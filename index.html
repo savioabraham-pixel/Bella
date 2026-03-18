@@ -240,13 +240,25 @@ function launch(){
   document.getElementById('app').style.display='flex';
   const ub=document.getElementById('ubtn'); if(ub.tagName==='SELECT'){ub.value=user;}else{ub.textContent=user;}
   addDiv();
-  bellaMsg(`Good ${tod()}, ${user}. I\'m here. You can type, speak using the microphone, or upload a document using the upload button. How can I help you today?`);
+  waitingForName=true;
+  bellaMsg(`Good ${tod()}! I\'m here and ready. Before we begin — who am I speaking to today? Is it Savio, Sanjukta, or Jishnu?`);
+}
+
+let waitingForName=false;
+
+function identifyUser(text){
+  const t=text.toLowerCase();
+  if(t.includes('savio'))return'Savio';
+  if(t.includes('sanjukta')||t.includes('sanju'))return'Sanjukta';
+  if(t.includes('jishnu')||t.includes('soumyajeet')||t.includes('somy'))return'Soumyajeet';
+  return null;
 }
 
 function changeUser(selected){
   user=selected;
   localStorage.setItem('b_u',user);
   hist=[];
+  waitingForName=false;
   bellaMsg(`Switched to ${user}'s profile. Hello ${user}, how can I help you today?`);
 }
 
@@ -310,6 +322,30 @@ async function send(){
   const disp=text||'Please analyse this document.';
   userMsg(disp,pFile?pFile.name:null);
   inp.value='';inp.style.height='auto';
+
+  // Handle who-are-you identification
+  if(waitingForName){
+    const identified=identifyUser(disp);
+    if(identified){
+      waitingForName=false;
+      user=identified;
+      const ub=document.getElementById('ubtn');if(ub.tagName==='SELECT'){ub.value=user;}
+      localStorage.setItem('b_u',user);
+      hist=[];
+      const greeting=`Hello ${user==='Sanjukta'?'Sanju, my dear':user==='Soumyajeet'?'Jishnu, my dear':'dear Savio'}! How wonderful to hear from you. How can I help you today?`;
+      const audio=await eleven(greeting);
+      bellaMsg(greeting,audio);
+      if(audio)autoPlay(audio);
+      return;
+    } else {
+      const retry=`I didn\'t quite catch that, dear. Could you tell me — are you Savio, Sanjukta, or Jishnu?`;
+      const audio=await eleven(retry);
+      bellaMsg(retry,audio);
+      if(audio)autoPlay(audio);
+      return;
+    }
+  }
+
   let full=`[Current user: ${user}]\n${disp}`;
   if(pText){full+=`\n\n[DOCUMENT ATTACHED: ${pFile?.name||'file'}]\n${pText.substring(0,12000)}`;clearFile();}
   hist.push({role:'user',parts:[{text:full}]});
@@ -346,12 +382,12 @@ async function gemini(){
 }
 
 async function eleven(text){
-  const clean=text.replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'').replace(/<[^>]+>/g,'').substring(0,480);
+  const clean=text.replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'').replace(/<[^>]+>/g,'').substring(0,5000);
   try{
     const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${cfg.v}`,{
       method:'POST',
       headers:{'xi-api-key':cfg.e,'Content-Type':'application/json'},
-      body:JSON.stringify({text:clean,model_id:'eleven_monolingual_v1',voice_settings:{stability:0.6,similarity_boost:0.85}})
+      body:JSON.stringify({text:clean,model_id:'eleven_monolingual_v1',voice_settings:{stability:0.75,similarity_boost:0.90,style:0.0,use_speaker_boost:true,speed:0.90}})
     });
     if(!r.ok)return null;
     return URL.createObjectURL(await r.blob());
