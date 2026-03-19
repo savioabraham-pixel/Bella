@@ -397,7 +397,10 @@ function loadCfg(){
   if(g&&e&&v){cfg={g,e,v};launch();}
 }
 
+let launched=false;
 function launch(){
+  if(launched)return;
+  launched=true;
   document.getElementById('setup').style.display='none';
   document.getElementById('app').style.display='flex';
   addDiv();
