@@ -94,6 +94,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);height:100dvh;disp
 .sbtn:hover{background:var(--navy2)}
 .sbtn:active{transform:scale(.93)}
 .disc{text-align:center;font-size:9px;color:var(--tsoft);margin-top:6px}
+.voice-toggle{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:5px}
+.vtgl{position:relative;width:30px;height:17px;background:var(--border);border-radius:9px;cursor:pointer;transition:background .2s;flex-shrink:0}
+.vtgl.on{background:var(--gold)}
+.vtgl-dot{position:absolute;top:2px;left:2px;width:13px;height:13px;background:var(--white);border-radius:50%;transition:transform .2s}
+.vtgl.on .vtgl-dot{transform:translateX(13px)}
+.vtgl-lbl{font-size:9px;color:var(--tsoft)}
 #fi{display:none}
 .perm-banner{display:none;align-items:center;gap:8px;padding:8px 14px;background:#FFF8E7;border-top:1px solid rgba(200,169,110,.4);font-size:11px;color:var(--navy);flex-shrink:0}
 .perm-banner.on{display:flex}
@@ -181,6 +187,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);height:100dvh;disp
       </button>
     </div>
     <div class="disc">Bella may make mistakes — always confirm important actions. No conversations are stored.</div>
+    <div class="voice-toggle">
+      <div class="vtgl on" id="voiceToggle" onclick="toggleVoice()"><div class="vtgl-dot"></div></div>
+      <span class="vtgl-lbl" id="voiceLbl">Voice ON — tap to mute for faster replies</span>
+    </div>
   </div>
 </div>
 
@@ -484,7 +494,7 @@ async function send(){
         rmTyping();
         if(reply){
           hist.push({role:'model',parts:[{text:reply}]});
-          const audio=await eleven(reply);
+          const audio=voiceEnabled?await eleven(reply):null;
           bellaMsg(reply,audio);
           if(audio)autoPlay(audio);
         }
@@ -492,7 +502,7 @@ async function send(){
       return;
     } else {
       const retry=`I didn\'t quite catch your name, dear. Could you tell me your name?`;
-      const audio=await eleven(retry);
+      const audio=voiceEnabled?await eleven(retry):null;
       bellaMsg(retry,audio);
       if(audio)autoPlay(audio);
       return;
@@ -529,7 +539,7 @@ async function send(){
     rmTyping();
     if(reply){
       hist.push({role:'model',parts:[{text:reply}]});
-      const audio=await eleven(reply);
+      const audio=voiceEnabled?await eleven(reply):null;
       bellaMsg(reply,audio);
       if(audio)autoPlay(audio);
     }
@@ -539,22 +549,46 @@ async function send(){
   }
 }
 
-// ─── GEMINI API WITH EXPONENTIAL BACKOFF ──────────────────────────────────────
+// ─── SMART SEARCH DETECTION ──────────────────────────────────────────────────
+// Only enable Google Search for questions that actually need live/current data
+// This keeps normal conversation fast (2-3 sec) and only adds search latency when needed
+function needsSearch(text){
+  const t=text.toLowerCase();
+  const searchKeywords=['weather','news','today','right now','current','latest','price','score',
+    'happened','happening','update','live','now','this week','this month','2026','2025',
+    'stock','market','match','game','result','who won','election','died','passed away',
+    'opened','closed','launched','released','announced','breaking','gulf','war','cricket',
+    'football','ipl','nba','nfl','kolkata','india','temperature','forecast','rain'];
+  return searchKeywords.some(k=>t.includes(k));
+}
+
+function hasUrl(text){
+  return /(https?:\/\/[^\s]+)/.test(text);
+}
+
+// ─── GEMINI API WITH SMART SEARCH + EXPONENTIAL BACKOFF ───────────────────────
 async function geminiCall(retries=4,delay=2000){
   const googleCtx=gUser?`\n[Google Account signed in: ${gUser.email} — Calendar and Gmail available with user permission]`:'';
-  const messages=[
+  const baseMessages=[
     {role:'user',parts:[{text:SYS+googleCtx}]},
     {role:'model',parts:[{text:`Understood. I am Bella. I am ready.`}]},
     ...hist
   ];
+
+  // Only add search tools when the question actually needs live data
+  // For normal conversation — no search tools = fast 2-3 second responses
+  const lastUserMsg=hist.length>0?hist[hist.length-1]?.parts?.[0]?.text||'':'';
+  const useSearch=needsSearch(lastUserMsg)||hasUrl(lastUserMsg);
+  const tools=useSearch?[{googleSearch:{}},{urlContext:{}}]:[];
+
   for(let i=0;i<retries;i++){
     try{
       const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${cfg.g}`,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
-          contents:messages,
-          tools:[{googleSearch:{}},{urlContext:{}}],
+          contents:baseMessages,
+          ...(tools.length>0?{tools}:{}),
           generationConfig:{temperature:0.75,maxOutputTokens:2048}
         })
       });
@@ -564,10 +598,12 @@ async function geminiCall(retries=4,delay=2000){
       }
       if(!r.ok){const e=await r.json();throw new Error(e.error?.message||'Something went wrong with my thinking. Please try again.');}
       const d=await r.json();
-      // Handle both grounded (search) and standard response formats
-      const parts=d.candidates?.[0]?.content?.parts||[];
-      const textPart=parts.find(p=>p.text);
-      return textPart?.text||null;
+      const candidate=d.candidates?.[0];
+      if(!candidate)return null;
+      const parts=candidate.content?.parts||[];
+      const textParts=parts.filter(p=>p.text).map(p=>p.text).join(' ').trim();
+      if(textParts.length>0)return textParts;
+      return null;
     }catch(err){
       if(i===retries-1)throw err;
       await sleep(delay*(Math.pow(2,i)));
@@ -710,6 +746,15 @@ function stopMic(){
 
 function hkey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}
 function arz(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,90)+'px';}
+let voiceEnabled=true;
+function toggleVoice(){
+  voiceEnabled=!voiceEnabled;
+  const t=document.getElementById('voiceToggle');
+  const l=document.getElementById('voiceLbl');
+  if(voiceEnabled){t.classList.add('on');l.textContent='Voice ON — tap to mute for faster replies';}
+  else{t.classList.remove('on');l.textContent='Voice OFF — tap to enable voice';if(curAudio){curAudio.pause();curAudio=null;}}
+}
+window.onload=loadCfg;
 </script>
 </body>
 </html>
