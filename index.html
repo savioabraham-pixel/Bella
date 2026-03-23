@@ -495,9 +495,10 @@ PERSONALITY & TONE (STRICT):
 - Never rude — always calm even if user is upset
 
 RESPONSE FORMAT:
-- Web search: 3-5 bullet points on screen, 2-sentence spoken summary max
+- Web search: 3-5 bullet points on screen with verifiable source links, 2-sentence spoken summary max
 - Documents: structured concise findings
 - Understand Hinglish, Benglish, and Marathish (Marathi-English mix) naturally
+- Document creation: When user asks to download as PDF or any format, say: I will prepare that document for you. Full file download is coming in the next update. For now here is the formatted content you can copy. NEVER say you cannot create or download files.
 
 MEMORY: If user says remember/store/don't forget — confirm and extract the key fact. Note concerns for proactive follow-up.
 
@@ -699,7 +700,17 @@ async function initAndLaunch(){
 // IDENTITY FLOW
 // ============================================================
 async function handleIdentityInput(text){
-  const t=text.trim().toLowerCase();
+  // Clean common voice prefixes before name matching
+  let cleaned=text.trim().toLowerCase();
+  const prefixes=[
+    /^(hi|hello|hey)[\s,]+bella[\s,]*(this is|i am|i'm|its|it's|my name is|call me|they call me|you can call me)[\s,]*/i,
+    /^(this is|i am|i'm|its|it's|my name is|call me|they call me|you can call me)[\s,]*/i,
+    /^(hi|hello|hey)[\s,]+bella[\s,]*/i,
+    /^(hi|hello|hey)[\s,]*/i,
+  ];
+  for(const p of prefixes){cleaned=cleaned.replace(p,'').trim();}
+  // Use cleaned version if it's not empty, otherwise use original
+  const t=cleaned.length>0?cleaned:text.trim().toLowerCase();
   if(idState==='awaiting_name'){
     const match=matchName(t);
     if(match==='ambiguous'){idState='awaiting_lastname';tempProfileKey=t;const msg=`Lovely! Just to make sure I'm speaking with the right person — could you tell me your last name?`;bellaMsg(msg);speakText(msg,'en');return true;}
@@ -707,11 +718,12 @@ async function handleIdentityInput(text){
       const stored=sheetsToken?(await getPreferenceFromSheets(match)):null||localStorage.getItem('b_pref_'+match);
       if(stored){await confirmIdentity(match,stored);return true;}
       idState='awaiting_preferred';tempProfileKey=match;
-      const p=PROFILES[match];const opts=p.firstName+(p.familyName!==p.firstName?' or '+p.familyName:'');
-      const msg=`${p.firstName}! What would you like me to call you — ${opts}?`;bellaMsg(msg);speakText(msg,'en');return true;
+      const p=PROFILES[match];
+      const msg=`${p.firstName}! Lovely to hear from you. How would you like me to address you during our conversations?`;
+      bellaMsg(msg);speakText(msg,'en');return true;
     }
     idState='awaiting_preferred';tempProfileKey='_new_'+text.trim();
-    const msg=`Hello ${text.trim().split(' ')[0]}! Lovely to meet you. What would you like me to call you?`;bellaMsg(msg);speakText(msg,'en');return true;
+    const msg=`Hello ${text.trim().split(' ')[0]}! Lovely to meet you. How would you like me to address you during our conversations?`;bellaMsg(msg);speakText(msg,'en');return true;
   }
   if(idState==='awaiting_lastname'){
     const resolved=resolveByLastName(tempProfileKey,t);
@@ -719,9 +731,9 @@ async function handleIdentityInput(text){
       const stored=sheetsToken?(await getPreferenceFromSheets(resolved)):null||localStorage.getItem('b_pref_'+resolved);
       if(stored){await confirmIdentity(resolved,stored);return true;}
       idState='awaiting_preferred';tempProfileKey=resolved;
-      const p=PROFILES[resolved];const opts=p.firstName+(p.familyName!==p.firstName?' or '+p.familyName:'');
-      const msg=`Thank you! What would you like me to call you — ${opts}?`;bellaMsg(msg);speakText(msg,'en');
-    }else{idState='awaiting_preferred';tempProfileKey='_new_'+text.trim();const msg=`What would you like me to call you?`;bellaMsg(msg);speakText(msg,'en');}
+      const p=PROFILES[resolved];const msgL=`Thank you! How would you like me to address you during our conversations?`;
+      bellaMsg(msgL);speakText(msgL,'en');
+    }else{idState='awaiting_preferred';tempProfileKey='_new_'+text.trim();const msg=`How would you like me to address you during our conversations?`;bellaMsg(msg);speakText(msg,'en');}
     return true;
   }
   if(idState==='awaiting_preferred'){
@@ -866,7 +878,18 @@ async function send(){
   const disp=text||'Please analyse the attached document(s).';
   removeSuggestions();userMsg(disp,pFiles.map(f=>f.name));
   inp.value='';inp.style.height='auto';
-  if(idState!=='confirmed'){const handled=await handleIdentityInput(disp);if(handled){clearFiles();return;}}
+  if(idState!=='confirmed'){
+    // During identity flow, ignore very short fragments (1 word under 4 chars)
+    // to prevent voice mishearing single syllables as names
+    const wordCount=disp.trim().split(/\s+/).length;
+    if(wordCount===1&&disp.trim().length<4&&idState==='awaiting_name'){
+      // Too short - likely a fragment, ask again gently
+      const retry='I did not quite catch that — could you tell me your name again?';
+      bellaMsg(retry);speakText(retry,'en');
+      clearFiles();return;
+    }
+    const handled=await handleIdentityInput(disp);if(handled){clearFiles();return;}
+  }
   if(detectMemoryRequest(disp)){
     const memItem=disp.replace(/remember|store this|don't forget|dont forget|keep in mind|note this/gi,'').trim();
     if(memItem&&currentProfileKey){await saveMemory(currentProfileKey,memItem);const ack=`Got it, ${currentAddressedName}. I've stored that in my memory.`;bellaMsg(ack);speakText(ack,'en');return;}
@@ -1129,7 +1152,12 @@ function startMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecogn
     }
     stopMic();
   };recog.onend=()=>stopMic();recog.start();}
-function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){continuousVoice=false;document.getElementById('voice-tog').classList.remove('on');return;}recog=new SR();recog.continuous=true;recog.interimResults=(idState==='confirmed');recog.lang='en-IN';recog.onstart=()=>{listening=true;document.getElementById('vbar').classList.add('on');document.getElementById('vbar-lbl').textContent='Listening continuously...';document.getElementById('mbtn').classList.add('voice-on');};recog.onresult=e=>{
+function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){continuousVoice=false;document.getElementById('voice-tog').classList.remove('on');return;}recog=new SR();// If in identity flow, use single-shot mode for reliability
+  if(idState!=='confirmed'){
+    // Fall back to single mic for name capture — more accurate
+    startMic();return;
+  }
+  recog.continuous=true;recog.interimResults=false;recog.lang='en-IN';recog.onstart=()=>{listening=true;document.getElementById('vbar').classList.add('on');document.getElementById('vbar-lbl').textContent='Listening continuously...';document.getElementById('mbtn').classList.add('voice-on');};recog.onresult=e=>{
     const r=e.results[e.results.length-1];
     const transcript=r[0].transcript;
     const ti=document.getElementById('ti');
