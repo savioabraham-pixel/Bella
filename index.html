@@ -410,7 +410,7 @@ const BACKEND='https://bella-backend-299648732006.asia-south1.run.app';
 const OAUTH_CLIENT_ID='299648732006-dbctq5hd6p5b5k402nakkq6mn801e462.apps.googleusercontent.com';
 const SHEET_ID='1C0k3XX8SpNv4K1cnxiaW5iHr2XTi-hFANLqOTm_DnsY';
 const SHEETS_API='https://sheets.googleapis.com/v4/spreadsheets';
-const VOICES={en:'MzqUf1HbJ8UmQ0wUsx2p',hi:'1Z7Y8o9cvUeWq8oLKgMY',bn:'FDQcYNtvPtQjNlTyU3du'};
+const VOICES={en:'MzqUf1HbJ8UmQ0wUsx2p',hi:'1Z7Y8o9cvUeWq8oLKgMY',bn:'FDQcYNtvPtQjNlTyU3du',mr:'zRCVl5g50WOtvILI2Cxm'};
 
 // ============================================================
 // PROFILES
@@ -495,7 +495,7 @@ PERSONALITY & TONE (STRICT):
 RESPONSE FORMAT:
 - Web search: 3-5 bullet points on screen, 2-sentence spoken summary max
 - Documents: structured concise findings
-- Understand Hinglish and Benglish naturally
+- Understand Hinglish, Benglish, and Marathish (Marathi-English mix) naturally
 
 MEMORY: If user says remember/store/don't forget — confirm and extract the key fact. Note concerns for proactive follow-up.
 
@@ -925,7 +925,16 @@ function autoPlay(url){if(curAudio){curAudio.pause();curAudio=null;}const a=new 
 // ============================================================
 // LANGUAGE & SEARCH
 // ============================================================
-function detectLanguage(t){if(/[\u0980-\u09FF]/.test(t))return'bn';if(/[\u0900-\u097F]/.test(t))return'hi';return'en';}
+function detectLanguage(t){
+  if(/[\u0980-\u09FF]/.test(t))return'bn';
+  if(/[\u0900-\u097F]/.test(t)){
+    // Marathi-specific words to distinguish from Hindi
+    const marathiWords=['आहे','नाही','काय','कसे','मला','तुम्ही','आम्ही','होय','ठीक','धन्यवाद'];
+    if(marathiWords.some(w=>t.includes(w)))return'mr';
+    return'hi';
+  }
+  return'en';
+}
 function isTimeSensitive(t){const l=t.toLowerCase();return['today','tonight','now','current','latest','recent','live','score','weather','price','news','update','right now','this week','this month','happening','2026','2025','breaking','just','aaj','abhi','kal'].some(w=>l.includes(w));}
 
 // ============================================================
