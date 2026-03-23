@@ -223,19 +223,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 /* ============================================================
    INPUT AREA
    ============================================================ */
-.inp-area{padding:12px 16px;padding-bottom:max(16px,env(safe-area-inset-bottom,16px));flex-shrink:0;border-top:1px solid var(--border);background:var(--white)}
-.inp-row{display:flex;align-items:flex-end;gap:8px;padding:6px 6px 6px 14px;background:transparent;border:none;transition:border-color .2s,box-shadow .2s}
-.inp-row:focus-within{border-color:rgba(200,169,110,.5);box-shadow:0 0 0 3px rgba(200,169,110,.08)}
-#ti{flex:1;border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;resize:none;max-height:120px;line-height:1.5;padding:4px 0}
-#ti::placeholder{color:var(--tsoft)}
-.inp-actions{display:flex;align-items:center;gap:4px;flex-shrink:0}
-.ibtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0}
-.ibtn:hover{background:var(--goldpale);border-color:rgba(200,169,110,.4)}
+.inp-area{padding:16px 20px;padding-bottom:max(20px,env(safe-area-inset-bottom,20px));flex-shrink:0;background:var(--cream)}
+.inp-box{background:var(--white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 2px 16px rgba(27,42,74,0.08);transition:border-color .2s,box-shadow .2s;overflow:hidden}
+.inp-box:focus-within{border-color:rgba(200,169,110,.6);box-shadow:0 0 0 3px rgba(200,169,110,.1),0 2px 16px rgba(27,42,74,0.08)}
+.inp-row{display:flex;align-items:flex-end;gap:8px;padding:10px 10px 10px 16px}
+#ti{flex:1;border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;resize:none;min-height:44px;max-height:160px;line-height:1.6;padding:4px 0}
+#ti::placeholder{color:var(--tsoft);font-size:14px}
+.inp-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;padding-bottom:4px}
+.ibtn{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--cream);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0}
+.ibtn:hover{background:var(--goldpale);border-color:rgba(200,169,110,.5);color:var(--navy)}
 .ibtn.act{background:var(--navy);border-color:var(--navy)}
 .ibtn.act svg{stroke:var(--gold)!important}
 .ibtn.voice-on{background:#E8F9F2;border-color:#5DCAA5}
 .ibtn.voice-on svg{stroke:#2A8A62!important}
-.sbtn{width:36px;height:36px;border-radius:50%;background:var(--navy);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s,transform .1s}
+.sbtn{width:40px;height:40px;border-radius:12px;background:var(--navy);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s;box-shadow:0 2px 8px rgba(27,42,74,0.25)}
 .sbtn:hover{background:var(--navy2)}
 .sbtn:active{transform:scale(.92)}
 .inp-footer{display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 4px}
@@ -377,18 +378,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
     <div class="inp-area">
       <!-- Input box — file chips + textarea together like ChatGPT/Gemini -->
       <div class="inp-box">
-        <div id="fbar" style="display:none;flex-wrap:wrap;gap:5px;padding:8px 12px 4px;border-bottom:1px solid var(--border)"></div>
+        <div id="fbar" style="display:none;flex-wrap:wrap;gap:6px;padding:10px 14px 6px 14px;border-bottom:1px solid var(--border);background:var(--goldfaint)"></div>
         <div class="inp-row">
           <textarea id="ti" rows="1" placeholder="Ask Bella anything…" onkeydown="hkey(event)" oninput="arz(this)"></textarea>
           <div class="inp-actions">
             <input type="file" id="fi" accept=".pdf,.txt,.doc,.docx,.csv,.xlsx,.xls,.pptx,.jpg,.jpeg,.png,.webp,.mp4,.mov,.mp3,.wav,.m4a,.aac" multiple onchange="hfile(event)">
-            <button class="ibtn" onclick="document.getElementById('fi').click()" title="Upload files">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--tsoft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <button type="button" class="ibtn ibtn-attach" onclick="document.getElementById('fi').click()" title="Attach files — PDF, Word, Excel, PowerPoint, Images" style="border-radius:10px;padding:0 10px;width:auto;gap:5px;font-size:11px;color:var(--tsoft);font-family:'DM Sans',sans-serif">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span>Add files</span>
             </button>
-            <button class="ibtn" id="mbtn" onclick="toggleMic()" title="Voice input">
+            <button type="button" class="ibtn" id="mbtn" onclick="toggleMic()" title="Voice input">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--tsoft)" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
             </button>
-            <button class="sbtn" onclick="send()" title="Send">
+            <button type="button" class="sbtn" onclick="send()" title="Send">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
           </div>
@@ -653,6 +655,11 @@ function closeSidebar(){document.getElementById('sidebar').classList.remove('mob
 // INIT
 // ============================================================
 async function splashTap(){
+  // Unlock audio AND mic permissions with user gesture
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    ctx.resume();
+  }catch(e){}
   audioUnlocked=true;
   document.getElementById('splash').classList.add('hide');
   if(localStorage.getItem('b_dark')==='1')applyDark();
@@ -675,6 +682,14 @@ async function initAndLaunch(){
   renderThreadList();
   addDiv();
   idState='awaiting_name';
+  // Check mic permission status
+  if(navigator.permissions){
+    navigator.permissions.query({name:'microphone'}).then(function(result){
+      if(result.state==='denied'){
+        setTimeout(()=>bellaMsg('Note: Microphone is currently blocked in your browser. To use voice, click the 🔒 icon in the address bar and allow microphone access.'),2000);
+      }
+    }).catch(()=>{});
+  }
   const msg=`Hello! I'm Bella. May I know who I'm speaking with today?`;
   playNotifSound();
   bellaMsg(msg);speakText(msg,'en');
@@ -1092,16 +1107,29 @@ function addDiv(){const d=document.createElement('div');d.className='date-div';d
 // ============================================================
 function toggleVoiceMode(){continuousVoice=!continuousVoice;const tog=document.getElementById('voice-tog');if(continuousVoice){tog.classList.add('on');startContinuousMic();}else{tog.classList.remove('on');stopMic();}}
 function toggleMic(){if(continuousVoice)return;listening?stopMic():startMic();}
-function startMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){bellaMsg('Voice input works best in Chrome on Android/desktop and Safari on iPhone.');return;}recog=new SR();recog.continuous=false;recog.interimResults=true;recog.lang='en-IN';
+function startMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){bellaMsg('Voice input works best in Chrome on Android/desktop and Safari on iPhone.');return;}recog=new SR();recog.continuous=false;recog.interimResults=(idState==='confirmed');recog.lang='en-IN';
   recog.onstart=()=>{listening=true;document.getElementById('mbtn').classList.add('act');document.getElementById('vbar').classList.add('on');};
   recog.onresult=e=>{
     const r=e.results[0];
     const t=r[0].transcript;
     const ti=document.getElementById('ti');
     ti.value=t;arz(ti);
-    if(r.isFinal){stopMic();setTimeout(()=>send(),300);}
-  };recog.onerror=()=>stopMic();recog.onend=()=>stopMic();recog.start();}
-function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){continuousVoice=false;document.getElementById('voice-tog').classList.remove('on');return;}recog=new SR();recog.continuous=true;recog.interimResults=true;recog.lang='en-IN';recog.onstart=()=>{listening=true;document.getElementById('vbar').classList.add('on');document.getElementById('vbar-lbl').textContent='Listening continuously...';document.getElementById('mbtn').classList.add('voice-on');};recog.onresult=e=>{
+    if(r.isFinal){
+      // During identity flow, wait a beat to ensure complete name captured
+      const delay=idState==='confirmed'?300:800;
+      stopMic();setTimeout(()=>send(),delay);
+    }
+  };recog.onerror=e=>{
+    if(e.error==='not-allowed'){
+      bellaMsg('Microphone access was blocked. Please click the 🔒 icon in your browser address bar and allow microphone access, then refresh the page.');
+    } else if(e.error==='no-speech'){
+      // silent - no speech detected is normal
+    } else {
+      bellaMsg('Voice input had a small issue ('+e.error+'). You can type instead or try the mic button again.');
+    }
+    stopMic();
+  };recog.onend=()=>stopMic();recog.start();}
+function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){continuousVoice=false;document.getElementById('voice-tog').classList.remove('on');return;}recog=new SR();recog.continuous=true;recog.interimResults=(idState==='confirmed');recog.lang='en-IN';recog.onstart=()=>{listening=true;document.getElementById('vbar').classList.add('on');document.getElementById('vbar-lbl').textContent='Listening continuously...';document.getElementById('mbtn').classList.add('voice-on');};recog.onresult=e=>{
     const r=e.results[e.results.length-1];
     const transcript=r[0].transcript;
     const ti=document.getElementById('ti');
@@ -1109,7 +1137,14 @@ function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSp
     arz(ti);
     if(r.isFinal){send();}
   };
-  recog.onerror=err=>{if(err.error!=='no-speech')stopMic();};recog.onend=()=>{if(continuousVoice)recog.start();};recog.start();}
+  recog.onerror=err=>{
+    if(err.error==='not-allowed'){
+      bellaMsg('Microphone access is blocked. Please click the 🔒 icon in your browser address bar, allow microphone, then refresh.');
+      continuousVoice=false;
+      document.getElementById('voice-tog').classList.remove('on');
+    }
+    if(err.error!=='no-speech')stopMic();
+  };recog.onend=()=>{if(continuousVoice)recog.start();};recog.start();}
 function stopMic(){listening=false;document.getElementById('mbtn').classList.remove('act','voice-on');document.getElementById('vbar').classList.remove('on');if(recog){recog.stop();recog=null;}}
 
 // ============================================================
