@@ -276,8 +276,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .suggestions{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 8px 38px}
 .sug-chip{display:inline-flex;align-items:center;padding:6px 12px;background:var(--white);border:1px solid var(--border);border-radius:16px;font-size:11.5px;color:var(--tmid);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
 .sug-chip:hover{background:var(--goldpale);border-color:rgba(200,169,110,.5);color:var(--navy)}
-</style>
-</head>
+/* ============================================================
+   USER MENU SLIDE-OUT PANEL
+   ============================================================ */
+.user-menu-panel{position:fixed;top:0;right:-320px;width:300px;height:100dvh;background:var(--white);border-left:1px solid var(--border);box-shadow:var(--shadow-lg);z-index:91;display:flex;flex-direction:column;transition:right .3s cubic-bezier(0.4,0,0.2,1);overflow-y:auto}
+.user-menu-panel.open{right:0}
+.ump-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--goldlight)}
+.ump-section{border-bottom:1px solid var(--border)}
+.ump-sec-hdr{width:100%;padding:13px 20px;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--text);text-align:left;transition:background .15s;letter-spacing:.3px}
+.ump-sec-hdr:hover{background:var(--goldpale)}
+.ump-arrow{font-size:16px;color:var(--tsoft);transition:transform .2s;display:inline-block}
+.ump-arrow.open{transform:rotate(90deg)}
+.ump-sec-body{display:none;flex-direction:column;padding:2px 0 6px 0}
+.ump-sec-body.open{display:flex}
+.ump-item{width:100%;padding:9px 20px 9px 32px;background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--tmid);text-align:left;transition:background .15s;display:flex;align-items:center;justify-content:space-between}
+.ump-item:hover{background:var(--goldpale);color:var(--navy)}
+.ump-item-danger{color:var(--danger)!important}
+.ump-item-danger:hover{background:#FEF0EE!important}
+.ump-item-soon{opacity:.6;cursor:default}
+.ump-item-soon:hover{background:none!important;color:var(--tmid)!important}
+.ump-soon-tag{font-size:9px;background:var(--goldpale);color:var(--gold);border:1px solid rgba(200,169,110,.3);border-radius:4px;padding:1px 5px;flex-shrink:0}
+</style></head>
 <body>
 
 <!-- SPLASH -->
@@ -288,8 +307,81 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
   <div class="splash-tap">Tap anywhere to begin</div>
 </div>
 
-<!-- SIDEBAR OVERLAY (mobile) -->
-<div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+<!-- USER MENU OVERLAY -->
+<div id="user-menu-overlay" onclick="closeUserMenu()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:150;transition:opacity .3s"></div>
+
+<!-- USER MENU SLIDE-OUT PANEL -->
+<div id="user-menu-panel" style="position:fixed;top:0;right:-320px;width:300px;max-width:90vw;height:100dvh;background:var(--white);border-left:1px solid var(--border);box-shadow:var(--shadow-lg);z-index:151;display:flex;flex-direction:column;transition:right .3s cubic-bezier(0.4,0,0.2,1);overflow-y:auto">
+  <!-- Panel header -->
+  <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--navy)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600;color:var(--navy)">B</div>
+      <span style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold)">Bella.ai</span>
+    </div>
+    <button onclick="closeUserMenu()" style="background:none;border:none;color:var(--gold);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1">✕</button>
+  </div>
+
+  <!-- Section: About -->
+  <div class="umenu-section">
+    <button class="umenu-header" onclick="toggleMenuSection('sec-about')">
+      <span>ℹ️ About</span>
+      <svg class="umenu-arrow" id="arr-about" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="umenu-items" id="sec-about">
+      <button class="umenu-item" onclick="showUserMenuPage('about-bella')">About Bella</button>
+      <button class="umenu-item" onclick="showUserMenuPage('whats-new')">What's New</button>
+      <button class="umenu-item" onclick="showUserMenuPage('coming-phase2')">Coming in Phase 2</button>
+    </div>
+  </div>
+
+  <!-- Section: Profile & Account -->
+  <div class="umenu-section">
+    <button class="umenu-header" onclick="toggleMenuSection('sec-profile')">
+      <span>👤 Profile &amp; Account</span>
+      <svg class="umenu-arrow" id="arr-profile" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="umenu-items" id="sec-profile">
+      <button class="umenu-item" onclick="showUserMenuPage('my-profile')">My Profile</button>
+      <button class="umenu-item" onclick="showUserMenuPage('change-name')">Change Preferred Name</button>
+      <button class="umenu-item" onclick="showUserMenuPage('notifications')">Notification Settings</button>
+      <button class="umenu-item" onclick="showUserMenuPage('language-pref')">Language Preference</button>
+    </div>
+  </div>
+
+  <!-- Section: Data & Privacy -->
+  <div class="umenu-section">
+    <button class="umenu-header" onclick="toggleMenuSection('sec-data')">
+      <span>🔒 Data &amp; Privacy</span>
+      <svg class="umenu-arrow" id="arr-data" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="umenu-items" id="sec-data">
+      <button class="umenu-item" onclick="showUserMenuPage('my-memory')">My Memory</button>
+      <button class="umenu-item" onclick="showUserMenuPage('download-data')">Download My Data</button>
+      <button class="umenu-item" onclick="clearAllThreadsConfirm()">Clear All Threads</button>
+      <button class="umenu-item" style="color:var(--danger)" onclick="deleteAccountConfirm()">Delete Account</button>
+    </div>
+  </div>
+
+  <!-- Section: Legal -->
+  <div class="umenu-section">
+    <button class="umenu-header" onclick="toggleMenuSection('sec-legal')">
+      <span>📋 Legal</span>
+      <svg class="umenu-arrow" id="arr-legal" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="umenu-items" id="sec-legal">
+      <button class="umenu-item" onclick="showUserMenuPage('terms')">Terms of Use</button>
+      <button class="umenu-item" onclick="showUserMenuPage('privacy')">Privacy Policy</button>
+      <button class="umenu-item" onclick="showUserMenuPage('security')">Security Information</button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="margin-top:auto;padding:16px 20px;border-top:1px solid var(--border);font-size:10px;color:var(--tlight);text-align:center">
+    Bella.ai · Phase 1 · Built with ❤️ by Savio Abraham
+  </div>
+</div>
+
+
 
 <!-- SETUP -->
 <div id="setup">
@@ -359,7 +451,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
       About Bella
     </button>
     <button class="sb-shutter-btn" id="sb-shutter-btn" onclick="toggleShutter()">
-      <span id="shutter-label">Coming Soon</span>
+      <span id="shutter-label" style="flex:1;text-align:center;font-weight:700;letter-spacing:.8px">COMING SOON</span>
       <svg id="shutter-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
     </button>
   </div>
@@ -386,6 +478,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
         <button class="topbar-btn" id="summarise-btn" onclick="summariseThread()" title="Summarise this conversation" style="display:none;background:var(--goldpale);border-color:rgba(200,169,110,.4)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
         </button>
+        <!-- USER MENU BUTTON — top right -->
+        <button class="topbar-btn" onclick="toggleUserMenu()" id="user-menu-btn" title="Menu">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--tmid)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="1.5" fill="var(--tmid)"/><circle cx="12" cy="12" r="1.5" fill="var(--tmid)"/><circle cx="12" cy="16" r="1.5" fill="var(--tmid)"/></svg>
+        </button>
       </div>
     </div>
 
@@ -406,8 +502,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
         <div class="inp-row">
           <textarea id="ti" rows="1" placeholder="Ask Bella anything…" onkeydown="hkey(event)" oninput="arz(this);handleTypingDetection()"></textarea>
           <div class="inp-actions">
-            <button type="button" class="ibtn" id="rec-btn" onclick="toggleRecord()" title="Record voice or video">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+            <button type="button" class="ibtn" id="rec-btn" onclick="toggleRecord()" title="Record voice conversation">
+              <svg id="rec-icon" width="14" height="14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="var(--tsoft)" stroke="none"/></svg>
             </button>
             <input type="file" id="fi" accept=".pdf,.txt,.doc,.docx,.csv,.xlsx,.xls,.pptx,.jpg,.jpeg,.png,.webp,.mp4,.mov,.mp3,.wav,.m4a,.aac,.zip,.tar,.gz" multiple onchange="hfile(event)">
             <button type="button" class="ibtn ibtn-attach" onclick="document.getElementById('fi').click()" title="Attach files — PDF, Word, Excel, PowerPoint, Images" style="border-radius:10px;padding:0 10px;width:auto;gap:5px;font-size:11px;color:var(--tsoft);font-family:'DM Sans',sans-serif">
@@ -424,7 +520,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
         </div>
       </div>
       <div class="inp-footer">
-        <div class="disc">Bella may make mistakes — always confirm important actions. No conversations stored externally.</div>
         <div style="display:flex;align-items:center;gap:8px">
             <div style="display:flex;align-items:center;gap:3px;margin-right:4px">
               <span style="font-size:9px;color:var(--tsoft)">Light</span>
@@ -435,8 +530,78 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
             </div>
             <div class="voice-toggle" onclick="toggleVoiceMode()"><span>Text</span><div class="toggle-sw" id="voice-tog"></div><span>Voice</span></div>
           </div>
+        <div class="disc">* Bella may make mistakes — always confirm important actions.</div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- USER MENU SLIDE-OUT PANEL -->
+<div id="user-menu-overlay" onclick="closeUserMenu()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.25);z-index:90"></div>
+<div id="user-menu-panel" class="user-menu-panel">
+  <div class="ump-header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:var(--gold)" id="ump-av">?</div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)" id="ump-name">Welcome</div>
+        <div style="font-size:10px;color:var(--tsoft)">Bella.ai</div>
+      </div>
+    </div>
+    <button onclick="closeUserMenu()" style="background:none;border:none;cursor:pointer;color:var(--tsoft);font-size:18px;line-height:1;padding:4px">✕</button>
+  </div>
+
+  <!-- SECTION: ABOUT -->
+  <div class="ump-section">
+    <button class="ump-sec-hdr" onclick="toggleUmpSection('sec-about')">
+      <span>About</span><span class="ump-arrow" id="arr-about">›</span>
+    </button>
+    <div class="ump-sec-body" id="sec-about">
+      <button class="ump-item" onclick="showAboutBella();closeUserMenu()">About Bella</button>
+      <button class="ump-item" onclick="showWhatsNew();closeUserMenu()">What's New</button>
+      <button class="ump-item" onclick="showComingInPhase2();closeUserMenu()">Coming in Phase 2</button>
+    </div>
+  </div>
+
+  <!-- SECTION: PROFILE & ACCOUNT -->
+  <div class="ump-section">
+    <button class="ump-sec-hdr" onclick="toggleUmpSection('sec-profile')">
+      <span>Profile &amp; Account</span><span class="ump-arrow" id="arr-profile">›</span>
+    </button>
+    <div class="ump-sec-body" id="sec-profile">
+      <button class="ump-item" onclick="showMyProfile();closeUserMenu()">My Profile</button>
+      <button class="ump-item" onclick="changePreferredName();closeUserMenu()">Change Preferred Name</button>
+      <button class="ump-item ump-item-soon">Notification Settings <span class="ump-soon-tag">Phase 2</span></button>
+      <button class="ump-item" onclick="showLanguagePreference();closeUserMenu()">Language Preference</button>
+    </div>
+  </div>
+
+  <!-- SECTION: DATA & PRIVACY -->
+  <div class="ump-section">
+    <button class="ump-sec-hdr" onclick="toggleUmpSection('sec-data')">
+      <span>Data &amp; Privacy</span><span class="ump-arrow" id="arr-data">›</span>
+    </button>
+    <div class="ump-sec-body" id="sec-data">
+      <button class="ump-item" onclick="showMyMemory();closeUserMenu()">My Memory</button>
+      <button class="ump-item ump-item-soon">Download My Data <span class="ump-soon-tag">Phase 2</span></button>
+      <button class="ump-item ump-item-danger" onclick="clearAllThreads();closeUserMenu()">Clear All Threads</button>
+      <button class="ump-item ump-item-danger" onclick="deleteAccount();closeUserMenu()">Delete Account</button>
+    </div>
+  </div>
+
+  <!-- SECTION: LEGAL -->
+  <div class="ump-section">
+    <button class="ump-sec-hdr" onclick="toggleUmpSection('sec-legal')">
+      <span>Legal</span><span class="ump-arrow" id="arr-legal">›</span>
+    </button>
+    <div class="ump-sec-body" id="sec-legal">
+      <button class="ump-item ump-item-soon">Terms of Use <span class="ump-soon-tag">Coming</span></button>
+      <button class="ump-item ump-item-soon">Privacy Policy <span class="ump-soon-tag">Coming</span></button>
+      <button class="ump-item ump-item-soon">Security Information <span class="ump-soon-tag">Coming</span></button>
+    </div>
+  </div>
+
+  <div style="padding:16px 20px;border-top:1px solid var(--border)">
+    <div style="font-size:9px;color:var(--tlight);text-align:center;line-height:1.6">* Bella is always learning.<br>Every conversation makes her better. Every memory makes her more yours.</div>
   </div>
 </div>
 
@@ -559,6 +724,8 @@ let idState='splash';
 let tempProfileKey=null;
 let sheetsToken=null;
 let userMemory={addressedName:'',memories:'',lastSeen:'',proactiveFollowUp:''};
+let voiceWelcomeSpoken=false; // tracks if welcome was spoken this session on first voice toggle
+let _recogRestartTimer=null;  // watchdog for recognition crash recovery
 
 // THREAD SYSTEM
 let threads={}; // {id: {name, hist, created}}
@@ -657,7 +824,7 @@ function newThread(){
   const btn=document.getElementById('sb-shutter-btn');
   if(shutter&&shutter.classList.contains('open')){
     shutter.classList.remove('open');
-    if(btn){btn.classList.remove('open');btn.querySelector('#shutter-label').textContent='Coming Soon';}
+    if(btn){btn.classList.remove('open');btn.querySelector('#shutter-label').textContent='COMING SOON';}
   }
   const id=createThread('New Conversation');
   switchThread(id);
@@ -705,27 +872,20 @@ function closeSidebar(){document.getElementById('sidebar').classList.remove('mob
 // INIT
 // ============================================================
 async function splashTap(){
-  // Request all permissions upfront on first interaction
+  // Unlock audio context on first user interaction — required by browsers
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)();
     ctx.resume();
   }catch(e){}
-  // Request mic permission upfront
-  if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
-    navigator.mediaDevices.getUserMedia({audio:true})
-      .then(stream=>{stream.getTracks().forEach(t=>t.stop());console.log('Mic permission granted');})
-      .catch(()=>{console.warn('Mic permission not granted — voice features limited');});
-  }
-  // Request location permission upfront
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(()=>{},()=>{});
-  }
   audioUnlocked=true;
   document.getElementById('splash').classList.add('hide');
   if(localStorage.getItem('b_dark')==='1')applyDark();
   const e=localStorage.getItem('b_e');
   if(e){cfg.e=e;await initAndLaunch();}
   else{document.getElementById('setup').classList.add('show');}
+  // NOTE: Mic permission requested only when user first presses Voice toggle
+  // Location requested only when user asks for location-based info
+  // Camera requested only when user tries to use camera
 }
 async function startBella(){
   const e=document.getElementById('se').value.trim();
@@ -736,13 +896,16 @@ async function startBella(){
 }
 async function initAndLaunch(){
   setMemBadge('🔄');
-  initGoogleAuth().then(ok=>setMemBadge(ok?'💾 On':'📱 Local'));
+  // OAuth runs first — Bella main UI shows only after auth attempt completes
+  // This prevents the OAuth popup overlapping the Bella interface
+  const authOk=await initGoogleAuth();
+  setMemBadge(authOk?'💾 On':'📱 Local');
   loadThreadsLocal();
   document.getElementById('main').classList.add('show');
   renderThreadList();
   addDiv();
   idState='awaiting_name';
-  // Check mic permission status
+  // Mic permission check — inform only if denied, don't request upfront
   if(navigator.permissions){
     navigator.permissions.query({name:'microphone'}).then(function(result){
       if(result.state==='denied'){
@@ -852,7 +1015,7 @@ function toggleShutter(){
   const isOpen=shutter.classList.contains('open');
   shutter.classList.toggle('open',!isOpen);
   btn.classList.toggle('open',!isOpen);
-  document.getElementById('shutter-label').textContent=isOpen?'Coming Soon':'Hide';
+  document.getElementById('shutter-label').textContent=isOpen?'COMING SOON':'Hide';
 }
 
 // Auto-close shutter when new thread added
@@ -946,26 +1109,7 @@ function removeSuggestions(){
   document.querySelectorAll('.suggestions').forEach(el=>el.remove());
 }
 
-function addSuggestions(suggestions){
-  if(!suggestions||suggestions.length===0)return;
-  removeSuggestions();
-  const m=document.getElementById('msgs');
-  const row=document.createElement('div');
-  row.className='suggestions';
-  suggestions.forEach(s=>{
-    const chip=document.createElement('button');
-    chip.className='sug-chip';
-    chip.textContent=s;
-    chip.onclick=()=>{
-      removeSuggestions();
-      document.getElementById('ti').value=s;
-      send();
-    };
-    row.appendChild(chip);
-  });
-  m.appendChild(row);
-  m.scrollTop=m.scrollHeight;
-}
+// addSuggestions defined below
 
 async function generateSuggestions(replyText,userMsg){
   if(!currentProfileKey||currentProfileKey==='_guest')return;
@@ -1075,8 +1219,10 @@ async function callBella(useSearch,memCtx){
 // ELEVENLABS
 // ============================================================
 async function speakText(text,lang){
-  // Strictly respect text/voice toggle — never speak in text mode
-  if(!continuousVoice&&!listening)return;
+  // Only speak when voice mode is active OR listening (single-shot mic)
+  // voiceActive = true when toggle is Voice OR mic button is pressed
+  const voiceActive=continuousVoice||listening;
+  if(!voiceActive)return;
   if(!cfg.e||!audioUnlocked)return;
   // Always verify voiceId is one of our 4 approved voices — never allow unknown voice
   const approvedVoices=['MzqUf1HbJ8UmQ0wUsx2p','1Z7Y8o9cvUeWq8oLKgMY','FDQcYNtvPtQjNlTyU3du','zRCVl5g50WOtvILI2Cxm'];
@@ -1176,43 +1322,8 @@ function clearFiles(){pFiles=[];pTexts=[];pImages=[];document.getElementById('fb
 // ============================================================
 // UI HELPERS
 // ============================================================
-function generateSuggestions(text){
-  // Generate contextual follow-up suggestions based on Bella's response
-  const t=text.toLowerCase();
-  const suggestions=[];
+// generateSuggestions (AI-powered version defined above)
 
-  // Document/analysis context
-  if(t.includes('document')||t.includes('summary')||t.includes('report')||t.includes('pdf')||t.includes('analysis')){
-    suggestions.push('Extract all action items','Download as PDF','What are the key deadlines?');
-  }
-  // Travel context
-  else if(t.includes('flight')||t.includes('hotel')||t.includes('itinerary')||t.includes('travel')||t.includes('trip')){
-    suggestions.push('Build the full itinerary','Show hotel options','What is the budget estimate?');
-  }
-  // Email/calendar context
-  else if(t.includes('email')||t.includes('meeting')||t.includes('calendar')||t.includes('schedule')){
-    suggestions.push('Draft a reply','Add to my calendar','Show me my week ahead');
-  }
-  // Health context
-  else if(t.includes('health')||t.includes('doctor')||t.includes('medicine')||t.includes('hospital')){
-    suggestions.push('Remind me about this','Find nearby hospitals','Summarise for my doctor');
-  }
-  // Search/research context
-  else if(t.includes('search')||t.includes('found')||t.includes('result')||t.includes('according')){
-    suggestions.push('Tell me more','Save this as a report','What are the next steps?');
-  }
-  // General helpful suggestions
-  else{
-    const general=[
-      ['Tell me more','Summarise this','What should I do next?'],
-      ['Give me more details','Create a to-do list','How does this affect me?'],
-      ['Explain this simply','What are the key points?','Save this information'],
-    ];
-    const pick=general[Math.floor(Math.random()*general.length)];
-    suggestions.push(...pick);
-  }
-  return suggestions.slice(0,3);
-}
 
 function addSuggestions(suggestions, skipOnIdentity){
   if(skipOnIdentity)return;
@@ -1290,7 +1401,69 @@ function addDiv(){const d=document.createElement('div');d.className='date-div';d
 // ============================================================
 // VOICE
 // ============================================================
-function toggleVoiceMode(){continuousVoice=!continuousVoice;const tog=document.getElementById('voice-tog');if(continuousVoice){tog.classList.add('on');startContinuousMic();}else{tog.classList.remove('on');stopMic();}}
+function toggleVoiceMode(){
+  continuousVoice=!continuousVoice;
+  const tog=document.getElementById('voice-tog');
+  const mbtn=document.getElementById('mbtn');
+  if(continuousVoice){
+    tog.classList.add('on');
+    // Show listening alert immediately — don't wait for mic to start
+    document.getElementById('vbar').classList.add('on');
+    document.getElementById('vbar-lbl').textContent='Listening continuously...';
+    // Mic button hidden in Voice mode — Bella always listening
+    if(mbtn)mbtn.style.display='none';
+    // Request mic permission on FIRST voice toggle only
+    const _doStart=()=>{
+      startContinuousMic();
+      // Speak welcome ONCE per session — only if no prior text exchange has happened
+      if(!voiceWelcomeSpoken){
+        const hist=getHist();
+        const hasTextExchange=hist.some(h=>h.role==='user');
+        if(!hasTextExchange&&idState==='confirmed'){
+          const welcomeMsg=`I am listening, ${currentAddressedName}. Go ahead.`;
+          setTimeout(()=>speakTextDirect(welcomeMsg,'en'),400);
+        }
+        voiceWelcomeSpoken=true;
+      }
+    };
+    if(navigator.permissions){
+      navigator.permissions.query({name:'microphone'}).then(result=>{
+        if(result.state==='denied'){
+          // Option A — snap back to text
+          continuousVoice=false;tog.classList.remove('on');
+          if(mbtn)mbtn.style.display='';
+          document.getElementById('vbar').classList.remove('on');
+          bellaMsg('Microphone access is needed for Voice mode. You can enable it by clicking the 🔒 icon in your browser address bar, then allow microphone and refresh.');
+        } else {
+          _doStart();
+        }
+      }).catch(()=>_doStart());
+    } else {
+      _doStart();
+    }
+  } else {
+    tog.classList.remove('on');
+    // Show mic button again in text mode
+    if(mbtn)mbtn.style.display='';
+    document.getElementById('vbar').classList.remove('on');
+    stopMic();
+    // Clear restart watchdog
+    if(_recogRestartTimer){clearTimeout(_recogRestartTimer);_recogRestartTimer=null;}
+  }
+}
+// speakTextDirect — speaks regardless of toggle state (for system announcements)
+async function speakTextDirect(text,lang){
+  if(!cfg.e||!audioUnlocked)return;
+  const approvedVoices=['MzqUf1HbJ8UmQ0wUsx2p','1Z7Y8o9cvUeWq8oLKgMY','FDQcYNtvPtQjNlTyU3du','zRCVl5g50WOtvILI2Cxm'];
+  const voiceId=VOICES[lang]||VOICES.en;
+  if(!approvedVoices.includes(voiceId))return;
+  const clean=text.replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'').replace(/<[^>]+>/g,'').replace(/•/g,'').substring(0,4000);
+  try{
+    const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,{method:'POST',headers:{'xi-api-key':cfg.e,'Content-Type':'application/json'},body:JSON.stringify({text:clean,model_id:'eleven_multilingual_v2',voice_settings:{stability:0.75,similarity_boost:0.90,style:0.0,use_speaker_boost:true,speed:0.92}})});
+    if(!r.ok)return;
+    autoPlay(URL.createObjectURL(await r.blob()));
+  }catch{}
+}
 function toggleMic(){if(continuousVoice)return;listening?stopMic():startMic();}
 function startMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){bellaMsg('Voice input works best in Chrome on Android/desktop and Safari on iPhone.');return;}recog=new SR();recog.continuous=false;recog.interimResults=(idState==='confirmed');recog.lang='en-IN';
   recog.onstart=()=>{listening=true;document.getElementById('mbtn').classList.add('act');document.getElementById('vbar').classList.add('on');};
@@ -1314,12 +1487,34 @@ function startMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecogn
     }
     stopMic();
   };recog.onend=()=>stopMic();recog.start();}
-function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){continuousVoice=false;document.getElementById('voice-tog').classList.remove('on');return;}recog=new SR();// If in identity flow, use single-shot mode for reliability
+function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){continuousVoice=false;document.getElementById('voice-tog').classList.remove('on');return;}
+  // Clear any existing watchdog
+  if(_recogRestartTimer){clearTimeout(_recogRestartTimer);_recogRestartTimer=null;}
+  if(recog){try{recog.stop();}catch{}recog=null;}
+  recog=new SR();// If in identity flow, use single-shot mode for reliability
   if(idState!=='confirmed'){
     // Fall back to single mic for name capture — more accurate
     startMic();return;
   }
-  recog.continuous=true;recog.interimResults=false;recog.lang='en-IN';recog.onstart=()=>{listening=true;document.getElementById('vbar').classList.add('on');document.getElementById('vbar-lbl').textContent='Listening continuously...';document.getElementById('mbtn').classList.add('voice-on');};recog.onresult=e=>{
+  recog.continuous=true;recog.interimResults=false;recog.lang='en-IN';
+  recog.onstart=()=>{
+    listening=true;
+    document.getElementById('vbar').classList.add('on');
+    document.getElementById('vbar-lbl').textContent='Listening continuously...';
+    document.getElementById('mbtn').classList.add('voice-on');
+    // Watchdog: if recognition hasn't fired onresult in 25s, restart it
+    if(_recogRestartTimer)clearTimeout(_recogRestartTimer);
+    _recogRestartTimer=setTimeout(()=>{
+      if(continuousVoice&&listening){
+        console.log('Bella voice watchdog: restarting recognition');
+        startContinuousMic();
+      }
+    },25000);
+  };
+  recog.onresult=e=>{
+    // Reset watchdog on each result
+    if(_recogRestartTimer)clearTimeout(_recogRestartTimer);
+    _recogRestartTimer=setTimeout(()=>{if(continuousVoice&&listening)startContinuousMic();},25000);
     const r=e.results[e.results.length-1];
     const transcript=r[0].transcript;
     const ti=document.getElementById('ti');
@@ -1329,19 +1524,42 @@ function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSp
     if(curAudio&&!curAudio.paused){
       curAudio.pause();curAudio.currentTime=0;curAudio=null;
       document.getElementById('spk').style.display='none';
-      // Offer to continue after handling user input
       window._interruptedSpeech=true;
     }
     if(r.isFinal){send();}
   };
   recog.onerror=err=>{
+    if(_recogRestartTimer){clearTimeout(_recogRestartTimer);_recogRestartTimer=null;}
     if(err.error==='not-allowed'){
-      bellaMsg('Microphone access is blocked. Please click the 🔒 icon in your browser address bar, allow microphone, then refresh.');
+      // Option A — toggle snaps back to Text with clear message
       continuousVoice=false;
       document.getElementById('voice-tog').classList.remove('on');
+      document.getElementById('mbtn').style.display='';
+      document.getElementById('vbar').classList.remove('on');
+      bellaMsg('Microphone access is needed for Voice mode. You can enable it by clicking the 🔒 icon in your browser address bar, then allow microphone and refresh.');
+      return;
     }
-    if(err.error!=='no-speech')stopMic();
-  };recog.onend=()=>{if(continuousVoice)recog.start();};recog.start();}
+    if(err.error!=='no-speech'){
+      stopMic();
+      // Auto-restart after non-fatal error if still in voice mode
+      if(continuousVoice){
+        setTimeout(()=>{if(continuousVoice)startContinuousMic();},1000);
+      }
+    }
+  };
+  recog.onend=()=>{
+    if(_recogRestartTimer){clearTimeout(_recogRestartTimer);_recogRestartTimer=null;}
+    listening=false;
+    if(continuousVoice){
+      // Brief pause before restart to prevent tight crash loop
+      setTimeout(()=>{if(continuousVoice)startContinuousMic();},300);
+    }
+  };
+  try{recog.start();}catch(e){
+    // If start() throws (already started), wait and retry
+    setTimeout(()=>{if(continuousVoice)startContinuousMic();},500);
+  }
+}
 function stopMic(){listening=false;document.getElementById('mbtn').classList.remove('act','voice-on');document.getElementById('vbar').classList.remove('on');if(recog){recog.stop();recog=null;}}
 
 // ============================================================
@@ -1391,26 +1609,45 @@ function toggleRecord(){
       window._mediaRecorder.stop();
     }
     window._recording=false;
-    document.getElementById('rec-btn').style.color='';
+    // Reset button to grey circle
+    const icon=document.getElementById('rec-icon');
+    if(icon)icon.setAttribute('fill','var(--tsoft)');
+    // Remove disclosure banner
+    const banner=document.getElementById('rec-banner');
+    if(banner)banner.remove();
     return;
   }
-  // Start recording — announce to user first
-  const announcement='This conversation is being recorded for your reference.';
-  bellaMsg(announcement);speakText(announcement,'en');
+  // Start recording — show disclosure banner pinned at top of chat
+  const msgs=document.getElementById('msgs');
+  let banner=document.getElementById('rec-banner');
+  if(!banner){
+    banner=document.createElement('div');
+    banner.id='rec-banner';
+    banner.style.cssText='position:sticky;top:0;z-index:10;background:#FFF3CD;border:1px solid #FFC107;border-radius:10px;padding:8px 16px;font-size:12px;color:#856404;text-align:center;margin-bottom:8px;font-weight:500';
+    banner.textContent='🔴 This conversation is being recorded for your reference.';
+    msgs.insertBefore(banner,msgs.firstChild);
+    msgs.scrollTop=0;
+  }
+  // Red circle — recording active
+  const icon=document.getElementById('rec-icon');
+  if(icon){icon.setAttribute('fill','#E53E3E');icon.style.filter='drop-shadow(0 0 4px rgba(229,62,62,0.6))';}
   navigator.mediaDevices.getUserMedia({audio:true,video:false}).then(stream=>{
-    window._mediaRecorder=new MediaRecorder(stream);
+    // Use MP3-compatible format — widely supported
+    const mimeType=MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':
+                   MediaRecorder.isTypeSupported('audio/mpeg')?'audio/mpeg':'audio/webm';
+    const ext=mimeType.includes('mp4')?'mp4':mimeType.includes('mpeg')?'mp3':'mp3';
+    window._mediaRecorder=new MediaRecorder(stream,{mimeType});
     window._recChunks=[];
     window._mediaRecorder.ondataavailable=e=>{if(e.data.size>0)window._recChunks.push(e.data);};
     window._mediaRecorder.onstop=()=>{
-      const blob=new Blob(window._recChunks,{type:'audio/webm'});
+      const blob=new Blob(window._recChunks,{type:mimeType});
       const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download='bella-recording-'+Date.now()+'.webm';a.click();
-      bellaMsg('Your recording has been saved and downloaded.');
+      const a=document.createElement('a');a.href=url;a.download='bella-recording-'+Date.now()+'.'+ext;a.click();
+      bellaMsg('Your recording has been saved and downloaded as an '+ext.toUpperCase()+' file.');
       stream.getTracks().forEach(t=>t.stop());
     };
     window._mediaRecorder.start();
     window._recording=true;
-    document.getElementById('rec-btn').style.color='red';
   }).catch(()=>bellaMsg('Microphone access is needed for recording. Please allow it in your browser settings.'));
 }
 function toggleTheme(){isDark=!isDark;isDark?applyDark():applyLight();localStorage.setItem('b_dark',isDark?'1':'0');}
@@ -1431,6 +1668,209 @@ function applyLight(){
 function timeOfDay(){const h=new Date().getHours();return h<12?'morning':h<17?'afternoon':'evening';}
 function hkey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}
 function arz(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+// ============================================================
+// USER MENU
+// ============================================================
+function toggleUserMenu(){
+  const panel=document.getElementById('user-menu-panel');
+  const overlay=document.getElementById('user-menu-overlay');
+  const isOpen=panel.classList.contains('open');
+  if(isOpen){closeUserMenu();}
+  else{
+    // Sync avatar and name
+    document.getElementById('ump-av').textContent=(currentAddressedName||'?').substring(0,2).toUpperCase();
+    document.getElementById('ump-name').textContent=currentAddressedName||'Guest';
+    panel.classList.add('open');
+    overlay.style.display='block';
+  }
+}
+function closeUserMenu(){
+  document.getElementById('user-menu-panel').classList.remove('open');
+  document.getElementById('user-menu-overlay').style.display='none';
+}
+function toggleUmpSection(id){
+  const body=document.getElementById(id);
+  const sectionKey=id.replace('sec-','');
+  const arrow=document.getElementById('arr-'+sectionKey);
+  const isOpen=body.classList.contains('open');
+  // Close all sections first
+  document.querySelectorAll('.ump-sec-body').forEach(el=>el.classList.remove('open'));
+  document.querySelectorAll('.ump-arrow').forEach(el=>el.classList.remove('open'));
+  // Open clicked if it was closed
+  if(!isOpen){body.classList.add('open');if(arrow)arrow.classList.add('open');}
+}
+function showWhatsNew(){
+  bellaMsg(`**What's New in Bella**
+
+✅ **Just Added:**
+- Multi-language voice — English, Hindi, Bengali, Marathi
+- Document reading — PDF, Word, Excel, PowerPoint
+- Web search with source links
+- Thread system — multiple conversations
+- Copy, retry, and edit any message
+- Dark and Light theme
+- Voice interrupt — speak to stop Bella mid-sentence
+- Recording — save your conversations as MP3
+
+🔜 **Coming Very Soon:**
+- Gmail OAuth login — no more name typing
+- Persistent memory across sessions
+- Full user profiles`);
+}
+function showComingInPhase2(){
+  bellaMsg(`**Coming in Phase 2**
+
+**Phase 2A — Authentication & Memory**
+Gmail OAuth login, one-time mobile OTP, full user profiles, persistent memory in Google Sheets
+
+**Phase 2B — Write & Act**
+Send emails via Gmail, WhatsApp messages, write to Google Calendar, expense tracking, proactive monitoring
+
+**Phase 2C — Create & Download**
+Create PDF, Word, Excel, PowerPoint files for download, chart generation, image transformation via Imagen 3, travel agent
+
+**Phase 2D — Intelligence**
+Google Meet recording and minutes, voice biometrics, LiveKit real-time voice pipeline
+
+**Phase 2E — BKC Chat**
+Private family and friends chat network built inside Bella — invitation only, end-to-end encrypted, with Bella as the silent AI layer`);
+}
+function showMyProfile(){
+  if(!currentProfileKey||currentProfileKey==='_guest'){bellaMsg('Please introduce yourself to Bella first — she will remember you.');return;}
+  const p=PROFILES[currentProfileKey]||{};
+  const bg=BACKGROUNDS[currentProfileKey]||'';
+  bellaMsg(`**My Profile**
+
+**Name:** ${p.firstName||currentAddressedName} ${p.lastName||''}
+**Preferred Name:** ${currentAddressedName}
+**Group:** ${p.group||'Guest'}
+**Background:** ${bg}
+
+*Profile editing and photo upload are coming in Phase 2A.*`);
+}
+function changePreferredName(){
+  if(!currentProfileKey){bellaMsg('Please introduce yourself to Bella first.');return;}
+  const newName=prompt('What would you like Bella to call you?',currentAddressedName||'');
+  if(newName&&newName.trim()){
+    currentAddressedName=newName.trim();
+    if(currentProfileKey&&!currentProfileKey.startsWith('_'))localStorage.setItem('b_pref_'+currentProfileKey,currentAddressedName);
+    document.getElementById('sb-uname').textContent=currentAddressedName;
+    document.getElementById('sb-av').textContent=currentAddressedName.substring(0,2).toUpperCase();
+    bellaMsg(`Done! I will call you ${currentAddressedName} from now on.`);
+  }
+}
+function showLanguagePreference(){
+  bellaMsg(`**Language Preference**
+
+Bella automatically detects your language from what you type or say:
+
+🇬🇧 **English** — default
+🇮🇳 **Hindi** — type or speak in Devanagari or Hinglish
+🇧🇩 **Bengali** — type in Bengali script
+🇮🇳 **Marathi** — type in Marathi Devanagari
+
+Bella switches voice automatically — no setting needed. Just speak or type in your language.
+
+*Manual language lock is coming in Phase 2A.*`);
+}
+function showMyMemory(){
+  if(!userMemory.memories){
+    bellaMsg(`**My Memory**
+
+Bella has not stored any specific memories for you yet in this session.
+
+As you share things — preferences, family details, important dates — Bella remembers them. Say *"Remember that..."* at any time.
+
+*Persistent memory across sessions is coming in Phase 2A with Gmail login.*`);
+    return;
+  }
+  bellaMsg(`**My Memory — What Bella Remembers**
+
+${userMemory.memories}
+
+*To add a memory, say "Remember that..." at any time.*
+*To clear all memories, use Data & Privacy → Clear All Threads.*`);
+}
+function clearAllThreads(){
+  if(!confirm('This will permanently delete ALL your conversations. This cannot be undone.\n\nAre you sure?'))return;
+  threads={};currentThreadId=null;
+  localStorage.removeItem('b_threads');
+  document.getElementById('msgs').innerHTML='';
+  renderThreadList();
+  bellaMsg('All conversations have been cleared. Starting fresh.');
+}
+function deleteAccount(){
+  if(!confirm('DELETE ACCOUNT\n\nThis will permanently delete:\n• All your conversations\n• Your preferred name\n• All stored preferences\n\nThis cannot be undone. Are you absolutely sure?'))return;
+  if(!confirm('Final confirmation: Delete everything and reset Bella completely?'))return;
+  // Clear all stored data
+  const keysToRemove=[];
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&(k.startsWith('b_')||k.startsWith('bella_')))keysToRemove.push(k);}
+  keysToRemove.forEach(k=>localStorage.removeItem(k));
+  threads={};currentThreadId=null;currentProfileKey=null;currentAddressedName=null;
+  sheetsToken=null;userMemory={addressedName:'',memories:'',lastSeen:'',proactiveFollowUp:''};
+  // Reload app completely
+  location.reload();
+}
+
+// ============================================================
+// USER MENU
+// ============================================================
+
+
+function toggleMenuSection(id){
+  const body=document.getElementById(id);
+  const sectionKey=id.replace('sec-','');
+  const arrow=document.getElementById('arr-'+sectionKey);
+  const isOpen=body.classList.contains('open');
+  // Close all sections first
+  document.querySelectorAll('.umenu-items').forEach(el=>el.classList.remove('open'));
+  document.querySelectorAll('.umenu-arrow').forEach(el=>el.style.transform='');
+  if(!isOpen){
+    body.classList.add('open');
+    if(arrow)arrow.style.transform='rotate(180deg)';
+  }
+}
+function showUserMenuPage(page){
+  closeUserMenu();
+  const name=currentAddressedName||'there';
+  const pages={
+    'about-bella':`**About Bella**\n\nBella is a personal AI companion built to make everyday life easier, more organised, and more connected. She listens, remembers, researches, creates, and acts — always with your approval. Bella speaks your language, knows your world, and grows with you.\n\n**Bella's Memory Promise**\nNothing Bella learns about you will ever disappear unless you choose to delete it. Every conversation, every preference, every correction you share is stored permanently in your personal space — tied to your verified Gmail, accessible from any device, any browser, any thread.\n\n**What Bella Can Do Today:**\n- Analyse documents — PDF, Word, Excel, PowerPoint, images\n- Search the web with verified source links\n- Remember your preferences, family, and important details\n- Speak in English, Hindi, Bengali, and Marathi\n- Work seamlessly across all your devices`,
+    'whats-new':`**What's New in Bella**\n\n- Voice mode fully rebuilt — listens continuously, restarts automatically\n- Four language voices — English, Hindi, Bengali, Marathi\n- Recording now saves as MP3 — plays on every device\n- New user menu — this menu you're reading right now\n- Permissions on demand — mic, location, camera only when needed\n- Identity system improved — voice fragment filtering\n- Inline file chips — PDF, Word, Excel, PowerPoint supported`,
+    'coming-phase2':`**Coming in Phase 2**\n\n- **Gmail** — send, read, and reply to emails through Bella\n- **WhatsApp** — send messages to your contacts\n- **Google Calendar** — read and create events\n- **Document Creation** — download PDF, Word, Excel, PowerPoint files\n- **Chart Generation** — turn your data into beautiful charts\n- **Image Transform** — Ghibli, cartoon, sketch — any style you want\n- **Travel Agent** — flights, hotels, full itineraries\n- **BKC Chat** — private family and friends network\n- **Voice Biometrics** — Bella recognises your voice automatically\n- **Proactive Monitoring** — Bella alerts you before you ask`,
+    'my-profile':`**My Profile**\n\nName: ${currentAddressedName||'Not set'}\nProfile: ${currentProfileKey&&PROFILES[currentProfileKey]?PROFILES[currentProfileKey].firstName+' '+PROFILES[currentProfileKey].lastName:'Guest'}\nGroup: ${currentProfileKey&&PROFILES[currentProfileKey]?PROFILES[currentProfileKey].group:'—'}\nMemory: ${userMemory.memories?'Active — '+userMemory.memories.split('|').length+' stored items':'No memories yet'}\nLast session: ${userMemory.lastSeen||'This is your first session'}\n\nTo update your profile, Gmail login is coming in Phase 2.`,
+    'change-name':`**Change Preferred Name**\n\nYour current preferred name is: **${currentAddressedName||'not set'}**\n\nTo change how Bella addresses you, simply tell Bella your new preferred name in the conversation — say "Bella, please call me [name] from now on" and she will update immediately.`,
+    'notifications':`**Notification Settings**\n\nProactive notifications and alerts are coming in Phase 2. Bella will be able to alert you about calendar events, important emails, and reminders — all without you having to ask.`,
+    'language-pref':`**Language Preference**\n\nBella automatically detects your language from what you type or say. She currently supports:\n\n- English (Katie voice)\n- Hindi (Tripti voice)\n- Bengali (Sumi voice)\n- Marathi (Devanagari detection)\n\nSimply speak or type in any of these languages and Bella will respond in the same language.`,
+    'my-memory':`**My Memory**\n\n${userMemory.memories?'Bella remembers the following about you:\n\n'+userMemory.memories.split(' | ').map((m,i)=>`${i+1}. ${m}`).join('\n'):'Bella does not have any stored memories for you yet. As you share things — preferences, family details, important notes — she will remember them here.'}`,
+    'download-data':`**Download My Data**\n\nFull data export is coming in Phase 2. This will include all your conversation threads, stored memories, and profile information in a single downloadable file.\n\nYour data is currently stored in Google Sheets linked to your Gmail — it is private, encrypted, and only accessible by you.`,
+    'terms':`**Terms of Use**\n\nBella is currently in private beta testing for family and close friends of Savio Abraham. By using Bella you agree that:\n\n- Bella is an AI assistant and may make mistakes — always verify important information\n- You will not share your access with anyone outside the invited group\n- Conversations may be used to improve Bella's responses\n- Full Terms of Use will be published at Phase 2 launch`,
+    'privacy':`**Privacy Policy**\n\nBella takes your privacy seriously:\n\n- Your conversations are processed by Google Gemini — subject to Google's privacy policy\n- Voice is processed by ElevenLabs for audio synthesis\n- Memories are stored in your personal Google Sheet — only you can access it\n- Bella never shares one user's information with another\n- Full Privacy Policy will be published at Phase 2 launch`,
+    'security':`**Security Information**\n\n- Bella uses Google OAuth for authentication — your password is never stored by Bella\n- All API communications use HTTPS encryption\n- Your ElevenLabs voice API key is stored on your device only\n- The backend runs on Google Cloud Run — enterprise-grade security\n- Voice IDs will move to the secure backend in the next update`,
+  };
+  const content=pages[page]||'This section is coming soon.';
+  bellaMsg(content);
+}
+function clearAllThreadsConfirm(){
+  closeUserMenu();
+  if(!confirm('This will permanently delete ALL your conversations. This cannot be undone.\n\nAre you sure you want to clear all threads?'))return;
+  if(!confirm('Last confirmation — delete all conversations?'))return;
+  threads={};currentThreadId=null;
+  saveThreadsLocal();renderThreadList();
+  document.getElementById('msgs').innerHTML='';
+  bellaMsg('All your conversation threads have been cleared. Your memory and profile are still intact.');
+}
+function deleteAccountConfirm(){
+  closeUserMenu();
+  if(!confirm('⚠️ DELETE ACCOUNT\n\nThis will permanently delete your profile, all memories, and all conversation threads. This cannot be undone.\n\nAre you sure?'))return;
+  if(!confirm('Final confirmation — permanently delete your Bella account and all data?'))return;
+  // Clear all local data
+  localStorage.removeItem('b_e');localStorage.removeItem('b_dark');localStorage.removeItem('b_threads');
+  Object.keys(PROFILES).forEach(k=>localStorage.removeItem('b_pref_'+k));
+  threads={};currentProfileKey=null;currentAddressedName=null;idState='splash';
+  bellaMsg('Your account and all data have been cleared from this device. To complete deletion from Google Sheets, please contact Savio.');
+  setTimeout(()=>location.reload(),3000);
+}
+
 window.onload=()=>{};
 </script>
 </body>
