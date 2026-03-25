@@ -426,7 +426,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
     </div>
 
     <span class="vlbl" id="vbar-lbl">Listening...</span></div>
-    <div id="spk"><div class="spkd"></div><span>Bella is speaking</span></div>
+    <div id="spk"><div class="spkd"></div><span>Bella is Speaking</span></div>
 
     <div class="inp-area">
       <!-- Input box — file chips + textarea together like ChatGPT/Gemini -->
@@ -774,7 +774,7 @@ function renderThreadList(){
     const preview=t.hist.length>0?t.hist[t.hist.length-1].parts[0].text.substring(0,40)+'...':'Start a conversation';
     el.innerHTML=`<div class="thread-icon">💬</div>
       <div class="thread-info">
-        <div class="thread-name" id="tname_${id}">${t.name}</div>
+        <div class="thread-name" id="tname_${id}">${t.name.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>
         <div class="thread-preview">${preview}</div>
       </div>
       <div class="thread-actions">
@@ -893,6 +893,18 @@ async function showGmailGate(){
       document.getElementById('gmail-input').style.borderColor='#cc0000';
     }
   });
+  // Block Escape key — gate cannot be dismissed by keyboard
+  gate.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){
+      e.preventDefault();e.stopPropagation();
+      document.getElementById('gmail-error').textContent='Please verify your Gmail to access Bella.';
+    }
+  });
+  document.addEventListener('keydown',function escBlock(e){
+    if(e.key==='Escape'&&document.getElementById('gmail-gate')){
+      e.preventDefault();e.stopPropagation();
+    }
+  },{capture:true});
   document.body.appendChild(gate);
   setTimeout(()=>document.getElementById('gmail-input').focus(),300);
 }
@@ -1311,6 +1323,10 @@ async function speakAlways(text,lang){
 }
 
 async function _callBackendSpeak(text,lang,always){
+  // Sanitise lang — only allow known language codes
+  const allowedLangs=['en','hi','bn','mr'];
+  if(!allowedLangs.includes(lang))lang='en';
+  if(!audioUnlocked)return;
   const clean=text.replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'').replace(/<[^>]+>/g,'').replace(/•/g,'').substring(0,always?500:4000);
   if(!clean.trim())return;
   try{
@@ -1803,14 +1819,14 @@ function startSelectedRecording(){
       if(rb){rb.style.background='#1a1a1a';rb.style.borderColor='#1a1a1a';}
       window._recording=false;
     };
-    window._mediaRecorder.start();
-    window._recording=true;
+    // Disclosure BEFORE recording starts — required
+    const discMsg=type==='voice'?'🔴 Voice recording started. Your audio is being captured.':type==='screen'?'🔴 Screen recording started. Your screen is being captured.':'🔴 Video recording started. Your camera and audio are being captured.';
+    bellaMsg(discMsg);
     // Button turns red — dot and REC stay white (set in HTML)
     const rb=document.getElementById('rec-btn');
     if(rb){rb.style.background='#cc0000';rb.style.borderColor='#cc0000';}
-    // Disclosure in chat
-    const discMsg=type==='voice'?'🔴 Voice recording started. Your audio is being captured.':type==='screen'?'🔴 Screen recording started. Your screen is being captured.':'🔴 Video recording started. Your camera and audio are being captured.';
-    bellaMsg(discMsg);
+    window._mediaRecorder.start();
+    window._recording=true;
   }).catch(err=>{
     // Hard gate — no permission, no recording
     const msg=type==='voice'?'Microphone access was denied. Recording cannot start without permission.':type==='screen'?'Screen capture access was denied. Recording cannot start without permission.':'Camera or microphone access was denied. Recording cannot start without permission.';
