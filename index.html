@@ -425,7 +425,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
       </div>
     </div>
 
-    <span class="vlbl" id="vbar-lbl">Listening...</span></div>
     <div id="spk"><div class="spkd"></div><span>Bella is Speaking</span></div>
 
     <div class="inp-area">
@@ -705,16 +704,23 @@ function setHist(h){if(currentThreadId&&threads[currentThreadId])threads[current
 // GOOGLE SHEETS MEMORY
 // ============================================================
 async function initGoogleAuth(){
+  // Silent token request only — never show OAuth popup on launch
+  // Sheets memory is a background feature, Bella works without it
   return new Promise((resolve)=>{
     if(typeof google==='undefined'){resolve(false);return;}
     try{
       const client=google.accounts.oauth2.initTokenClient({
         client_id:OAUTH_CLIENT_ID,
         scope:'https://www.googleapis.com/auth/spreadsheets',
-        callback:(r)=>{if(r.access_token){sheetsToken=r.access_token;setMemBadge('💾 On');resolve(true);}else{setMemBadge('📱');resolve(false);}}
+        prompt:'none',
+        callback:(r)=>{
+          if(r.access_token){sheetsToken=r.access_token;setMemBadge('💾 On');resolve(true);}
+          else{setMemBadge('📱 Local');resolve(false);}
+        },
+        error_callback:(e)=>{setMemBadge('📱 Local');resolve(false);}
       });
-      client.requestAccessToken({prompt:''});
-    }catch{setMemBadge('📱');resolve(false);}
+      client.requestAccessToken({prompt:'none'});
+    }catch(e){setMemBadge('📱 Local');resolve(false);}
   });
 }
 function setMemBadge(t){const el=document.getElementById('mem-badge');if(el)el.textContent=t;}
@@ -932,10 +938,13 @@ function verifyGmailGate(){
 }
 
 function initAndLaunch(){
-  setMemBadge('🔄');
-  initGoogleAuth().then(ok=>setMemBadge(ok?'💾 On':'📱 Local'));
+  setMemBadge('📱 Local');
   loadThreadsLocal();
   document.getElementById('main').classList.add('show');
+  // Sheets auth runs silently in background — never blocks UI or shows popup
+  setTimeout(()=>{
+    try{initGoogleAuth().then(ok=>setMemBadge(ok?'💾 On':'📱 Local')).catch(()=>{});}catch(e){}
+  },2000);
   renderThreadList();
   addDiv();
   idState='awaiting_name';
