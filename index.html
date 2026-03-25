@@ -88,18 +88,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 /* ============================================================
    SETUP SCREEN
    ============================================================ */
-#setup{display:none;position:fixed;inset:0;background:var(--cream);align-items:center;justify-content:center;z-index:100;overflow-y:auto;padding:32px 20px}
-#setup.show{display:flex}
-.setup-inner{width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center;gap:24px}
-.setup-logo{width:72px;height:72px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:600;color:var(--gold);box-shadow:var(--shadow-lg)}
+
+
+
+
 .setup-title h1{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:var(--navy);text-align:center}
 .setup-title p{font-size:13px;color:var(--tmid);margin-top:4px;text-align:center;line-height:1.6}
-.setup-card{width:100%;background:var(--white);border-radius:20px;border:1px solid var(--border);padding:28px;display:flex;flex-direction:column;gap:18px;box-shadow:var(--shadow)}
+
 .setup-card label{display:block;font-size:10px;font-weight:500;color:var(--tsoft);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:5px}
 .setup-card input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--cream);outline:none;transition:border-color .2s,box-shadow .2s}
 .setup-card input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(200,169,110,0.12)}
 .setup-card input::placeholder{color:var(--tsoft)}
-.setup-note{font-size:11px;color:var(--tmid);line-height:1.6;background:var(--goldpale);border-radius:10px;padding:12px 14px;border:1px solid rgba(200,169,110,0.2)}
+
 .btn-primary{width:100%;padding:14px;background:var(--navy);color:var(--gold);border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:background .2s,transform .1s;letter-spacing:.3px}
 .btn-primary:hover{background:var(--navy2)}
 .btn-primary:active{transform:scale(.98)}
@@ -162,6 +162,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .chat-topbar{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;background:var(--white)}
 .chat-topbar-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
 .sb-toggle{width:32px;height:32px;border-radius:8px;background:var(--cream);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s;display:none}
+.topbar-sep-rhs{width:1px;height:20px;background:var(--border);margin:0 8px;flex-shrink:0}
 .sb-toggle:hover{background:var(--goldpale)}
 .chat-thread-name{font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chat-thread-sub{font-size:11px;color:var(--tsoft);margin-top:1px}
@@ -170,6 +171,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .topbar-listening.on{display:flex}
 .listening-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);animation:lisDot 1.2s ease infinite}
 .listening-txt{font-size:10px;color:var(--navy);font-weight:600}
+@keyframes vwv{0%,100%{height:4px}50%{height:14px}}
 @keyframes lisDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
 #mbtn-wave{display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;border:1px solid rgba(200,169,110,.5);background:var(--goldpale)}
 #mbtn-wave.on{display:flex}
@@ -241,7 +243,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .inp-row{display:flex;align-items:flex-end;gap:8px;padding:10px 10px 10px 16px}
 #ti{flex:1;border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;resize:none;min-height:80px;max-height:200px;line-height:1.6;padding:4px 0}
 #ti::placeholder{color:var(--tsoft);font-size:14px}
-.inp-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;padding-bottom:4px}
+.inp-actions{display:flex;align-items:flex-end;gap:6px;flex-shrink:0;padding-bottom:4px}
 .ibtn{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--cream);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0}
 .ibtn:hover{background:var(--goldpale);border-color:rgba(200,169,110,.5);color:var(--navy)}
 .ibtn.act{background:var(--navy);border-color:var(--navy)}
@@ -254,7 +256,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .inp-footer{display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 4px;gap:8px}
 .inp-box{background:var(--cream);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;transition:border-color .2s;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .inp-box:focus-within{border-color:rgba(200,169,110,.5);box-shadow:0 0 0 3px rgba(200,169,110,.08)}
-.disc{font-size:9px;color:var(--tlight)}
+.disc{font-size:9px;color:#3a3a3a;font-weight:500}
+#inp-listen-indicator{display:none;flex-direction:column;align-items:center;gap:2px;padding:2px 4px}
+#inp-listen-indicator.show{display:flex}
 .voice-toggle{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--tsoft);cursor:pointer;user-select:none}
 .toggle-sw{width:32px;height:17px;border-radius:9px;background:var(--border);position:relative;transition:background .2s;flex-shrink:0}
 .toggle-sw.on{background:var(--navy)}
@@ -323,17 +327,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
 
 <!-- SETUP -->
-<div id="setup">
-  <div class="setup-inner">
-    <div class="setup-logo">B</div>
-    <div class="setup-title"><h1>Bella.ai</h1></div>
-    <div class="setup-card">
-      <div><label>ElevenLabs API Key</label><input type="password" id="se" placeholder="Paste your ElevenLabs API key"></div>
-      <div class="setup-note">Your key is saved securely on this device only. Bella's brain runs on Google Cloud — your conversations are private and never stored.</div>
-      <button class="btn-primary" onclick="startBella()">Open Bella</button>
-    </div>
-  </div>
-</div>
+<!-- Setup screen removed — ElevenLabs on backend -->
 
 <!-- MAIN APP -->
 <div id="main">
@@ -404,28 +398,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
           <div class="chat-thread-sub" id="topbar-sub">Ask Bella anything</div>
         </div>
       </div>
-      <div class="topbar-listening" id="topbar-listening">
-        <div class="listening-dot"></div>
-        <span class="listening-txt">Listening</span>
-      </div>
+      <div class="topbar-sep-rhs"></div>
       <div class="topbar-actions">
-        <button class="topbar-btn" onclick="openUserMenu()" title="My Account" style="font-size:15px">👤</button>
         <button class="topbar-btn" id="search-btn" onclick="toggleSearch()" title="Search conversations">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--tmid)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
-        <button class="topbar-btn" onclick="renameCurrentThread()" title="Rename conversation">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--tmid)" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        </button>
-        <button class="topbar-btn" onclick="clearCurrentThread()" title="Clear conversation">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--tmid)" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-        </button>
+        <button class="topbar-btn" onclick="openUserMenu()" title="My Account" style="font-size:15px">👤</button>
         <button class="topbar-btn" id="summarise-btn" onclick="summariseThread()" title="Summarise this conversation" style="display:none;background:var(--goldpale);border-color:rgba(200,169,110,.4)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
         </button>
       </div>
     </div>
 
-    <div id="search-overlay" style="display:none;position:absolute;top:56px;left:0;right:0;background:var(--white);border-bottom:1px solid var(--border);padding:10px 16px;z-index:30;box-shadow:0 4px 12px rgba(0,0,0,.08)">
+    <div id="search-overlay" style="display:none;position:absolute;top:56px;left:50%;transform:translateX(-50%);width:300px;max-width:90vw;background:var(--white);border:1px solid var(--border);border-top:none;border-radius:0 0 14px 14px;padding:10px 14px;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.12)">
       <div style="display:flex;align-items:center;gap:8px;background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:6px 12px">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--tsoft)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input id="search-input" type="text" placeholder="Search conversations..." oninput="doSearch(this.value)" style="flex:1;border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none">
@@ -440,7 +425,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
       </div>
     </div>
 
-    <div id="vbar" style="position:absolute;bottom:90px;left:50%;transform:translateX(-50%);z-index:20"><div class="vwave"><span></span><span></span><span></span><span></span><span></span></div><span class="vlbl" id="vbar-lbl">Listening...</span></div>
+    <span class="vlbl" id="vbar-lbl">Listening...</span></div>
     <div id="spk"><div class="spkd"></div><span>Bella is speaking</span></div>
 
     <div class="inp-area">
@@ -450,17 +435,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
         <div class="inp-row">
           <textarea id="ti" rows="1" placeholder="Ask Bella anything…" onkeydown="hkey(event)" oninput="arz(this);handleTypingDetection()"></textarea>
           <div class="inp-actions">
-            <button type="button" class="ibtn rec-ibtn" id="rec-btn" onclick="toggleRecord()" title="Start/Stop Recording" style="flex-direction:column;gap:1px;width:42px;height:36px;border-radius:10px">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
-              <span style="font-size:8px;font-weight:700;letter-spacing:.5px;font-family:'DM Sans',sans-serif">REC</span>
+            <button type="button" class="ibtn rec-ibtn" id="rec-btn" onclick="toggleRecord()" title="Start/Stop Recording" style="flex-direction:column;gap:1px;width:42px;height:36px;border-radius:10px;background:#1a1a1a;border-color:#1a1a1a;color:#fff">
+              <div style="width:8px;height:8px;border-radius:50%;background:#fff;flex-shrink:0"></div>
+              <span style="font-size:8px;font-weight:700;letter-spacing:.5px;font-family:'DM Sans',sans-serif;color:#fff">REC</span>
             </button>
             <input type="file" id="fi" accept=".pdf,.txt,.doc,.docx,.csv,.xlsx,.xls,.pptx,.jpg,.jpeg,.png,.webp,.mp4,.mov,.mp3,.wav,.m4a,.aac,.zip,.tar,.gz" multiple onchange="hfile(event)">
-            <button type="button" class="ibtn ibtn-attach" onclick="document.getElementById('fi').click()" title="Attach files — PDF, Word, Excel, PowerPoint, Images" style="border-radius:10px;padding:0 10px;width:auto;gap:5px;font-size:11px;color:var(--tsoft);font-family:'DM Sans',sans-serif">
+            <button type="button" class="ibtn ibtn-attach" onclick="document.getElementById('fi').click()" title="Attach files — PDF, Word, Excel, PowerPoint, Images" style="border-radius:10px;padding:0 10px;width:auto;gap:5px;font-size:11px;color:#1a1a1a;font-family:'DM Sans',sans-serif">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span>Add files</span>
             </button>
-            <div id="mbtn-wave" title="Listening...">
-              <div class="vwave"><span></span><span></span><span></span><span></span><span></span></div>
+            <div id="inp-listen-indicator" style="display:none;flex-direction:column;align-items:center;gap:3px;position:relative">
+              <span id="mic-status-lbl" style="font-size:9px;font-weight:600;color:var(--gold);white-space:nowrap;letter-spacing:.3px">Bella is Listening</span>
+              <div id="inp-wave" style="display:flex;align-items:flex-end;gap:2px;height:16px">
+                <span style="width:3px;background:var(--gold);border-radius:2px;animation:vwv .6s ease infinite;animation-delay:0s"></span>
+                <span style="width:3px;background:var(--gold);border-radius:2px;animation:vwv .6s ease infinite;animation-delay:.1s"></span>
+                <span style="width:3px;background:var(--gold);border-radius:2px;animation:vwv .6s ease infinite;animation-delay:.2s"></span>
+                <span style="width:3px;background:var(--gold);border-radius:2px;animation:vwv .6s ease infinite;animation-delay:.3s"></span>
+                <span style="width:3px;background:var(--gold);border-radius:2px;animation:vwv .6s ease infinite;animation-delay:.4s"></span>
+              </div>
             </div>
             <button type="button" class="ibtn" id="mbtn" onclick="toggleMic()" title="Voice input">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--tsoft)" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -473,15 +465,50 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
       </div>
       <div class="inp-footer">
         <div style="display:flex;align-items:center;gap:3px">
-          <span style="font-size:9px;color:var(--tsoft)">Light</span>
+          <span style="font-size:9px;color:#1a1a1a;font-weight:500">Light</span>
           <div onclick="toggleTheme()" id="theme-btn" style="width:28px;height:16px;border-radius:8px;background:var(--border);cursor:pointer;display:flex;align-items:center;padding:0 2px;transition:background .2s" title="Light / Dark">
             <div id="theme-knob" style="width:12px;height:12px;border-radius:50%;background:var(--gold);transition:transform .2s;transform:translateX(0)"></div>
           </div>
-          <span style="font-size:9px;color:var(--tsoft)">Dark</span>
+          <span style="font-size:9px;color:#1a1a1a;font-weight:500">Dark</span>
         </div>
-        <div class="disc" style="flex:1;text-align:center">* Bella may make mistakes — always confirm important actions. No conversations stored externally.</div>
-        <div class="voice-toggle" onclick="toggleVoiceMode()"><span>Text</span><div class="toggle-sw" id="voice-tog"></div><span>Voice</span></div>
+        <div class="disc" style="flex:1;text-align:center">* Bella may make mistakes — Always Confirm important actions. No conversations stored externally.</div>
+        <div class="voice-toggle" onclick="toggleVoiceMode()"><span style="color:#1a1a1a;font-weight:500">Text</span><div class="toggle-sw" id="voice-tog"></div><span style="color:#1a1a1a;font-weight:500">Voice</span></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- RECORDING MODAL -->
+<div id="rec-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:16px;padding:24px;width:300px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">What would you like to record?</div>
+    <div style="font-size:12px;color:var(--tsoft);margin-bottom:18px">Select one option to continue</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:10px;border:1px solid var(--border);transition:background .15s" id="rec-opt-voice-lbl">
+        <input type="radio" name="rec-type" value="voice" id="rec-opt-voice" style="accent-color:var(--gold);width:16px;height:16px">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Voice</div>
+          <div style="font-size:10px;color:var(--tsoft)">Records audio from your microphone</div>
+        </div>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:10px;border:1px solid var(--border);transition:background .15s" id="rec-opt-screen-lbl">
+        <input type="radio" name="rec-type" value="screen" id="rec-opt-screen" style="accent-color:var(--gold);width:16px;height:16px">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Screen</div>
+          <div style="font-size:10px;color:var(--tsoft)">Records your screen with system audio</div>
+        </div>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:10px;border:1px solid var(--border);transition:background .15s" id="rec-opt-video-lbl">
+        <input type="radio" name="rec-type" value="video" id="rec-opt-video" style="accent-color:var(--gold);width:16px;height:16px">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Video</div>
+          <div style="font-size:10px;color:var(--tsoft)">Records camera video with microphone audio</div>
+        </div>
+      </label>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeRecModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+      <button onclick="startSelectedRecording()" style="flex:1;padding:10px;border-radius:10px;border:none;background:#1a1a1a;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Start Recording</button>
     </div>
   </div>
 </div>
@@ -555,7 +582,7 @@ const BACKEND='https://bella-backend-299648732006.asia-south1.run.app';
 const OAUTH_CLIENT_ID='299648732006-dbctq5hd6p5b5k402nakkq6mn801e462.apps.googleusercontent.com';
 const SHEET_ID='1C0k3XX8SpNv4K1cnxiaW5iHr2XTi-hFANLqOTm_DnsY';
 const SHEETS_API='https://sheets.googleapis.com/v4/spreadsheets';
-const VOICES={en:'MzqUf1HbJ8UmQ0wUsx2p',hi:'1Z7Y8o9cvUeWq8oLKgMY',bn:'FDQcYNtvPtQjNlTyU3du',mr:'zRCVl5g50WOtvILI2Cxm'};
+// Voice IDs managed on backend — not stored in frontend
 
 // ============================================================
 // PROFILES
@@ -833,29 +860,66 @@ function closeSidebar(){document.getElementById('sidebar').classList.remove('mob
 async function splashTap(){
   // Unlock audio context with user gesture
   try{const ctx=new(window.AudioContext||window.webkitAudioContext)();ctx.resume();}catch(e){}
-  // Hide splash, show loading state briefly, then trigger OAuth
+  audioUnlocked=true;
+  if(localStorage.getItem('b_dark')==='1')applyDark();
   document.getElementById('splash').style.opacity='0';
   document.getElementById('splash').style.transition='opacity .3s';
   setTimeout(()=>{
     document.getElementById('splash').style.display='none';
-    // Trigger Gmail OAuth — Bella launches only after successful login
-    initGoogleAuth();
+    // Gmail gate is the only entry — returning users skip it
+    const savedGmail=localStorage.getItem('b_gmail');
+    if(savedGmail){cfg.userEmail=savedGmail;initAndLaunch();}
+    else{showGmailGate();}
   },300);
-  audioUnlocked=true;
-  document.getElementById('splash').classList.add('hide');
-  if(localStorage.getItem('b_dark')==='1')applyDark();
-  const e=localStorage.getItem('b_e');
-  if(e){cfg.e=e;await initAndLaunch();}
-  else{document.getElementById('setup').classList.add('show');}
 }
-async function startBella(){
-  const e=document.getElementById('se').value.trim();
-  if(!e){alert('Please enter your ElevenLabs API key to continue.');return;}
-  cfg.e=e;localStorage.setItem('b_e',e);
-  document.getElementById('setup').classList.remove('show');
-  await initAndLaunch();
+async function showGmailGate(){
+  // Show a simple Gmail verification UI — cannot be dismissed
+  const gate=document.createElement('div');
+  gate.id='gmail-gate';
+  gate.style.cssText='position:fixed;inset:0;background:var(--cream);display:flex;align-items:center;justify-content:center;z-index:150;';
+  gate.innerHTML=`
+    <div style="background:var(--white);border-radius:20px;padding:32px 28px;width:320px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.12);text-align:center">
+      <div style="font-size:28px;margin-bottom:12px">✉️</div>
+      <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px">Verify your Gmail</div>
+      <div style="font-size:12px;color:var(--tsoft);margin-bottom:20px;line-height:1.5">Enter your Gmail address to access Bella. This keeps your conversations private and tied to your account.</div>
+      <input id="gmail-input" type="email" placeholder="yourname@gmail.com" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);font-size:13px;background:var(--cream);color:var(--text);box-sizing:border-box;margin-bottom:12px;outline:none" oninput="this.style.borderColor='var(--border)'">
+      <div id="gmail-error" style="font-size:11px;color:#cc0000;min-height:16px;margin-bottom:8px"></div>
+      <button onclick="verifyGmailGate()" style="width:100%;padding:11px;border-radius:10px;border:none;background:var(--navy);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">Open Bella</button>
+    </div>`;
+  // Prevent closing by clicking outside
+  gate.addEventListener('click',function(e){
+    if(e.target===gate){
+      document.getElementById('gmail-error').textContent='Please verify your Gmail to access Bella.';
+      document.getElementById('gmail-input').style.borderColor='#cc0000';
+    }
+  });
+  document.body.appendChild(gate);
+  setTimeout(()=>document.getElementById('gmail-input').focus(),300);
 }
-async function initAndLaunch(){
+
+function verifyGmailGate(){
+  const inp=document.getElementById('gmail-input');
+  const val=inp.value.trim().toLowerCase();
+  const err=document.getElementById('gmail-error');
+  if(!val||!val.includes('@')||!val.includes('.')){
+    err.textContent='Please enter a valid Gmail address.';
+    inp.style.borderColor='#cc0000';
+    return;
+  }
+  if(!val.endsWith('@gmail.com')&&!val.includes('gmail')){
+    err.textContent='Please use a Gmail address (@gmail.com).';
+    inp.style.borderColor='#cc0000';
+    return;
+  }
+  // Store and proceed
+  cfg.userEmail=val;
+  localStorage.setItem('b_gmail',val);
+  const gate=document.getElementById('gmail-gate');
+  if(gate){gate.style.opacity='0';gate.style.transition='opacity .3s';setTimeout(()=>gate.remove(),300);}
+  initAndLaunch();
+}
+
+function initAndLaunch(){
   setMemBadge('🔄');
   initGoogleAuth().then(ok=>setMemBadge(ok?'💾 On':'📱 Local'));
   loadThreadsLocal();
@@ -1160,7 +1224,6 @@ function removeSuggestions(){
 }
 
 
-async 
 async function send(){
   const inp=document.getElementById('ti');
   const text=inp.value.trim();
@@ -1243,42 +1306,47 @@ async function callBella(useSearch,memCtx){
 // ELEVENLABS
 // ============================================================
 async function speakAlways(text,lang){
-  // Speaks regardless of voice toggle state — for greetings and system messages
-  if(!cfg.e||!audioUnlocked)return;
-  const approvedVoices=['MzqUf1HbJ8UmQ0wUsx2p','1Z7Y8o9cvUeWq8oLKgMY','FDQcYNtvPtQjNlTyU3du','zRCVl5g50WOtvILI2Cxm'];
-  const voiceId=VOICES[lang]||VOICES.en;
-  if(!approvedVoices.includes(voiceId)){return speakAlways(text,'en');}
-  const clean=text.replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'').replace(/<[^>]+>/g,'').replace(/•/g,'').substring(0,500);
+  if(!audioUnlocked)return;
+  await _callBackendSpeak(text,lang,true);
+}
+
+async function _callBackendSpeak(text,lang,always){
+  const clean=text.replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'').replace(/<[^>]+>/g,'').replace(/•/g,'').substring(0,always?500:4000);
+  if(!clean.trim())return;
   try{
-    const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,{method:'POST',headers:{'xi-api-key':cfg.e,'Content-Type':'application/json'},body:JSON.stringify({text:clean,model_id:'eleven_multilingual_v2',voice_settings:{stability:0.75,similarity_boost:0.90,style:0.0,use_speaker_boost:true,speed:0.92}})});
-    if(!r.ok)return;
+    setSpeakingState(true);
+    const r=await fetch(BACKEND+'/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:clean,lang:lang||'en'})});
+    if(!r.ok){setSpeakingState(false);console.warn('Bella /speak:',r.status);return;}
     const blob=await r.blob();
     const url=URL.createObjectURL(blob);
-    const audio=new Audio(url);
-    audio.play().catch(()=>{});
-  }catch(e){}
+    curAudio=new Audio(url);
+    curAudio.onended=()=>{curAudio=null;setSpeakingState(false);};
+    curAudio.onerror=()=>{curAudio=null;setSpeakingState(false);};
+    curAudio.play().catch(()=>{setSpeakingState(false);});
+  }catch(e){setSpeakingState(false);}
+}
+
+function setSpeakingState(speaking){
+  const lbl=document.getElementById('mic-status-lbl');
+  const wave=document.getElementById('inp-wave');
+  if(lbl){
+    lbl.textContent=speaking?'Bella is Speaking':'Bella is Listening';
+    lbl.style.color=speaking?'var(--navy)':'var(--gold)';
+  }
+  if(wave){
+    const spans=wave.querySelectorAll('span');
+    spans.forEach(s=>{
+      s.style.animationPlayState=speaking?'paused':'running';
+      s.style.background=speaking?'var(--tsoft)':'var(--gold)';
+      s.style.height=speaking?'2px':'';
+    });
+  }
 }
 
 async function speakText(text,lang){
-  // Only skip speech if explicitly in text mode (toggle is OFF)
   if(!continuousVoice)return;
-  if(!cfg.e||!audioUnlocked)return;
-  // Always verify voiceId is one of our 4 approved voices — never allow unknown voice
-  const approvedVoices=['MzqUf1HbJ8UmQ0wUsx2p','1Z7Y8o9cvUeWq8oLKgMY','FDQcYNtvPtQjNlTyU3du','zRCVl5g50WOtvILI2Cxm'];
-  const voiceId=VOICES[lang]||VOICES.en;
-  if(!approvedVoices.includes(voiceId)){
-    console.warn('Bella: Unknown voice ID detected — falling back to English Katie');
-    return speakText(text,'en');
-  }
-  const clean=text.replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'').replace(/<[^>]+>/g,'').replace(/•/g,'').substring(0,4000);
-  try{
-    const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,{method:'POST',headers:{'xi-api-key':cfg.e,'Content-Type':'application/json'},body:JSON.stringify({text:clean,model_id:'eleven_multilingual_v2',voice_settings:{stability:0.75,similarity_boost:0.90,style:0.0,use_speaker_boost:true,speed:0.92}})});
-    if(!r.ok){
-      // If voice request fails, don't silently fail — log it
-      console.warn('Bella voice error:',r.status,'voice:',voiceId,'lang:',lang);
-      return;
-    }autoPlay(URL.createObjectURL(await r.blob()));
-  }catch{}
+  if(!audioUnlocked)return;
+  await _callBackendSpeak(text,lang,false);
 }
 function autoPlay(url){if(curAudio){curAudio.pause();curAudio=null;}const a=new Audio(url);curAudio=a;document.getElementById('spk').classList.add('on');a.play().catch(()=>{});a.onended=()=>{document.getElementById('spk').classList.remove('on');curAudio=null;};}
 
@@ -1476,50 +1544,87 @@ function addDiv(){const d=document.createElement('div');d.className='date-div';d
 // VOICE
 // ============================================================
 function toggleVoiceMode(){
-  continuousVoice=!continuousVoice;
-  const tog=document.getElementById('voice-tog');
-  const mbtn=document.getElementById('mbtn');
-  const wave=document.getElementById('mbtn-wave');
-  const tl=document.getElementById('topbar-listening');
-
-  if(continuousVoice){
-    // Voice ON
-    tog.classList.add('on');
-    if(mbtn)mbtn.style.display='none';
-    if(wave)wave.classList.add('on');
-    if(tl)tl.classList.add('on');
-    startContinuousMic();
-
-    // Announcement — always on toggle, never on mic button
-    const name=currentAddressedName&&idState==='confirmed'?', '+currentAddressedName:'';
-    const announcement='Voice mode activated — I can speak from here'+name+'.';
-
-    // Situation A: identity not yet confirmed — speak announcement + greeting
-    if(idState!=='confirmed'){
-      speakAlways(announcement,'en');
-      // Speak the greeting question so user can respond by voice
-      setTimeout(()=>{
-        const greetEl=document.querySelector('#msgs .mbub');
-        const greetText=greetEl?greetEl.innerText||greetEl.textContent:'Hello! I am Bella. May I know who I am speaking with today?';
-        speakAlways(greetText.substring(0,200),'en');
-      },1500);
+  if(!continuousVoice){
+    // ── Switching TO Voice ──
+    // Check mic permission first — request if not yet granted
+    if(!window._micPermGranted){
+      navigator.mediaDevices.getUserMedia({audio:true})
+        .then(s=>{
+          s.getTracks().forEach(t=>t.stop());
+          window._micPermGranted=true;
+          _activateVoiceMode();
+        })
+        .catch(()=>{
+          alert('Microphone access is required to use Voice mode. Please allow microphone access in your browser settings and try again.');
+          // Revert toggle visual
+          document.getElementById('voice-tog').classList.remove('on');
+        });
     } else {
-      // Situation B or C: identity confirmed — speak announcement only, never repeat history
-      speakAlways(announcement,'en');
+      _activateVoiceMode();
     }
   } else {
-    // Voice OFF — silent immediately
-    tog.classList.remove('on');
-    if(mbtn)mbtn.style.display='';
-    if(wave)wave.classList.remove('on');
-    if(tl)tl.classList.remove('on');
+    // ── Switching TO Text ──
+    continuousVoice=false;
+    document.getElementById('voice-tog').classList.remove('on');
+    document.getElementById('mbtn').style.display='';
+    // Hide listening indicator
+    _setListenIndicator(false);
     stopMic();
-    // Stop any ongoing speech
+    // Stop any ongoing speech — silent immediately
     if(curAudio){curAudio.pause();curAudio.currentTime=0;curAudio=null;}
     document.getElementById('spk').style.display='none';
   }
 }
-function toggleMic(){if(continuousVoice)return;listening?stopMic():startMic();}
+
+function _activateVoiceMode(){
+  continuousVoice=true;
+  document.getElementById('voice-tog').classList.add('on');
+  // Replace mic button with wave indicator
+  document.getElementById('mbtn').style.display='none';
+  _setListenIndicator(true);
+  setSpeakingState(false); // starts in listening state
+
+  // Build announcement
+  const name=currentAddressedName&&idState==='confirmed'?', '+currentAddressedName:'';
+  const announcement='Voice mode activated — I can speak from here'+name+'.';
+
+  if(idState!=='confirmed'){
+    // Situation A — before identity
+    speakAlways(announcement,'en');
+    setTimeout(()=>{
+      const greetEl=document.querySelector('#msgs .mbub');
+      const greetText=greetEl?greetEl.innerText||greetEl.textContent:"Hello! I'm Bella. May I know who I'm speaking with today?";
+      speakAlways(greetText.substring(0,200),'en');
+    },1500);
+  } else {
+    // Situation B — after identity
+    speakAlways(announcement,'en');
+  }
+  startContinuousMic();
+}
+
+function _setListenIndicator(show){
+  const ind=document.getElementById('inp-listen-indicator');
+  if(ind) ind.style.display=show?'flex':'none';
+}
+function toggleMic(){
+  if(continuousVoice)return;
+  if(listening){
+    stopMic();
+    _setListenIndicator(false);
+  } else {
+    // Request mic permission first time
+    if(!window._micPermGranted){
+      navigator.mediaDevices.getUserMedia({audio:true})
+        .then(s=>{s.getTracks().forEach(t=>t.stop());window._micPermGranted=true;startMic();_setListenIndicator(true);setSpeakingState(false);})
+        .catch(()=>bellaMsg('Microphone access is needed. Please allow it in your browser settings.'));
+    } else {
+      startMic();
+      _setListenIndicator(true);
+      setSpeakingState(false);
+    }
+  }
+}
 function startMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){bellaMsg('Voice input works best in Chrome on Android/desktop and Safari on iPhone.');return;}
   // Request mic permission only when first used — not on launch
   if(!window._micPermGranted){
@@ -1527,7 +1632,7 @@ function startMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecogn
       .then(s=>{s.getTracks().forEach(t=>t.stop());window._micPermGranted=true;})
       .catch(()=>{});
   }recog=new SR();recog.continuous=false;recog.interimResults=(idState==='confirmed');recog.lang='en-IN';
-  recog.onstart=()=>{listening=true;document.getElementById('mbtn').classList.add('act');document.getElementById('vbar').classList.add('on');};
+  recog.onstart=()=>{listening=true;document.getElementById('mbtn').classList.add('act');};
   recog.onresult=e=>{
     const r=e.results[0];
     const t=r[0].transcript;
@@ -1553,7 +1658,7 @@ function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSp
     // Fall back to single mic for name capture — more accurate
     startMic();return;
   }
-  recog.continuous=true;recog.interimResults=false;recog.lang='en-IN';recog.onstart=()=>{listening=true;document.getElementById('vbar').classList.add('on');document.getElementById('vbar-lbl').textContent='Listening continuously...';document.getElementById('mbtn').classList.add('voice-on');};recog.onresult=e=>{
+  recog.continuous=true;recog.interimResults=false;recog.lang='en-IN';recog.onstart=()=>{listening=true;_setListenIndicator(true);setSpeakingState(false);document.getElementById('mbtn').classList.add('voice-on');};recog.onresult=e=>{
     const r=e.results[e.results.length-1];
     const transcript=r[0].transcript;
     const ti=document.getElementById('ti');
@@ -1576,7 +1681,9 @@ function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSp
     }
     if(err.error!=='no-speech')stopMic();
   };recog.onend=()=>{if(continuousVoice)recog.start();};recog.start();}
-function stopMic(){listening=false;document.getElementById('mbtn').classList.remove('act','voice-on');document.getElementById('vbar').classList.remove('on');if(recog){recog.stop();recog=null;}}
+function stopMic(){listening=false;document.getElementById('mbtn').classList.remove('act','voice-on');if(recog){recog.stop();recog=null;}
+  if(!continuousVoice)_setListenIndicator(false);
+}
 
 // ============================================================
 // THEME
@@ -1625,37 +1732,94 @@ function toggleRecord(){
       window._mediaRecorder.stop();
     }
     window._recording=false;
-    const rbStop=document.getElementById('rec-btn');
-    if(rbStop){rbStop.style.color='';rbStop.style.background='';}
+    // Button returns to default black
+    const rb=document.getElementById('rec-btn');
+    if(rb){rb.style.background='#1a1a1a';rb.style.borderColor='#1a1a1a';}
     return;
   }
-  // Start recording — announce to user first
-  const announcement='This conversation is being recorded for your reference.';
-  bellaMsg(announcement);speakText(announcement,'en');
-  navigator.mediaDevices.getUserMedia({audio:true,video:false}).then(stream=>{
+  // Show recording type modal
+  document.getElementById('rec-modal-overlay').style.display='flex';
+  // Highlight selected option
+  document.querySelectorAll('[id^="rec-opt-"][id$="-lbl"]').forEach(lbl=>{
+    lbl.addEventListener('click',function(){
+      document.querySelectorAll('[id^="rec-opt-"][id$="-lbl"]').forEach(l=>l.style.background='');
+      this.style.background='var(--goldpale)';
+    });
+  });
+}
+
+function closeRecModal(){
+  document.getElementById('rec-modal-overlay').style.display='none';
+  document.querySelectorAll('input[name="rec-type"]').forEach(r=>r.checked=false);
+  document.querySelectorAll('[id^="rec-opt-"][id$="-lbl"]').forEach(l=>l.style.background='');
+}
+
+function startSelectedRecording(){
+  const selected=document.querySelector('input[name="rec-type"]:checked');
+  if(!selected){alert('Please select what you would like to record.');return;}
+  const type=selected.value;
+  closeRecModal();
+
+  // Request appropriate permission based on type
+  let streamPromise;
+  if(type==='voice'){
+    streamPromise=navigator.mediaDevices.getUserMedia({audio:true,video:false});
+  } else if(type==='screen'){
+    streamPromise=navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
+  } else if(type==='video'){
+    streamPromise=navigator.mediaDevices.getUserMedia({audio:true,video:true});
+  }
+
+  streamPromise.then(stream=>{
+    // Permission granted — start recording
+    const mimeType=type==='voice'?'audio/webm':'video/webm';
+    const ext=type==='voice'?'mp3':'mp4';
     window._mediaRecorder=new MediaRecorder(stream);
     window._recChunks=[];
+    window._recType=type;
     window._mediaRecorder.ondataavailable=e=>{if(e.data.size>0)window._recChunks.push(e.data);};
     window._mediaRecorder.onstop=()=>{
-      const hasVideo=window._recChunks.some(c=>c.type&&c.type.includes('video'));
-      const mimeType=hasVideo?'video/mp4':'audio/mpeg';
-      const ext=hasVideo?'mp4':'mp3';
-      const blob=new Blob(window._recChunks,{type:'audio/webm'});
+      const blob=new Blob(window._recChunks,{type:mimeType});
       const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download='bella-recording-'+Date.now()+'.'+(window._recChunks.some(c=>c.type&&c.type.includes('video'))?'mp4':'mp3');a.click();
-      bellaMsg('Your recording has been saved and downloaded.');
       stream.getTracks().forEach(t=>t.stop());
+      // Show saving message
+      bellaMsg('Your recording is being saved…');
+      // Show clip in chat with download + save buttons
+      setTimeout(()=>{
+        const msgDiv=document.createElement('div');
+        msgDiv.className='msg bella-msg';
+        msgDiv.innerHTML=`<div class="mbub" style="background:var(--goldpale);border:1px solid rgba(200,169,110,.3);padding:12px 14px">
+          <div style="font-size:12px;font-weight:600;color:var(--navy);margin-bottom:8px">🎙️ Recording saved</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a href="${url}" download="bella-recording-${Date.now()}.${ext}" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:#1a1a1a;color:#fff;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none">⬇ Download</a>
+            <button onclick="saveRecordingToDrive('${url}','bella-recording-${Date.now()}.${ext}')" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--gold);color:#fff;border-radius:8px;font-size:11px;font-weight:600;border:none;cursor:pointer">☁ Save to Google Drive</button>
+          </div>
+        </div>`;
+        document.getElementById('msgs').appendChild(msgDiv);
+        msgDiv.scrollIntoView({behavior:'smooth'});
+      },500);
+      // Reset REC button to default black
+      const rb=document.getElementById('rec-btn');
+      if(rb){rb.style.background='#1a1a1a';rb.style.borderColor='#1a1a1a';}
+      window._recording=false;
     };
     window._mediaRecorder.start();
     window._recording=true;
-    // Visual — REC button turns red
+    // Button turns red — dot and REC stay white (set in HTML)
     const rb=document.getElementById('rec-btn');
-    if(rb){rb.style.color='red';rb.style.background='rgba(220,0,0,.08)';}
-    // Disclosure — always announce before any recording
-    const disc='This conversation is being recorded for your reference.';
-    bellaMsg(disc);
-    if(continuousVoice)speakText(disc,'en');
-  }).catch(()=>bellaMsg('Microphone access is needed for recording. Please allow it in your browser settings.'));
+    if(rb){rb.style.background='#cc0000';rb.style.borderColor='#cc0000';}
+    // Disclosure in chat
+    const discMsg=type==='voice'?'🔴 Voice recording started. Your audio is being captured.':type==='screen'?'🔴 Screen recording started. Your screen is being captured.':'🔴 Video recording started. Your camera and audio are being captured.';
+    bellaMsg(discMsg);
+  }).catch(err=>{
+    // Hard gate — no permission, no recording
+    const msg=type==='voice'?'Microphone access was denied. Recording cannot start without permission.':type==='screen'?'Screen capture access was denied. Recording cannot start without permission.':'Camera or microphone access was denied. Recording cannot start without permission.';
+    alert(msg);
+  });
+}
+
+function saveRecordingToDrive(url,filename){
+  bellaMsg('Saving to Google Drive… (Coming in Phase 2)');
 }
 function toggleTheme(){isDark=!isDark;isDark?applyDark():applyLight();localStorage.setItem('b_dark',isDark?'1':'0');}
 function applyDark(){
