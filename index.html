@@ -17,17 +17,20 @@
   --navy: #1B2A4A;      /* Your Original Background */
   --cream: #FAF8F4;     /* Your Original Background */
   --gold: #C8A96E;      /* Logo Gold */
-  --black: #000000;     /* New Bubble/Icon Background */
+  --black: #000000;     /* New Component Background */
   --white: #FFFFFF;
   --active-red: #FF0000;
+  --sidebar-w: 280px;
 }
+
+body, html { margin: 0; padding: 0; height: 100dvh; background-color: var(--cream); font-family: 'DM Sans', sans-serif; overflow: hidden; }
 
 /* 1 & 2. ICONS & PROFILE ICONS - Black/Gold */
 .sb-logo, .sb-user-av, .mav, .topbar-btn, .ibtn, .sbtn, .rec-btn, .mic-btn {
     background: var(--black) !important;
     border: 1px solid var(--gold) !important;
     color: var(--gold) !important;
-    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
 }
 svg { stroke: var(--gold) !important; }
 
@@ -43,6 +46,7 @@ svg { stroke: var(--gold) !important; }
     background: var(--black) !important;
     color: var(--gold) !important;
     border: 1px solid var(--gold) !important;
+    padding: 12px 16px; border-radius: 18px; font-size: 14px;
 }
 
 /* 6. SUGGESTION BUBBLES - Black/Gold */
@@ -50,6 +54,7 @@ svg { stroke: var(--gold) !important; }
     background: var(--black) !important;
     border: 1px solid var(--gold) !important;
     color: var(--gold) !important;
+    border-radius: 20px; padding: 6px 12px; font-size: 12px; cursor: pointer;
 }
 
 /* 8. TOGGLE BOUNDARY FIX */
@@ -70,12 +75,78 @@ svg { stroke: var(--gold) !important; }
     color: var(--white) !important;
 }
 
-/* RETAINING YOUR ORIGINAL ARCHITECTURE */
-body.light-mode { background-color: var(--cream); }
-#sidebar { background: var(--navy); border-right: 1px solid var(--gold); }
+/* ARCHITECTURE */
+#main { display: flex; height: 100vh; }
+#sidebar { width: var(--sidebar-w); background: var(--navy); border-right: 1px solid var(--gold); color: var(--gold); transition: transform 0.3s; }
+#chat-area { flex: 1; display: flex; flex-direction: column; background: var(--cream); }
+#msgs { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+.inp-area { padding: 15px 20px; border-top: 1px solid var(--gold); background: var(--cream); }
+.inp-box { border: 1px solid var(--gold); border-radius: 20px; display: flex; padding: 5px 15px; gap: 10px; background: #fff; }
+#ti { flex: 1; background: transparent; border: none; outline: none; font-size: 14px; padding: 10px 0; }
 </style>
 </head>
 <body>
 
+<div id="main">
+  <div id="sidebar">
+    <div class="sb-header" style="padding:20px; display:flex; align-items:center; gap:10px;">
+      <div class="sb-logo" style="width:36px; height:36px;">B</div>
+      <div style="font-family:'Cormorant Garamond',serif; font-size:20px;">Bella.ai</div>
+    </div>
+    <div style="padding:20px;">
+      <div style="font-size:10px; margin-bottom:10px;">ACTIVE PROFILE</div>
+      <div id="profile-card" style="display:flex; align-items:center; gap:12px; border:1px solid var(--gold); padding:10px; border-radius:12px;">
+        <div class="sb-user-av" id="sb-av" style="width:32px; height:32px;">?</div>
+        <div><div id="sb-uname" style="font-weight:600;">Welcome</div><div style="font-size:10px;">Online</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="chat-area">
+    <header class="chat-topbar">
+      <div style="font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:600;">Bella</div>
+      <button class="topbar-btn" style="width:36px; height:36px;">☀️</button>
+    </header>
+    <div id="msgs"></div>
+    <div class="inp-area">
+      <div class="inp-box">
+        <button class="rec-btn" id="rec-btn" style="width:35px; height:35px; font-size:10px; font-weight:700;" onclick="this.classList.toggle('active')">REC</button>
+        <textarea id="ti" placeholder="Speak to Bella..." rows="1" onkeydown="hkey(event)"></textarea>
+        <button class="mic-btn" id="mic-btn" style="width:35px; height:35px;" onclick="this.classList.toggle('active')">🎤</button>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+        <div style="font-size:10px; color:var(--navy); opacity:0.6;">* Stage 1: Luxury Light Mode</div>
+        <div class="voice-toggle">
+          <span style="font-size:10px; font-weight:600; color:var(--navy);">Text</span>
+          <div class="toggle-sw" onclick="this.classList.toggle('on')"></div>
+          <span style="font-size:10px; font-weight:600; color:var(--navy);">Voice</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   LOGIC PRESERVED FOR BACKEND
+   ============================================================ */
+function hkey(e) { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
+function send() { 
+    const ti = document.getElementById('ti');
+    if(!ti.value.trim()) return;
+    const m = document.getElementById('msgs');
+    const u = document.createElement('div');
+    u.innerHTML = `<div style="display:flex; justify-content:flex-end; margin-bottom:10px;"><div class="mbub">${ti.value}</div></div>`;
+    m.appendChild(u);
+    ti.value = '';
+    m.scrollTop = m.scrollHeight;
+}
+window.onload = () => {
+    const m = document.getElementById('msgs');
+    const b = document.createElement('div');
+    b.innerHTML = `<div style="display:flex; margin-bottom:10px;"><div class="mbub">Hello Savio. My buttons and bubbles are updated, and the layout is back!</div></div>`;
+    m.appendChild(b);
+};
+</script>
 </body>
 </html>
