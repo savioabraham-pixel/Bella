@@ -1972,7 +1972,9 @@ function toggleMenuSection(id){
   }
 }
 function showAboutBella(){
-  bellaMsg(`*When days feel heavy and time moves fast,*
+  bellaMsg(`**About Bella**
+
+*When days feel heavy and time moves fast,*
 *when too much builds and nothing seems to last,*
 *Bella brings calm where chaos grew —*
 *a quiet space that thinks with you.*
@@ -1992,107 +1994,33 @@ function showAboutBella(){
 *Bella is there, steady and true…*
 *just a tap away, always with you.*
 
-— *Bella, your personal AI companion* 🤍`);
+---
 
-  // Show About Bella suggestion chips
-  setTimeout(()=>{
-    const chips=[
-      {label:"Bella's Memory Promise", fn:"showMemoryPromise()"},
-      {label:"What Bella Can Do", fn:"showWhatBellaDoes()"},
-      {label:"Coming Soon ✨", fn:"showComingSoon()"}
-    ];
-    const wrap=document.createElement('div');
-    wrap.className='suggestions';
-    wrap.style.cssText='display:flex;flex-wrap:wrap;gap:8px;padding:4px 16px 12px 56px';
-    chips.forEach(chip=>{
-      const btn=document.createElement('button');
-      btn.className='sug-chip';
-      btn.textContent=chip.label;
-      btn.onclick=()=>{ wrap.remove(); eval(chip.fn); };
-      wrap.appendChild(btn);
-    });
-    document.getElementById('msgs').appendChild(wrap);
-    document.getElementById('msgs').scrollTop=document.getElementById('msgs').scrollHeight;
-  },400);
-}
+**Bella's Memory Promise**
 
-function showMemoryPromise(){
-  const msg=`**Bella's Memory Promise** 🔒
-
-Nothing Bella learns about you is ever lost — unless you choose to delete it.
-
-Every conversation, every preference, every correction you share is stored permanently in your personal space — tied to your verified Gmail, accessible from any device, any browser, any thread.
-
-Start a new conversation and Bella remembers everything. Switch devices and your full profile is right there waiting for you.
-
-Bella doesn't just assist. She remembers. And she never forgets anything you've asked her to hold on to — until you tell her to let go.`;
-  bellaMsg(msg);
-  if(continuousVoice) speakText(msg,'en');
-}
-
-function showWhatBellaDoes(){
-  const msg=`**What Bella Can Do** ✨
-
-Right now, today — here is what I can do for you:
-
-🧠 **Think & Respond** — Powered by Gemini 2.5 Flash, I can reason, analyse, research and hold deep conversations on any topic.
-
-🎙️ **Speak** — I speak in English, Hindi, Bengali, and Marathi using natural voice powered by ElevenLabs.
-
-💾 **Remember** — Everything you share stays in my memory permanently — tied to your Gmail and accessible across all your devices.
-
-🔍 **Search the Web** — I search for current information, news, prices, and facts in real time with source links.
-
-📄 **Read Documents** — Upload PDFs, Word files, Excel sheets, PowerPoints, images and I will analyse, summarise and answer questions about them.
-
-📝 **Create & Convert** — I can help you write, draft, and structure content ready for download.
-
-🌐 **Work Across Devices** — Open me on your phone, laptop, or tablet — I am always the same Bella with the same memory.`;
-  bellaMsg(msg);
-  if(continuousVoice) speakText(msg,'en');
-}
-
-function showComingSoon(){
-  const msg=`**The Road Ahead — Bella's Journey** 🚀
+Nothing Bella learns about you is ever lost unless you choose to delete it. Every conversation, preference, and detail is securely stored in your personal space — tied to your verified Gmail and accessible across devices, browsers, and conversations. Bella doesn't just assist. She remembers.
 
 ---
 
-**Bella (Now) — Reactive Companion**
-I listen, respond, remember, search the web, read your documents, and speak in 4 languages. This is where the foundation is being laid — intelligence first.
+**What Bella Can Do**
+- Analyse documents — PDF, Word, Excel, PowerPoint, images
+- Search the web with verified sources
+- Remember preferences, people, and important details
+- Speak in English, Hindi, Bengali, and Marathi
+- Work seamlessly across all your devices
 
 ---
 
-**Bella 1.0 — Upgraded Intelligence**
-Memory deepens. Document intelligence expands — PDF, DOCX, XLSX, PPTX creation and conversion. Charts and graphs from your data. PWA install on home screen. Full voice biometrics. The brain gets smarter.
+**Coming Next**
+- Send emails and WhatsApp messages on your behalf
+- Create documents, reports, and presentations
+- Plan travel — flights, hotels, full itineraries
+- Generate and transform images
+- Connect with family and friends via BKC Chat
 
 ---
 
-**Bella 2.0 — Agentic Bella (Proactive)**
-This is the transformation. Bella stops waiting and starts watching.
-
-• 📧 Read and send emails on your behalf
-• 📅 Manage your Google Calendar — alerts, conflicts, reminders
-• 💬 Draft WhatsApp messages for your approval
-• ✈️ Plan complete trips — flights, hotels, itineraries, budgets
-• 🖼️ Generate and transform images — Pixar, anime, sketches, headshots
-• 📊 Create presentations, reports, Excel sheets from conversation
-• 🔔 Proactive morning briefings — Gmail + Calendar + news spoken to you
-• 💬 BKC Chat — private, encrypted chat for family and close friends
-• 🔄 Convert documents between any format — PDF to DOCX, XLSX to PDF and more
-• 🗺️ Google Maps integration — local search, routes, recommendations
-
----
-
-**Bella 3.0 — Holographic Bella**
-The intelligence built in 1.0 and 2.0 justifies the body. Bella gets a physical presence in your space — a WebXR holographic interface with a 3D avatar, surface anchoring, and gesture control.
-
-Just like JARVIS — the intelligence came first. The interface followed. That is exactly what we are building.
-
----
-
-*Each version builds the foundation for the next. By the time Bella 3.0 arrives, she will have the brain, the memory, and the agency to truly deserve that holographic form.* 🤍`;
-  bellaMsg(msg);
-  if(continuousVoice) speakText(msg,'en');
+*Bella — Your personal AI companion.*`);
 }
 function showWhatsNew(){
   bellaMsg("**What's New in Bella**\n\n- Suggestion chips after every response\n- Thread summarise button after 5 exchanges\n- Live transcription while speaking\n- Notification sound on open\n- Source links on all web searches\n- Coming Soon shutter with 18 upcoming features\n- Retry, Edit, Copy on every message\n- Recording capability with MP3 download\n- Search across all conversations");
