@@ -1962,7 +1962,9 @@ function showNewUserGate() {
               <button onclick="photoZoom(0.1)" title="Zoom in" style="background:none;border:none;color:#D4AF37;cursor:pointer;font-size:14px;padding:2px 4px">+</button>
               <button onclick="photoZoom(-0.1)" title="Zoom out" style="background:none;border:none;color:#D4AF37;cursor:pointer;font-size:14px;padding:2px 4px">−</button>
               <button onclick="photoCentre()" title="Centre" style="background:none;border:none;color:#D4AF37;cursor:pointer;font-size:10px;padding:2px 4px">⊡</button>
-              <button onclick="savePhoto()" title="Save photo" style="background:#D4AF37;border:none;color:#0B2545;cursor:pointer;font-size:10px;padding:3px 8px;border-radius:8px;font-weight:700;font-family:'DM Sans',sans-serif">Save ✓</button>
+              <button onclick="savePhoto()" title="Save photo" style="background:none;border:none;color:#D4AF37;cursor:pointer;padding:2px 4px;display:flex;align-items:center;justify-content:center">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </button>
               <button onclick="clearPhoto()" title="Remove" style="background:none;border:none;color:rgba(212,175,55,0.5);cursor:pointer;font-size:10px;padding:2px 4px">✕</button>
             </div>
           </div>
@@ -2438,22 +2440,22 @@ function photoCentre() {
 
 function savePhoto() {
   saveCroppedPhoto();
-  // Show a brief confirmation
+  // Hide toolbar
   const toolbar = document.getElementById('reg-photo-toolbar');
-  if (toolbar) {
-    const saveBtn = toolbar.querySelector('button');
-    if (saveBtn && saveBtn.title === 'Save photo') {
-      saveBtn.textContent = 'Saved ✓';
-      saveBtn.style.background = '#2E8B57';
-      setTimeout(() => {
-        saveBtn.textContent = 'Save ✓';
-        saveBtn.style.background = '#D4AF37';
-      }, 1500);
-    }
-  }
-  // Lock the image — stop dragging cursor hint
+  if (toolbar) toolbar.style.display = 'none';
+  // Lock border
   const container = document.getElementById('reg-photo-crop-container');
   if (container) container.style.border = '2px solid rgba(212,175,55,0.8)';
+  // Show "Image saved" toast
+  const toast = document.createElement('div');
+  toast.textContent = 'Image saved';
+  toast.style.cssText = "position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#0B2545;color:#D4AF37;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;padding:8px 20px;border-radius:20px;border:1px solid rgba(212,175,55,0.4);z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);opacity:0;transition:opacity .3s";
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => { toast.style.opacity = '1'; });
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 2000);
 }
 
 function clearPhoto() {
