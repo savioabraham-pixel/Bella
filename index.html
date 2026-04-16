@@ -1885,11 +1885,15 @@ async function showRegistrationGate() {
   // Show main app blurred in background
   document.getElementById('main').classList.add('show');
 
-  // Check if returning user
-  const savedUser = localStorage.getItem('b_registered_user');
-  if (savedUser) {
-    const userData = JSON.parse(savedUser);
-    showReturningUserGate(userData);
+  // Check if returning user — use lightweight recogniser (survives tab close)
+  // b_registered_user is cleared on tab close for security — b_returning_email is not
+  const returningEmail = localStorage.getItem('b_returning_email');
+  const returningName = localStorage.getItem('b_returning_name') || '';
+  const returningMobile = localStorage.getItem('b_returning_mobile') || '';
+  if (returningEmail) {
+    // Reconstruct minimal userData for the returning gate — full data loaded after OTP
+    const minimalUser = { email: returningEmail, preferredName: returningName, fullName: returningName, mobile: returningMobile };
+    showReturningUserGate(minimalUser);
     return;
   }
 
@@ -2680,8 +2684,21 @@ async function verifyReturningOTP(mobile) {
   try {
     if (!_returningConfirmationResult) throw new Error('No OTP session');
     await _returningConfirmationResult.confirm(otp);
-    // OTP verified — go straight to mainframe with saved user data
-    const savedUser = _returningUserData || JSON.parse(localStorage.getItem('b_registered_user') || '{}');
+    // OTP verified — reload full userData from localStorage (set during original registration)
+    // If b_registered_user was cleared on tab close, reconstruct from returning identifiers
+    let savedUser = JSON.parse(localStorage.getItem('b_registered_user') || 'null');
+    if (!savedUser || !savedUser.email) {
+      // Reconstruct from lightweight recogniser — full data will load from Sheets memory
+      savedUser = {
+        email: localStorage.getItem('b_returning_email') || '',
+        preferredName: localStorage.getItem('b_returning_name') || '',
+        fullName: localStorage.getItem('b_returning_name') || '',
+        mobile: localStorage.getItem('b_returning_mobile') || '',
+        photoUrl: '',
+        userId: localStorage.getItem('b_userid') || ''
+      };
+      localStorage.setItem('b_registered_user', JSON.stringify(savedUser));
+    }
     completeLogin(savedUser);
   } catch (e) {
     if (errEl) errEl.textContent = 'Invalid OTP. Please try again.';
@@ -2738,6 +2755,11 @@ async function completeRegistration() {
 
   // Save to localStorage
   localStorage.setItem('b_registered_user', JSON.stringify(userData));
+  // Save lightweight recogniser — survives tab close — used only to show returning user gate
+  // Does NOT bypass OTP or security — just identifies email for the returning user welcome screen
+  localStorage.setItem('b_returning_email', userData.email);
+  localStorage.setItem('b_returning_name', userData.preferredName || userData.fullName || '');
+  localStorage.setItem('b_returning_mobile', userData.mobile || '');
   cfg.userEmail = userData.email;
 
   // Save to Google Sheets via backend
@@ -2816,7 +2838,7 @@ function showAuthAlert(message) {
   document.body.appendChild(alert);
 }
 
-function initAndLaunch(userData){
+async function initAndLaunch(userData){
   setMemBadge('📱 Local');
   loadThreadsLocal();
   document.getElementById('main').classList.add('show');
@@ -2838,7 +2860,7 @@ function initAndLaunch(userData){
     const profileKey = userData.email.replace('@gmail.com','').replace(/\./g,'_');
     const addressedName = userData.preferredName || userData.firstName || userData.email.split('@')[0];
     idState='confirmed';
-    confirmIdentity(profileKey, addressedName);
+    await confirmIdentity(profileKey, addressedName);
   } else {
     idState='awaiting_name';
     const msg=`Hello! I'm Bella. May I know who I'm speaking with today?`;
@@ -3191,6 +3213,9 @@ function signOut(){
   localStorage.removeItem('bella_threads_ts');
   localStorage.removeItem('b_location_perm');
   localStorage.removeItem('b_userid');
+  localStorage.removeItem('b_returning_email');
+  localStorage.removeItem('b_returning_name');
+  localStorage.removeItem('b_returning_mobile');
   sessionStorage.clear();
   location.reload();
 }
