@@ -5073,5 +5073,75 @@ document.addEventListener("DOMContentLoaded", function(){
 });
 </script>
 
+
+<!-- LOCATION FLOW SAFE -->
+<script>
+function triggerLocationFlow(){
+  let sessionKey = "bella_location_decided";
+  if(sessionStorage.getItem(sessionKey)) return;
+
+  const modal = document.createElement("div");
+  modal.style = "position:fixed;inset:0;background:#0B2545;z-index:99999;display:flex;align-items:center;justify-content:center;color:#F5E6C8;text-align:center;padding:20px;";
+
+  modal.innerHTML = `
+    <div>
+      <p style="max-width:420px;margin-bottom:20px;">
+      Location access is required to show your local weather, time zone, and location-aware features.
+      </p>
+      <button id="allowLoc">Allow</button>
+      <button id="notNowLoc">Not Now</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  document.getElementById("allowLoc").onclick = () => {
+    navigator.geolocation.getCurrentPosition(
+      () => finish(true),
+      () => denyFlow()
+    );
+  };
+
+  document.getElementById("notNowLoc").onclick = denyFlow;
+
+  function denyFlow(){
+    modal.innerHTML = `
+      <div>
+        <p style="max-width:420px;margin-bottom:20px;">
+        Without location access, your city, local weather, time zone and city features cannot be personalised.
+        </p>
+        <button id="enableLoc">Enable Location</button>
+        <button id="continueNoLoc">Continue Without Location</button>
+      </div>
+    `;
+
+    document.getElementById("enableLoc").onclick = () => {
+      navigator.geolocation.getCurrentPosition(
+        () => finish(true),
+        () => finish(false)
+      );
+    };
+
+    document.getElementById("continueNoLoc").onclick = () => finish(false);
+  }
+
+  function finish(granted){
+    sessionStorage.setItem(sessionKey, "1");
+    modal.remove();
+
+    if(!granted){
+      const topbar = document.querySelector(".chat-topbar");
+      if(topbar){
+        const warn = document.createElement("div");
+        warn.innerText = "📍 Location off";
+        warn.style = "color:red;font-size:12px;margin-left:10px;cursor:pointer;";
+        warn.onclick = () => alert("Enable location in your browser settings");
+        topbar.appendChild(warn);
+      }
+    }
+  }
+}
+</script>
+
 </body>
 </html>
