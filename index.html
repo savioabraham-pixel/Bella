@@ -1617,6 +1617,7 @@ RESPONSE COMPLETENESS: Always complete your full response. Never stop mid-senten
 let cfg={},currentProfileKey=null,currentAddressedName=null;
 let pFiles=[],pTexts=[],pImages=[];
 let recog=null,listening=false,continuousVoice=false,curAudio=null,isDark=false;
+let _clockInterval=null;
 let audioUnlocked=false;
 let idState='splash';
 let _testMode=false;
