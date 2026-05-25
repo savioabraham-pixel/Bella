@@ -2938,6 +2938,7 @@ async function completeRegistration() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        type: 'welcome',
         to: userData.email,
         subject: `Welcome to Bella — Your User ID is ${userId}`,
         body: welcomeBody,
@@ -4645,9 +4646,17 @@ function initLocationWithCoords(lat, lon){
   fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
     .then(r=>r.json())
     .then(d=>{
-      const city = d.address.city||d.address.town||d.address.village||d.address.county||'';
+      const area = d.address.suburb||d.address.neighbourhood||d.address.quarter||d.address.village||'';
+      const city = d.address.city||d.address.town||d.address.county||'';
       const country = d.address.country||'';
-      locEl.textContent = city ? `📍 ${city}, ${country}` : `📍 ${country}`;
+      const line1 = area || city;
+      const line2 = area ? (city ? `${city}, ${country}` : country) : country;
+      locEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:1px">
+        <span style="font-size:12px;font-weight:600;color:var(--text)">📍 ${line1}</span>
+        <span style="font-size:10px;color:var(--tsoft)">${line2}</span>
+      </div>`;
+      // Store for thought of day
+      try{ sessionStorage.setItem('b_location_data', JSON.stringify({city, country, area, lat, lon})); }catch(e){}
     })
     .catch(()=>{ locEl.textContent = '📍 Location found'; });
 }
@@ -4659,6 +4668,40 @@ function deliverGreeting(addressedName){
   if(userMemory.proactiveFollowUp)msg=`Good ${tod}, ${addressedName}! ${userMemory.proactiveFollowUp} How are you?`;
   playNotifSound();
   bellaMsg(msg);speakText(msg,'en');
+}
+
+async function loadThoughtOfDay(addressedName, city){
+  const cacheKey = 'b_thought_cache';
+  // Use cached thought for this session if available
+  try{
+    const cached = sessionStorage.getItem(cacheKey);
+    if(cached){
+      const el = document.getElementById('tb-thought');
+      if(el) el.textContent = cached;
+      return;
+    }
+  }catch(e){}
+  const thoughtEl = document.getElementById('tb-thought');
+  if(!thoughtEl) return;
+  try{
+    const cityHint = city && city !== 'Locating...' ? ` The user is in ${city}.` : '';
+    const prompt = `You are Bella, a warm personal AI companion. Generate a single uplifting "Food For Thought" quote for ${addressedName}.${cityHint} Format: Title Case, opening and closing curly quotes, ONE emoji at the end, no full stop. Example: "Every Sunrise Is A New Invitation To Begin Again ✨" Return only the quote, nothing else.`;
+    const r = await fetch(`${BACKEND}/chat`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        contents:[{role:'user',parts:[{text:prompt}]}],
+        useSearch: false
+      })
+    });
+    if(!r.ok) throw new Error('Failed');
+    const d = await r.json();
+    const thought = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '"Every Day Holds The Seed Of Something Wonderful ✨"';
+    thoughtEl.textContent = thought;
+    try{ sessionStorage.setItem(cacheKey, thought); }catch(e){}
+  }catch(e){
+    thoughtEl.textContent = '"Every Day Holds The Seed Of Something Wonderful ✨"';
+  }
 }
 
 function initClock(){
@@ -4725,11 +4768,16 @@ function initTopbarDashboard(addressedName, userId){
   updateTopbarUser(addressedName, userId);
   initClock();
   initLocation();
-  // Load thought after a moment so location can be read
+  // Load thought after location resolves — read city from sessionStorage
   setTimeout(()=>{
-    const city = (document.getElementById('tb-location')||{}).textContent.replace('📍','').split(',')[0].trim();
-    loadThoughtOfDay(addressedName, city !== 'Locating...' && city !== 'Enable location' ? city : '');
-  }, 1500);
+    try{
+      const locData = JSON.parse(sessionStorage.getItem('b_location_data') || '{}');
+      const city = locData.city || locData.area || '';
+      loadThoughtOfDay(addressedName, city);
+    }catch(e){
+      loadThoughtOfDay(addressedName, '');
+    }
+  }, 2000);
 }
 
 function openConverterPanel(){
