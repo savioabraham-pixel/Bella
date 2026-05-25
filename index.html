@@ -3051,7 +3051,12 @@ async function confirmIdentity(profileKey,addressedName){
   // topbar-thread removed — welcome greeting is static
   // topbar-sub removed — userid shown instead
   saveThreadsLocal();renderThreadList();
-  // Step 1: Request location permission — mainframe shown only after decision
+  // Show mainframe blurred — location modal sits on top — blur lifts after decision
+  const mainEl = document.getElementById('main');
+  mainEl.classList.add('show');
+  mainEl.style.filter = 'blur(6px)';
+  mainEl.style.pointerEvents = 'none';
+  // Step 1: Request location permission — blur lifts after user decides
   await requestLocationPermission(addressedName);
 }
 
@@ -4418,7 +4423,7 @@ function showLocationPermissionModal(addressedName){
             localStorage.setItem('b_location_perm','granted');
             initLocationWithCoords(pos.coords.latitude, pos.coords.longitude);
             resolve();
-            document.getElementById('main').classList.add('show');
+            _unblurMain();
             deliverGreeting(addressedName);
           },
           ()=>{
@@ -4426,14 +4431,14 @@ function showLocationPermissionModal(addressedName){
             localStorage.setItem('b_location_perm','denied');
             showLocationDeniedState();
             resolve();
-            document.getElementById('main').classList.add('show');
+            _unblurMain();
             deliverGreeting(addressedName);
           }
         );
       } else {
         showLocationDeniedState();
         resolve();
-        document.getElementById('main').classList.add('show');
+        _unblurMain();
         deliverGreeting(addressedName);
       }
     };
@@ -4480,21 +4485,21 @@ function showLocationDeniedWarning(addressedName, resolve){
           localStorage.setItem('b_location_perm','granted');
           initLocationWithCoords(pos.coords.latitude, pos.coords.longitude);
           resolve();
-          document.getElementById('main').classList.add('show');
+          _unblurMain();
           deliverGreeting(addressedName);
         },
         ()=>{
           localStorage.setItem('b_location_perm','denied');
           showLocationDeniedState();
           resolve();
-          document.getElementById('main').classList.add('show');
+          _unblurMain();
           deliverGreeting(addressedName);
         }
       );
     } else {
       showLocationDeniedState();
       resolve();
-      document.getElementById('main').classList.add('show');
+      _unblurMain();
       deliverGreeting(addressedName);
     }
   };
@@ -4505,9 +4510,16 @@ function showLocationDeniedWarning(addressedName, resolve){
     warn.remove();
     showLocationDeniedState();
     resolve();
-    document.getElementById('main').classList.add('show');
+    _unblurMain();
     deliverGreeting(addressedName);
   };
+}
+
+function _unblurMain(){
+  const mainEl = document.getElementById('main');
+  if(!mainEl) return;
+  mainEl.style.filter = 'none';
+  mainEl.style.pointerEvents = '';
 }
 
 function showLocationDeniedState(){
