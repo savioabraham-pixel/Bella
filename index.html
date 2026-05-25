@@ -222,7 +222,7 @@ body.dark #rec-lbl{color:#0B2545}
 .chat-topbar{padding:0;border-bottom:1px solid var(--border);display:flex;align-items:stretch;gap:0;flex-shrink:0;background:var(--white);height:68px;position:relative}
 .chat-topbar-left{display:flex;align-items:center;gap:10px;flex-shrink:0}
 /* Base column width — all fixed cells use this */
-:root{--tb-col:160px}
+:root{--tb-col:180px}
 /* Dashboard panel cells — all equal width */
 .tb-cell{display:flex;flex-direction:column;justify-content:center;padding:0 16px;border-right:1px solid var(--border);height:100%;flex-shrink:0;cursor:default;width:var(--tb-col)}
 .tb-cell-expand{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 20px;border-right:1px solid var(--border);height:100%;text-align:center}
@@ -233,8 +233,8 @@ body.dark #rec-lbl{color:#0B2545}
 /* Thought cell */
 .tb-thought-title{font-size:13px;font-weight:600;color:var(--text);font-family:'DM Sans',sans-serif;margin-bottom:3px}
 .tb-thought-text{font-size:6.5px;color:var(--text);opacity:.7;line-height:1.5;font-family:'DM Sans',sans-serif;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-@keyframes thoughtPop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
-.tb-thought-emoji{display:inline-block;animation:thoughtPop 2s ease infinite}
+@keyframes thoughtPop{0%{transform:scale(1)}40%{transform:scale(1.35) rotate(-8deg)}60%{transform:scale(1.35) rotate(8deg)}100%{transform:scale(1)}}
+.tb-thought-emoji{display:inline-block;animation:thoughtPop 2.5s ease infinite}
 /* Convert cell */
 .tb-conv-btn{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:0 16px;border-right:1px solid var(--border);height:100%;cursor:pointer;flex-shrink:0;width:var(--tb-col);transition:background .15s}
 .tb-conv-btn:hover{background:var(--goldpale)}
@@ -1005,9 +1005,9 @@ body.dark #sidebar .sb-new-chat span{
         <button class="sb-toggle" onclick="toggleSidebar()" style="flex-shrink:0">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--tmid)" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <div style="min-width:0">
-          <div class="tb-primary" id="topbar-welcome">Welcome</div>
-          <div class="tb-secondary" id="topbar-userid">—</div>
+        <div style="min-width:0;overflow:hidden">
+          <div id="topbar-welcome" style="font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Welcome</div>
+          <div id="topbar-userid" style="font-size:9px;color:var(--tsoft);white-space:nowrap;margin-top:1px;letter-spacing:.3px">—</div>
         </div>
       </div>
 
@@ -1659,71 +1659,78 @@ const CURRENCIES=[
   {code:'VND',name:'Vietnamese Dong',flag:'🇻🇳'}
 ];
 
-// TIMEZONES — 63 cities
+// TIMEZONES — 63 cities with state
 const TIMEZONES=[
-  {city:'Kolkata',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
-  {city:'Mumbai',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
-  {city:'Delhi',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
-  {city:'New York',country:'USA',tz:'America/New_York',abbr:'EST'},
-  {city:'Los Angeles',country:'USA',tz:'America/Los_Angeles',abbr:'PST'},
-  {city:'Chicago',country:'USA',tz:'America/Chicago',abbr:'CST'},
-  {city:'Birmingham AL',country:'USA',tz:'America/Chicago',abbr:'CST'},
-  {city:'Houston',country:'USA',tz:'America/Chicago',abbr:'CST'},
-  {city:'Toronto',country:'Canada',tz:'America/Toronto',abbr:'EST'},
-  {city:'Vancouver',country:'Canada',tz:'America/Vancouver',abbr:'PST'},
-  {city:'London',country:'UK',tz:'Europe/London',abbr:'GMT'},
-  {city:'Birmingham UK',country:'UK',tz:'Europe/London',abbr:'GMT'},
-  {city:'Paris',country:'France',tz:'Europe/Paris',abbr:'CET'},
-  {city:'Berlin',country:'Germany',tz:'Europe/Berlin',abbr:'CET'},
-  {city:'Amsterdam',country:'Netherlands',tz:'Europe/Amsterdam',abbr:'CET'},
-  {city:'Madrid',country:'Spain',tz:'Europe/Madrid',abbr:'CET'},
-  {city:'Rome',country:'Italy',tz:'Europe/Rome',abbr:'CET'},
-  {city:'Zurich',country:'Switzerland',tz:'Europe/Zurich',abbr:'CET'},
-  {city:'Stockholm',country:'Sweden',tz:'Europe/Stockholm',abbr:'CET'},
-  {city:'Oslo',country:'Norway',tz:'Europe/Oslo',abbr:'CET'},
-  {city:'Copenhagen',country:'Denmark',tz:'Europe/Copenhagen',abbr:'CET'},
-  {city:'Helsinki',country:'Finland',tz:'Europe/Helsinki',abbr:'EET'},
-  {city:'Athens',country:'Greece',tz:'Europe/Athens',abbr:'EET'},
-  {city:'Istanbul',country:'Turkey',tz:'Europe/Istanbul',abbr:'TRT'},
-  {city:'Moscow',country:'Russia',tz:'Europe/Moscow',abbr:'MSK'},
-  {city:'Dubai',country:'UAE',tz:'Asia/Dubai',abbr:'GST'},
-  {city:'Riyadh',country:'Saudi Arabia',tz:'Asia/Riyadh',abbr:'AST'},
-  {city:'Kuwait City',country:'Kuwait',tz:'Asia/Kuwait',abbr:'AST'},
-  {city:'Doha',country:'Qatar',tz:'Asia/Qatar',abbr:'AST'},
-  {city:'Muscat',country:'Oman',tz:'Asia/Muscat',abbr:'GST'},
-  {city:'Bahrain',country:'Bahrain',tz:'Asia/Bahrain',abbr:'AST'},
-  {city:'Karachi',country:'Pakistan',tz:'Asia/Karachi',abbr:'PKT'},
-  {city:'Dhaka',country:'Bangladesh',tz:'Asia/Dhaka',abbr:'BST'},
-  {city:'Colombo',country:'Sri Lanka',tz:'Asia/Colombo',abbr:'IST'},
-  {city:'Kathmandu',country:'Nepal',tz:'Asia/Kathmandu',abbr:'NPT'},
-  {city:'Yangon',country:'Myanmar',tz:'Asia/Yangon',abbr:'MMT'},
-  {city:'Bangkok',country:'Thailand',tz:'Asia/Bangkok',abbr:'ICT'},
-  {city:'Jakarta',country:'Indonesia',tz:'Asia/Jakarta',abbr:'WIB'},
-  {city:'Singapore',country:'Singapore',tz:'Asia/Singapore',abbr:'SGT'},
-  {city:'Kuala Lumpur',country:'Malaysia',tz:'Asia/Kuala_Lumpur',abbr:'MYT'},
-  {city:'Manila',country:'Philippines',tz:'Asia/Manila',abbr:'PHT'},
-  {city:'Hong Kong',country:'China',tz:'Asia/Hong_Kong',abbr:'HKT'},
-  {city:'Shanghai',country:'China',tz:'Asia/Shanghai',abbr:'CST'},
-  {city:'Beijing',country:'China',tz:'Asia/Shanghai',abbr:'CST'},
-  {city:'Taipei',country:'Taiwan',tz:'Asia/Taipei',abbr:'CST'},
-  {city:'Seoul',country:'South Korea',tz:'Asia/Seoul',abbr:'KST'},
-  {city:'Tokyo',country:'Japan',tz:'Asia/Tokyo',abbr:'JST'},
-  {city:'Sydney',country:'Australia',tz:'Australia/Sydney',abbr:'AEDT'},
-  {city:'Melbourne',country:'Australia',tz:'Australia/Melbourne',abbr:'AEDT'},
-  {city:'Brisbane',country:'Australia',tz:'Australia/Brisbane',abbr:'AEST'},
-  {city:'Perth',country:'Australia',tz:'Australia/Perth',abbr:'AWST'},
-  {city:'Auckland',country:'New Zealand',tz:'Pacific/Auckland',abbr:'NZDT'},
-  {city:'Johannesburg',country:'South Africa',tz:'Africa/Johannesburg',abbr:'SAST'},
-  {city:'Cairo',country:'Egypt',tz:'Africa/Cairo',abbr:'EET'},
-  {city:'Lagos',country:'Nigeria',tz:'Africa/Lagos',abbr:'WAT'},
-  {city:'Nairobi',country:'Kenya',tz:'Africa/Nairobi',abbr:'EAT'},
-  {city:'Casablanca',country:'Morocco',tz:'Africa/Casablanca',abbr:'WET'},
-  {city:'Sao Paulo',country:'Brazil',tz:'America/Sao_Paulo',abbr:'BRT'},
-  {city:'Mexico City',country:'Mexico',tz:'America/Mexico_City',abbr:'CST'},
-  {city:'Buenos Aires',country:'Argentina',tz:'America/Argentina/Buenos_Aires',abbr:'ART'},
-  {city:'Lima',country:'Peru',tz:'America/Lima',abbr:'PET'},
-  {city:'Bogota',country:'Colombia',tz:'America/Bogota',abbr:'COT'},
-  {city:'Santiago',country:'Chile',tz:'America/Santiago',abbr:'CLT'}
+  {city:'Kolkata',state:'West Bengal',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
+  {city:'Mumbai',state:'Maharashtra',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
+  {city:'Delhi',state:'Delhi',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
+  {city:'Bangalore',state:'Karnataka',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
+  {city:'Chennai',state:'Tamil Nadu',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
+  {city:'Hyderabad',state:'Telangana',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
+  {city:'Pune',state:'Maharashtra',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
+  {city:'Ahmedabad',state:'Gujarat',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
+  {city:'New York',state:'New York',country:'United States',tz:'America/New_York',abbr:'EST'},
+  {city:'Los Angeles',state:'California',country:'United States',tz:'America/Los_Angeles',abbr:'PST'},
+  {city:'Chicago',state:'Illinois',country:'United States',tz:'America/Chicago',abbr:'CST'},
+  {city:'Birmingham',state:'Alabama',country:'United States',tz:'America/Chicago',abbr:'CST'},
+  {city:'Houston',state:'Texas',country:'United States',tz:'America/Chicago',abbr:'CST'},
+  {city:'Dallas',state:'Texas',country:'United States',tz:'America/Chicago',abbr:'CST'},
+  {city:'Miami',state:'Florida',country:'United States',tz:'America/New_York',abbr:'EST'},
+  {city:'Boston',state:'Massachusetts',country:'United States',tz:'America/New_York',abbr:'EST'},
+  {city:'Seattle',state:'Washington',country:'United States',tz:'America/Los_Angeles',abbr:'PST'},
+  {city:'San Francisco',state:'California',country:'United States',tz:'America/Los_Angeles',abbr:'PST'},
+  {city:'Denver',state:'Colorado',country:'United States',tz:'America/Denver',abbr:'MST'},
+  {city:'Phoenix',state:'Arizona',country:'United States',tz:'America/Phoenix',abbr:'MST'},
+  {city:'Toronto',state:'Ontario',country:'Canada',tz:'America/Toronto',abbr:'EST'},
+  {city:'Vancouver',state:'British Columbia',country:'Canada',tz:'America/Vancouver',abbr:'PST'},
+  {city:'London',state:'England',country:'United Kingdom',tz:'Europe/London',abbr:'GMT'},
+  {city:'Birmingham',state:'England',country:'United Kingdom',tz:'Europe/London',abbr:'GMT'},
+  {city:'Manchester',state:'England',country:'United Kingdom',tz:'Europe/London',abbr:'GMT'},
+  {city:'Paris',state:'Île-de-France',country:'France',tz:'Europe/Paris',abbr:'CET'},
+  {city:'Berlin',state:'Berlin',country:'Germany',tz:'Europe/Berlin',abbr:'CET'},
+  {city:'Amsterdam',state:'North Holland',country:'Netherlands',tz:'Europe/Amsterdam',abbr:'CET'},
+  {city:'Madrid',state:'Madrid',country:'Spain',tz:'Europe/Madrid',abbr:'CET'},
+  {city:'Rome',state:'Lazio',country:'Italy',tz:'Europe/Rome',abbr:'CET'},
+  {city:'Zurich',state:'Zurich',country:'Switzerland',tz:'Europe/Zurich',abbr:'CET'},
+  {city:'Stockholm',state:'Stockholm',country:'Sweden',tz:'Europe/Stockholm',abbr:'CET'},
+  {city:'Oslo',state:'Oslo',country:'Norway',tz:'Europe/Oslo',abbr:'CET'},
+  {city:'Copenhagen',state:'Capital',country:'Denmark',tz:'Europe/Copenhagen',abbr:'CET'},
+  {city:'Helsinki',state:'Uusimaa',country:'Finland',tz:'Europe/Helsinki',abbr:'EET'},
+  {city:'Athens',state:'Attica',country:'Greece',tz:'Europe/Athens',abbr:'EET'},
+  {city:'Istanbul',state:'Istanbul',country:'Turkey',tz:'Europe/Istanbul',abbr:'TRT'},
+  {city:'Moscow',state:'Moscow',country:'Russia',tz:'Europe/Moscow',abbr:'MSK'},
+  {city:'Dubai',state:'Dubai',country:'UAE',tz:'Asia/Dubai',abbr:'GST'},
+  {city:'Riyadh',state:'Riyadh',country:'Saudi Arabia',tz:'Asia/Riyadh',abbr:'AST'},
+  {city:'Kuwait City',state:'Al Asimah',country:'Kuwait',tz:'Asia/Kuwait',abbr:'AST'},
+  {city:'Doha',state:'Ad Dawhah',country:'Qatar',tz:'Asia/Qatar',abbr:'AST'},
+  {city:'Muscat',state:'Muscat',country:'Oman',tz:'Asia/Muscat',abbr:'GST'},
+  {city:'Manama',state:'Capital',country:'Bahrain',tz:'Asia/Bahrain',abbr:'AST'},
+  {city:'Karachi',state:'Sindh',country:'Pakistan',tz:'Asia/Karachi',abbr:'PKT'},
+  {city:'Dhaka',state:'Dhaka',country:'Bangladesh',tz:'Asia/Dhaka',abbr:'BST'},
+  {city:'Colombo',state:'Western',country:'Sri Lanka',tz:'Asia/Colombo',abbr:'IST'},
+  {city:'Kathmandu',state:'Bagmati',country:'Nepal',tz:'Asia/Kathmandu',abbr:'NPT'},
+  {city:'Bangkok',state:'Bangkok',country:'Thailand',tz:'Asia/Bangkok',abbr:'ICT'},
+  {city:'Jakarta',state:'DKI Jakarta',country:'Indonesia',tz:'Asia/Jakarta',abbr:'WIB'},
+  {city:'Singapore',state:'Singapore',country:'Singapore',tz:'Asia/Singapore',abbr:'SGT'},
+  {city:'Kuala Lumpur',state:'Federal Territory',country:'Malaysia',tz:'Asia/Kuala_Lumpur',abbr:'MYT'},
+  {city:'Manila',state:'Metro Manila',country:'Philippines',tz:'Asia/Manila',abbr:'PHT'},
+  {city:'Hong Kong',state:'Hong Kong',country:'China',tz:'Asia/Hong_Kong',abbr:'HKT'},
+  {city:'Shanghai',state:'Shanghai',country:'China',tz:'Asia/Shanghai',abbr:'CST'},
+  {city:'Beijing',state:'Beijing',country:'China',tz:'Asia/Shanghai',abbr:'CST'},
+  {city:'Seoul',state:'Seoul',country:'South Korea',tz:'Asia/Seoul',abbr:'KST'},
+  {city:'Tokyo',state:'Tokyo',country:'Japan',tz:'Asia/Tokyo',abbr:'JST'},
+  {city:'Sydney',state:'New South Wales',country:'Australia',tz:'Australia/Sydney',abbr:'AEDT'},
+  {city:'Melbourne',state:'Victoria',country:'Australia',tz:'Australia/Melbourne',abbr:'AEDT'},
+  {city:'Brisbane',state:'Queensland',country:'Australia',tz:'Australia/Brisbane',abbr:'AEST'},
+  {city:'Perth',state:'Western Australia',country:'Australia',tz:'Australia/Perth',abbr:'AWST'},
+  {city:'Auckland',state:'Auckland',country:'New Zealand',tz:'Pacific/Auckland',abbr:'NZDT'},
+  {city:'Johannesburg',state:'Gauteng',country:'South Africa',tz:'Africa/Johannesburg',abbr:'SAST'},
+  {city:'Cairo',state:'Cairo',country:'Egypt',tz:'Africa/Cairo',abbr:'EET'},
+  {city:'Lagos',state:'Lagos',country:'Nigeria',tz:'Africa/Lagos',abbr:'WAT'},
+  {city:'Nairobi',state:'Nairobi',country:'Kenya',tz:'Africa/Nairobi',abbr:'EAT'},
+  {city:'Sao Paulo',state:'São Paulo',country:'Brazil',tz:'America/Sao_Paulo',abbr:'BRT'},
+  {city:'Mexico City',state:'CDMX',country:'Mexico',tz:'America/Mexico_City',abbr:'CST'},
+  {city:'Buenos Aires',state:'Buenos Aires',country:'Argentina',tz:'America/Argentina/Buenos_Aires',abbr:'ART'},
 ];
 
 // UNIT DATA — 6 categories
@@ -2320,8 +2327,8 @@ function showReturningUserGate(userData) {
         <div style="width:56px;height:56px;border-radius:50%;background:#D4AF37;display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
           <span style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:#0B2545">B</span>
         </div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:#F5E6C8;margin-bottom:4px">Welcome back</div>
-        <div style="font-size:13px;color:#D4AF37;font-weight:500;margin-bottom:4px">${userData.preferredName || userData.fullName}</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;color:rgba(245,230,200,0.6);margin-bottom:4px">welcome back</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:#F5E6C8;margin-bottom:4px">${userData.preferredName || userData.fullName}</div>
         <div style="font-size:11px;color:rgba(245,230,200,0.4);margin-bottom:24px">${userData.email}</div>
         <button id="returning-verify-btn" onclick="signInReturningUser()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px">
           <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#0B2545" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#0B2545" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#0B2545" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#0B2545" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
@@ -5015,16 +5022,77 @@ function doTZConvert(){
   try{
     const[h,m]=timeIn.split(':').map(Number);
     const now=new Date();now.setHours(h,m,0,0);
-    const toStr=now.toLocaleString('en-GB',{timeZone:_tzTo,hour:'2-digit',minute:'2-digit',hour12:false,weekday:'short',day:'numeric',month:'short'});
+    // Format from time with abbr
+    const fromLabel=tzLabel(_tzFrom);
+    const toLabel=tzLabel(_tzTo);
+    const fromAbbr=TIMEZONES.find(x=>x.tz===_tzFrom)?.abbr||'';
+    const toAbbr=TIMEZONES.find(x=>x.tz===_tzTo)?.abbr||'';
+    // Format to time — full date if day changes
+    const toDate=new Date(now.toLocaleString('en-US',{timeZone:_tzTo}));
+    const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const toDayStr=`${days[toDate.getDay()]} ${toDate.getDate()} ${months[toDate.getMonth()]} ${toDate.getFullYear()}`;
+    const toH=String(toDate.getHours()).padStart(2,'0');
+    const toMin=String(toDate.getMinutes()).padStart(2,'0');
+    const fromDate=new Date(now.toLocaleString('en-US',{timeZone:_tzFrom}));
+    const fromDayStr=`${days[fromDate.getDay()]} ${fromDate.getDate()} ${months[fromDate.getMonth()]} ${fromDate.getFullYear()}`;
     const diffMins=getUTCOffset(_tzTo)-getUTCOffset(_tzFrom);
     const diffSign=diffMins>=0?'+':'-';
     const absDiff=Math.abs(diffMins);
     const diffH=Math.floor(absDiff/60);const diffM=absDiff%60;
     const diffStr=diffM>0?`${diffSign}${diffH}h ${diffM}m`:`${diffSign}${diffH}h`;
-    document.getElementById('tz-result').textContent=`${timeIn} -> ${toStr}`;
+    const resEl=document.getElementById('tz-result');
     const diffEl=document.getElementById('tz-diff');
+    if(resEl) resEl.textContent=`${fromDayStr} ${timeIn} hrs ${fromAbbr}  =  ${toH}:${toMin} hrs ${toAbbr} ${toDayStr}`;
     if(diffEl) diffEl.textContent=`Time difference: ${diffStr}`;
   }catch(e){document.getElementById('tz-result').textContent='Conversion error';}
+}
+
+function filterTZList(side){
+  const inp=document.getElementById(`tz-${side}-search`);
+  const list=document.getElementById(`tz-${side}-list`);
+  const q=inp.value.toLowerCase();
+  const filtered=TIMEZONES.filter(t=>
+    t.city.toLowerCase().includes(q)||
+    t.state.toLowerCase().includes(q)||
+    t.country.toLowerCase().includes(q)||
+    t.abbr.toLowerCase().includes(q)
+  );
+  renderTZList(list,filtered,side);list.classList.add('on');
+}
+
+function renderTZList(list,items,side){
+  const current=side==='from'?_tzFrom:_tzTo;
+  list.innerHTML=items.map(t=>`<div class="conv-select-item ${t.tz===current?'selected':''}" onclick="selectTZ('${side}','${t.tz}')">${t.city}, ${t.state}, ${t.country} — ${t.abbr}</div>`).join('');
+}
+
+function selectTZ(side,tz){
+  if(side==='from') _tzFrom=tz; else _tzTo=tz;
+  document.getElementById(`tz-${side}-search`).value=tzLabel(tz);
+  document.getElementById(`tz-${side}-list`).classList.remove('on');
+  doTZConvert();
+}
+
+function showTZList(side){
+  const list=document.getElementById(`tz-${side}-list`);
+  renderTZList(list,TIMEZONES,side);list.classList.add('on');
+}
+
+function getUTCOffset(tz){
+  try{
+    const now=new Date();
+    const u=now.toLocaleString('en-US',{timeZone:'UTC',hour:'2-digit',minute:'2-digit',hour12:false});
+    const t=now.toLocaleString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false});
+    const[uh,um]=u.split(':').map(Number);
+    const[th,tm]=t.split(':').map(Number);
+    return(th*60+tm)-(uh*60+um);
+  }catch(e){return 0;}
+}
+
+function tzLabel(tz){
+  const t=TIMEZONES.find(x=>x.tz===tz);
+  if(!t) return tz;
+  return `${t.city}, ${t.state}, ${t.country} — ${t.abbr}`;
 }
 
 function filterCurrencyList(side){
@@ -5103,48 +5171,6 @@ function buildUnitSearchLists(){
 }
 
 function buildUnitSelects(){buildUnitSearchLists();}
-
-function filterTZList(side){
-  const inp=document.getElementById(`tz-${side}-search`);
-  const list=document.getElementById(`tz-${side}-list`);
-  const q=inp.value.toLowerCase();
-  const filtered=TIMEZONES.filter(t=>t.city.toLowerCase().includes(q)||t.country.toLowerCase().includes(q)||t.abbr.toLowerCase().includes(q));
-  renderTZList(list,filtered,side);list.classList.add('on');
-}
-
-function renderTZList(list,items,side){
-  const current=side==='from'?_tzFrom:_tzTo;
-  list.innerHTML=items.map(t=>`<div class="conv-select-item ${t.tz===current?'selected':''}" onclick="selectTZ('${side}','${t.tz}')">${t.flag} ${t.city}, ${t.country} — ${t.abbr} (UTC ${t.offset})</div>`).join('');
-}
-
-function selectTZ(side,tz){
-  if(side==='from') _tzFrom=tz; else _tzTo=tz;
-  document.getElementById(`tz-${side}-search`).value=tzLabel(tz);
-  document.getElementById(`tz-${side}-list`).classList.remove('on');
-  doTZConvert();
-}
-
-function showTZList(side){
-  const list=document.getElementById(`tz-${side}-list`);
-  renderTZList(list,TIMEZONES,side);list.classList.add('on');
-}
-
-function getUTCOffset(tz){
-  try{
-    const now=new Date();
-    const u=now.toLocaleString('en-US',{timeZone:'UTC',hour:'2-digit',minute:'2-digit',hour12:false});
-    const t=now.toLocaleString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false});
-    const[uh,um]=u.split(':').map(Number);
-    const[th,tm]=t.split(':').map(Number);
-    return(th*60+tm)-(uh*60+um);
-  }catch(e){return 0;}
-}
-
-function tzLabel(tz){
-  const t=TIMEZONES.find(x=>x.tz===tz);
-  if(!t) return tz;
-  return `${t.flag} ${t.city}, ${t.country} — ${t.abbr} (UTC ${t.offset})`;
-}
 
 // ── Country code data for searchable dropdown ────────────────────────
 const CC_LIST = [
