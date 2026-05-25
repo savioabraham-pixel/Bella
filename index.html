@@ -1627,6 +1627,123 @@ let tempProfileKey=null;
 let sheetsToken=null;
 let userMemory={addressedName:'',memories:'',lastSeen:'',proactiveFollowUp:''};
 
+// CONVERTER STATE
+let _currFrom='INR',_currTo='USD',_exchangeRates=null,_ratesTimestamp=null;
+let _unitFrom='km',_unitTo='mi';
+let _tzFrom='Asia/Kolkata',_tzTo='America/New_York';
+
+// CURRENCIES — 46 entries
+const CURRENCIES=[
+  {code:'INR',name:'Indian Rupee',flag:'🇮🇳'},{code:'USD',name:'US Dollar',flag:'🇺🇸'},
+  {code:'EUR',name:'Euro',flag:'🇪🇺'},{code:'GBP',name:'British Pound',flag:'🇬🇧'},
+  {code:'AED',name:'UAE Dirham',flag:'🇦🇪'},{code:'AUD',name:'Australian Dollar',flag:'🇦🇺'},
+  {code:'BDT',name:'Bangladeshi Taka',flag:'🇧🇩'},{code:'BHD',name:'Bahraini Dinar',flag:'🇧🇭'},
+  {code:'BRL',name:'Brazilian Real',flag:'🇧🇷'},{code:'CAD',name:'Canadian Dollar',flag:'🇨🇦'},
+  {code:'CHF',name:'Swiss Franc',flag:'🇨🇭'},{code:'CNY',name:'Chinese Yuan',flag:'🇨🇳'},
+  {code:'CZK',name:'Czech Koruna',flag:'🇨🇿'},{code:'DKK',name:'Danish Krone',flag:'🇩🇰'},
+  {code:'EGP',name:'Egyptian Pound',flag:'🇪🇬'},{code:'HKD',name:'Hong Kong Dollar',flag:'🇭🇰'},
+  {code:'HUF',name:'Hungarian Forint',flag:'🇭🇺'},{code:'IDR',name:'Indonesian Rupiah',flag:'🇮🇩'},
+  {code:'ILS',name:'Israeli Shekel',flag:'🇮🇱'},{code:'JPY',name:'Japanese Yen',flag:'🇯🇵'},
+  {code:'KES',name:'Kenyan Shilling',flag:'🇰🇪'},{code:'KRW',name:'South Korean Won',flag:'🇰🇷'},
+  {code:'KWD',name:'Kuwaiti Dinar',flag:'🇰🇼'},{code:'LKR',name:'Sri Lankan Rupee',flag:'🇱🇰'},
+  {code:'MAD',name:'Moroccan Dirham',flag:'🇲🇦'},{code:'MXN',name:'Mexican Peso',flag:'🇲🇽'},
+  {code:'MYR',name:'Malaysian Ringgit',flag:'🇲🇾'},{code:'NGN',name:'Nigerian Naira',flag:'🇳🇬'},
+  {code:'NOK',name:'Norwegian Krone',flag:'🇳🇴'},{code:'NPR',name:'Nepalese Rupee',flag:'🇳🇵'},
+  {code:'NZD',name:'New Zealand Dollar',flag:'🇳🇿'},{code:'OMR',name:'Omani Rial',flag:'🇴🇲'},
+  {code:'PHP',name:'Philippine Peso',flag:'🇵🇭'},{code:'PKR',name:'Pakistani Rupee',flag:'🇵🇰'},
+  {code:'PLN',name:'Polish Zloty',flag:'🇵🇱'},{code:'QAR',name:'Qatari Riyal',flag:'🇶🇦'},
+  {code:'RUB',name:'Russian Ruble',flag:'🇷🇺'},{code:'SAR',name:'Saudi Riyal',flag:'🇸🇦'},
+  {code:'SEK',name:'Swedish Krona',flag:'🇸🇪'},{code:'SGD',name:'Singapore Dollar',flag:'🇸🇬'},
+  {code:'THB',name:'Thai Baht',flag:'🇹🇭'},{code:'TRY',name:'Turkish Lira',flag:'🇹🇷'},
+  {code:'TWD',name:'Taiwan Dollar',flag:'🇹🇼'},{code:'ZAR',name:'South African Rand',flag:'🇿🇦'},
+  {code:'VND',name:'Vietnamese Dong',flag:'🇻🇳'}
+];
+
+// TIMEZONES — 63 cities
+const TIMEZONES=[
+  {city:'Kolkata',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
+  {city:'Mumbai',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
+  {city:'Delhi',country:'India',tz:'Asia/Kolkata',abbr:'IST'},
+  {city:'New York',country:'USA',tz:'America/New_York',abbr:'EST'},
+  {city:'Los Angeles',country:'USA',tz:'America/Los_Angeles',abbr:'PST'},
+  {city:'Chicago',country:'USA',tz:'America/Chicago',abbr:'CST'},
+  {city:'Birmingham AL',country:'USA',tz:'America/Chicago',abbr:'CST'},
+  {city:'Houston',country:'USA',tz:'America/Chicago',abbr:'CST'},
+  {city:'Toronto',country:'Canada',tz:'America/Toronto',abbr:'EST'},
+  {city:'Vancouver',country:'Canada',tz:'America/Vancouver',abbr:'PST'},
+  {city:'London',country:'UK',tz:'Europe/London',abbr:'GMT'},
+  {city:'Birmingham UK',country:'UK',tz:'Europe/London',abbr:'GMT'},
+  {city:'Paris',country:'France',tz:'Europe/Paris',abbr:'CET'},
+  {city:'Berlin',country:'Germany',tz:'Europe/Berlin',abbr:'CET'},
+  {city:'Amsterdam',country:'Netherlands',tz:'Europe/Amsterdam',abbr:'CET'},
+  {city:'Madrid',country:'Spain',tz:'Europe/Madrid',abbr:'CET'},
+  {city:'Rome',country:'Italy',tz:'Europe/Rome',abbr:'CET'},
+  {city:'Zurich',country:'Switzerland',tz:'Europe/Zurich',abbr:'CET'},
+  {city:'Stockholm',country:'Sweden',tz:'Europe/Stockholm',abbr:'CET'},
+  {city:'Oslo',country:'Norway',tz:'Europe/Oslo',abbr:'CET'},
+  {city:'Copenhagen',country:'Denmark',tz:'Europe/Copenhagen',abbr:'CET'},
+  {city:'Helsinki',country:'Finland',tz:'Europe/Helsinki',abbr:'EET'},
+  {city:'Athens',country:'Greece',tz:'Europe/Athens',abbr:'EET'},
+  {city:'Istanbul',country:'Turkey',tz:'Europe/Istanbul',abbr:'TRT'},
+  {city:'Moscow',country:'Russia',tz:'Europe/Moscow',abbr:'MSK'},
+  {city:'Dubai',country:'UAE',tz:'Asia/Dubai',abbr:'GST'},
+  {city:'Riyadh',country:'Saudi Arabia',tz:'Asia/Riyadh',abbr:'AST'},
+  {city:'Kuwait City',country:'Kuwait',tz:'Asia/Kuwait',abbr:'AST'},
+  {city:'Doha',country:'Qatar',tz:'Asia/Qatar',abbr:'AST'},
+  {city:'Muscat',country:'Oman',tz:'Asia/Muscat',abbr:'GST'},
+  {city:'Bahrain',country:'Bahrain',tz:'Asia/Bahrain',abbr:'AST'},
+  {city:'Karachi',country:'Pakistan',tz:'Asia/Karachi',abbr:'PKT'},
+  {city:'Dhaka',country:'Bangladesh',tz:'Asia/Dhaka',abbr:'BST'},
+  {city:'Colombo',country:'Sri Lanka',tz:'Asia/Colombo',abbr:'IST'},
+  {city:'Kathmandu',country:'Nepal',tz:'Asia/Kathmandu',abbr:'NPT'},
+  {city:'Yangon',country:'Myanmar',tz:'Asia/Yangon',abbr:'MMT'},
+  {city:'Bangkok',country:'Thailand',tz:'Asia/Bangkok',abbr:'ICT'},
+  {city:'Jakarta',country:'Indonesia',tz:'Asia/Jakarta',abbr:'WIB'},
+  {city:'Singapore',country:'Singapore',tz:'Asia/Singapore',abbr:'SGT'},
+  {city:'Kuala Lumpur',country:'Malaysia',tz:'Asia/Kuala_Lumpur',abbr:'MYT'},
+  {city:'Manila',country:'Philippines',tz:'Asia/Manila',abbr:'PHT'},
+  {city:'Hong Kong',country:'China',tz:'Asia/Hong_Kong',abbr:'HKT'},
+  {city:'Shanghai',country:'China',tz:'Asia/Shanghai',abbr:'CST'},
+  {city:'Beijing',country:'China',tz:'Asia/Shanghai',abbr:'CST'},
+  {city:'Taipei',country:'Taiwan',tz:'Asia/Taipei',abbr:'CST'},
+  {city:'Seoul',country:'South Korea',tz:'Asia/Seoul',abbr:'KST'},
+  {city:'Tokyo',country:'Japan',tz:'Asia/Tokyo',abbr:'JST'},
+  {city:'Sydney',country:'Australia',tz:'Australia/Sydney',abbr:'AEDT'},
+  {city:'Melbourne',country:'Australia',tz:'Australia/Melbourne',abbr:'AEDT'},
+  {city:'Brisbane',country:'Australia',tz:'Australia/Brisbane',abbr:'AEST'},
+  {city:'Perth',country:'Australia',tz:'Australia/Perth',abbr:'AWST'},
+  {city:'Auckland',country:'New Zealand',tz:'Pacific/Auckland',abbr:'NZDT'},
+  {city:'Johannesburg',country:'South Africa',tz:'Africa/Johannesburg',abbr:'SAST'},
+  {city:'Cairo',country:'Egypt',tz:'Africa/Cairo',abbr:'EET'},
+  {city:'Lagos',country:'Nigeria',tz:'Africa/Lagos',abbr:'WAT'},
+  {city:'Nairobi',country:'Kenya',tz:'Africa/Nairobi',abbr:'EAT'},
+  {city:'Casablanca',country:'Morocco',tz:'Africa/Casablanca',abbr:'WET'},
+  {city:'Sao Paulo',country:'Brazil',tz:'America/Sao_Paulo',abbr:'BRT'},
+  {city:'Mexico City',country:'Mexico',tz:'America/Mexico_City',abbr:'CST'},
+  {city:'Buenos Aires',country:'Argentina',tz:'America/Argentina/Buenos_Aires',abbr:'ART'},
+  {city:'Lima',country:'Peru',tz:'America/Lima',abbr:'PET'},
+  {city:'Bogota',country:'Colombia',tz:'America/Bogota',abbr:'COT'},
+  {city:'Santiago',country:'Chile',tz:'America/Santiago',abbr:'CLT'}
+];
+
+// UNIT DATA — 6 categories
+const UNIT_DATA={
+  length:{km:{f:1,l:'Kilometres'},mi:{f:0.621371,l:'Miles'},m:{f:1000,l:'Metres'},ft:{f:3280.84,l:'Feet'},cm:{f:100000,l:'Centimetres'},inch:{f:39370.1,l:'Inches'}},
+  weight:{kg:{f:1,l:'Kilograms'},lb:{f:2.20462,l:'Pounds'},g:{f:1000,l:'Grams'},oz:{f:35.274,l:'Ounces'},t:{f:0.001,l:'Metric Tonnes'}},
+  temp:{c:{f:1,l:'Celsius'},f:{f:1,l:'Fahrenheit'},k:{f:1,l:'Kelvin'}},
+  volume:{l:{f:1,l:'Litres'},ml:{f:1000,l:'Millilitres'},gal:{f:0.264172,l:'US Gallons'},pt:{f:2.11338,l:'Pints'},fl_oz:{f:33.814,l:'Fluid Ounces'}},
+  area:{sqkm:{f:1,l:'Sq Kilometres'},sqmi:{f:0.386102,l:'Sq Miles'},sqm:{f:1000000,l:'Sq Metres'},sqft:{f:10763910.4,l:'Sq Feet'},acre:{f:247.105,l:'Acres'},hectare:{f:100,l:'Hectares'}},
+  speed:{kmh:{f:1,l:'km/h'},mph:{f:0.621371,l:'mph'},ms:{f:0.277778,l:'m/s'},knot:{f:0.539957,l:'Knots'}}
+};
+
+async function fetchExchangeRates(){
+  try{
+    const r=await fetch('https://open.er-api.com/v6/latest/USD');
+    const d=await r.json();
+    if(d.rates){_exchangeRates=d.rates;_ratesTimestamp=new Date().toISOString();doConvert();}
+  }catch(e){console.warn('Exchange rate fetch failed:',e);}
+}
+
 // THREAD SYSTEM
 let threads={}; // {id: {name, hist, created}}
 let currentThreadId=null;
@@ -2821,13 +2938,17 @@ async function verifyReturningOTP(mobile) {
     let savedUser = JSON.parse(localStorage.getItem('b_registered_user') || 'null');
     if (!savedUser || !savedUser.email) {
       // Reconstruct from lightweight recogniser — full data will load from Sheets memory
+      const storedUserId = localStorage.getItem('b_userid') || '';
+      // If userId missing, generate a new one and store it
+      const userId = storedUserId || ('BE-' + Math.floor(10000000 + Math.random() * 90000000));
+      if(!storedUserId) localStorage.setItem('b_userid', userId);
       savedUser = {
         email: localStorage.getItem('b_returning_email') || '',
         preferredName: localStorage.getItem('b_returning_name') || '',
         fullName: localStorage.getItem('b_returning_name') || '',
         mobile: localStorage.getItem('b_returning_mobile') || '',
         photoUrl: '',
-        userId: localStorage.getItem('b_userid') || ''
+        userId: userId
       };
       localStorage.setItem('b_registered_user', JSON.stringify(savedUser));
     }
@@ -4646,9 +4767,12 @@ function initLocationWithCoords(lat, lon){
   fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
     .then(r=>r.json())
     .then(d=>{
-      const area = d.address.suburb||d.address.neighbourhood||d.address.quarter||d.address.village||'';
-      const city = d.address.city||d.address.town||d.address.county||'';
-      const country = d.address.country||'';
+      const a = d.address;
+      // Line 1: district/area level (e.g. Bidhannagar)
+      const area = a.city_district||a.suburb||a.neighbourhood||a.quarter||a.village||'';
+      // Line 2: city + country (e.g. Kolkata, India)
+      const city = a.city||a.town||a.county||'';
+      const country = a.country||'';
       const line1 = area || city;
       const line2 = area ? (city ? `${city}, ${country}` : country) : country;
       locEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:1px">
@@ -4672,12 +4796,11 @@ function deliverGreeting(addressedName){
 
 async function loadThoughtOfDay(addressedName, city){
   const cacheKey = 'b_thought_cache';
-  // Use cached thought for this session if available
   try{
     const cached = sessionStorage.getItem(cacheKey);
     if(cached){
       const el = document.getElementById('tb-thought');
-      if(el) el.textContent = cached;
+      if(el) el.innerHTML = cached;
       return;
     }
   }catch(e){}
@@ -4685,7 +4808,27 @@ async function loadThoughtOfDay(addressedName, city){
   if(!thoughtEl) return;
   try{
     const cityHint = city && city !== 'Locating...' ? ` The user is in ${city}.` : '';
-    const prompt = `You are Bella, a warm personal AI companion. Generate a single uplifting "Food For Thought" quote for ${addressedName}.${cityHint} Format: Title Case, opening and closing curly quotes, ONE emoji at the end, no full stop. Example: "Every Sunrise Is A New Invitation To Begin Again ✨" Return only the quote, nothing else.`;
+    const prompt = `You are Bella, a warm personal AI companion. Generate a single uplifting "Food For Thought" for ${addressedName}.${cityHint}
+
+Format rules — follow exactly:
+- Title Case throughout
+- Opening curly quote " at start
+- Closing curly quote " at end  
+- ONE animated emoji that matches the emotional mood of the thought — placed after the closing quote
+- No full stop
+- Return ONLY the quote with emoji, nothing else
+
+The emoji must be chosen to match the mood. Examples:
+- Curiosity/discovery -> 🧭 or 🔭
+- Growth/nature -> 🌱 or 🌿
+- Joy/happiness -> ✨ or 🌟
+- Courage/strength -> 🦋 or 🔥
+- Peace/calm -> 🌊 or 🕊️
+- Love/warmth -> 🌸 or 💫
+- Wisdom -> 🌙 or ⭐
+
+Example output: "Every Sunrise Is A New Invitation To Begin Again" ✨`;
+
     const r = await fetch(`${BACKEND}/chat`, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -4696,11 +4839,19 @@ async function loadThoughtOfDay(addressedName, city){
     });
     if(!r.ok) throw new Error('Failed');
     const d = await r.json();
-    const thought = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '"Every Day Holds The Seed Of Something Wonderful ✨"';
-    thoughtEl.textContent = thought;
-    try{ sessionStorage.setItem(cacheKey, thought); }catch(e){}
+    let thought = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '"Every Day Holds The Seed Of Something Wonderful" ✨';
+    // Extract emoji from end of thought for animation
+    const emojiMatch = thought.match(/(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*$/u);
+    let displayHtml = thought;
+    if(emojiMatch){
+      const emoji = emojiMatch[0].trim();
+      const textPart = thought.slice(0, thought.lastIndexOf(emoji)).trim();
+      displayHtml = `${textPart} <span class="tb-thought-emoji">${emoji}</span>`;
+    }
+    thoughtEl.innerHTML = displayHtml;
+    try{ sessionStorage.setItem(cacheKey, displayHtml); }catch(e){}
   }catch(e){
-    thoughtEl.textContent = '"Every Day Holds The Seed Of Something Wonderful ✨"';
+    thoughtEl.innerHTML = '"Every Day Holds The Seed Of Something Wonderful" <span class="tb-thought-emoji">✨</span>';
   }
 }
 
