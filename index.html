@@ -1006,8 +1006,8 @@ body.dark #sidebar .sb-new-chat span{
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--tmid)" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
         <div style="min-width:0;overflow:hidden">
-          <div id="topbar-welcome" style="font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Welcome</div>
-          <div id="topbar-userid" style="font-size:9px;color:var(--tsoft);white-space:nowrap;margin-top:1px;letter-spacing:.3px">—</div>
+          <div id="topbar-welcome" style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Welcome</div>
+          <div id="topbar-userid" style="font-family:'DM Sans',sans-serif;font-size:10px;color:var(--tsoft);white-space:nowrap;margin-top:1px;letter-spacing:.2px">—</div>
         </div>
       </div>
 
@@ -1111,12 +1111,12 @@ body.dark #sidebar .sb-new-chat span{
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;margin-bottom:8px">
           <input id="tz-time-in" type="time" style="flex-shrink:0;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none" oninput="doTZConvert()">
           <div style="position:relative;flex:1">
-            <input type="text" id="tz-from-search" placeholder="Search city or country..." class="conv-search" style="margin:0" oninput="filterTZList('from')" onfocus="showTZList('from')">
+            <input type="text" id="tz-from-search" placeholder="Search state, country or IST..." class="conv-search" style="margin:0" oninput="filterTZList('from')" onfocus="showTZList('from')">
             <div id="tz-from-list" class="conv-select-list" style="min-width:260px"></div>
           </div>
           <span style="font-size:14px;color:var(--tsoft);flex-shrink:0">-></span>
           <div style="position:relative;flex:1">
-            <input type="text" id="tz-to-search" placeholder="Search city or country..." class="conv-search" style="margin:0" oninput="filterTZList('to')" onfocus="showTZList('to')">
+            <input type="text" id="tz-to-search" placeholder="Search state, country or CST..." class="conv-search" style="margin:0" oninput="filterTZList('to')" onfocus="showTZList('to')">
             <div id="tz-to-list" class="conv-select-list" style="min-width:260px"></div>
           </div>
         </div>
@@ -1197,6 +1197,13 @@ body.dark #sidebar .sb-new-chat span{
         </div>
       </div>
     </div>
+
+<!-- SEARCH OVERLAY -->
+<div id="search-overlay" style="display:none;position:fixed;top:60px;left:50%;transform:translateX(-50%);width:500px;max-width:92vw;background:var(--card);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.2);border:1px solid var(--border);z-index:300;padding:16px">
+  <input id="search-input" type="text" placeholder="Search conversations..." oninput="doSearch(this.value)"
+    style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box">
+  <div id="search-results" style="margin-top:10px;max-height:300px;overflow-y:auto"></div>
+</div>
 
 <!-- RECORDING MODAL -->
 <div id="rec-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
@@ -2284,7 +2291,10 @@ function showNewUserGate() {
       <div id="gate-step-3" style="display:none;padding:24px 28px">
         <div style="font-size:12px;font-weight:600;color:#D4AF37;letter-spacing:.5px;margin-bottom:8px">VERIFY YOUR MOBILE</div>
         <div id="gate-otp-hint" style="font-size:12px;color:rgba(245,230,200,0.6);margin-bottom:16px;line-height:1.5"></div>
-        <input id="gate-otp-input" type="tel" placeholder="Enter 6-digit OTP" maxlength="6" style="width:100%;padding:14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:20px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:8px" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
+        <div style="position:relative;margin-bottom:10px">
+          <input id="gate-otp-input" type="tel" placeholder="Enter 6-digit OTP" maxlength="6" style="width:100%;padding:14px 44px 14px 14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:16px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:8px" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
+          <button onclick="toggleOTPVisibility('gate-otp-input','otp-eye-new')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(245,230,200,0.5);font-size:16px;padding:4px" title="Show/Hide OTP"><span id="otp-eye-new">👁</span></button>
+        </div>
         <div id="gate-error-3" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-top:8px;text-align:center"></div>
         <div id="recaptcha-container" style="display:none"></div>
         <button onclick="verifyOTP()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.3px">
@@ -2488,9 +2498,12 @@ function showReturningOTPGate(savedUser) {
       </div>
       <div style="font-size:11px;color:rgba(245,230,200,0.4);margin-bottom:8px">Sending OTP to ${savedUser.mobile || 'your registered mobile'}...</div>
       <div id="recaptcha-container-returning" style="display:none"></div>
-      <input id="gate-otp-returning" type="tel" placeholder="Enter 6-digit OTP" maxlength="6"
-        style="width:100%;padding:14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:20px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:8px;margin-bottom:10px"
-        onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
+      <div style="position:relative;margin-bottom:10px">
+        <input id="gate-otp-returning" type="tel" placeholder="Enter 6-digit OTP" maxlength="6"
+          style="width:100%;padding:14px 44px 14px 14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:16px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:8px"
+          onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
+        <button onclick="toggleOTPVisibility('gate-otp-returning','otp-eye-ret')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(245,230,200,0.5);font-size:16px;padding:4px" title="Show/Hide OTP"><span id="otp-eye-ret">👁</span></button>
+      </div>
       <div id="gate-otp-returning-error" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-bottom:10px;text-align:center"></div>
       <button onclick="verifyReturningOTP('${savedUser.mobile}')" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">
         Verify &amp; Enter Bella
@@ -2964,6 +2977,16 @@ async function verifyReturningOTP(mobile) {
     if (errEl) errEl.textContent = 'Invalid OTP. Please try again.';
     if (btn) { btn.textContent = 'Verify & Enter Bella'; btn.disabled = false; }
     console.error('Returning OTP verify error:', e);
+  }
+}
+
+function toggleOTPVisibility(inputId, eyeId){
+  const inp = document.getElementById(inputId);
+  const eye = document.getElementById(eyeId);
+  if(!inp) return;
+  if(inp.type === 'tel' || inp.type === 'password'){
+    inp.type = inp.type === 'password' ? 'tel' : 'password';
+    if(eye) eye.textContent = inp.type === 'password' ? '🙈' : '👁';
   }
 }
 
@@ -3479,9 +3502,9 @@ function signOut(){
   localStorage.removeItem('bella_threads_ts');
   localStorage.removeItem('b_location_perm');
   localStorage.removeItem('b_userid');
-  // b_returning_email/name/mobile kept intentionally — only cleared in notYouGate()
-  // These allow the returning user gate to show on next login
-  // Full Gmail OAuth + OTP still required regardless
+  localStorage.removeItem('b_returning_email');
+  localStorage.removeItem('b_returning_name');
+  localStorage.removeItem('b_returning_mobile');
   sessionStorage.clear();
   location.reload();
 }
@@ -4775,9 +4798,9 @@ function initLocationWithCoords(lat, lon){
     .then(r=>r.json())
     .then(d=>{
       const a = d.address;
-      // Line 1: district/area level (e.g. Bidhannagar)
-      const area = a.city_district||a.suburb||a.neighbourhood||a.quarter||a.village||'';
-      // Line 2: city + country (e.g. Kolkata, India)
+      // Line 1: best available area name — locality gives Bidhannagar level
+      const area = a.locality||a.city_district||a.suburb||a.neighbourhood||a.quarter||a.village||'';
+      // Line 2: city + country
       const city = a.city||a.town||a.county||'';
       const country = a.country||'';
       const line1 = area || city;
@@ -5063,7 +5086,7 @@ function filterTZList(side){
 
 function renderTZList(list,items,side){
   const current=side==='from'?_tzFrom:_tzTo;
-  list.innerHTML=items.map(t=>`<div class="conv-select-item ${t.tz===current?'selected':''}" onclick="selectTZ('${side}','${t.tz}')">${t.city}, ${t.state}, ${t.country} — ${t.abbr}</div>`).join('');
+  list.innerHTML=items.map(t=>`<div class="conv-select-item ${t.tz===current?'selected':''}" onclick="selectTZ('${side}','${t.tz}')">${t.state}, ${t.country} — ${t.abbr}</div>`).join('');
 }
 
 function selectTZ(side,tz){
@@ -5092,7 +5115,7 @@ function getUTCOffset(tz){
 function tzLabel(tz){
   const t=TIMEZONES.find(x=>x.tz===tz);
   if(!t) return tz;
-  return `${t.city}, ${t.state}, ${t.country} — ${t.abbr}`;
+  return `${t.state}, ${t.country} — ${t.abbr}`;
 }
 
 function filterCurrencyList(side){
