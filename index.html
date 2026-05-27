@@ -2336,14 +2336,14 @@ function showReturningUserGate(userData) {
           <span style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:#0B2545">B</span>
         </div>
         <div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;color:rgba(245,230,200,0.6);margin-bottom:4px">welcome back</div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:#F5E6C8;margin-bottom:4px">${userData.preferredName || userData.fullName}</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:#F5E6C8;margin-bottom:4px">${userData.firstName || (userData.fullName||'').split(' ')[0] || userData.preferredName}</div>
         <div style="font-size:11px;color:rgba(245,230,200,0.4);margin-bottom:24px">${userData.email}</div>
         <button id="returning-verify-btn" onclick="signInReturningUser()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px">
           <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#0B2545" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#0B2545" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#0B2545" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#0B2545" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
           Verify with Google &amp; Mobile OTP
         </button>
         <button onclick="notYouGate()" style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(245,230,200,0.15);background:transparent;color:rgba(245,230,200,0.4);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px">
-          Not ${userData.preferredName || 'you'}? Sign in with a different account
+          Not ${userData.firstName || (userData.fullName||'').split(' ')[0] || 'you'}? Sign in with a different account
         </button>
         <div id="gate-error-returning" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-top:8px;text-align:center"></div>
       </div>
@@ -2417,7 +2417,8 @@ async function signInReturningUser() {
     const savedUser = JSON.parse(localStorage.getItem('b_registered_user') || 'null') || {
       email: expectedEmail,
       preferredName: localStorage.getItem('b_returning_name') || '',
-      fullName: localStorage.getItem('b_returning_name') || '',
+      firstName: localStorage.getItem('b_returning_firstname') || '',
+      fullName: localStorage.getItem('b_returning_fullname') || localStorage.getItem('b_returning_name') || '',
       mobile: localStorage.getItem('b_returning_mobile') || '',
       photoUrl: '',
       userId: localStorage.getItem('b_userid') || ''
@@ -2518,6 +2519,8 @@ function notYouGate() {
   localStorage.removeItem('b_registered_user');
   localStorage.removeItem('b_returning_email');
   localStorage.removeItem('b_returning_name');
+  localStorage.removeItem('b_returning_firstname');
+  localStorage.removeItem('b_returning_fullname');
   localStorage.removeItem('b_returning_mobile');
   showNewUserGate();
 }
@@ -2964,7 +2967,8 @@ async function verifyReturningOTP(mobile) {
       savedUser = {
         email: localStorage.getItem('b_returning_email') || '',
         preferredName: localStorage.getItem('b_returning_name') || '',
-        fullName: localStorage.getItem('b_returning_name') || '',
+        firstName: localStorage.getItem('b_returning_firstname') || '',
+        fullName: localStorage.getItem('b_returning_fullname') || localStorage.getItem('b_returning_name') || '',
         mobile: localStorage.getItem('b_returning_mobile') || '',
         photoUrl: '',
         userId: userId
@@ -3041,6 +3045,8 @@ async function completeRegistration() {
   // Does NOT bypass OTP or security — just identifies email for the returning user welcome screen
   localStorage.setItem('b_returning_email', userData.email);
   localStorage.setItem('b_returning_name', userData.preferredName || userData.fullName || '');
+  localStorage.setItem('b_returning_firstname', userData.firstName || (userData.fullName||'').split(' ')[0] || '');
+  localStorage.setItem('b_returning_fullname', userData.fullName || '');
   localStorage.setItem('b_returning_mobile', userData.mobile || '');
   cfg.userEmail = userData.email;
 
@@ -3504,6 +3510,8 @@ function signOut(){
   localStorage.removeItem('b_userid');
   localStorage.removeItem('b_returning_email');
   localStorage.removeItem('b_returning_name');
+  localStorage.removeItem('b_returning_firstname');
+  localStorage.removeItem('b_returning_fullname');
   localStorage.removeItem('b_returning_mobile');
   sessionStorage.clear();
   location.reload();
