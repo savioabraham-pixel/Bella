@@ -2088,10 +2088,18 @@ async function showRegistrationGate() {
   // b_registered_user is cleared on tab close for security — b_returning_email is not
   const returningEmail = localStorage.getItem('b_returning_email');
   const returningName = localStorage.getItem('b_returning_name') || '';
+  const returningFirstName = localStorage.getItem('b_returning_firstname') || '';
+  const returningFullName = localStorage.getItem('b_returning_fullname') || '';
   const returningMobile = localStorage.getItem('b_returning_mobile') || '';
   if (returningEmail) {
     // Reconstruct minimal userData for the returning gate — full data loaded after OTP
-    const minimalUser = { email: returningEmail, preferredName: returningName, fullName: returningName, mobile: returningMobile };
+    const minimalUser = {
+      email: returningEmail,
+      preferredName: returningName,
+      firstName: returningFirstName || returningFullName.split(' ')[0] || returningName,
+      fullName: returningFullName || returningName,
+      mobile: returningMobile
+    };
     showReturningUserGate(minimalUser);
     return;
   }
@@ -2289,7 +2297,7 @@ function showNewUserGate() {
         <div style="font-size:12px;font-weight:600;color:#D4AF37;letter-spacing:.5px;margin-bottom:8px">VERIFY YOUR MOBILE</div>
         <div id="gate-otp-hint" style="font-size:12px;color:rgba(245,230,200,0.6);margin-bottom:16px;line-height:1.5"></div>
         <div style="position:relative;margin-bottom:10px">
-          <input id="gate-otp-input" type="tel" placeholder="• • • • • •" maxlength="6" style="width:100%;padding:14px 44px 14px 14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:16px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:8px;caret-color:#D4AF37" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'"
+          <input id="gate-otp-input" type="tel" placeholder="Enter OTP" maxlength="6" style="width:100%;padding:14px 44px 14px 14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:22px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:10px;caret-color:#D4AF37" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'"
           oninput="this.value=this.value.replace(/[^0-9]/g,'')">
           <button onclick="toggleOTPVisibility('gate-otp-input','otp-eye-new')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(245,230,200,0.5);font-size:16px;padding:4px" title="Show/Hide OTP"><span id="otp-eye-new">👁</span></button>
         </div>
