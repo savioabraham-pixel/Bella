@@ -4318,7 +4318,7 @@ function bellaMsg(text,audioUrl){
   if(formatted.includes('<li>'))formatted='<ul style="padding-left:16px;margin:4px 0">'+formatted+'</ul>';
   // Restore rendered tables last so their markup is never touched by the inline passes.
   formatted=formatted.replace(/@@BELLATABLE(\d+)@@/g,(m0,i)=>_tbl.tables[+i]||'');
-  const msgId='msg-'+Date.now();
+  const msgId='msg-'+(++_msgSeq);
   w.innerHTML=`<div class="mav b">B</div><div class="msg-wrap"><div class="mbub" id="${msgId}">${formatted}</div><div class="msg-actions">${audioUrl?`<button class="msg-act-btn" onclick="autoPlay('${audioUrl}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>Replay</button>`:''}<button class="msg-act-btn" onclick="copyMsg('${msgId}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button></div></div>`;
   m.appendChild(w);m.scrollTop=m.scrollHeight;
 }
