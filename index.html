@@ -4092,9 +4092,11 @@ async function _callBackendSpeak(text,lang,always){
     const blob=await r.blob();
     const url=URL.createObjectURL(blob);
     curAudio=new Audio(url);
-    curAudio.onended=()=>{curAudio=null;setSpeakingState(false);};
-    curAudio.onerror=()=>{curAudio=null;setSpeakingState(false);};
-    curAudio.play().catch(()=>{setSpeakingState(false);});
+    // Release the blob once playback settles, or it is retained for the page's life.
+    const _done=()=>{URL.revokeObjectURL(url);curAudio=null;setSpeakingState(false);};
+    curAudio.onended=_done;
+    curAudio.onerror=_done;
+    curAudio.play().catch(()=>{URL.revokeObjectURL(url);setSpeakingState(false);});
   }catch(e){setSpeakingState(false);}
 }
 
