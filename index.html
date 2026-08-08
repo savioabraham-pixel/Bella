@@ -4336,7 +4336,7 @@ function userMsg(text,fileNames){
   const m=document.getElementById('msgs');if(!m)return;const w=document.createElement('div');w.className='msg user';
   const initials=(currentAddressedName||'U').substring(0,2).toUpperCase();
   const safe=text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const chips=fileNames&&fileNames.length>0?fileNames.map(n=>`<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);border-radius:6px;padding:3px 7px;font-size:10px;margin-bottom:4px">${n}</span>`).join(''):'';
+  const chips=fileNames&&fileNames.length>0?fileNames.map(n=>`<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);border-radius:6px;padding:3px 7px;font-size:10px;margin-bottom:4px">${String(n).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`).join(''):'';
   const uMsgId='umsg-'+(++_msgSeq);
   w.innerHTML=`<div class="mav u">${initials}</div><div class="msg-wrap"><div class="mbub" id="${uMsgId}">${chips?chips+'<br>':''}${safe}</div>
   <div class="msg-actions user-actions">
