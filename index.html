@@ -4032,7 +4032,7 @@ async function callBella(useSearch,memCtx){
   const _activeAddressedName = (_testMode && _testAddressedName) ? _testAddressedName : currentAddressedName;
   const systemPrompt=buildSystemPrompt(_activeProfileKey,_activeAddressedName,_testMode?'':memCtx);
   const searchNote=useSearch?'\n\nNeeds current live web data. Search and present as 3-5 bullet points with verifiable source links where possible. For medical info cite medical sources, for government info cite official sources, for business data cite industry reports. Spoken summary: 2 sentences max — do not speak URLs aloud.':'';
-  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote}]},{role:'model',parts:[{text:`Understood. I am Bella, ready to assist ${currentAddressedName}.`}]},...getHist()];
+  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote}]},{role:'model',parts:[{text:`Understood. I am Bella, ready to assist ${_activeAddressedName}.`}]},...getHist()];
   const r=await fetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch})});
   if(!r.ok)throw new Error('Backend error: '+r.status);
   const d=await r.json();
