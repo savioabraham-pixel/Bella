@@ -4271,6 +4271,38 @@ function addSuggestions(suggestions, skipOnIdentity){
   m.scrollTop=m.scrollHeight;
 }
 
+// Markdown tables must be lifted out BEFORE newlines become <br>, otherwise the
+// whole message collapses to one line and a greedy |...| match swallows it.
+function _mdCells(line){
+  return line.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim());
+}
+function _mdInline(s){
+  return s.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+}
+function _mdBuildTable(header,rows){
+  const th=header.map(c=>`<th style="padding:5px 10px;border:1px solid var(--border);font-size:12px;text-align:left;font-weight:600;background:var(--goldpale)">${_mdInline(c)}</th>`).join('');
+  const tb=rows.map(r=>`<tr>${r.map(c=>`<td style="padding:5px 10px;border:1px solid var(--border);font-size:12px">${_mdInline(c)}</td>`).join('')}</tr>`).join('');
+  return`<div style="overflow-x:auto;margin:8px 0"><table style="border-collapse:collapse;width:100%;font-family:'DM Sans',sans-serif"><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table></div>`;
+}
+// Replaces each markdown table with a placeholder; returns the rendered tables.
+function _mdExtractTables(src){
+  const isRow=l=>/^\s*\|.*\|\s*$/.test(l);
+  const isSep=l=>/^\s*\|[\s:|-]*\|\s*$/.test(l)&&l.includes('-');
+  const lines=src.split('\n'),out=[],tables=[];
+  let i=0;
+  while(i<lines.length){
+    if(isRow(lines[i])&&i+1<lines.length&&isSep(lines[i+1])){
+      const header=_mdCells(lines[i]);
+      i+=2;
+      const rows=[];
+      while(i<lines.length&&isRow(lines[i])){rows.push(_mdCells(lines[i]));i++;}
+      tables.push(_mdBuildTable(header,rows));
+      out.push(`@@BELLATABLE${tables.length-1}@@`);
+    }else{out.push(lines[i]);i++;}
+  }
+  return{text:out.join('\n'),tables};
+}
+
 function bellaMsg(text,audioUrl){
   const empty=document.getElementById('empty-state');if(empty)empty.remove();
   const m=document.getElementById('msgs');if(!m)return;
