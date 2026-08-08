@@ -4271,6 +4271,10 @@ function addSuggestions(suggestions, skipOnIdentity){
   m.scrollTop=m.scrollHeight;
 }
 
+// Monotonic id source. Date.now() collided when a saved thread was replayed in a
+// synchronous loop, so Copy/Retry/Edit resolved to the first matching element.
+let _msgSeq=0;
+
 // Markdown tables must be lifted out BEFORE newlines become <br>, otherwise the
 // whole message collapses to one line and a greedy |...| match swallows it.
 function _mdCells(line){
