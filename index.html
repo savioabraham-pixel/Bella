@@ -5184,15 +5184,39 @@ function showTZList(side){
   renderTZList(list,TIMEZONES,side);list.classList.add('on');
 }
 
+// Wall-clock reading of an instant in a given zone, as numeric parts.
+function _tzParts(instant,tz){
+  const f=new Intl.DateTimeFormat('en-US',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const p={};
+  for(const{type,value}of f.formatToParts(instant))p[type]=value;
+  return{y:+p.year,mo:+p.month,d:+p.day,h:(+p.hour)%24,mi:+p.minute,s:+p.second};
+}
+// Offset in minutes for a zone AT a given instant (so DST is accounted for).
+function _tzOffsetMin(instant,tz){
+  const p=_tzParts(instant,tz);
+  return Math.round((Date.UTC(p.y,p.mo-1,p.d,p.h,p.mi,p.s)-instant.getTime())/60000);
+}
 function getUTCOffset(tz){
+  try{return _tzOffsetMin(new Date(),tz);}catch(e){return 0;}
+}
+// Live abbreviation so New York reads EDT in summer, EST in winter. Intl gives
+// "GMT+5:30" for zones with no common abbreviation — fall back to our table there.
+function tzAbbrAt(instant,tz){
+  const stat=(TIMEZONES.find(x=>x.tz===tz)||{}).abbr||'';
   try{
-    const now=new Date();
-    const u=now.toLocaleString('en-US',{timeZone:'UTC',hour:'2-digit',minute:'2-digit',hour12:false});
-    const t=now.toLocaleString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false});
-    const[uh,um]=u.split(':').map(Number);
-    const[th,tm]=t.split(':').map(Number);
-    return(th*60+tm)-(uh*60+um);
-  }catch(e){return 0;}
+    const part=new Intl.DateTimeFormat('en-US',{timeZone:tz,timeZoneName:'short'}).formatToParts(instant).find(x=>x.type==='timeZoneName');
+    const live=part?part.value:'';
+    return(!live||/^GMT/i.test(live))?stat:live;
+  }catch(e){return stat;}
+}
+// Resolve "HH:MM today, in zone tz" to a real instant.
+function _instantFromWallTime(h,m,tz){
+  const today=_tzParts(new Date(),tz);
+  const wall=Date.UTC(today.y,today.mo-1,today.d,h,m,0);
+  let inst=new Date(wall-_tzOffsetMin(new Date(),tz)*60000);
+  // Re-resolve once using the offset actually in force at that instant (DST edges).
+  inst=new Date(wall-_tzOffsetMin(inst,tz)*60000);
+  return inst;
 }
 
 function tzLabel(tz){
