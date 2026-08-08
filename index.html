@@ -5127,22 +5127,19 @@ function doTZConvert(){
   if(!timeIn){document.getElementById('tz-result').textContent='Enter a time above';return;}
   try{
     const[h,m]=timeIn.split(':').map(Number);
-    const now=new Date();now.setHours(h,m,0,0);
-    // Format from time with abbr
-    const fromLabel=tzLabel(_tzFrom);
-    const toLabel=tzLabel(_tzTo);
-    const fromAbbr=TIMEZONES.find(x=>x.tz===_tzFrom)?.abbr||'';
-    const toAbbr=TIMEZONES.find(x=>x.tz===_tzTo)?.abbr||'';
-    // Format to time — full date if day changes
-    const toDate=new Date(now.toLocaleString('en-US',{timeZone:_tzTo}));
+    // The typed time is wall-clock time in the SOURCE zone, not in the browser's zone.
+    const inst=_instantFromWallTime(h,m,_tzFrom);
+    const fromAbbr=tzAbbrAt(inst,_tzFrom);
+    const toAbbr=tzAbbrAt(inst,_tzTo);
     const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const toDayStr=`${days[toDate.getDay()]} ${toDate.getDate()} ${months[toDate.getMonth()]} ${toDate.getFullYear()}`;
-    const toH=String(toDate.getHours()).padStart(2,'0');
-    const toMin=String(toDate.getMinutes()).padStart(2,'0');
-    const fromDate=new Date(now.toLocaleString('en-US',{timeZone:_tzFrom}));
-    const fromDayStr=`${days[fromDate.getDay()]} ${fromDate.getDate()} ${months[fromDate.getMonth()]} ${fromDate.getFullYear()}`;
-    const diffMins=getUTCOffset(_tzTo)-getUTCOffset(_tzFrom);
+    const fp=_tzParts(inst,_tzFrom),tp=_tzParts(inst,_tzTo);
+    const dayName=p=>days[new Date(Date.UTC(p.y,p.mo-1,p.d)).getUTCDay()];
+    const fromDayStr=`${dayName(fp)} ${fp.d} ${months[fp.mo-1]} ${fp.y}`;
+    const toDayStr=`${dayName(tp)} ${tp.d} ${months[tp.mo-1]} ${tp.y}`;
+    const toH=String(tp.h).padStart(2,'0');
+    const toMin=String(tp.mi).padStart(2,'0');
+    const diffMins=_tzOffsetMin(inst,_tzTo)-_tzOffsetMin(inst,_tzFrom);
     const diffSign=diffMins>=0?'+':'-';
     const absDiff=Math.abs(diffMins);
     const diffH=Math.floor(absDiff/60);const diffM=absDiff%60;
