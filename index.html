@@ -4321,7 +4321,9 @@ function bellaMsg(text,audioUrl){
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
     .replace(/^[-•]\s(.+)$/gm,'<li>$1</li>')
     .replace(/\n/g,'<br>');
-  if(formatted.includes('<li>'))formatted='<ul style="padding-left:16px;margin:4px 0">'+formatted+'</ul>';
+  // Wrap only contiguous runs of <li>, not the whole message — the old form put
+  // surrounding prose inside the <ul>.
+  formatted=formatted.replace(/(?:<li>.*?<\/li>(?:<br>)?)+/g,r=>'<ul style="padding-left:16px;margin:4px 0">'+r.replace(/<br>/g,'')+'</ul>');
   // Restore rendered tables last so their markup is never touched by the inline passes.
   formatted=formatted.replace(/@@BELLATABLE(\d+)@@/g,(m0,i)=>_tbl.tables[+i]||'');
   const msgId='msg-'+(++_msgSeq);
