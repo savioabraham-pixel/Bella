@@ -1853,18 +1853,6 @@ function _showMemAlert(threshold, memCount, threadCount){
     if(continuousVoice) speakText(msg,'en');
   }
 }
-async function sheetsRead(range){
-  if(!sheetsToken)return null;
-  try{const r=await fetch(`${SHEETS_API}/${SHEET_ID}/values/${range}?access_token=${sheetsToken}`);if(!r.ok)return null;const d=await r.json();return d.values||null;}catch{return null;}
-}
-async function sheetsWrite(range,values){
-  if(!sheetsToken)return false;
-  try{const r=await fetch(`${SHEETS_API}/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW&access_token=${sheetsToken}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({range,majorDimension:'ROWS',values})});return r.ok;}catch{return false;}
-}
-async function sheetsAppend(range,values){
-  if(!sheetsToken)return false;
-  try{const r=await fetch(`${SHEETS_API}/${SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS&access_token=${sheetsToken}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({range,majorDimension:'ROWS',values})});return r.ok;}catch{return false;}
-}
 async function loadUserMemory(profileKey,addressedName){
   userMemory={addressedName,memories:'',lastSeen:'',proactiveFollowUp:''};
   try{
