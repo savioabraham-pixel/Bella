@@ -5100,8 +5100,13 @@ function switchConvTab(tab){
 function doConvert(){
   if(!_exchangeRates) return;
   const amt=parseFloat(document.getElementById('conv-amt').value)||0;
-  const rFrom=_exchangeRates[_currFrom]||1;
-  const rTo=_exchangeRates[_currTo]||1;
+  const rFrom=_exchangeRates[_currFrom],rTo=_exchangeRates[_currTo];
+  // A missing rate used to silently default to 1 (USD parity) and show a wrong number.
+  if(!rFrom||!rTo){
+    const el=document.getElementById('conv-result');
+    if(el)el.textContent=`Rate unavailable for ${!rFrom?_currFrom:_currTo}`;
+    return;
+  }
   const result=amt*(rTo/rFrom);
   const resEl=document.getElementById('conv-result');
   const rateEl=document.getElementById('conv-rate-info');
