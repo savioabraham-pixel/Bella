@@ -1778,26 +1778,10 @@ function setHist(h){if(currentThreadId&&threads[currentThreadId])threads[current
 // ============================================================
 // GOOGLE SHEETS MEMORY
 // ============================================================
-async function initGoogleAuth(){
-  // Silent token request only — never show OAuth popup on launch
-  // Sheets memory is a background feature, Bella works without it
-  return new Promise((resolve)=>{
-    if(typeof google==='undefined'){resolve(false);return;}
-    try{
-      const client=google.accounts.oauth2.initTokenClient({
-        client_id:OAUTH_CLIENT_ID,
-        scope:'https://www.googleapis.com/auth/spreadsheets',
-        prompt:'none',
-        callback:(r)=>{
-          if(r.access_token){sheetsToken=r.access_token;setMemBadge('💾 On');resolve(true);}
-          else{setMemBadge('📱 Local');resolve(false);}
-        },
-        error_callback:(e)=>{setMemBadge('📱 Local');resolve(false);}
-      });
-      client.requestAccessToken({prompt:'none'});
-    }catch(e){setMemBadge('📱 Local');resolve(false);}
-  });
-}
+// Direct Google Sheets access was removed with the GSI script — it depended on the
+// window.google global that script provided, and initGoogleAuth() was never called,
+// so sheetsToken stayed null and every read/write short-circuited. Sheet persistence
+// now goes through the backend's /sheets-write endpoint instead.
 // Memory limits — per user
 const MEM_MAX_MEMORIES = 100;  // max memory entries per user
 const MEM_MAX_THREADS = 50;    // max conversation threads
