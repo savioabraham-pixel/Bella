@@ -4307,7 +4307,8 @@ function bellaMsg(text,audioUrl){
   const empty=document.getElementById('empty-state');if(empty)empty.remove();
   const m=document.getElementById('msgs');if(!m)return;
   const w=document.createElement('div');w.className='msg bella';
-  let formatted=text.replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  const _tbl=_mdExtractTables(text.replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+  let formatted=_tbl.text
     .replace(/^###\s(.+)$/gm,'<h4 style="margin:10px 0 4px;font-size:13px;color:var(--navy);font-weight:700">$1</h4>')
     .replace(/^##\s(.+)$/gm,'<h3 style="margin:12px 0 4px;font-size:14px;color:var(--navy);font-weight:700">$1</h3>')
     .replace(/^#\s(.+)$/gm,'<h2 style="margin:14px 0 6px;font-size:15px;color:var(--navy);font-weight:700">$1</h2>')
@@ -4315,13 +4316,8 @@ function bellaMsg(text,audioUrl){
     .replace(/^[-•]\s(.+)$/gm,'<li>$1</li>')
     .replace(/\n/g,'<br>');
   if(formatted.includes('<li>'))formatted='<ul style="padding-left:16px;margin:4px 0">'+formatted+'</ul>';
-  // Render markdown tables as HTML tables
-  formatted=formatted.replace(/(<br>)?\|(.+)\|(<br>)?/g,(match,b1,cells,b2)=>{
-    if(cells.includes('---'))return'';
-    const tds=cells.split('|').map(c=>`<td style="padding:5px 10px;border:1px solid var(--border);font-size:12px">${c.trim()}</td>`).join('');
-    return`<tr>${tds}</tr>`;
-  });
-  if(formatted.includes('<tr>'))formatted=`<table style="border-collapse:collapse;margin:8px 0;width:100%;font-family:'DM Sans',sans-serif">${formatted}</table>`;
+  // Restore rendered tables last so their markup is never touched by the inline passes.
+  formatted=formatted.replace(/@@BELLATABLE(\d+)@@/g,(m0,i)=>_tbl.tables[+i]||'');
   const msgId='msg-'+Date.now();
   w.innerHTML=`<div class="mav b">B</div><div class="msg-wrap"><div class="mbub" id="${msgId}">${formatted}</div><div class="msg-actions">${audioUrl?`<button class="msg-act-btn" onclick="autoPlay('${audioUrl}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>Replay</button>`:''}<button class="msg-act-btn" onclick="copyMsg('${msgId}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button></div></div>`;
   m.appendChild(w);m.scrollTop=m.scrollHeight;
