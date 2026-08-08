@@ -3222,10 +3222,6 @@ async function handleIdentityInput(text){
   }
   return false;
 }
-async function getPreferenceFromSheets(profileKey){
-  if(!sheetsToken)return null;
-  try{const rows=await sheetsRead('Users!A:B');if(rows){for(const row of rows){if(row[0]===profileKey)return row[1]||null;}}}catch{}return null;
-}
 async function confirmIdentity(profileKey,addressedName){
   idState='confirmed';currentProfileKey=profileKey;currentAddressedName=addressedName;
   // Sidebar shows First + Last name (real name)
