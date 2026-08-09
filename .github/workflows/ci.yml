@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: astral-sh/setup-uv@v9
+      - uses: astral-sh/setup-uv@v9.0.0
         with:
           enable-cache: true
           cache-dependency-glob: apps/api/uv.lock
@@ -48,9 +48,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # Version comes from `packageManager` in apps/web/package.json — passing it here
-      # as well is rejected as a conflicting specification.
+      # Version comes from `packageManager` in apps/web/package.json. The action looks in
+      # the repository root by default, so it has to be pointed at the app; passing a
+      # `version` as well would be rejected as a conflicting specification.
       - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/web/package.json
 
       - uses: actions/setup-node@v5
         with:
@@ -118,12 +121,27 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Scans what this ref introduces, not the whole history.
+      #
+      # `main` carries the Firebase *web* API key in index.html across ~50 commits. That
+      # value is a public client identifier rather than a credential — it is meant to ship
+      # to browsers, and is protected by authorised domains and App Check, not by secrecy.
+      # Scanning full history here would keep this job permanently red on a known,
+      # already-documented condition and train everyone to ignore it, which is precisely
+      # how a real secret gets waved through. The wider history question is tracked as
+      # open question 3 in docs/10-decision-log.md.
       - name: Secret scan
         run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            RANGE="HEAD~1..HEAD"
+          else
+            RANGE="origin/main..HEAD"
+          fi
+          echo "scanning $RANGE"
           docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
-            detect --source=/repo --redact --verbose --no-banner
+            detect --source=/repo --redact --verbose --no-banner --log-opts="$RANGE"
 
-      - uses: astral-sh/setup-uv@v9
+      - uses: astral-sh/setup-uv@v9.0.0
 
       - name: Python dependency audit
         working-directory: apps/api
