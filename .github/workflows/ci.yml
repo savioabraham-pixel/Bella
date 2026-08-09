@@ -1,0 +1,181 @@
+name: CI
+
+on:
+  push:
+    branches: [main, beta]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOCKER_BUILDKIT: "1"
+
+jobs:
+  # ── static analysis ─────────────────────────────────────────────────────────
+  api-quality:
+    name: API · lint, types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+
+      - name: Install
+        working-directory: apps/api
+        run: uv sync --frozen
+
+      - name: Ruff lint
+        working-directory: apps/api
+        run: uv run ruff check app tests --output-format=github
+
+      - name: Ruff format
+        working-directory: apps/api
+        run: uv run ruff format --check app tests
+
+      - name: mypy
+        working-directory: apps/api
+        run: uv run mypy app
+
+  web-quality:
+    name: Web · lint, types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+
+      - name: ESLint
+        working-directory: apps/web
+        run: pnpm lint
+
+      - name: Prettier
+        working-directory: apps/web
+        run: pnpm format:check
+
+      - name: TypeScript
+        working-directory: apps/web
+        run: pnpm typecheck
+
+  # ── tests ───────────────────────────────────────────────────────────────────
+  api-tests:
+    name: API · tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The compose stack is used verbatim so CI and local development cannot drift.
+      # In particular the postgres image carries the role and privilege setup that the
+      # Row-Level Security tests depend on — a plain `services:` postgres would let
+      # those tests pass while proving nothing.
+      - name: Start data services
+        run: docker compose up -d --build postgres redis
+
+      - name: Wait for postgres
+        run: |
+          for _ in $(seq 1 60); do
+            docker compose exec -T postgres pg_isready -U bella -d bella && exit 0
+            sleep 2
+          done
+          echo "postgres did not become ready"; docker compose logs postgres; exit 1
+
+      - name: Build API image
+        run: docker compose build api
+
+      - name: Migrate test database
+        run: make migrate-test
+
+      - name: Run suite
+        run: make test-api
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+  # ── security ────────────────────────────────────────────────────────────────
+  security:
+    name: Security scans
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Python dependency audit
+        working-directory: apps/api
+        run: |
+          uv sync --frozen
+          uv run --with pip-audit pip-audit --strict || true
+
+      - name: Build images for scanning
+        run: docker compose build api web
+
+      - name: Trivy — API image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: bella-api:dev
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Trivy — web image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: bella-web:dev
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+  # ── production images must build and boot ───────────────────────────────────
+  prod-images:
+    name: Production images
+    runs-on: ubuntu-latest
+    needs: [api-quality, web-quality]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build production targets
+        env:
+          NEXT_PUBLIC_API_URL: https://api.example.test
+        run: docker compose -f compose.yaml -f compose.prod.yaml build
+
+      - name: Verify the API image starts and answers liveness
+        run: |
+          docker run -d --name api-smoke \
+            -e DATABASE_URL=postgresql://u:p@127.0.0.1:5432/x \
+            -e REDIS_URL=redis://127.0.0.1:6379/0 \
+            -e JWT_SECRET=ci-smoke-secret \
+            -e CORS_ORIGINS=https://example.test \
+            -e TRUSTED_HOSTS='*' \
+            -p 8000:8000 bella-api:latest
+          for _ in $(seq 1 30); do
+            curl -fsS http://localhost:8000/health && break || sleep 2
+          done
+          curl -fsS http://localhost:8000/health
+          docker rm -f api-smoke

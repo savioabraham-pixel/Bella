@@ -1,0 +1,204 @@
+# Bella — local development stack.
+#
+#   make up          start everything
+#   make logs        follow
+#   make migrate     apply migrations
+#   make test        run the suite against the isolated test database
+#
+# Production runs on Cloud Run and is described in infra/terraform; this file is for
+# local and CI only. `compose.prod.yaml` exists to verify the production image builds
+# and boots, not to run production.
+
+name: bella
+
+# ── shared fragments ──────────────────────────────────────────────────────────
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-api-env: &api-env
+  ENVIRONMENT: local
+  DEBUG: "true"
+  LOG_LEVEL: DEBUG
+  LOG_FORMAT: console
+  DATABASE_URL: postgresql://bella_app:bella_app_local@postgres:5432/bella
+  REDIS_URL: redis://redis:6379/0
+  CORS_ORIGINS: http://localhost:3000
+  JWT_SECRET: dev-only-not-a-real-secret
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
+  STORAGE_BACKEND: local
+  STORAGE_LOCAL_PATH: /var/lib/bella/storage
+  MOCK_PROVIDER_URL: http://mock-providers:9000
+  LLM_PROVIDER: mock
+  TTS_PROVIDER: mock
+
+services:
+  # ── data ────────────────────────────────────────────────────────────────────
+  postgres:
+    build:
+      context: ./infra/docker/postgres
+      args:
+        PG_MAJOR: "17"
+    image: bella-postgres:dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bella
+      POSTGRES_PASSWORD: bella_local
+      POSTGRES_DB: bella
+      # Deterministic collation so ORDER BY matches production regardless of host locale.
+      POSTGRES_INITDB_ARGS: "--locale=C.UTF-8 --encoding=UTF8"
+    ports:
+      - "127.0.0.1:5432:5432"   # loopback only — never expose a database on 0.0.0.0
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bella -d bella"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    logging: *default-logging
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 256mb
+      # Session and rate-limit keys carry TTLs; evict the least-recently-used of those
+      # rather than failing a write when memory fills.
+      - --maxmemory-policy
+      - allkeys-lru
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging: *default-logging
+
+  # ── application ─────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: ../../infra/docker/api/Dockerfile
+      target: dev
+    image: bella-api:dev
+    restart: unless-stopped
+    environment: *api-env
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      # Source is mounted for hot reload; the virtualenv is masked by a named volume so
+      # the host never shadows the image's installed dependencies.
+      - ./apps/api:/app:cached
+      - api-venv:/app/.venv
+      - storage-data:/var/lib/bella/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *default-logging
+
+  worker:
+    build:
+      context: ./apps/api
+      dockerfile: ../../infra/docker/worker/Dockerfile
+      target: dev
+    image: bella-worker:dev
+    restart: unless-stopped
+    environment: *api-env
+    volumes:
+      # Its own venv volume: the worker is a separate image with extra system libraries,
+      # so it must not be masked by the API's.
+      - ./apps/api:/app:cached
+      - worker-venv:/app/.venv
+      - storage-data:/var/lib/bella/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *default-logging
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: ../../infra/docker/web/Dockerfile
+      target: dev
+    image: bella-web:dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      API_INTERNAL_URL: http://api:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      WATCHPACK_POLLING: "true"    # bind mounts do not emit inotify events reliably
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./apps/web:/app:cached
+      - web-node-modules:/app/node_modules
+      - web-next-cache:/app/.next
+    depends_on:
+      api:
+        condition: service_started
+    logging: *default-logging
+
+  # ── developer tooling ───────────────────────────────────────────────────────
+  # Catches outbound mail so nothing is ever delivered to a real address from a dev box.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"   # web UI
+      - "127.0.0.1:1025:1025"   # SMTP
+    environment:
+      MP_MAX_MESSAGES: "500"
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    logging: *default-logging
+
+  # One-shot migration runner. `make migrate` invokes this rather than exec-ing into the
+  # API container, so migrations work identically in CI where no API container runs.
+  migrate:
+    image: bella-api:dev
+    profiles: ["tools"]
+    # Tooling that writes into the bind mount (autogenerated migrations, ruff --fix) runs
+    # as the host user, so generated files are not left owned by the image's uid. The
+    # long-running services keep their unprivileged in-image user.
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    environment:
+      <<: *api-env
+      # Migrations need DDL rights; the runtime role deliberately has none.
+      DATABASE_URL: postgresql://bella_migrator:bella_migrator_local@postgres:5432/bella
+    volumes:
+      - ./apps/api:/app:cached
+      - api-venv:/app/.venv
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+
+volumes:
+  postgres-data:
+  redis-data:
+  storage-data:
+  api-venv:
+  worker-venv:
+  web-node-modules:
+  web-next-cache:
+
+networks:
+  default:
+    name: bella-network

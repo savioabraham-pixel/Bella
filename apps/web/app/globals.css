@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/**
+ * Design tokens.
+ *
+ * These are the navy / gold / cream values carried over from the legacy `:root` block —
+ * the visual identity is worth keeping. What is not carried over is the fifteen layers of
+ * `!important` overrides that accumulated on top of it. Every colour in the application
+ * resolves through a token defined here; there are no hex literals in components.
+ */
+@theme {
+  --color-navy: #0b2545;
+  --color-navy-soft: #142f5a;
+  --color-navy-deep: #1b2a4a;
+
+  --color-gold: #d4af37;
+  --color-gold-pale: #f5e6c8;
+  --color-gold-muted: rgb(212 175 55 / 0.35);
+
+  --color-cream: #faf8f4;
+  --color-cream-warm: #fbf6ec;
+  --color-parchment: #f6efe2;
+
+  --color-ink: #0b2545;
+  --color-ink-mid: #3d5a80;
+  --color-ink-soft: #8a9bbf;
+
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-body: "DM Sans", system-ui, -apple-system, sans-serif;
+
+  --radius-card: 1rem;
+  --radius-bubble: 1.25rem;
+}
+
+/**
+ * Theming has three states: explicit light, explicit dark, and unset (follow the OS).
+ * Tokens are defined on bare :root so nothing depends on a media query having matched,
+ * then re-mapped for dark in both directions.
+ */
+:root {
+  --surface: var(--color-cream);
+  --surface-raised: #ffffff;
+  --surface-sunken: var(--color-parchment);
+  --text-primary: var(--color-ink);
+  --text-secondary: var(--color-ink-mid);
+  --text-muted: var(--color-ink-soft);
+  --border-subtle: rgb(11 37 69 / 0.12);
+  --accent: var(--color-gold);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface: var(--color-navy-deep);
+    --surface-raised: var(--color-navy);
+    --surface-sunken: #0a1c33;
+    --text-primary: var(--color-gold-pale);
+    --text-secondary: rgb(245 230 200 / 0.7);
+    --text-muted: rgb(245 230 200 / 0.45);
+    --border-subtle: rgb(212 175 55 / 0.18);
+  }
+}
+
+:root[data-theme="dark"] {
+  --surface: var(--color-navy-deep);
+  --surface-raised: var(--color-navy);
+  --surface-sunken: #0a1c33;
+  --text-primary: var(--color-gold-pale);
+  --text-secondary: rgb(245 230 200 / 0.7);
+  --text-muted: rgb(245 230 200 / 0.45);
+  --border-subtle: rgb(212 175 55 / 0.18);
+}
+
+* {
+  min-width: 0;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background-color: var(--surface);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Respect the OS setting rather than animating regardless. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Visible focus everywhere. The legacy build removed outlines and never replaced them. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

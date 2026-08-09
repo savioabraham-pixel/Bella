@@ -1,0 +1,95 @@
+# Production-image verification stack.
+#
+# This is NOT how production runs — that is Cloud Run, defined in infra/terraform. The
+# purpose here is to prove, locally and in CI, that the production build targets compile,
+# boot, and pass their healthchecks before an image is promoted.
+#
+#   docker compose -f compose.yaml -f compose.prod.yaml up --build
+#
+# Secrets come from the environment; there are no defaults, so a missing value fails
+# loudly at startup rather than silently running with a development credential.
+
+name: bella-prod
+
+x-prod-env: &prod-env
+  ENVIRONMENT: production
+  DEBUG: "false"
+  LOG_LEVEL: INFO
+  LOG_FORMAT: json
+  DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+  REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+  JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+  CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
+  TRUSTED_HOSTS: ${TRUSTED_HOSTS:?TRUSTED_HOSTS is required}
+  OTEL_ENABLED: "true"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  SENTRY_DSN: ${SENTRY_DSN:-}
+
+services:
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: ../../infra/docker/api/Dockerfile
+      target: prod
+    image: bella-api:${IMAGE_TAG:-latest}
+    environment: *prod-env
+    # No source mount: the image is the artefact.
+    volumes: []
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+
+  worker:
+    build:
+      context: ./apps/api
+      dockerfile: ../../infra/docker/worker/Dockerfile
+      target: prod
+    image: bella-worker:${IMAGE_TAG:-latest}
+    environment: *prod-env
+    volumes: []
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: ../../infra/docker/web/Dockerfile
+      target: prod
+    image: bella-web:${IMAGE_TAG:-latest}
+    environment:
+      NODE_ENV: production
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:8000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
+    volumes: []
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+  # Developer tooling has no place in a production-shaped stack.
+  mailpit:
+    profiles: ["never"]
