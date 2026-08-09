@@ -1,0 +1,19 @@
+# Generated — reformatting a lockfile risks the package manager rewriting it back on the
+# next install, which turns every PR into a diff war.
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Build output and caches
+.next/
+out/
+dist/
+build/
+coverage/
+test-results/
+playwright-report/
+node_modules/
+
+# Generated types
+next-env.d.ts
+*.tsbuildinfo

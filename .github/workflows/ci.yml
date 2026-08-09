@@ -155,6 +155,11 @@ jobs:
       - name: Build production images for scanning
         env:
           NEXT_PUBLIC_API_URL: https://api.example.test
+          DATABASE_URL: postgresql://placeholder:placeholder@127.0.0.1:5432/placeholder
+          REDIS_URL: redis://127.0.0.1:6379/0
+          JWT_SECRET: build-time-placeholder-not-used
+          CORS_ORIGINS: https://api.example.test
+          TRUSTED_HOSTS: "*"
         run: docker compose -f compose.yaml -f compose.prod.yaml build api web
 
       - name: Trivy — API image
@@ -186,6 +191,11 @@ jobs:
       - name: Build production targets
         env:
           NEXT_PUBLIC_API_URL: https://api.example.test
+          DATABASE_URL: postgresql://placeholder:placeholder@127.0.0.1:5432/placeholder
+          REDIS_URL: redis://127.0.0.1:6379/0
+          JWT_SECRET: build-time-placeholder-not-used
+          CORS_ORIGINS: https://api.example.test
+          TRUSTED_HOSTS: "*"
         run: docker compose -f compose.yaml -f compose.prod.yaml build
 
       - name: Verify the API image starts and answers liveness
