@@ -19,9 +19,9 @@ jobs:
     name: API · lint, types
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v9
         with:
           enable-cache: true
           cache-dependency-glob: apps/api/uv.lock
@@ -46,13 +46,13 @@ jobs:
     name: Web · lint, types
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
+      # Version comes from `packageManager` in apps/web/package.json — passing it here
+      # as well is rejected as a conflicting specification.
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
@@ -79,7 +79,7 @@ jobs:
     name: API · tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # The compose stack is used verbatim so CI and local development cannot drift.
       # In particular the postgres image carries the role and privilege setup that the
@@ -114,16 +114,16 @@ jobs:
     name: Security scans
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Secret scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
+            detect --source=/repo --redact --verbose --no-banner
 
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v9
 
       - name: Python dependency audit
         working-directory: apps/api
@@ -135,7 +135,7 @@ jobs:
         run: docker compose build api web
 
       - name: Trivy — API image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: bella-api:dev
           format: table
@@ -144,7 +144,7 @@ jobs:
           severity: CRITICAL,HIGH
 
       - name: Trivy — web image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: bella-web:dev
           format: table
@@ -158,7 +158,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [api-quality, web-quality]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Build production targets
         env:

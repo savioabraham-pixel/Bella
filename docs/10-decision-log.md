@@ -9,8 +9,8 @@ Compressed ADRs: the decision, the reason, the cost, and what would change our m
 
 The file has 15 competing style layers, ~212 globals, no module boundaries and no tests.
 Refactoring in place means changing a 315 KB file with no safety net for a user group that
-includes children and elderly relatives. Instead: freeze it as `legacy/index.html`, treat it as
-the behavioural specification, and build alongside.
+includes children and elderly relatives. Instead: leave it in place on `main`, treat it as
+the behavioural specification (`git show main:index.html`), and build alongside.
 *Cost:* a period with two codebases. *Reconsider if:* the goal narrows to "fix security and
 stop", in which case Phase 0 alone is the right scope.
 

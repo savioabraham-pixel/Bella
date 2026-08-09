@@ -5,7 +5,6 @@
 .gitignore
 .github
 docs
-legacy
 infra/terraform
 
 **/.env

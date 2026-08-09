@@ -205,9 +205,10 @@ bella/
 ├── infra/
 │   ├── terraform/
 │   └── docker/
-├── docs/                    these documents, plus ADRs
-└── legacy/
-    └── index.html           frozen reference — the source of truth for behaviour parity
+└── docs/                    these documents, plus ADRs
+
+The previous single-file build stays on `main` as the behaviour reference
+(`git show main:index.html`); it is deliberately not vendored into this tree.
 ```
 
 ## Toolchain

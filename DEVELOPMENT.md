@@ -40,7 +40,6 @@ infra/
 packages/
   api-client/   generated from the OpenAPI schema; never hand-edited
 docs/           architecture, data model, API contract, roadmap
-legacy/         the original single-file app, frozen as a behaviour reference
 ```
 
 ## Services
@@ -197,3 +196,18 @@ containerised stack, configuration, structured logging with PII redaction, error
 request IDs, health and readiness probes, the full data model with RLS, and CI.
 
 The API surface itself is Phase 2 onward — `app/api/v1/router.py` lists what lands when.
+
+## The previous application
+
+`main` still holds the original single-file build, and it remains the specification for
+what Bella actually *does* — the persona, the conversation flow, the identity and memory
+rules. Read it there rather than keeping a copy on this branch:
+
+```bash
+git show main:index.html > /tmp/bella-legacy.html
+```
+
+It is not vendored here because it is byte-identical to `main` and contains hardcoded
+personal data for nineteen real people, including health and bereavement details. One
+public copy is one too many; a second serves no purpose. What it gets wrong is catalogued
+in [docs/01-current-state.md](docs/01-current-state.md).
