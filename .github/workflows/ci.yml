@@ -149,13 +149,18 @@ jobs:
           uv sync --frozen
           uv run --with pip-audit pip-audit --strict || true
 
-      - name: Build images for scanning
-        run: docker compose build api web
+      # The production targets are what deploy; the dev images bundle the test
+      # toolchain (esbuild, vitest) and would keep this job permanently red on
+      # advisories that never reach a running service.
+      - name: Build production images for scanning
+        env:
+          NEXT_PUBLIC_API_URL: https://api.example.test
+        run: docker compose -f compose.yaml -f compose.prod.yaml build api web
 
       - name: Trivy — API image
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: bella-api:dev
+          image-ref: bella-api:latest
           format: table
           exit-code: "1"
           ignore-unfixed: true
@@ -164,7 +169,7 @@ jobs:
       - name: Trivy — web image
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: bella-web:dev
+          image-ref: bella-web:latest
           format: table
           exit-code: "1"
           ignore-unfixed: true
