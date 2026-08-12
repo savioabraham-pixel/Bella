@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -42,12 +46,54 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.otel_enabled:
         _install_telemetry(app, settings)
 
+    await _recover_orphaned_generations(settings)
+
     try:
         yield
     finally:
         logger.info("shutdown")
         await close_redis()
         await dispose_engine()
+
+
+async def _recover_orphaned_generations(settings: Settings) -> None:
+    """Clear replies abandoned by a previous process.
+
+    Never fatal. A database that is not ready yet must not stop the app from booting into
+    a state where its own readiness probe can report the problem.
+    """
+    from app.modules.threads.maintenance import fail_orphaned_generations
+
+    try:
+        await fail_orphaned_generations(settings)
+    except Exception as exc:
+        logger.warning("orphan_sweep_failed", error_type=type(exc).__name__)
+
+
+_STATIC_DIR = Path(__file__).parent / "static"
+
+
+def _mount_docs(app: FastAPI) -> None:
+    """Serve Swagger UI from the application itself.
+
+    FastAPI's default docs page pulls its bundle and stylesheet from a public CDN. That is
+    one more origin the page depends on, and it fails invisibly — a blocked request leaves
+    a blank page with no error anywhere, which is exactly how this was found. A private
+    tool for a family should not need the public internet to render its own documentation.
+
+    Not mounted in production, where `docs_url` is None and these paths do not exist.
+    """
+    app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+
+    @app.get("/docs", include_in_schema=False)
+    async def swagger_ui() -> HTMLResponse:
+        return get_swagger_ui_html(
+            openapi_url="/openapi.json",
+            title=f"{app.title} — Swagger UI",
+            swagger_js_url="/static/swagger/swagger-ui-bundle.js",
+            swagger_css_url="/static/swagger/swagger-ui.css",
+            swagger_favicon_url="/static/swagger/favicon.png",
+        )
 
 
 def _install_telemetry(app: FastAPI, settings: Settings) -> None:
@@ -73,7 +119,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version=settings.version,
         description="Backend for Bella — a personal AI companion.",
         openapi_url=None if settings.is_production else "/openapi.json",
-        docs_url=None if settings.is_production else "/docs",
+        # Replaced by `_mount_docs`, which serves the bundle from this app rather
+        # than from a CDN.
+        docs_url=None,
         redoc_url=None,
         lifespan=lifespan,
     )
@@ -101,6 +149,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(api_router, prefix=settings.api_v1_prefix)
+
+    if not settings.is_production:
+        _mount_docs(app)
 
     return app
 

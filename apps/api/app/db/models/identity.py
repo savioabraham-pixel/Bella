@@ -15,15 +15,18 @@ import uuid
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     LargeBinary,
     String,
     Text,
+    func,
     text,
 )
 from sqlalchemy.dialects.postgresql import CITEXT, JSONB, UUID
@@ -38,6 +41,9 @@ if TYPE_CHECKING:
 USER_STATUSES = ("active", "suspended", "deletion_requested", "deleted")
 USER_ROLES = ("member", "admin", "owner")
 SENSITIVITY_LEVELS = ("normal", "high")
+THEMES = ("light", "dark", "system")
+RELATION_KINDS = ("spouse", "child", "parent", "sibling", "friend", "colleague", "other")
+RETENTION_DAYS = (30, 90, 365)
 
 
 class User(Base, UUIDPrimaryKeyMixin):
@@ -223,6 +229,66 @@ class Session(Base, UUIDPrimaryKeyMixin):
     )
 
 
+class UserPreferences(Base):
+    """How the app behaves for this person.
+
+    A side table rather than columns on `profiles`, mirroring `user_quotas`: these are
+    operational settings, not personal data, and they must survive a profile erasure long
+    enough for the retention job to know what the person asked for.
+
+    Typed columns rather than a JSONB blob because `message_retention_days` is read by a
+    background sweep across all users — a predicate JSONB cannot index usefully — and
+    because the legacy client's habit of storing whatever it liked under `b_pref_*` is
+    exactly what this replaces.
+    """
+
+    __tablename__ = "user_preferences"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+
+    theme: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="system", server_default=text("'system'")
+    )
+    clock_24h: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+
+    voice_replies: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    voice_autoplay: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    hands_free: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+
+    notifications_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    location_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+
+    # NULL means "keep forever", which is the default and the reverse of the legacy
+    # behaviour where closing a tab destroyed the conversation (finding H2).
+    message_retention_days: Mapped[int | None] = mapped_column(Integer)
+
+    updated_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        CheckConstraint(f"theme IN {THEMES}", name="theme_valid"),
+        CheckConstraint(
+            f"message_retention_days IS NULL OR message_retention_days IN {RETENTION_DAYS}",
+            name="retention_valid",
+        ),
+    )
+
+
 class UserQuota(Base):
     """Server-side quotas. The legacy client computed these in the browser and reported
     thread count under a label that said 'memories' — this is the source of truth."""
@@ -240,11 +306,13 @@ class UserQuota(Base):
     threads_limit: Mapped[int] = mapped_column(
         nullable=False, default=500, server_default=text("500")
     )
+    # BigInteger, not Integer: the 2 GiB default is 2147483648, one past the int4 ceiling,
+    # so every quota row would fail to insert. Byte counts get 64 bits on principle.
     storage_bytes_used: Mapped[int] = mapped_column(
-        nullable=False, default=0, server_default=text("0")
+        BigInteger, nullable=False, default=0, server_default=text("0")
     )
     storage_limit_bytes: Mapped[int] = mapped_column(
-        nullable=False, default=2 * 1024**3, server_default=text("2147483648")
+        BigInteger, nullable=False, default=2 * 1024**3, server_default=text("2147483648")
     )
     tokens_used_today: Mapped[int] = mapped_column(
         nullable=False, default=0, server_default=text("0")

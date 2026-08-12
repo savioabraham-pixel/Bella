@@ -25,8 +25,13 @@ x-api-env: &api-env
   LOG_FORMAT: console
   DATABASE_URL: postgresql://bella_app:bella_app_local@postgres:5432/bella
   REDIS_URL: redis://redis:6379/0
-  CORS_ORIGINS: http://localhost:3000
+  # Both spellings of the loopback host. A browser sends whichever one is in the URL
+  # bar, and an Origin that is not on this list is refused before the handler runs.
+  CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://[::1]:3000
   JWT_SECRET: dev-only-not-a-real-secret
+  AUTH_PROVIDER: mock
+  # http://localhost never returns a Secure cookie; deployed environments leave this true.
+  REFRESH_COOKIE_SECURE: "false"
   SMTP_HOST: mailpit
   SMTP_PORT: "1025"
   STORAGE_BACKEND: local
@@ -51,7 +56,8 @@ services:
       # Deterministic collation so ORDER BY matches production regardless of host locale.
       POSTGRES_INITDB_ARGS: "--locale=C.UTF-8 --encoding=UTF8"
     ports:
-      - "127.0.0.1:5432:5432"   # loopback only — never expose a database on 0.0.0.0
+      # Loopback only, and IPv4 only — never expose a database on 0.0.0.0.
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -97,6 +103,7 @@ services:
     environment: *api-env
     ports:
       - "127.0.0.1:8000:8000"
+      - "[::1]:8000:8000"
     volumes:
       # Source is mounted for hot reload; the virtualenv is masked by a named volume so
       # the host never shadows the image's installed dependencies.
@@ -141,10 +148,14 @@ services:
     environment:
       NODE_ENV: development
       API_INTERNAL_URL: http://api:8000
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      # NEXT_PUBLIC_API_URL is deliberately unset for local development: the browser
+      # derives the API origin from the host in the address bar, so reaching the app
+      # on 127.0.0.1 talks to the API on 127.0.0.1 rather than crossing to localhost
+      # and back into the IPv4/IPv6 mismatch. Deployments set it explicitly.
       WATCHPACK_POLLING: "true"    # bind mounts do not emit inotify events reliably
     ports:
       - "127.0.0.1:3000:3000"
+      - "[::1]:3000:3000"
     volumes:
       - ./apps/web:/app:cached
       - web-node-modules:/app/node_modules
@@ -161,6 +172,7 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8025:8025"   # web UI
+      - "[::1]:8025:8025"
       - "127.0.0.1:1025:1025"   # SMTP
     environment:
       MP_MAX_MESSAGES: "500"

@@ -64,15 +64,59 @@ def test_sqlalchemy_url_gets_the_asyncpg_driver() -> None:
     assert settings.sqlalchemy_url.startswith("postgresql+asyncpg://")
 
 
+# A deployed environment has to satisfy the auth validator, so these are the minimum
+# credentials any non-local Settings must carry.
+DEPLOYED_AUTH = {
+    "AUTH_PROVIDER": "firebase",
+    "FIREBASE_PROJECT_ID": "bella-prod",
+    "JWT_SECRET": "a-real-secret",
+}
+
+
 def test_is_production_flag() -> None:
-    assert _settings(ENVIRONMENT="production").is_production is True
+    assert _settings(ENVIRONMENT="production", **DEPLOYED_AUTH).is_production is True
     assert _settings(ENVIRONMENT="local").is_production is False
+
+
+def test_mock_auth_is_refused_outside_local_and_test() -> None:
+    """The development identity provider must not be reachable from a deployed environment.
+
+    `mock` believes whatever an unsigned token claims, so shipping it would mean anyone
+    could mint a session as anyone.
+    """
+    with pytest.raises(ValueError, match="AUTH_PROVIDER=mock"):
+        _settings(ENVIRONMENT="staging", JWT_SECRET="a-real-secret")
+
+
+def test_placeholder_jwt_secret_is_refused_outside_local_and_test() -> None:
+    with pytest.raises(ValueError, match="JWT_SECRET is the development placeholder"):
+        _settings(
+            ENVIRONMENT="production",
+            AUTH_PROVIDER="firebase",
+            FIREBASE_PROJECT_ID="bella-prod",
+        )
+
+
+def test_firebase_provider_requires_a_project_id() -> None:
+    with pytest.raises(ValueError, match="FIREBASE_PROJECT_ID"):
+        _settings(
+            ENVIRONMENT="production",
+            AUTH_PROVIDER="firebase",
+            JWT_SECRET="a-real-secret",
+        )
+
+
+def test_local_environment_may_use_the_development_defaults() -> None:
+    settings = _settings(ENVIRONMENT="local")
+
+    assert settings.auth_provider == "mock"
+    assert settings.jwt_secret.get_secret_value() == "dev-only-change-me"
 
 
 def test_missing_required_setting_fails_loudly() -> None:
     """A missing DSN must fail at startup, not on the first query."""
     with pytest.raises(ValueError, match="database_url"):
-        Settings(REDIS_URL="redis://cache:6379/0")  # type: ignore[call-arg]
+        Settings(REDIS_URL="redis://cache:6379/0")
 
 
 def test_secrets_are_not_rendered_in_repr() -> None:

@@ -30,6 +30,9 @@ dependencies = [
     "httpx>=0.28.0",
     "tenacity>=9.0.0",
     "structlog>=24.4.0",
+    # Renders the versioned system prompts held in `prompt_versions`. Sandboxed, so a
+    # template is data the admin surface can edit rather than code it can execute.
+    "jinja2>=3.1.5",
     "opentelemetry-sdk>=1.28.0",
     "opentelemetry-instrumentation-fastapi>=0.49b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.49b0",
@@ -128,11 +131,17 @@ addopts = "-ra --strict-markers --strict-config"
 markers = [
     "integration: requires postgres and redis",
     "security: cross-tenant isolation assertions",
+    "unit: no external dependencies — runs anywhere, including without docker",
 ]
 
 [tool.coverage.run]
 source = ["app"]
 omit = ["app/db/migrations/*"]
+# SQLAlchemy's asyncio layer runs sync driver code inside greenlets. Without this the
+# tracer loses the execution context at the first `await db.execute(...)`, and every line
+# after it in that function is reported as unexecuted — which showed up as routers at 100%
+# sitting on top of service functions at 50%.
+concurrency = ["greenlet", "thread"]
 
 [tool.coverage.report]
 fail_under = 80

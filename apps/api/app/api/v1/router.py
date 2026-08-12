@@ -8,14 +8,20 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.modules.auth.router import router as auth_router
+from app.modules.me.router import router as me_router
+from app.modules.threads.router import router as threads_router
+from app.modules.threads.router import search_router
+
 api_router = APIRouter()
 
 # Phase 2 — identity, profile, relationships, consents
-# api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
-# api_router.include_router(me.router, prefix="/me", tags=["profile"])
+api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
+api_router.include_router(me_router, prefix="/me", tags=["profile"])
 
 # Phase 3 — threads, messages, streaming, search
-# api_router.include_router(threads.router, prefix="/threads", tags=["conversations"])
+api_router.include_router(threads_router, prefix="/threads", tags=["conversations"])
+api_router.include_router(search_router, prefix="/search", tags=["search"])
 
 # Phase 4 — memory
 # api_router.include_router(memories.router, prefix="/memories", tags=["memory"])

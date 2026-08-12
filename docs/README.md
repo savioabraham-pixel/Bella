@@ -20,6 +20,7 @@ Written on branch `beta`. Nothing here changes `index.html` or `main`.
 | 08 | [Observability & quality](08-observability-quality.md) | Logging, tracing, evals, test strategy |
 | 09 | [Migration roadmap](09-migration-roadmap.md) | Phased plan, sequencing, exit criteria per phase |
 | 10 | [Decision log (ADRs)](10-decision-log.md) | The 14 decisions that define the architecture, each with rationale |
+| 11 | [Status & gap analysis](11-status.md) | Where the rewrite actually is, what remains of `index.html`, what to do next |
 
 ## The 60-second version
 

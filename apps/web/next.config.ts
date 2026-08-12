@@ -1,31 +1,14 @@
 import type { NextConfig } from "next";
 
 /**
- * The CSP here is the one that matters — it governs the rendered page.
+ * The CSP is NOT here.
  *
- * The legacy app shipped no CSP at all and loaded four un-pinned CDN scripts, which is
- * how a cdnjs compromise would have executed code in a page holding auth state. Nothing
- * is loaded from a third-party origin any more, so `script-src 'self'` is achievable.
+ * It is issued per request from `middleware.ts`, because it carries a nonce and a nonce
+ * that is the same on every response is not a nonce. A static policy here would also be
+ * merged with that one by the browser, and two policies are enforced as their
+ * intersection — which is how a page ends up blocked by a rule nobody thinks is active.
  */
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  // 'unsafe-inline' for styles is required by Next's runtime style injection.
-  "style-src 'self' 'unsafe-inline'",
-  "script-src 'self'" + (process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""),
-  "img-src 'self' data: blob: https:",
-  "media-src 'self' blob:",
-  "font-src 'self' data:",
-  `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL ?? ""} https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com`,
-  "frame-src 'self' https://*.firebaseapp.com",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "upgrade-insecure-requests",
-].join("; ");
-
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: contentSecurityPolicy },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -33,10 +16,16 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "camera=(self), microphone=(self), geolocation=(self), interest-cohort=()",
   },
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
-  },
+  // Deployed environments only. A browser ignores HSTS over plain http, but sending it
+  // from a development server is still a claim this origin cannot honour.
+  ...(process.env.NODE_ENV === "development"
+    ? []
+    : [
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=63072000; includeSubDomains; preload",
+        },
+      ]),
 ];
 
 const nextConfig: NextConfig = {
@@ -47,9 +36,12 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
 
-  experimental: {
-    typedRoutes: true,
-  },
+  typedRoutes: true,
+
+  // Next's dev server refuses /_next/* requests whose Origin it does not recognise.
+  // `localhost` and `127.0.0.1` are the same machine but not the same origin, and a
+  // rejected chunk request leaves a page that hydrates into nothing.
+  allowedDevOrigins: ["localhost", "127.0.0.1", "[::1]"],
 
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

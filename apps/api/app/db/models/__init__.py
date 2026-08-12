@@ -16,6 +16,7 @@ from app.db.models.identity import (
     Relationship,
     Session,
     User,
+    UserPreferences,
     UserQuota,
 )
 from app.db.models.memory import EMBEDDING_DIMENSIONS, Memory
@@ -48,6 +49,7 @@ __all__ = [
     "Thread",
     "ToolInvocation",
     "User",
+    "UserPreferences",
     "UserQuota",
 ]
 
@@ -57,6 +59,7 @@ RLS_TABLES = (
     "profiles",
     "relationships",
     "sessions",
+    "user_preferences",
     "user_quotas",
     "threads",
     "messages",

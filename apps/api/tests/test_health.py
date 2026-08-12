@@ -68,3 +68,30 @@ async def test_unknown_route_uses_the_error_envelope(app_client: AsyncClient) ->
     error = response.json()["error"]
     assert error["code"] == "not_found"
     assert error["request_id"]
+
+
+@pytest.mark.integration
+async def test_api_responses_forbid_loading_anything(app_client: AsyncClient) -> None:
+    """The API serves JSON. Nothing it returns should be able to fetch a resource."""
+    response = await app_client.get("/health")
+    assert response.headers["content-security-policy"] == (
+        "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+    )
+
+
+@pytest.mark.integration
+async def test_the_docs_page_may_load_its_own_bundle(app_client: AsyncClient) -> None:
+    """Swagger UI loads its bundle from a CDN.
+
+    Under the API's blanket `default-src 'none'` the browser blocks the script and the
+    stylesheet, and /docs renders as a blank page — which is exactly what it did until
+    this exemption existed.
+    """
+    response = await app_client.get("/docs")
+    policy = response.headers["content-security-policy"]
+
+    assert "https://cdn.jsdelivr.net" in policy
+    assert "script-src 'self' https://cdn.jsdelivr.net" in policy
+    # Widened for the bundle, not thrown open.
+    assert "default-src 'none'" in policy
+    assert "frame-ancestors 'none'" in policy

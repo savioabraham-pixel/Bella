@@ -77,11 +77,26 @@ class AccessLogMiddleware(BaseHTTPMiddleware):
         return response
 
 
+# The API serves JSON, so its CSP is absolute: nothing may load, anywhere.
+_API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+
+# Swagger UI is the one HTML page the API serves. Its bundle is vendored into this app
+# (see `_mount_docs`), so the page needs same-origin script and style and nothing else —
+# no CDN, and no exception for one.
+_DOCS_CSP = (
+    "default-src 'none'; script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; "
+    "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'"
+)
+_DOCS_PATHS = frozenset({"/docs", "/docs/oauth2-redirect", "/redoc"})
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Defence-in-depth headers on API responses.
 
     The API serves JSON, so the CSP here is deliberately absolute — it is the web app's
-    own CSP (set in Next.js) that governs the rendered page.
+    own CSP (set in Next.js) that governs the rendered page. The interactive docs are the
+    single exception; see `_DOCS_CSP`.
     """
 
     def __init__(self, app: ASGIApp, *, settings: Settings) -> None:
@@ -95,10 +110,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-        response.headers.setdefault(
-            "Content-Security-Policy",
-            "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
-        )
+
+        is_docs = not self._settings.is_production and request.url.path in _DOCS_PATHS
+        response.headers.setdefault("Content-Security-Policy", _DOCS_CSP if is_docs else _API_CSP)
         response.headers.setdefault(
             "Permissions-Policy", "geolocation=(), microphone=(), camera=()"
         )
