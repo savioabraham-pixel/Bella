@@ -4171,10 +4171,25 @@ const speechQueue={
   },
   // Splits on sentence boundaries and caps chunk size well under any TTS
   // backend limit, so nothing gets dropped for long answers.
+  // The FIRST chunk is deliberately kept short. /speak synthesis time scales
+  // with character count (~0.55s + ~8.7ms per character, measured), so a
+  // 1400-character opener meant the text rendered and then the user sat
+  // through ~12s of silence. A ~180-character opener starts the voice in
+  // ~2s. Later chunks keep the full cap because they are fetched while the
+  // previous chunk is still playing, so their synthesis time is hidden.
   splitToChunks(text){
-    const CAP=1400;
+    // Ramped caps, not a flat one. A chunk plays for roughly chars/14.7
+    // seconds but takes 0.55s + 0.0087s/char to synthesize, so the prefetch
+    // below only stays ahead if each chunk is long enough to cover the NEXT
+    // one's synthesis. 180 -> 1400 directly would leave a ~1.4s gap at the
+    // first boundary; stepping through 900 keeps every handoff seamless.
+    const CAPS=[180,900],CAP=1400;
     const sentences=text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g)||[text];
     const chunks=[];let cur='';
+    // Only the accumulation limit shrinks for the early chunks — a single
+    // sentence is never split to satisfy them, so the voice never starts
+    // mid-clause. Hard-wrapping still happens at the real CAP below.
+    const limit=()=>CAPS[chunks.length]||CAP;
     for(let s of sentences){
       // A single "sentence" can itself exceed CAP (a long run-on with no
       // terminal punctuation) — hard-wrap it on whitespace so no chunk sent
@@ -4185,7 +4200,7 @@ const speechQueue={
         chunks.push(s.slice(0,cut).trim());
         s=s.slice(cut).trim();
       }
-      if(cur&&(cur+s).length>CAP){chunks.push(cur.trim());cur=s;}
+      if(cur&&(cur+s).length>limit()){chunks.push(cur.trim());cur=s;}
       else cur+=s;
     }
     if(cur.trim())chunks.push(cur.trim());
@@ -4200,29 +4215,49 @@ const speechQueue={
     const clean=text.replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'').replace(/<[^>]+>/g,'').replace(/•/g,'');
     if(!clean.trim()||!audioUnlocked)return;
     this.playing=true;
-    for(const chunk of this.splitToChunks(clean)){
-      if(myToken!==this.stopToken)return; // stopped/interrupted mid-way
-      await this._playChunk(chunk,lang,myToken);
+    setSpeakingState(true);
+    const chunks=this.splitToChunks(clean);
+    // Pipelined: chunk N+1 is synthesized while chunk N is still playing.
+    // Previously each chunk only started fetching after the previous one had
+    // finished playing, so every chunk boundary was a full round trip of
+    // silence. Now the only wait the user hears is the first chunk's.
+    let pending=this._fetchChunk(chunks[0],lang,myToken);
+    for(let i=0;i<chunks.length;i++){
+      const url=await pending;
+      if(myToken!==this.stopToken){if(url)URL.revokeObjectURL(url);return;}
+      // Kick off the next synthesis BEFORE playing this one, so the two overlap.
+      pending=(i+1<chunks.length)?this._fetchChunk(chunks[i+1],lang,myToken):null;
+      if(url)await this._playUrl(url,myToken);
+      if(myToken!==this.stopToken){
+        // Interrupted mid-playback — drop whatever the prefetch produces.
+        if(pending)pending.then(u=>{if(u)URL.revokeObjectURL(u);});
+        return;
+      }
     }
-    if(myToken===this.stopToken){this.playing=false;this.msgId=null;}
+    if(myToken===this.stopToken){this.playing=false;this.msgId=null;setSpeakingState(false);}
   },
-  async _playChunk(text,lang,myToken){
+  // Synthesis only. Resolves to a playable object URL, or null if the request
+  // failed or was superseded. Never throws — a bad chunk must not break the rest.
+  async _fetchChunk(text,lang,myToken){
     try{
-      setSpeakingState(true);
       const r=await fetch(BACKEND+'/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang})});
-      if(myToken!==this.stopToken)return;
-      if(!r.ok){console.warn('Bella /speak:',r.status);return;}
+      if(myToken!==this.stopToken)return null;
+      if(!r.ok){console.warn('Bella /speak:',r.status);return null;}
       const blob=await r.blob();
-      if(myToken!==this.stopToken)return;
-      const url=URL.createObjectURL(blob);
-      await new Promise(resolve=>{
-        if(myToken!==this.stopToken){URL.revokeObjectURL(url);resolve();return;}
-        curAudio=new Audio(url);
-        const done=()=>{URL.revokeObjectURL(url);if(myToken===this.stopToken)curAudio=null;resolve();};
-        curAudio.onended=done;curAudio.onerror=done;
-        curAudio.play().catch(()=>{URL.revokeObjectURL(url);resolve();});
-      });
-    }catch(e){/* move on rather than breaking the rest of the queue */}
+      if(myToken!==this.stopToken)return null;
+      return URL.createObjectURL(blob);
+    }catch(e){return null;}
+  },
+  // Playback only. Resolves when the clip ends, errors, or is interrupted,
+  // and always revokes the object URL exactly once.
+  _playUrl(url,myToken){
+    return new Promise(resolve=>{
+      if(myToken!==this.stopToken){URL.revokeObjectURL(url);resolve();return;}
+      curAudio=new Audio(url);
+      const done=()=>{URL.revokeObjectURL(url);if(myToken===this.stopToken)curAudio=null;resolve();};
+      curAudio.onended=done;curAudio.onerror=done;
+      curAudio.play().catch(()=>{URL.revokeObjectURL(url);resolve();});
+    });
   }
 };
 // Stops any message's speech in progress — wired to the per-message "Voice off" button.
@@ -5596,7 +5631,28 @@ function updateMobileDigitLimit() {
 window.onload=()=>{};
 
 // ── SESSION SECURITY: Tab close / browser shut = complete wipe — identical to manual sign out ──
+// Keys the wipe below removes from localStorage. Mirrored into sessionStorage
+// first so a REFRESH can put them back; see restoreSessionAfterRefresh().
+const _SESSION_KEYS = ['b_registered_user','b_gmail','b_threads','bella_threads_ts','b_location_perm','b_userid'];
+const _SESSION_MIRROR = 'b_session_mirror';
+
+// pagehide fires on reload just as it does on a real tab close, and the two are
+// indistinguishable at this point — which is why every refresh used to dump the
+// user back at the splash screen with their threads gone. The wipe below still
+// runs exactly as before; we just stash a copy in sessionStorage on the way out.
+// sessionStorage is per-tab and dies with the tab, so a genuine close still
+// leaves nothing behind and still demands full Gmail OAuth + OTP. Only a reload,
+// which keeps the same tab alive, can find the mirror and restore from it.
 window.addEventListener('pagehide', function() {
+  try {
+    const mirror = {};
+    _SESSION_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) mirror[k] = v; });
+    // Only worth mirroring if a session was actually established.
+    if (sessionStorage.getItem('b_active_session') === '1' && mirror.b_registered_user) {
+      sessionStorage.setItem(_SESSION_MIRROR, JSON.stringify(mirror));
+    }
+  } catch (e) {}
+
   // Sign out of Firebase
   if (typeof fbAuth !== 'undefined') {
     fbAuth.signOut().catch(() => {});
@@ -5611,7 +5667,58 @@ window.addEventListener('pagehide', function() {
   // Keep b_returning_email, b_returning_name, b_returning_mobile
   // These only show the returning user gate — they do NOT bypass Gmail OAuth or OTP
   // Full re-authentication is always required regardless
-  sessionStorage.clear();
+  // NOTE: deliberately not sessionStorage.clear() — that would destroy the mirror
+  // we just wrote. Everything else in sessionStorage is cleared individually, and
+  // the whole store dies with the tab regardless.
+  Object.keys(sessionStorage)
+    .filter(k => k !== _SESSION_MIRROR)
+    .forEach(k => sessionStorage.removeItem(k));
+});
+
+// Restores a session across a page refresh only. Returns true if the app was
+// launched directly, false if the caller should show the normal login gate.
+function restoreSessionAfterRefresh() {
+  let mirror;
+  try {
+    const raw = sessionStorage.getItem(_SESSION_MIRROR);
+    if (!raw) return false;
+    sessionStorage.removeItem(_SESSION_MIRROR); // one shot — never reusable
+    mirror = JSON.parse(raw);
+  } catch (e) { return false; }
+  if (!mirror || !mirror.b_registered_user) return false;
+
+  let userData;
+  try { userData = JSON.parse(mirror.b_registered_user); } catch (e) { return false; }
+  if (!userData || !userData.email) return false;
+
+  // Put the wiped keys back exactly as they were before the reload.
+  Object.keys(mirror).forEach(k => localStorage.setItem(k, mirror[k]));
+  sessionStorage.setItem('b_active_session', '1');
+
+  // The splash tap normally does these two things. Skipping the splash means
+  // skipping the user gesture that unlocks audio, so defer that to the first
+  // real interaction — otherwise the browser blocks Bella's voice silently.
+  if (localStorage.getItem('b_dark') === '1') applyDark();
+  const unlockAudioOnce = () => {
+    try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); ctx.resume(); } catch (e) {}
+    audioUnlocked = true;
+    document.removeEventListener('pointerdown', unlockAudioOnce);
+    document.removeEventListener('keydown', unlockAudioOnce);
+  };
+  document.addEventListener('pointerdown', unlockAudioOnce);
+  document.addEventListener('keydown', unlockAudioOnce);
+
+  const splash = document.getElementById('splash');
+  if (splash) splash.style.display = 'none';
+
+  cfg.userEmail = userData.email;
+  initAndLaunch(userData);
+  return true;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  try { restoreSessionAfterRefresh(); }
+  catch (e) { console.error('Session restore failed, falling back to login gate:', e); }
 });
 </script>
 
