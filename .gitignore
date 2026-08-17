@@ -2,3 +2,19 @@
 .DS_Store
 .env
 .env.*
+
+# Build artifacts and caches.
+# The real apps/ source lives on the beta branch; what lands here on main is
+# only leftover build output from switching branches. Patterns are scoped to
+# artifacts rather than ignoring apps/ wholesale, so genuine source under
+# apps/ is never silently skipped.
+node_modules/
+.next/
+.venv/
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+*.tsbuildinfo
+next-env.d.ts
