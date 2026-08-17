@@ -1636,6 +1636,13 @@ let cfg={},currentProfileKey=null,currentAddressedName=null;
 let pFiles=[],pTexts=[],pImages=[];
 let recog=null,listening=false,continuousVoice=false,curAudio=null,isDark=false;
 let _clockInterval=null;
+// Must be declared, not created by first assignment. initClock() only assigns
+// it when localStorage already holds 'b_clock_fmt', so on a browser that has
+// never toggled the clock, updateClock() used to read an undeclared variable
+// and throw. That threw out of initTopbarDashboard() -> confirmIdentity(),
+// which meant #main never got its 'show' class while the login gate had
+// already been removed — a blank white page after OTP for every new user.
+let _clockFormat24=false;
 let audioUnlocked=false;
 // Turn-lifecycle state for issue #3 (typing-while-answering) and #4 (no overlap)
 window._bellaBusy=false;       // true from send() start until the reply text AND its speech are both done
@@ -3235,7 +3242,12 @@ async function confirmIdentity(profileKey,addressedName){
   const fullName = savedUser.fullName || addressedName;
   document.getElementById('sb-uname').textContent = fullName;
   // Topbar Welcome shows addressed as name (what Bella calls you)
-  initTopbarDashboard(addressedName, userId);
+  // Decorative only (clock, date, thought-of-the-day). It must never be able to
+  // abort confirmIdentity before #main is revealed below — the login gate is
+  // already gone by this point, so anything thrown here strands the user on a
+  // blank page. Degrade the dashboard instead of losing the whole app.
+  try{ initTopbarDashboard(addressedName, userId); }
+  catch(e){ console.error('Topbar dashboard init failed (continuing):', e); }
   const notYou=document.getElementById('not-you-btn');
   if(notYou)notYou.style.display='block';
   // Sidebar avatar — picks up photo from registration or profile page
