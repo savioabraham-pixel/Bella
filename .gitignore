@@ -1,13 +1,58 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# IMPORTANT: `main` is served publicly by GitHub Pages.
+# Every committed file is downloadable at savioabraham-pixel.github.io/Bella/<path>.
+# Only the deployable site belongs on this branch: index.html, README.md.
+# ─────────────────────────────────────────────────────────────────────────────
+
 .claude/
 .DS_Store
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Secrets. Real credentials live outside the repo in ~/Bella-Secrets/.
+# These patterns are a backstop, not the primary control.
+# ─────────────────────────────────────────────────────────────────────────────
 .env
 .env.*
+*.pem
+*.key
+*.p12
+client_secret*.json
+gen-lang-client*.json
+service-account*.json
+*credentials*.json
+token.json
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Project archive — reference material, not part of the deployed site.
+# Kept on disk, deliberately out of git so it is never published.
+# NOTE: two of these directory names end in a space; the trailing backslash
+# escapes it, otherwise git strips the space and the rule never matches.
+# ─────────────────────────────────────────────────────────────────────────────
+BKC/
+Bella App/
+Bella Icons/
+Bella Testing\ /
+Bella-2/
+Favicon\ /
+Feedback Screenshots/
+Index.js-Files.js/
+SOW & Build Guides/
+
+# Internal documents (SOW, handover notes, architecture, directives).
+# Confidential-by-default: a public Pages branch is not the place for them.
+*.docx
+~$*
+
+# Project instructions for Claude Code — local to this machine by request.
+CLAUDE.md
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Build artifacts and caches.
 # The real apps/ source lives on the beta branch; what lands here on main is
 # only leftover build output from switching branches. Patterns are scoped to
 # artifacts rather than ignoring apps/ wholesale, so genuine source under
 # apps/ is never silently skipped.
+# ─────────────────────────────────────────────────────────────────────────────
 node_modules/
 .next/
 .venv/
