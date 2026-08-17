@@ -25,18 +25,18 @@ token.json
 # ─────────────────────────────────────────────────────────────────────────────
 # Project archive — reference material, not part of the deployed site.
 # Kept on disk, deliberately out of git so it is never published.
-# NOTE: two of these directory names end in a space; the trailing backslash
-# escapes it, otherwise git strips the space and the rule never matches.
+# Directory names use underscores, not spaces: a trailing space in a name is
+# stripped from an ignore pattern unless escaped, which fails silently.
 # ─────────────────────────────────────────────────────────────────────────────
 BKC/
-Bella App/
-Bella Icons/
-Bella Testing\ /
+Bella_App/
+Bella_Icons/
+Bella_Testing/
 Bella-2/
-Favicon\ /
-Feedback Screenshots/
+Favicon/
+Feedback_Screenshots/
 Index.js-Files.js/
-SOW & Build Guides/
+SOW_&_Build_Guides/
 
 # Internal documents (SOW, handover notes, architecture, directives).
 # Confidential-by-default: a public Pages branch is not the place for them.
