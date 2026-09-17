@@ -1273,6 +1273,16 @@ body.dark #sidebar .sb-new-chat span{
           </div>
         </div>
         <div class="inp-footer">
+          <!-- Speech language. The Web Speech API CANNOT auto-detect a language:
+               recog.lang must name one before listening starts, and it was
+               hardcoded 'en-IN', so speaking Bengali produced garbled Latin and
+               Bella never saw Bengali at all. This is the only reliable fix. -->
+          <div id="mic-lang" role="group" aria-label="Speech language">
+            <button type="button" data-l="en" onclick="setMicLang('en')" title="Speak English">EN</button>
+            <button type="button" data-l="bn" onclick="setMicLang('bn')" title="Speak Bengali (বাংলা)">বা</button>
+            <button type="button" data-l="hi" onclick="setMicLang('hi')" title="Speak Hindi (हिन्दी)">हि</button>
+            <button type="button" data-l="mr" onclick="setMicLang('mr')" title="Speak Marathi (मराठी)">मर</button>
+          </div>
           <!-- Light/Dark toggle -->
           <div style="display:flex;align-items:center;gap:3px">
             <span style="font-size:9px;color:#0B2545;font-weight:500">Light</span>
@@ -1686,9 +1696,15 @@ USER BACKGROUND: ${bg}
 PREFERRED ADDRESS NAME: Always address this user as "${addressedName}" — never use their first name if a preferred name has been set.${pronNote}
 FAMILY FOLLOW-UP (ask after a positive response — use EXACT names, NEVER say \u201cyour family\u201d generically, and ask it ALONE, never bundled with another question): "${fq}"${userCtx}
 
-LANGUAGE (critical — this decides which voice reads your reply):
+LANGUAGE — READ THIS FIRST AND TREAT IT AS ABSOLUTE:
+YOU WRITE IN EXACTLY FOUR LANGUAGES AND NO OTHERS: English, Bengali, Hindi, Marathi.
+ENGLISH IS THE DEFAULT AND THE FALLBACK. If the message in front of you is not written in Bengali, Hindi or Marathi, you answer in ENGLISH — no exceptions, no matter what language it IS written in. Malayalam, Tamil, Telugu, Kannada, Gujarati, Punjabi, Spanish, French, German, Japanese, Arabic: all of these get an ENGLISH reply. You do not speak them. Do not mirror them. Answer the person's question warmly, in English.
+The ONLY three things that make you leave English: the message is in Bengali, or in Hindi, or in Marathi.
+
+LANGUAGE (detail — this also decides which voice reads your reply):
 DEFAULT TO ENGLISH. English is the language you use unless the rule below says otherwise. If the user's message is in English — including Hinglish or Banglish written in Latin letters — you reply in ENGLISH. "Hi Bella how are you" is English and gets an English answer.
-SWITCH ONLY WHEN THE USER'S OWN WORDS ARE IN THAT LANGUAGE. Reply in Bengali only if they wrote to you in Bengali. Hindi only if they wrote in Hindi. Marathi only if they wrote in Marathi. Look at the message in front of you, nothing else.
+THERE ARE EXACTLY THREE LANGUAGES YOU MAY EVER SWITCH TO: Bengali, Hindi and Marathi. No others. Reply in Bengali only if they wrote to you in Bengali. Hindi only if they wrote in Hindi. Marathi only if they wrote in Marathi. Look at the message in front of you, nothing else. If someone writes to you in ANY other language — Spanish, French, German, Tamil, Malayalam, Japanese, anything at all — you reply in ENGLISH. You may acknowledge what they said, but you answer in English.
+NEVER REASON YOUR WAY INTO A LANGUAGE. Do not infer, deduce or assume a language from anything. The only thing that may ever change your language is the actual words of the message in front of you.
 THESE ARE NOT LANGUAGE SIGNALS AND YOU MUST IGNORE THEM: where the user lives or was born (Kolkata, Mumbai, anywhere), their name, their family members' names, the city in their background notes, the language you used earlier in the conversation, or which language guide below happens to be longest. A user in Kolkata writing English gets English. Every time.
 The register guides that follow apply ONLY once you have already switched — they describe HOW to write each language, never WHETHER to use it.
 When you do switch, write in THAT LANGUAGE'S OWN SCRIPT — Bengali in Bengali script, Hindi and Marathi in Devanagari. Never reply in Latin transliteration, because the voice then reads it with the wrong accent.
@@ -4912,6 +4928,32 @@ async function send(){
 // ============================================================
 // BACKEND
 // ============================================================
+// The LANGUAGE rule in the prompt is an instruction the model MAY follow — on
+// test, Spanish and Kannada still slipped through roughly 1 time in 4 even with
+// the rule stated as an absolute at the top. A hard invariant should not rest on
+// that, so the decision is made HERE, in code, and stated as the last thing the
+// model reads. detectLanguage() reads the SCRIPT of what the user actually
+// typed: anything that is not Bengali or Devanagari resolves to English, which
+// is exactly Savio's rule — English everywhere unless the message itself is in
+// Bengali, Hindi or Marathi. Costs about 20 tokens a message.
+function _replyLangNote(){
+  const NAMES={bn:'Bengali',hi:'Hindi',mr:'Marathi'};
+  try{
+    const h=getHist();
+    for(let i=h.length-1;i>=0;i--){
+      const m=h[i];
+      if(m&&m.role==='user'){
+        const t=(m.parts&&m.parts[0]&&m.parts[0].text)||'';
+        const L=NAMES[detectLanguage(t)];
+        return L
+          ? '\n\nREPLY LANGUAGE FOR THIS MESSAGE: '+L+'. Write your entire reply in '+L+', in its own script.'
+          : '\n\nREPLY LANGUAGE FOR THIS MESSAGE: English. Write your entire reply in English, whatever language the user wrote in. Do not mirror their language.';
+      }
+    }
+  }catch(e){}
+  return '\n\nREPLY LANGUAGE FOR THIS MESSAGE: English.';
+}
+
 async function callBella(useSearch,memCtx,signal){
   // Use test profile if admin test mode is active — nothing saved to real user data
   const _activeProfileKey = (_testMode && _testProfileKey) ? _testProfileKey : currentProfileKey;
@@ -4919,7 +4961,7 @@ async function callBella(useSearch,memCtx,signal){
   const systemPrompt=buildSystemPrompt(_activeProfileKey,_activeAddressedName,_testMode?'':memCtx);
   const searchNote=useSearch?'\n\nNeeds current live web data. Search and present as 3-5 bullet points with verifiable source links where possible. For medical info cite medical sources, for government info cite official sources, for business data cite industry reports. Spoken summary: 2 sentences max — do not speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).':'';
   const voiceNote='\n\nAt the very end of your reply, on its own new line, always add a short spoken-friendly version of your answer in this exact format: [VOICE]a natural 2-3 sentence summary, in plain conversational language[/VOICE]. This tag is never shown to the user — it is only used to decide what to speak aloud for long answers.';
-  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote}]},{role:'model',parts:[{text:`Understood. I am Bella, ready to assist ${_activeAddressedName}.`}]},...getHist()];
+  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_replyLangNote()}]},{role:'model',parts:[{text:`Understood. I am Bella, ready to assist ${_activeAddressedName}.`}]},...getHist()];
   const r=await bfetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch}),signal});
   if(!r.ok)throw new Error('Backend error: '+r.status);
   const d=await r.json();
@@ -5689,13 +5731,51 @@ function toggleMic(){
     }
   }
 }
+// ══ Speech language (Savio, 2026-09-17) ═══════════════════════════════
+// "unless the message itself is in Bengali, Hindi or Marathi OR SPOKEN TO when
+// the voice starts." Typing already worked; speaking did not, because
+// recog.lang was hardcoded 'en-IN' in both mic paths. The Web Speech API has no
+// auto-detect — it will happily transcribe Bengali speech into nonsense Latin
+// rather than tell you it heard Bengali. So the user names the language, and
+// everything downstream follows: the transcript arrives in the right script,
+// detectLanguage() sees it, and Bella's LANGUAGE rule replies in kind.
+const SPEECH_LANGS = { en:'en-IN', bn:'bn-IN', hi:'hi-IN', mr:'mr-IN' };
+// Reflect the saved choice as soon as the footer exists.
+document.addEventListener('DOMContentLoaded', function(){ try{ paintMicLang(); }catch(e){} });
+function micLang(){
+  try{ const v = localStorage.getItem('b_voice_lang'); return SPEECH_LANGS[v] ? v : 'en'; }
+  catch(e){ return 'en'; }
+}
+function micLangTag(){ return SPEECH_LANGS[micLang()] || 'en-IN'; }
+function paintMicLang(){
+  const box = document.getElementById('mic-lang');
+  if(!box) return;
+  const cur = micLang();
+  box.querySelectorAll('button').forEach(function(b){
+    b.classList.toggle('on', b.getAttribute('data-l') === cur);
+  });
+}
+function setMicLang(code){
+  if(!SPEECH_LANGS[code]) return;
+  try{ localStorage.setItem('b_voice_lang', code); }catch(e){}
+  paintMicLang();
+  // A recogniser already listening keeps its old language until restarted, so
+  // restart it — otherwise the change appears to do nothing until next time.
+  if(typeof recog !== 'undefined' && recog && listening){
+    try{ recog.stop(); }catch(e){}
+    setTimeout(function(){
+      try{ continuousVoice ? startContinuousMic() : startMic(); }catch(e){}
+    }, 250);
+  }
+}
+
 function startMic(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){bellaMsg('Voice input works best in Chrome on Android/desktop and Safari on iPhone.');return;}
   // Request mic permission only when first used — not on launch
   if(!window._micPermGranted){
     navigator.mediaDevices&&navigator.mediaDevices.getUserMedia({audio:true})
       .then(s=>{s.getTracks().forEach(t=>t.stop());window._micPermGranted=true;})
       .catch(()=>{});
-  }recog=new SR();recog.continuous=false;recog.interimResults=(idState==='confirmed');recog.lang='en-IN';
+  }recog=new SR();recog.continuous=false;recog.interimResults=(idState==='confirmed');recog.lang=micLangTag();
   recog.onstart=()=>{listening=true;document.getElementById('mbtn').classList.add('act');};
   recog.onresult=e=>{
     const r=e.results[0];
@@ -5722,7 +5802,7 @@ function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSp
     // Fall back to single mic for name capture — more accurate
     startMic();return;
   }
-  recog.continuous=true;recog.interimResults=false;recog.lang='en-IN';recog.onstart=()=>{listening=true;_setListenIndicator(true);setSpeakingState(false);document.getElementById('mbtn').classList.add('voice-on');};
+  recog.continuous=true;recog.interimResults=false;recog.lang=micLangTag();recog.onstart=()=>{listening=true;_setListenIndicator(true);setSpeakingState(false);document.getElementById('mbtn').classList.add('voice-on');};
   let _voiceAccumulated='';let _voiceFinalizeTimer=null;
   recog.onresult=e=>{
     // Anything arriving while Bella is speaking is Bella, not the user — see
@@ -6925,6 +7005,22 @@ body.dark #tb-menu-btn{background:#0B2545!important;color:#D4AF37!important;
   #loc-allow-btn,#loc-deny-btn{min-height:44px}
   .sug-chip{padding:10px 14px}
 }
+
+/* Speech-language picker. Keyed off #mic-lang: the file carries a blanket
+   `body.dark button{...!important}` rule that beats class selectors, and
+   body.dark INVERTS the brand tokens (--gold becomes navy), so dark values are
+   hardcoded hex. Both traps are documented and both have bitten before. */
+#mic-lang{display:inline-flex;align-items:center;gap:2px;flex-shrink:0;
+  border:1px solid var(--border);border-radius:999px;padding:2px;background:var(--white)}
+#mic-lang button{min-width:30px;height:22px;padding:0 7px;border:0;border-radius:999px;
+  background:transparent;color:#0B2545;font-family:'DM Sans',sans-serif;font-size:10px;
+  font-weight:600;cursor:pointer;line-height:1;transition:background .15s,color .15s}
+#mic-lang button.on{background:#0B2545;color:#D4AF37}
+body.dark #mic-lang{background:#162030!important;border-color:rgba(212,175,55,.3)!important}
+body.dark #mic-lang button{background:transparent!important;color:#F5E6C8!important}
+body.dark #mic-lang button.on{background:#D4AF37!important;color:#0B2545!important}
+@media(pointer:coarse){ #mic-lang button{height:44px;min-width:44px} }
+@media(max-width:680px){ #mic-lang{order:1} }
 </style>
 
 
