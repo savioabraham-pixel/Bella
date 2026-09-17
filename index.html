@@ -233,8 +233,72 @@ body.dark #rec-lbl{color:#0B2545}
 /* Thought cell */
 .tb-thought-title{font-size:13px;font-weight:600;color:var(--text);font-family:'DM Sans',sans-serif;margin-bottom:3px}
 .tb-thought-text{font-size:11px;font-weight:400;color:var(--text);line-height:1.5;font-family:'DM Sans',sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@keyframes thoughtPop{0%{transform:scale(1)}40%{transform:scale(1.35) rotate(-8deg)}60%{transform:scale(1.35) rotate(8deg)}100%{transform:scale(1)}}
-.tb-thought-emoji{display:inline-block;animation:thoughtPop 2.5s ease infinite}
+/* Food For Thought emoji — genuinely animated, and never clipped.
+   It used to live INSIDE .tb-thought-text, which is overflow:hidden with an
+   ellipsis, so on any thought long enough to truncate the emoji was simply cut
+   off — that is why it looked invisible. It now sits in its own element beside
+   the text, which truncates on its own. */
+/* Long-answer offer (item 6) — "shall I read it all?" */
+/* Deleted conversations section (item 4) */
+.trash-section{border-top:1px solid var(--border);margin-top:6px;padding-top:4px}
+.trash-head{display:flex;align-items:center;gap:7px;padding:8px 10px;cursor:pointer;user-select:none;border-radius:8px}
+.trash-head:hover{background:var(--goldpale,#F6EFE2)}
+.trash-title{font-size:11px;font-weight:600;color:var(--tsoft);letter-spacing:.3px;flex:1 1 auto}
+.trash-count{font-size:10px;font-weight:700;color:var(--navy,#0B2545);background:var(--goldpale,#F6EFE2);border-radius:9px;padding:1px 7px}
+.trash-body{padding:0 4px 6px}
+.trash-item{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:8px}
+.trash-item:hover{background:var(--goldpale,#F6EFE2)}
+.trash-info{flex:1 1 auto;min-width:0}
+.trash-name{font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trash-sub{font-size:9px;color:var(--tsoft);margin-top:1px}
+.trash-btn{border:none;background:transparent;cursor:pointer;font-size:11px;padding:2px 4px;border-radius:6px;flex:0 0 auto}
+.trash-btn:hover{background:rgba(212,175,55,.25)}
+.trash-empty{width:100%;margin-top:4px;padding:6px;border-radius:8px;border:1px solid rgba(11,37,69,.2);background:transparent;color:var(--tsoft);font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif}
+body.dark .trash-head:hover,body.dark .trash-item:hover{background:rgba(212,175,55,.12)}
+body.dark .trash-count{background:rgba(212,175,55,.2);color:#F5E6C8}
+body.dark .trash-empty{border-color:rgba(245,230,200,.25);color:rgba(245,230,200,.65)}
+.read-offer{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;padding:9px 12px;
+  background:var(--goldpale,#F6EFE2);border:1px solid rgba(212,175,55,.45);border-radius:12px}
+.read-offer-q{font-size:12px;color:var(--navy,#0B2545);font-family:'DM Sans',sans-serif;flex:1 1 100%;min-width:0;margin-bottom:2px}
+.read-offer-btn{padding:6px 13px;border-radius:14px;border:1px solid #0B2545;background:#0B2545;color:#D4AF37;
+  font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;flex:0 0 auto}
+.read-offer-btn.ghost{background:transparent;color:#0B2545;border-color:rgba(11,37,69,.35)}
+.read-offer-btn:hover{opacity:.88}
+/* Dark mode: keyed off the class-free ID-level specificity trap documented in
+   CLAUDE.md — blanket body.dark rules outscore plain class selectors. */
+body.dark .read-offer{background:rgba(212,175,55,.10);border-color:rgba(212,175,55,.42)}
+body.dark .read-offer-q{color:#F5E6C8}
+body.dark .read-offer-btn{background:#D4AF37;color:#0B2545;border-color:#D4AF37}
+body.dark .read-offer-btn.ghost{background:transparent;color:#F5E6C8;border-color:rgba(245,230,200,.35)}
+.tb-thought-row{display:flex;align-items:center;gap:7px;min-width:0;width:100%;max-width:100%;box-sizing:border-box;overflow:visible}
+.tb-thought-row .tb-thought-text{flex:1 1 auto;min-width:0;max-width:100%}
+/* The cell is a fixed-width flex child; without min-width:0 its contents
+   refuse to shrink and the emoji gets pushed past the right-hand edge. */
+#tb-thought-cell{min-width:0;overflow:hidden}
+@keyframes thoughtFloat{
+  0%   {transform:translateY(0)    scale(1)    rotate(0deg)}
+  15%  {transform:translateY(-3px) scale(1.18) rotate(-9deg)}
+  30%  {transform:translateY(-4px) scale(1.24) rotate(8deg)}
+  45%  {transform:translateY(-2px) scale(1.14) rotate(-5deg)}
+  60%  {transform:translateY(0)    scale(1.06) rotate(3deg)}
+  75%  {transform:translateY(1px)  scale(0.97) rotate(0deg)}
+  100% {transform:translateY(0)    scale(1)    rotate(0deg)}
+}
+@keyframes thoughtGlow{
+  0%,100%{filter:drop-shadow(0 0 2px rgba(212,175,55,.55)) saturate(1.15)}
+  50%    {filter:drop-shadow(0 0 7px rgba(212,175,55,.95)) saturate(1.5)}
+}
+.tb-thought-emoji{
+  display:inline-block;flex:0 0 auto;font-size:19px;line-height:1;
+  /* The topbar is dark navy. A gold halo lifts any emoji off it, including the
+     paler ones, so visibility no longer depends on which emoji Gemini picks. */
+  animation:thoughtFloat 3.2s cubic-bezier(.34,1.56,.64,1) infinite, thoughtGlow 3.2s ease-in-out infinite;
+  transform-origin:center bottom;will-change:transform,filter;
+}
+/* Respect users who ask their device to reduce motion. */
+@media (prefers-reduced-motion:reduce){
+  .tb-thought-emoji{animation:thoughtGlow 4s ease-in-out infinite}
+}
 /* Convert cell */
 .tb-conv-btn{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 16px;border-right:1px solid var(--border);height:100%;cursor:pointer;flex-shrink:0;width:var(--tb-col);transition:background .15s}
 .tb-conv-btn:hover{background:var(--goldpale)}
@@ -967,6 +1031,15 @@ body.dark #sidebar .sb-new-chat span{
 
     <div class="sb-section">Conversations</div>
     <div class="sb-threads" id="thread-list"></div>
+    <!-- Deleted conversations — 30-day recycle bin (Savio's item 4) -->
+    <div class="trash-section" id="trash-section" style="display:none">
+      <div class="trash-head" onclick="toggleTrashSection()">
+        <span id="trash-caret">&#9656;</span>
+        <span class="trash-title">Deleted</span>
+        <span class="trash-count" id="trash-count">0</span>
+      </div>
+      <div class="trash-body" id="trash-body" style="display:none"></div>
+    </div>
 
     <button class="sb-shutter-btn" id="sb-shutter-btn" onclick="toggleShutter()">
       <span id="shutter-label">My Workshop</span>
@@ -1014,6 +1087,14 @@ body.dark #sidebar .sb-new-chat span{
     <!-- ══ TOPBAR ══════════════════════════════════════════════════════ -->
     <div class="chat-topbar" id="chat-topbar">
 
+      <!-- Mobile menu — the ONLY way into the sidebar on a phone. The original
+           toggle lives inside #sidebar, which is translated off-screen below
+           680px, so it measured at x=-45 and could never be tapped: no
+           conversations, no New Conversation, no workshop, no sign-out. -->
+      <button id="tb-menu-btn" onclick="toggleSidebar()" aria-label="Open menu" title="Menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+
       <!-- Welcome greeting (left anchor) -->
       <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:0 16px;border-right:1px solid var(--border);height:100%;flex-shrink:0;width:var(--tb-col)">
         <div style="min-width:0;overflow:hidden;text-align:center">
@@ -1040,7 +1121,10 @@ body.dark #sidebar .sb-new-chat span{
       <!-- CELL — Bella's Food For Thought (expands to fill remaining space) -->
       <div class="tb-cell-expand" id="tb-thought-cell">
         <div class="tb-thought-title">Bella's Food For Thought</div>
-        <div class="tb-thought-text" id="tb-thought">"Loading..."</div>
+        <div class="tb-thought-row">
+          <div class="tb-thought-text" id="tb-thought">"Loading..."</div>
+          <span class="tb-thought-emoji" id="tb-thought-emoji" aria-hidden="true"></span>
+        </div>
       </div>
 
       <!-- CELL — Convert -->
@@ -1050,7 +1134,7 @@ body.dark #sidebar .sb-new-chat span{
       </div>
 
       <!-- CELL — Search + Profile (right anchor, same width as other cells) -->
-      <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;flex-shrink:0;height:100%;border-left:1px solid var(--border);width:var(--tb-col)">
+      <div class="tb-actions" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;flex-shrink:0;height:100%;border-left:1px solid var(--border);width:var(--tb-col)">
         <button class="topbar-btn" id="search-btn" onclick="toggleSearch()" title="Search conversations" style="background:#0B2545;border:1px solid rgba(212,175,55,0.3)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
@@ -1388,8 +1472,8 @@ body.dark #sidebar .sb-new-chat span{
       </div>
       <div class="menu-items" id="sec-data">
         <div class="menu-item" onclick="showMyMemory();closeUserMenu()">My Memory</div>
-        <div class="menu-item" onclick="closeUserMenu()">Download My Data</div>
-        <div class="menu-item" onclick="closeUserMenu()">Clear All Threads</div>
+        <div class="menu-item" onclick="downloadMyData();closeUserMenu()">Download My Data</div>
+        <div class="menu-item" onclick="clearAllThreads();closeUserMenu()">Clear All Threads</div>
         <div class="menu-item danger" onclick="confirmDeleteAccount();closeUserMenu()">Delete Account</div>
       </div>
     </div>
@@ -1400,9 +1484,9 @@ body.dark #sidebar .sb-new-chat span{
         <span class="menu-section-arrow" id="arr-legal">▲</span>
       </div>
       <div class="menu-items" id="sec-legal">
-        <div class="menu-item" onclick="closeUserMenu()">Terms of Use</div>
-        <div class="menu-item" onclick="closeUserMenu()">Privacy Policy</div>
-        <div class="menu-item" onclick="closeUserMenu()">Security Information</div>
+        <div class="menu-item" onclick="showLegalDoc('terms');closeUserMenu()">Terms of Use</div>
+        <div class="menu-item" onclick="showLegalDoc('privacy');closeUserMenu()">Privacy Notice</div>
+        <div class="menu-item" onclick="showLegalDoc('security');closeUserMenu()">Security Information</div>
       </div>
     </div>
     <!-- Help Bella Improve -->
@@ -1442,6 +1526,57 @@ body.dark #sidebar .sb-new-chat span{
 // CONFIG
 // ============================================================
 const BACKEND='https://bella-backend-299648732006.asia-south1.run.app';
+
+// ══ Stage 1 of securing the backend (2026-09-17) ══════════════════════
+// Every call to BACKEND now carries the signed-in user's Firebase ID token.
+//
+// TODAY THIS CHANGES NOTHING. Verified live against the deployed service
+// before writing a line: the CORS preflight explicitly returns
+// `access-control-allow-headers: content-type,authorization`, and a POST
+// carrying a bogus Bearer token still returns 200. The current backend
+// ignores the header entirely.
+//
+// TOMORROW the backend starts REQUIRING it, and anonymous callers — who can
+// presently read stored memories by guessing a first name — are refused.
+//
+// The order is not optional. Deploying enforcement before this shipped would
+// take Bella down for every user instantly. This half is deliberately inert.
+let _fbAuthSettled = null;
+// Firebase restores its session from IndexedDB ASYNCHRONOUSLY, so currentUser
+// is briefly null on load even for a signed-in user. Sending no token in that
+// window would be fine today and a silent lockout tomorrow, so wait for the
+// first auth-state callback before deciding there is nobody signed in.
+function fbAuthSettled(){
+  if(_fbAuthSettled) return _fbAuthSettled;
+  _fbAuthSettled = new Promise(function(resolve){
+    try{
+      const stop = fbAuth.onAuthStateChanged(function(){ try{stop();}catch(e){} resolve(); });
+      // Never hang the app on Firebase. If it is slow or blocked, carry on.
+      setTimeout(resolve, 3000);
+    }catch(e){ resolve(); }
+  });
+  return _fbAuthSettled;
+}
+async function bellaAuthHeader(){
+  try{
+    await fbAuthSettled();
+    const u = (typeof fbAuth !== 'undefined') && fbAuth ? fbAuth.currentUser : null;
+    if(!u) return null;
+    // getIdToken() serves a cached token and silently refreshes it near its
+    // 1-hour expiry, so calling it per request is cheap and always current.
+    const t = await u.getIdToken();
+    return t ? ('Bearer ' + t) : null;
+  }catch(e){ return null; }
+}
+// Drop-in replacement for fetch() on backend calls. Never throws on the auth
+// path: if there is no token the request goes out exactly as it does today.
+async function bfetch(url, opts){
+  opts = opts || {};
+  const headers = Object.assign({}, opts.headers || {});
+  const auth = await bellaAuthHeader();
+  if(auth) headers['Authorization'] = auth;
+  return fetch(url, Object.assign({}, opts, {headers: headers}));
+}
 // OAUTH_CLIENT_ID / SHEET_ID / SHEETS_API removed — the browser no longer talks to
 // the Sheets API directly; the backend owns that credential and the sheet id.
 // GIPHY key stored on backend only — not in frontend
@@ -1478,30 +1613,33 @@ const BACKGROUNDS={
   soumyajeet:`Soumyajeet Paul (Jishnu). Son of Savio & Sanjukta. MSc Public Health (Epidemiology), UAB Birmingham, US.`,
   sukanya:`Sukanya Paul (Papa). Handicraft business owner. World traveller. Sanjukta's sister. Husband Shantanu (Babu). Son Neil (Souryakiran), MBA Marketing, Boston University.`,
   shantanu:`Shantanu Paul (Babu). Generational Diagnostic & Medical Services business. Wife Sukanya (Papa). Son Neil.`,
-  souryakiran:`Souryakiran Paul (Neil). MBA Marketing, Boston University. Dislikes Boston snow. Loves driving, gadgets, has projector in US room.`,
-  joydeep:`Joydeep Chatterjee (Joy). Business owner near Lake Market Kolkata. Parents in Singapore, father recovered from critical illness, elevator at their Salt Lake home. Drives Grand Vitara. Wife Purbita/Sreya (KPMG senior). Twins Urmi & Josh Grade 7 Heritage School 2026.`,
-  purbita:`Purbita Chatterjee (Sreya). KPMG senior. Married to Joy. Twins Urmi & Josh Grade 7 Heritage School 2026. Drives Wagon-R.`,
-  urmi:`Urmi Chatterjee. Twin with Josh. Grade 7 Heritage School 2026. Parents Joydeep & Purbita.`,
-  josh:`Josh Chatterjee. Twin with Urmi. Grade 7 Heritage School 2026. Parents Joydeep & Purbita.`,
+  souryakiran:`Souryakiran Paul (Neil). HAS COMPLETED his MBA in Marketing at Boston University. Now looking for opportunities, in the US or outside it, given how uncertain the job market there is. Dislikes Boston snow. Loves driving, gadgets, has projector in US room.`,
+  joydeep:`Joydeep Chatterjee (Joy). Business owner near Lake Market Kolkata. Parents in Singapore. His father is recuperating well now after a critical illness — ask after him warmly and in the present tense, never as though he is still in danger. Elevator at their Salt Lake home. Drives Grand Vitara. Wife Purbita/Sreya (KPMG senior). Twins Urmi & Josh, who were in Grade 7 at Heritage School during the 2026 school year — they move up a grade each year, so work out the current one from today's date.`,
+  purbita:`Purbita Chatterjee (Sreya). KPMG senior. Married to Joy. Twins Urmi & Josh, who were in Grade 7 at Heritage School during the 2026 school year — they move up a grade each year, so work out the current one from today's date. Drives Wagon-R.`,
+  urmi:`Urmi Chatterjee. Twin with Josh. Was in Grade 7 at Heritage School in the 2026 school year — advance that by the years elapsed since. Parents Joydeep & Purbita.`,
+  josh:`Josh Chatterjee. Twin with Urmi. Was in Grade 7 at Heritage School in the 2026 school year — advance that by the years elapsed since. Parents Joydeep & Purbita.`,
   subhro:`Subhro Saha. Retired journalist ABP & Telegraph. Freelance consultant. Voracious reader. Wife Sarbani. Daughter Sreya (Tishin) married to Rohan. Lives at Upohar Kolkata.`,
-  sarbani:`Sarbani Saha. Ex-ABP, ex-Medica Hospital, ex-Manipal. Now freelance Design & Branding. Fantasy reader. Dreams of writing poetry by the sea. Daughter Sreya recently married.`,
+  sarbani:`Sarbani Saha. Has recently started her own small home bakery, KNEAD I SAY MORE — a new venture that deserves active encouragement every time it comes up. A wonderful cook — her cakes and pastries are exceptional and her chicken paste — a savoury spread for bread, the kind you make a sandwich with — is famous among those who have tried it. Currently exploring Goan cuisine. Also ex-ABP, ex-Medica Hospital, ex-Manipal, and does freelance Design & Branding. Fantasy reader. Dreams of writing poetry by the sea. Daughter Sreya married to Rohan.`,
   sreya:`Sreya Saha (Tishin). Creative artist, exhibitions Kolkata & Mumbai. New 3BHK Tollygunge with Rohan. Teaches painting to underprivileged kids.`,
   rohan:`Rohan Mandapaka. CA, private sector. Makes Star Wars & Superhero miniatures. Married to Sreya. New flat Tollygunge. Teaches painting to underprivileged kids.`,
-  manish:`Manish Gupta. MVM Cars Accessories & Detailing Studio, Salt Lake Kolkata. Relocated from Bangalore. Loves driving. Wife Garima Khetan (corporate lawyer). Daughter Aarvi 24 months.`,
+  manish:`Manish Gupta. MVM Cars Accessories & Detailing Studio, Salt Lake Kolkata. Relocated from Bangalore. Loves driving. Wife Garima Khetan (corporate lawyer). Daughter Aarvi, a small child growing fast — never quote an age, ask what she is up to instead. Manish and Garima's own situation is unchanged.`,
   garima:`Garima Khetan. Corporate lawyer and new mother to 24-month-old Aarvi. Husband Manish Gupta.`,
-  aarvi:`Aarvi Gupta. 24 months old. Daughter of Manish & Garima.`,
-  shayani:`Shayani De (Ria). Kolkata-born, lives Hyderabad for Healthcare career. Father passed away last year. Husband Debashish Bose (Deloitte Hyderabad).`,
+  aarvi:`Aarvi Gupta. A small child, growing fast — never state an age in months or years, you will be out of date. Talk about what she is doing now and ask her parents. Daughter of Manish & Garima.`,
+  shayani:`Shayani De (Ria). Kolkata-born, lives Hyderabad for Healthcare career. HER FATHER HAS DIED — never state when, never raise it, and never ask after him. Her mother is in Kolkata and is a safe, welcome thing to ask about. Husband Debashish Bose (Deloitte Hyderabad).`,
   debashish:`Debashish Bose. Deloitte Hyderabad. Born Kolkata. Married to Shayani De (Ria).`,
 };
 
 const FOLLOWUP={
   savio:'How are Sanjukta and Jishnu?',sanjukta:'How are Savio and Jishnu?',
-  soumyajeet:"How are studies going? Which semester are you in?",
+  // ONE question, and it changes by itself when he graduates in April 2027 —
+  // asking a graduate about semesters is exactly the kind of stale-fact mistake
+  // the FACTS AGE rule exists to prevent.
+  soumyajeet:(new Date() >= new Date('2027-04-01') ? 'How are the PhD plans coming along?' : 'How are your studies going?'),
   sukanya:'How are Shantanu and Neil?',shantanu:'How are Sukanya and Neil?',
-  souryakiran:"How are Mum and Dad back in India?",
+  souryakiran:"How's the search going?",
   joydeep:'How are Purbita, Urmi and Josh?',purbita:'How are Joydeep, Urmi and Josh?',
   urmi:'How are Mum and Dad?',josh:'How are Mum and Dad?',
-  subhro:'How is Sarbani? How are Sreya and Rohan?',sarbani:'How is Subhro? How are Sreya and Rohan?',
+  subhro:'How is Sarbani? How are Sreya and Rohan?',sarbani:'How is the bakery going?',
   sreya:'How is Rohan? How are Mum and Dad?',rohan:'How is Sreya? How are your parents?',
   manish:'How is Garima? How is little Aarvi?',garima:'How is Manish? How is Aarvi?',
   shayani:'How is Debashish? How is your Mother in Kolkata?',debashish:'How is Shayani?',
@@ -1525,18 +1663,18 @@ function buildSystemPrompt(profileKey,addressedName,memCtx){
     soumyajeet:"JISHNU'S WORLD: Always address as Jishnu. Son of Savio & Sanjukta. MSc Public Health Epidemiology, UAB Birmingham US. When positive — ask how studies are going and which semester.",
     sukanya:"PAPA'S WORLD: May say Papa or Sukanya — both fine. Runs handicraft business Sukanya via exhibitions and referrals. Loves world travel. Husband Shantanu (Babu) runs generational Diagnostic & Medical business. Son Neil doing MBA Marketing Boston University. When positive — ask about Shantanu and Neil.",
     shantanu:"BABU'S WORLD: Family name Babu. Generational Diagnostic & Medical Services business. Wife Sukanya (Papa). Son Neil in Boston. When positive — ask about Sukanya and Neil.",
-    souryakiran:"NEIL'S WORLD: Always call Neil. MBA Marketing Boston University — graduating soon. Dislikes Boston snow, loves Indian summers. Gadget lover, loves driving, projector at US place. When positive — ask about Mum and Dad in India. Can open with how is the weather in Boston.",
-    joydeep:"JOY'S WORLD: Always call Joy. Runs own business near Lake Market Kolkata. Parents in Singapore — father recovered from critical illness, elevator being installed at Salt Lake home. Drives Grand Vitara. Twins Urmi & Josh Grade 7 Heritage School 2026. Clear genuine heart. When positive — ask about Purbita, Urmi and Josh.",
+    souryakiran:"NEIL'S WORLD: Always call Neil. HAS FINISHED his MBA in Marketing at Boston University — never ask about coursework, semesters or studying, that chapter is closed. He is now looking for opportunities, in the US or outside it, and the market there is uncertain. Ask how the search is going, what kind of role he is after, and whether he would consider coming back — then follow his lead. Do not be relentlessly upbeat about it; a job search is tiring. Dislikes Boston snow, loves Indian summers. Gadget lover, loves driving, projector at US place. When positive — ask about Mum and Dad in India. Can open with how is the weather in Boston.",
+    joydeep:"JOY'S WORLD: Always call Joy. Runs own business near Lake Market Kolkata. Parents in Singapore — father recovered from critical illness, elevator being installed at Salt Lake home. Drives Grand Vitara. Twins Urmi & Josh, who were in Grade 7 at Heritage School during the 2026 school year — they move up a grade each year, so work out the current one from today's date. Clear genuine heart. When positive — ask about Purbita, Urmi and Josh.",
     purbita:"SREYA'S WORLD (Purbita Chatterjee): May say Purbita or Sreya — always address as Sreya. Senior at KPMG. Married to Joy. Twins Urmi & Josh Grade 7 Heritage School. Drives Wagon-R. When positive — ask about Joydeep, Urmi and Josh. NOT same as Sreya Saha (Tishin).",
-    urmi:"URMI'S WORLD: Child Grade 7 Heritage School 2026. Twin with Josh. Parents Joydeep & Purbita. Age-appropriate friendly tone. When positive — ask about Josh, Mum and Dad.",
-    josh:"JOSH'S WORLD: Child Grade 7 Heritage School 2026. Twin with Urmi. Parents Joydeep & Purbita. Age-appropriate friendly tone. When positive — ask about Urmi, Mum and Dad.",
+    urmi:"URMI'S WORLD: A child at Heritage School — she was in Grade 7 during the 2026 school year, so add the years that have passed since; better still, ask what year she is in now. Twin with Josh. Parents Joydeep & Purbita. Age-appropriate friendly tone. When positive — ask about Josh, Mum and Dad.",
+    josh:"JOSH'S WORLD: A child at Heritage School — he was in Grade 7 during the 2026 school year, so add the years that have passed since; better still, ask what year he is in now. Twin with Urmi. Parents Joydeep & Purbita. Age-appropriate friendly tone. When positive — ask about Urmi, Mum and Dad.",
     subhro:"SUBHRO'S WORLD: Retired senior journalist ABP & Telegraph, covered healthcare and sports. Freelance consultant. Voracious reader, knowledgeable on most topics, learning tech gradually. Wife Sarbani. Daughter Sreya (Tishin) recently married Rohan. Lives at Upohar luxury complex Kolkata. When positive — ask about Sarbani, Sreya and Rohan.",
-    sarbani:"SARBANI'S WORLD: Ex-ABP Telegraph, ex-Medica Hospital (10+ yrs), ex-Manipal Hospital (2 yrs). Now freelance Design & Branding with Subhro. Voracious fantasy reader — loves idea of supernatural beings invisible to humans. Dreams of writing poetry alone by a serene beach. Daughter Sreya (Tishin) recently married Rohan. When positive — ask about Subhro, Sreya and Rohan.",
+    sarbani:"SARBANI'S WORLD: Has JUST STARTED her own home bakery, KNEAD I SAY MORE — note the pun, she will enjoy it being appreciated. SHE MUST BE ENCOURAGED ALL THE WAY: this venture is new and she has taken a real risk on it. Be warmly, specifically supportive every single time it comes up — never neutral, never merely polite. Baking is her real love and she is a genuinely superb cook: her cakes and pastries are extraordinary and her chicken paste has a reputation of its own (a savoury spread you put on bread for a sandwich, not a pastry — describe it that way if it comes up). She is currently trying her hand at GOAN cuisine, which is the liveliest thing to ask her about — what she is cooking, how the Goan experiments are going, how the bakery is doing. Ask with real interest, not politely. Also ex-ABP Telegraph, ex-Medica Hospital (10+ yrs), ex-Manipal Hospital (2 yrs). Now freelance Design & Branding with Subhro. Voracious fantasy reader — loves idea of supernatural beings invisible to humans. Dreams of writing poetry alone by a serene beach. Daughter Sreya (Tishin) recently married Rohan. When positive — ask about Subhro, Sreya and Rohan.",
     sreya:"TISHIN'S WORLD (Sreya Saha): Always call Tishin. Creative artist, own Instagram, makes coasters/paintings/abstract art. Exhibits Kolkata & Mumbai. Teaches painting to underprivileged kids with Rohan. New 3BHK Tollygunge. Parents Subhro & Sarbani at Upohar. When positive — ask about Rohan, Mum and Dad.",
     rohan:"ROHAN'S WORLD: CA in private sector. Happy-go-lucky, loves fantasy, makes Star Wars & Superhero miniatures. Teaches painting to underprivileged kids with Sreya. New 3BHK Tollygunge. Recently married Sreya. When positive — ask about Sreya and his parents.",
-    manish:"MANISH'S WORLD: Runs MVM Cars Accessories & Detailing Studio, Salt Lake Kolkata with Vidhit & Mayank. Loves driving. Relocated from Bangalore. Daughter Aarvi 24 months — spitting image of Manish, apple of his eye. Wife Garima corporate lawyer managing work and new motherhood. When positive — ask about Garima and little Aarvi.",
+    manish:"MANISH'S WORLD: Runs MVM Cars Accessories & Detailing Studio, Salt Lake Kolkata with Vidhit & Mayank. Loves driving. Relocated from Bangalore. Daughter Aarvi — spitting image of Manish, apple of his eye. She is growing fast, so never quote an age; ask what she is doing now. Wife Garima, corporate lawyer, balancing work and motherhood. Manish and Garima's own circumstances are unchanged. When positive — ask about Garima and little Aarvi.",
     garima:"GARIMA'S WORLD: Corporate lawyer, freelance projects and law firm. New mother to 24-month-old Aarvi. Husband Manish runs MVM Cars. Lots on her plate — be warm and supportive. When positive — ask about Manish and Aarvi.",
-    shayani:"SHAYANI'S WORLD: FIRST SESSION — ask warmly if she prefers Ria or Shayani. Store and use always. Moved Kolkata to Hyderabad for Healthcare career. Father passed away last year — NEVER mention unless she does. Husband Debashish Bose at Deloitte Hyderabad. When positive — ask about Debashish and her Mother in Kolkata.",
+    shayani:"SHAYANI'S WORLD: FIRST SESSION — ask warmly if she prefers Ria or Shayani. Store and use always. Moved Kolkata to Hyderabad for Healthcare career. HER FATHER HAS DIED. NEVER raise this, never refer to it however gently, and never ask how her father is — not once, not ever, in any language. Never mention how long ago it was. If SHE brings him up, respond with real warmth and stay with whatever she wants to say; do not change the subject and do not offer platitudes. Asking about her mother in Kolkata is safe and welcome. Husband Debashish Bose at Deloitte Hyderabad. When positive — ask about Debashish and her Mother in Kolkata.",
     debashish:"DEBASHISH'S WORLD: Deloitte Hyderabad. Originally Kolkata. Married to Shayani (Ria). When positive — ask about Shayani.",
   };
   const userCtx=USER_CTX[profileKey]?`\n${USER_CTX[profileKey]}`:'';
@@ -1546,7 +1684,34 @@ function buildSystemPrompt(profileKey,addressedName,memCtx){
 CURRENT USER: ${addressedName} | Profile: ${p.firstName||addressedName} ${p.lastName||''} | Group: ${p.group||'Guest'}
 USER BACKGROUND: ${bg}
 PREFERRED ADDRESS NAME: Always address this user as "${addressedName}" — never use their first name if a preferred name has been set.${pronNote}
-FAMILY FOLLOW-UP (MANDATORY after positive response — use EXACT names, NEVER say \u201cyour family\u201d generically): "${fq}"${userCtx}
+FAMILY FOLLOW-UP (ask after a positive response — use EXACT names, NEVER say \u201cyour family\u201d generically, and ask it ALONE, never bundled with another question): "${fq}"${userCtx}
+
+LANGUAGE (critical — this decides which voice reads your reply):
+Answer in the language you were addressed in, and write it in THAT LANGUAGE'S OWN SCRIPT. Bengali in Bengali script, Hindi and Marathi in Devanagari. Never reply in Latin transliteration, because the voice then reads it with the wrong accent.
+
+BENGALI = PLAIN, EVERYDAY KOLKATA BENGALI (West Bengal, NOT Bangladeshi):
+- Write the way an ordinary Kolkata person speaks at home. Simple, layman's Bengali. Never the formal Bangladeshi standard, never a literary or news-reader register, never "high" Sanskritised Bengali.
+- Vocabulary: জল not পানি. স্নান not গোসল. নিমন্ত্রণ not দাওয়াত. Prefer Sanskrit-derived and English-borrowed words over Perso-Arabic ones.
+- Kolkata Bengali mixes English in constantly and that is CORRECT — পয়েন্ট, টপিক, প্ল্যান, অফিস, ফোন, টাইম. Reaching for a "pure" Bengali substitute is the mistake, not the fix.
+- কী = "what". কি = yes/no question particle. Mixing these up is instantly visible to a Kolkata reader.
+- Default to the polite আপনি form unless the person is a child or has invited informality.
+- Test to apply: would a shopkeeper in Gariahat say it this way? If not, simplify.
+
+HINDI = EVERYDAY MUMBAI HINDI:
+- The Hindi actually spoken in Mumbai — plain, practical, heavily mixed with English. NOT literary or Sanskritised "shuddh Hindi", and NOT the Urdu-leaning Delhi/Lucknow register.
+- Keep the English words Mumbai uses naturally: टाइम, प्लान, ऑफिस, शॉर्ट, पॉइंट, ओके. Do not translate them into formal Hindi.
+- Short sentences, ordinary words. Avoid heavy words like कृपया, तत्पश्चात, अथवा, समुचित — nobody says these out loud.
+- Use the respectful आप form. Bambaiya slang (अपुन, बोले तो, काइको) is too informal for Bella — sit between slang and formality, where ordinary Mumbai conversation lives.
+
+MARATHI = EVERYDAY MUMBAI MARATHI:
+- The Marathi spoken in Mumbai, not formal Puneri Marathi and not literary/news Marathi.
+- Mumbai Marathi mixes Hindi and English in freely and naturally — पॉइंट, प्लान, ऑफिस, टाइम, ओके. Keep them.
+- Use colloquial forms (मोठं rather than the stiffer written मोठे) and short, spoken sentences.
+- Use the respectful तुम्ही form.
+
+ACROSS ALL THREE: write for the ear, not the page. If a sentence sounds like a textbook or a news bulletin, rewrite it the way a person would actually say it.
+
+TIME FORMAT (applies to EVERY reply, spoken and written, not only web searches): Always give clock times in 24-hour format — 14:00, not 2:00 PM. Bella is used worldwide and AM/PM is ambiguous outside India. This applies to every time you state: current times, timezone conversions, opening hours, schedules, reminders and arrival times alike.
 
 ADDRESSING RULE (never break this): You are always speaking directly and only to ${addressedName}. Every other name mentioned — a spouse, child, or family member — is a third party ${addressedName} is telling you about. Never use a third party's name as if they are the person you are talking to (for example, never say "How are your studies going, Jishnu?" when you are speaking with Savio — say "How are Jishnu's studies going?" instead). When it's time for the family check-in above, always use the full mandatory line with every name in it — the casual conversation examples below are optional flavour for other moments, never a substitute for it.
 
@@ -1582,12 +1747,21 @@ Step 2: WAIT for their reply. Read their mood carefully.
 
 IF POSITIVE (they say they are well, good, fine, great, happy, doing good):
 - Acknowledge warmly and briefly
-- If the user then asks "How are you Bella?" or "How are you doing?" or similar — respond warmly about yourself (e.g. "I'm doing wonderfully, thank you for asking!")
-- Then IMMEDIATELY in the same response ask the family follow-up: "${fq}"
-- This family follow-up is MANDATORY after the small talk exchange completes — never skip it
-- If the user does NOT ask about Bella and just says they are fine — still ask the family follow-up: "${fq}"
-- After their family reply — acknowledge appropriately and continue naturally
-- Use "${addressedName}" naturally throughout the session
+- If the user then asks "How are you Bella?" or similar — respond warmly about yourself, briefly
+- ONE QUESTION AT A TIME (this overrides everything else about small talk):
+  * Ask the family follow-up "${fq}" — and ask NOTHING ELSE in that message.
+  * Then STOP and WAIT. Do not ask a second question in the same reply.
+  * When they answer, respond to WHAT THEY ACTUALLY SAID before anything else.
+    If they mention something is wrong, follow that — never carry on down a list.
+  * Only if the conversation is still flowing naturally may you ask one further
+    question, and only one.
+- NEVER stack questions. "How is X? How is Y? How are their studies? Which
+  semester?" in one message is exactly wrong. It reads as an interrogation, not
+  a conversation. Any detail you know about someone is there for LATER in the
+  conversation, when it fits — not to be emptied out at the start.
+- The personal details you hold are for natural small talk when the moment
+  suits. They are not a checklist to complete.
+- Use "${addressedName}" sparingly — see the NAME USE rule.
 
 IF NEGATIVE (they say they are tired, stressed, unwell, sad, not good, could be better):
 - Lead with genuine empathy first — "I'm sorry to hear that, ${addressedName}. Do you want to talk about what's going on?"
@@ -1596,13 +1770,22 @@ IF NEGATIVE (they say they are tired, stressed, unwell, sad, not good, could be 
 - Gently offer help — "Is there anything I can do to make today easier for you?"
 - Use "${addressedName}" naturally and consistently throughout
 
-CRITICAL RULE: The family follow-up "${fq}" MUST appear in your response after the positive small talk exchange. Never go straight to "What can I do for you?" without first asking about family. The pattern is: User says fine -> User asks how Bella is (optional) -> Bella responds warmly -> Bella asks about family -> then offer help.
+CRITICAL RULE — ONE QUESTION PER MESSAGE. The family follow-up "${fq}" should come after the positive small talk exchange, but it must arrive ALONE and the conversation must then follow the user's answer. The pattern is: User says fine -> Bella responds warmly and asks ONE thing -> Bella LISTENS and responds to what they said -> conversation continues from there. Never ask a question while a previous one is still unanswered, and never read out a list of relatives. If the user changes the subject or asks for something, drop the small talk entirely and help them — their agenda always outranks yours.
 
-SPECIAL USER INSTRUCTIONS:
-- Jishnu (Soumyajeet): Also ask "How are your studies going? Which semester are you in?" when positive
-- Neil (Souryakiran): Also ask "How's the weather in Boston?" as a natural opener — he dislikes the snow
-- Shayani: Her father passed away last year — be extra gentle and warm. Never ask about her father. Ask about Debashish and her mother in Kolkata when positive.
-- Aarvi: She is only 24 months old — Bella should be playful and address parents Manish or Garima directly
+FACTS AGE — CHECK THEM AGAINST TODAY'S DATE (critical, applies to every personal detail you hold):
+Everything you know about these people was written down at a point in time. Before you use any of it, compare it with the DATE at the top of this prompt and work out what must be true NOW.
+- A course, a school year, a pregnancy, an age in months, an illness, a job — all of these move on.
+- NEVER ask about something that has already finished. Asking a graduate which semester they are in, or asking about a child's first steps when that child is now at school, is worse than saying nothing: it tells the person you are not really paying attention.
+- If a detail is clearly out of date, do not state the stale version and do not guess the current one. Ask instead, in an ordinary way — "What are you working on these days?" — and then follow their answer.
+- Ages given in months or years, and school grades, were true on the date they were recorded. Add the elapsed time yourself before mentioning them, or simply do not mention the number.
+- When someone reaches the end of something — a degree, a project, a move — the interesting question is what comes NEXT, not the thing that just ended.
+
+SPECIAL USER INSTRUCTIONS (these are things you MAY bring up later in a conversation when they fit — never all at once, and never stacked onto the opening greeting):
+- Jishnu (Soumyajeet): completes his MSPH at UAB in APRIL 2027, and is working towards a PhD after that. Check the DATE at the top of this prompt before choosing what to ask. BEFORE April 2027 — "How are your studies going?" OR "Which semester are you in now?", one of them only. FROM April 2027 ONWARDS he has GRADUATED — never ask about semesters or coursework again; ask about the PhD applications, where he is hoping to go, and what his plans are. Then follow whatever he says.
+- Sarbani: has JUST STARTED her own home bakery, KNEAD I SAY MORE. ENCOURAGE HER ALL THE WAY — this matters more than any other instruction about her. A new business is fragile and exhausting in its first months, and she has taken a real risk. Be genuinely, specifically enthusiastic: celebrate every order, every new recipe, every good day. If she has a bad day, be steady and believing, never dismissive and never falsely cheerful. Ask about ONE thing at a time — the bakery, the Goan experiments, her cakes and pastries — and let her talk. Never be lukewarm about this business.
+- Neil (Souryakiran): has finished his MBA and is job-hunting, in the US or elsewhere. Ask how the search is going — one question, then listen. Never ask about studies. "How's the weather in Boston?" still works as a light opener; he dislikes the snow
+- Shayani: her father has died — never say when, be extra gentle and warm, and NEVER ask about her father under any circumstance. Ask about Debashish, or about her mother in Kolkata, when positive.
+- Aarvi: a small child, growing all the time — never state her age, ask instead. Bella should be playful and address her parents Manish or Garima directly
 - Urmi & Josh: They are children in Grade 7 — keep language age-appropriate and fun
 
 IDENTITY RULES (CRITICAL):
@@ -1644,7 +1827,11 @@ let _clockInterval=null;
 // and throw. That threw out of initTopbarDashboard() -> confirmIdentity(),
 // which meant #main never got its 'show' class while the login gate had
 // already been removed — a blank white page after OTP for every new user.
-let _clockFormat24=false;
+// Item 10: "must use 24-hour time everywhere". The prompt rule covered what
+// Bella says; this is the dashboard clock, which was still rendering "12:33 PM".
+// Anyone who has explicitly chosen 12-hour keeps it — initClock() reads
+// b_clock_fmt from localStorage and overrides this default.
+let _clockFormat24=true;
 let audioUnlocked=false;
 // Turn-lifecycle state for issue #3 (typing-while-answering) and #4 (no overlap)
 window._bellaBusy=false;       // true from send() start until the reply text AND its speech are both done
@@ -1871,7 +2058,7 @@ async function loadUserMemory(profileKey,addressedName){
   userMemory={addressedName,memories:'',lastSeen:'',proactiveFollowUp:''};
   try{
     // Use backend memory endpoint — works without user OAuth
-    const r=await fetch(BACKEND+'/memory-read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey})});
+    const r=await bfetch(BACKEND+'/memory-read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey})});
     if(r.ok){
       const d=await r.json();
       if(d.user){
@@ -1883,7 +2070,7 @@ async function loadUserMemory(profileKey,addressedName){
         };
       }
       // Save/update user record in backend
-      await fetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey,addressedName,type:'user',email:cfg.userEmail||''})});
+      await bfetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey,addressedName,type:'user',email:cfg.userEmail||''})});
       setMemBadge('💾 On');
       // Load memory progress
       updateMemoryProgress(profileKey);
@@ -1896,7 +2083,7 @@ async function saveMemory(profileKey,newMem){
     return;
   }
   try{
-    await fetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey,addressedName:currentAddressedName,memoryText:newMem,type:'memory'})});
+    await bfetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey,addressedName:currentAddressedName,memoryText:newMem,type:'memory'})});
     userMemory.memories=userMemory.memories?userMemory.memories+'\n'+newMem:newMem;
     // Refresh progress bar after write
     if(profileKey) setTimeout(()=>updateMemoryProgress(profileKey),500);
@@ -1906,7 +2093,7 @@ function detectMemoryRequest(t){const l=t.toLowerCase();return l.includes('remem
 function detectPronunciationCorrection(t){const l=t.toLowerCase();return l.includes('pronounce')||l.includes('pronounced')||l.includes('say my name')||l.includes('my name is pronounced')||l.includes('sounds like')||l.includes('rhymes with');}
 async function savePronunciation(profileKey,correctionText){
   try{
-    await fetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey,addressedName:currentAddressedName,memoryText:correctionText,type:'pronunciation'})});
+    await bfetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey,addressedName:currentAddressedName,memoryText:correctionText,type:'pronunciation'})});
   }catch(e){console.warn('Pronunciation save error:',e);}
 }
 
@@ -1925,6 +2112,7 @@ function saveThreadsLocal(){
     const slim={};for(const[k,v]of Object.entries(threads)){slim[k]={name:v.name,hist:v.hist.slice(-20),created:v.created};}localStorage.setItem('b_threads',JSON.stringify(slim));}catch{}
 }
 function loadThreadsLocal(){
+  loadTrash();
   try{const d=localStorage.getItem('b_threads');if(d){threads=JSON.parse(d);if(Object.keys(threads).length===0)threads={};}else threads={};}catch{threads={};}
 }
 function renderThreadList(){
@@ -1936,7 +2124,12 @@ function renderThreadList(){
     const el=document.createElement('div');
     el.className='thread-item'+(id===currentThreadId?' active':'');
     el.id='thr_'+id;
-    const preview=t.hist.length>0?t.hist[t.hist.length-1].parts[0].text.substring(0,40)+'...':'Start a conversation';
+    // Guarded: this read used to be t.hist[last].parts[0].text with no checks, so
+    // ONE malformed thread in localStorage threw and the entire sidebar failed to
+    // render — every conversation gone from view, with the data still on disk.
+    const _last=Array.isArray(t.hist)&&t.hist.length>0?t.hist[t.hist.length-1]:null;
+    const _lastTxt=_last?((_last.parts&&_last.parts[0]&&_last.parts[0].text)||_last.text||''):'';
+    const preview=_lastTxt?_lastTxt.substring(0,40)+'...':'Start a conversation';
     el.innerHTML=`<div class="thread-icon">💬</div>
       <div class="thread-info">
         <div class="thread-name" id="tname_${id}">${t.name.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>
@@ -1949,6 +2142,36 @@ function renderThreadList(){
     el.onclick=(e)=>{if(!e.target.closest('.thread-actions'))switchThread(id);};
     list.appendChild(el);
   });
+}
+function renderTrashList(){
+  const sec=document.getElementById('trash-section');
+  const body=document.getElementById('trash-body');
+  const count=document.getElementById('trash-count');
+  if(!sec||!body) return;
+  purgeExpiredTrash();
+  const ids=Object.keys(deletedThreads).sort((a,b)=>
+    new Date(deletedThreads[b].deletedAt||0)-new Date(deletedThreads[a].deletedAt||0));
+  if(count) count.textContent=ids.length;
+  sec.style.display=ids.length?'block':'none';
+  if(!ids.length){ body.innerHTML=''; return; }
+  body.innerHTML='';
+  ids.forEach(id=>{
+    const t=deletedThreads[id]; const left=daysLeftInTrash(id);
+    const el=document.createElement('div'); el.className='trash-item';
+    const safe=String(t.name||'Conversation').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    el.innerHTML='<div class="trash-info">'+
+      '<div class="trash-name">'+safe+'</div>'+
+      '<div class="trash-sub">'+(left>0?('Deleted for good in '+left+' day'+(left===1?'':'s')):'Removing today')+'</div>'+
+      '</div>'+
+      '<button class="trash-btn" title="Restore this conversation" data-act="restore">\u21a9</button>'+
+      '<button class="trash-btn" title="Delete permanently" data-act="destroy">\u2715</button>';
+    el.querySelector('[data-act="restore"]').onclick=(e)=>restoreThread(id,e);
+    el.querySelector('[data-act="destroy"]').onclick=(e)=>destroyThreadForever(id,e);
+    body.appendChild(el);
+  });
+  const btn=document.createElement('button');
+  btn.className='trash-empty'; btn.textContent='Empty Deleted ('+ids.length+')';
+  btn.onclick=emptyTrash; body.appendChild(btn);
 }
 function newThread(){
   // Auto-close coming soon shutter for more thread space
@@ -1987,12 +2210,65 @@ function startRename(id,e){
   const name=prompt('Rename conversation:',threads[id].name);
   if(name&&name.trim()){threads[id].name=name.trim();renderThreadList();if(id===currentThreadId)document.getElementById('topbar-thread').textContent=name.trim();saveThreadsLocal();}
 }
+// ── Deleted conversations: a 30-day recycle bin, not a shredder ──
+// Savio's rule (2026-09-16): nothing is ever destroyed unless the user asks.
+// Deleting moves a thread here; it is recoverable for 30 days, or can be
+// destroyed individually from the Deleted section straight away. Anything older
+// than 30 days is purged automatically on load.
+const TRASH_KEY='b_threads_deleted';
+const TRASH_DAYS=30;
+let deletedThreads={};
+function loadTrash(){
+  try{ deletedThreads=JSON.parse(localStorage.getItem(TRASH_KEY)||'{}')||{}; }catch(e){ deletedThreads={}; }
+  purgeExpiredTrash();
+}
+function saveTrash(){ try{ localStorage.setItem(TRASH_KEY,JSON.stringify(deletedThreads)); }catch(e){} }
+function purgeExpiredTrash(){
+  const cutoff=Date.now()-TRASH_DAYS*24*60*60*1000; let changed=false;
+  Object.keys(deletedThreads).forEach(id=>{
+    const d=deletedThreads[id]; const when=d&&d.deletedAt?new Date(d.deletedAt).getTime():0;
+    if(!when||when<cutoff){ delete deletedThreads[id]; changed=true; }
+  });
+  if(changed) saveTrash();
+}
+function daysLeftInTrash(id){
+  const d=deletedThreads[id]; if(!d||!d.deletedAt) return 0;
+  const gone=new Date(d.deletedAt).getTime()+TRASH_DAYS*24*60*60*1000;
+  return Math.max(0,Math.ceil((gone-Date.now())/(24*60*60*1000)));
+}
+function restoreThread(id,e){
+  if(e)e.stopPropagation();
+  const d=deletedThreads[id]; if(!d) return;
+  const t=Object.assign({},d); delete t.deletedAt;
+  threads[id]=t; delete deletedThreads[id];
+  saveTrash(); saveThreadsLocal(); renderThreadList(); renderTrashList();
+}
+function destroyThreadForever(id,e){
+  if(e)e.stopPropagation();
+  const d=deletedThreads[id]; const nm=d&&d.name?d.name:'this conversation';
+  if(!confirm('Permanently delete "'+nm+'"?\n\nThis cannot be undone.')) return;
+  delete deletedThreads[id]; saveTrash(); renderTrashList();
+}
+function emptyTrash(){
+  const n=Object.keys(deletedThreads).length; if(!n) return;
+  if(!confirm('Permanently delete all '+n+' conversation'+(n===1?'':'s')+' in Deleted?\n\nThis cannot be undone.')) return;
+  deletedThreads={}; saveTrash(); renderTrashList();
+}
+function toggleTrashSection(){
+  const b=document.getElementById('trash-body'); if(!b) return;
+  const open=b.style.display!=='none';
+  b.style.display=open?'none':'block';
+  const c=document.getElementById('trash-caret'); if(c) c.textContent=open?'\u25b8':'\u25be';
+}
+
 function deleteThread(id,e){
   e.stopPropagation();
-  if(!confirm('Delete this conversation?'))return;
+  if(!confirm('Move this conversation to Deleted?\n\nYou can restore it for the next '+TRASH_DAYS+' days.'))return;
+  // Move, do not destroy.
+  if(threads[id]){ deletedThreads[id]=Object.assign({},threads[id],{deletedAt:new Date().toISOString()}); saveTrash(); }
   delete threads[id];
   if(currentThreadId===id){currentThreadId=null;document.getElementById('msgs').innerHTML='';}
-  renderThreadList();saveThreadsLocal();
+  renderThreadList();renderTrashList();saveThreadsLocal();
   // Free memory — refresh progress bar after deletion
   if(currentProfileKey){
     setTimeout(()=>{
@@ -2072,7 +2348,90 @@ let _recaptchaVerifier = null;
 let _confirmationResult = null;
 let _registrationData = {};
 
+// ============================================================
+// SESSION LIFETIME
+// ============================================================
+// Two rules, set by Savio 2026-09-16, and one hard constraint.
+//
+//   1. A refresh, a reload or reopening the tab must NEVER sign anyone out.
+//      Only an explicit sign-out, or a deliberate timeout, ends a session.
+//   2. Ending a session must NEVER delete the user's threads. "End the session"
+//      and "delete the data" are separate operations — see endSession() below,
+//      which touches session keys only.
+//
+// This REPLACES the previous "wipe everything on tab close" design. That design
+// could not tell a reload from a real close, so it signed the user out and
+// destroyed their entire history on every refresh — and, once OTP was in play,
+// charged for an SMS each time. The security intent is preserved by the two
+// timeouts below rather than by wiping on unload.
+const SESSION_IDLE_MS = 48 * 60 * 60 * 1000;      // 48h since last activity
+const SESSION_ABSOLUTE_MS = 15 * 24 * 60 * 60 * 1000; // 15d since login, active or not
+const _SESSION_META = 'b_session_meta';
+// Session identity only. Deliberately EXCLUDES b_threads and bella_threads_ts —
+// those belong to the account, not the session, and must survive a sign-out.
+const _SESSION_KEYS = ['b_registered_user','b_gmail','b_location_perm','b_userid'];
+
+function sessionStart(){
+  const now = Date.now();
+  localStorage.setItem(_SESSION_META, JSON.stringify({loginAt: now, lastActive: now}));
+}
+
+// Called on real user activity. Throttled to one write a minute — this runs on
+// every pointerdown/keydown and localStorage writes are synchronous.
+let _lastTouchWrite = 0;
+function sessionTouch(){
+  const now = Date.now();
+  if(now - _lastTouchWrite < 60000) return;
+  let m; try{ m = JSON.parse(localStorage.getItem(_SESSION_META) || 'null'); }catch(e){ m = null; }
+  if(!m || !m.loginAt) return;
+  m.lastActive = now;
+  localStorage.setItem(_SESSION_META, JSON.stringify(m));
+  _lastTouchWrite = now;
+}
+
+// Returns {ok:true} or {ok:false, reason:'none'|'idle'|'absolute'}.
+function sessionValid(){
+  let m; try{ m = JSON.parse(localStorage.getItem(_SESSION_META) || 'null'); }catch(e){ m = null; }
+  if(!m || !m.loginAt || !m.lastActive) return {ok:false, reason:'none'};
+  const now = Date.now();
+  // Clock moved backwards (timezone change, manual clock edit) — don't strand
+  // the user over something that isn't their doing; treat it as still valid.
+  if(now < m.lastActive) return {ok:true};
+  if(now - m.lastActive > SESSION_IDLE_MS)     return {ok:false, reason:'idle'};
+  if(now - m.loginAt   > SESSION_ABSOLUTE_MS)  return {ok:false, reason:'absolute'};
+  return {ok:true};
+}
+
+// Ends the session WITHOUT deleting anything the user owns. Threads, summaries
+// and the returning-user identifiers all survive so the next login restores
+// them. Account deletion is a separate, explicit action — confirmDeleteAccount().
+function endSession(){
+  try{ fbAuth.signOut().catch(()=>{}); }catch(e){}
+  _SESSION_KEYS.forEach(k => localStorage.removeItem(k));
+  localStorage.removeItem(_SESSION_META);
+}
+
 async function showRegistrationGate() {
+  // A live session skips the gates entirely — this is what makes a refresh
+  // free of both re-authentication and SMS cost. The splash tap still happens
+  // before this runs, so the browser gesture that unlocks audio is preserved.
+  const sv = sessionValid();
+  if (sv.ok) {
+    const saved = JSON.parse(localStorage.getItem('b_registered_user') || 'null');
+    if (saved && saved.email) {
+      sessionTouch();
+      completeLogin(saved);
+      return;
+    }
+  } else if (sv.reason === 'idle' || sv.reason === 'absolute') {
+    // Timed out on purpose. Clear the session — but keep every thread.
+    endSession();
+  }
+
+  return showRegistrationGateInner();
+}
+
+async function showRegistrationGateInner() {
   // Do NOT show main here — mainframe only shows after location modal resolves
   // Check if returning user — use lightweight recogniser (survives tab close)
   // b_registered_user is cleared on tab close for security — b_returning_email is not
@@ -2124,7 +2483,16 @@ function showNewUserGate() {
           Continue with Google
         </button>
         <div id="gate-error-1" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-top:8px;text-align:center"></div>
-        <div style="font-size:10px;color:rgba(245,230,200,0.3);text-align:center;margin-top:16px">🔒 Your data is private and secure</div>
+        <!-- DPDP Act 2023 requires a clear notice BEFORE consent. Signing in with
+             Google is the moment data is first collected, so the notice belongs
+             here, not after. "Your data is private and secure" said nothing. -->
+        <div style="font-size:10px;color:rgba(245,230,200,0.45);text-align:center;margin-top:16px;line-height:1.7">
+          Continuing shares your name, email and profile photo with Bella, so she can recognise you and remember your conversations.<br>
+          Never used for marketing. Never shared. Delete it all any time from My Account.<br>
+          <a href="#" onclick="event.preventDefault();showLegalDoc('privacy')" style="color:#D4AF37;text-decoration:underline">Privacy Notice</a>
+          &nbsp;·&nbsp;
+          <a href="#" onclick="event.preventDefault();showLegalDoc('terms')" style="color:#D4AF37;text-decoration:underline">Terms of Use</a>
+        </div>
       </div>
 
       <style>
@@ -3037,6 +3405,12 @@ async function completeRegistration() {
     userId: userId
   };
 
+  // Record WHEN consent was given and against which version of the notice.
+  // DPDP expects a data fiduciary to be able to demonstrate consent, and the
+  // notice date is what makes that meaningful if the wording later changes.
+  userData.consentedAt = new Date().toISOString();
+  userData.consentNoticeVersion = LEGAL_UPDATED;
+
   // Save to localStorage
   localStorage.setItem('b_registered_user', JSON.stringify(userData));
   // Save lightweight recogniser — survives tab close — used only to show returning user gate
@@ -3050,8 +3424,10 @@ async function completeRegistration() {
 
   // Save to Google Sheets via backend
   try {
-    const profileKey = userData.email.replace('@gmail.com', '').replace(/\./g, '_');
-    await fetch(BACKEND + '/memory-write', {
+    // Same key the rest of the app uses for this person, so the memory written
+    // at registration is the memory read back at login.
+    const profileKey = resolveAndStoreProfileKey(userData);
+    await bfetch(BACKEND + '/memory-write', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3088,7 +3464,7 @@ async function completeRegistration() {
           <p style="color:rgba(245,230,200,0.6);font-size:12px;line-height:1.7">You can always find your User ID displayed in the Bella sidebar next to your name.<br>Visit Bella anytime at <a href="https://savioabraham-pixel.github.io/Bella" style="color:#D4AF37">savioabraham-pixel.github.io/Bella</a></p>
         </div>
       </div>`;
-    await fetch(BACKEND + '/send-email', {
+    await bfetch(BACKEND + '/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3096,7 +3472,7 @@ async function completeRegistration() {
         to: userData.email,
         subject: `Welcome to Bella — Your User ID is ${userId}`,
         body: welcomeBody,
-        profileKey: userData.email.replace('@gmail.com','').replace(/\./g,'_')
+        profileKey: resolveAndStoreProfileKey(userData)
       })
     });
   } catch(e){ console.warn('Welcome email error:', e); }
@@ -3106,8 +3482,26 @@ async function completeRegistration() {
 
 function completeLogin(userData) {
   cfg.userEmail = userData.email;
-  // Mark active session — cleared on tab close
   sessionStorage.setItem('b_active_session', '1');
+  // Persist who is logged in. Every login route must leave this behind or the
+  // session cannot be restored on the next load — showRegistrationGate() reads
+  // it to decide whether to skip the gate. The registration flow writes it too;
+  // doing it here as well makes it true for every entry point, not just that one.
+  if (userData && userData.email) {
+    const _existing = JSON.parse(localStorage.getItem('b_registered_user') || 'null') || {};
+    localStorage.setItem('b_registered_user', JSON.stringify(Object.assign(_existing, userData)));
+  }
+  // Start (or refresh) the session clock. Re-entering here from a restored
+  // session is harmless — sessionStart only resets the 15-day absolute cap when
+  // a genuine login happens, and a restore always comes through here too, so
+  // preserve an existing loginAt rather than sliding the cap forward forever.
+  let _m; try{ _m = JSON.parse(localStorage.getItem(_SESSION_META)||'null'); }catch(e){ _m = null; }
+  if(_m && _m.loginAt){
+    _m.lastActive = Date.now();
+    localStorage.setItem(_SESSION_META, JSON.stringify(_m));
+  } else {
+    sessionStart();
+  }
   // Remove gate immediately
   const gate = document.getElementById('bella-gate');
   if (gate) gate.remove();
@@ -3132,6 +3526,7 @@ async function initAndLaunch(userData){
   // Sheets auth — GSI removed, badge stays Local unless OAuth token available
   setMemBadge('📱 Local');
   renderThreadList();
+  try{ renderTrashList(); }catch(e){}
   addDiv();
   // Check mic permission status
   if(navigator.permissions){
@@ -3143,7 +3538,9 @@ async function initAndLaunch(userData){
   }
   // If we have userData from login, confirm identity immediately
   if(userData && userData.email){
-    const profileKey = userData.email.replace('@gmail.com','').replace(/\./g,'_');
+    // Identity comes from the name they registered with, not their email address.
+    // See resolveProfileKey() for why the old email-derived key never matched.
+    const profileKey = resolveAndStoreProfileKey(userData);
     const addressedName = userData.preferredName || userData.firstName || userData.email.split('@')[0];
     idState='confirmed';
     await confirmIdentity(profileKey, addressedName);
@@ -3295,6 +3692,55 @@ function resolveByLastName(hint,lastName){
   return null;
 }
 
+// Works out WHO is logged in, from their registration details.
+//
+// This used to be done by chopping '@gmail.com' off the email address and using
+// whatever was left as the profile key. PROFILES is keyed by first name, so that
+// only ever matched someone whose email happened to BE their first name — i.e.
+// essentially nobody. Every user fell through to 'A guest user' with no family,
+// no background and no follow-up question, and Bella improvised from whatever
+// memory she had — which is how a logged-in Savio got asked about Savio.
+//
+// Names come from what the user typed at registration, so this needs no list of
+// email addresses and works for people who have not signed up yet.
+function resolveProfileKey(userData){
+  if(!userData) return '_guest';
+  // A key resolved earlier and stored wins — identity should not drift between
+  // logins just because someone edits their display name.
+  if(userData.profileKey && PROFILES[userData.profileKey]) return userData.profileKey;
+
+  const full = (userData.fullName || '').trim();
+  const candidates = [full, userData.preferredName || '', userData.firstName || ''].filter(Boolean);
+  for(const c of candidates){
+    const m = matchName(c.toLowerCase());
+    if(m === 'ambiguous'){
+      // Shared family name (e.g. two Sreyas). Try the surname they registered with.
+      const parts = full.split(/\s+/);
+      const last = userData.lastName || (parts.length > 1 ? parts[parts.length-1] : '');
+      const r = last ? resolveByLastName(c.toLowerCase(), last.toLowerCase()) : null;
+      if(r) return r;
+      continue; // still ambiguous — better a guest than the wrong person
+    }
+    if(m) return m;
+  }
+  return '_guest';
+}
+
+// Resolve once, then remember it on the user record so later logins are stable.
+function resolveAndStoreProfileKey(userData){
+  const key = resolveProfileKey(userData);
+  if(key !== '_guest' && userData && userData.email){
+    try{
+      const saved = JSON.parse(localStorage.getItem('b_registered_user') || 'null') || {};
+      if(saved.profileKey !== key){
+        saved.profileKey = key;
+        localStorage.setItem('b_registered_user', JSON.stringify(Object.assign(saved, userData, {profileKey:key})));
+      }
+    }catch(e){}
+  }
+  return key;
+}
+
 // ============================================================
 // SEND
 // ============================================================
@@ -3407,6 +3853,303 @@ function showAboutBella(){
   },400);
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// LEGAL & PRIVACY — Savio's item 9
+// India's DPDP Act 2023 requires a notice in clear, plain language BEFORE
+// consent, stating what is collected, why, how long it is kept, how to
+// withdraw consent, and where to complain. Researched against the Act and the
+// DPDP Rules 2025 (notified 13 Nov 2025, full compliance due 13 May 2027).
+//
+// Bella may well sit inside the Section 3(c) "personal or domestic purpose"
+// exemption today — an individual, non-commercial, built for family. That
+// exemption is narrow and ends the moment the app becomes commercial or opens
+// to the public, so the notice is written as if it applies. It costs nothing
+// and it means nothing has to change if Bella's status does.
+//
+// These three documents describe what the code ACTUALLY does — the fields in
+// completeRegistration(), the real third parties, the real retention. If any
+// of that changes, change these too, or the notice becomes false.
+// ══════════════════════════════════════════════════════════════════════
+const LEGAL_CONTACT = 'savioabraham.miiraki@gmail.com';
+const LEGAL_UPDATED = '17 September 2026';
+
+const LEGAL_DOCS = {
+  privacy: '**Bella.ai — Privacy Notice**\n\n' +
+    'Last updated: ' + LEGAL_UPDATED + '\n\n' +
+    'Bella is a personal project, built and run by Savio Abraham for family and close friends. ' +
+    'This notice explains exactly what Bella holds about you and what she does with it. Plain language, no small print.\n\n' +
+    '**What Bella collects**\n\n' +
+    'When you register: your name, the name you prefer to be called, your email address (from your Google account), ' +
+    'your mobile number, your gender, your date of birth, and your profile photo.\n\n' +
+    'While you use her: your conversations, anything you ask her to remember, your language preference, ' +
+    'and — only if you allow it — your approximate location, used to tell you the local weather and time.\n\n' +
+    '**Why**\n\n' +
+    'So Bella can recognise you, hold a proper conversation, and remember what you have asked her to remember. ' +
+    'That is the whole purpose.\n\n' +
+    'Your data is **never** used for marketing or advertising. You will **never** receive a promotional email. ' +
+    'It is **never** sold, rented or shared with anyone for their own purposes.\n\n' +
+    '**Who else handles it**\n\n' +
+    'Bella cannot work without a few services, and only what is needed is sent to each:\n\n' +
+    '- **Google** — signing you in, generating her replies, and storing your profile and memories\n' +
+    '- **ElevenLabs** — turning her replies into speech, and only when voice is switched on\n\n' +
+    '**Where it is kept**\n\n' +
+    'Your conversations are stored in your own browser, on the device you are using. ' +
+    'Your profile and the things Bella remembers are stored in a private Google account belonging to Savio.\n\n' +
+    '**How long**\n\n' +
+    'Until you delete it. Nothing expires on its own.\n\n' +
+    '- A conversation you delete goes to **Deleted** and stays recoverable for **30 days**, then is purged automatically\n' +
+    '- **Delete Account** removes everything within **72 hours**\n\n' +
+    '**Your rights**\n\n' +
+    'Under India\'s Digital Personal Data Protection Act 2023 you may see your data, correct it, erase it, ' +
+    'withdraw your consent, and complain if something is wrong. All of it is in the **My Account** menu:\n\n' +
+    '- **My Memory** — see everything Bella remembers about you\n' +
+    '- **Download My Data** — take a copy away with you\n' +
+    '- **Clear All Threads** — remove your conversations\n' +
+    '- **Delete Account** — erase everything. This is also how you withdraw your consent\n\n' +
+    '**Children**\n\n' +
+    'Bella is not intended for anyone under 18 without a parent or guardian involved.\n\n' +
+    '**Questions or complaints**\n\n' +
+    'Write to ' + LEGAL_CONTACT + ' and Savio will answer personally. ' +
+    'If you are not satisfied, you may complain to the Data Protection Board of India.',
+
+  terms: '**Bella.ai — Terms of Use**\n\n' +
+    'Last updated: ' + LEGAL_UPDATED + '\n\n' +
+    '**What Bella is**\n\n' +
+    'A personal AI companion, built by one person for family and close friends. She is not a company, ' +
+    'not a commercial product, and there is no charge to use her.\n\n' +
+    '**Please use her sensibly**\n\n' +
+    'Bella runs on an AI model, and AI models get things wrong — confidently. Always check anything that matters.\n\n' +
+    '**Do not rely on Bella alone** for medical, legal, financial or any other decision with real consequences. ' +
+    'She is a starting point and a companion, never a substitute for a doctor, a lawyer or an accountant.\n\n' +
+    '**What is expected of you**\n\n' +
+    '- Use your own account, and do not share your sign-in with anyone else\n' +
+    '- Do not use Bella to harm, harass or deceive anyone\n' +
+    '- Do not paste in other people\'s private information without their agreement\n\n' +
+    '**What is not promised**\n\n' +
+    'Bella is offered as she is. She may be unavailable, slow, or wrong. ' +
+    'She depends on services run by other companies, and if one of those stops, part of her stops.\n\n' +
+    'Please keep your own copy of anything you would be upset to lose — **Download My Data** is there for that.\n\n' +
+    '**Changes**\n\n' +
+    'These terms may change as Bella grows. The date at the top tells you when they last did.\n\n' +
+    'Questions: ' + LEGAL_CONTACT,
+
+  security: '**Bella.ai — Security Information**\n\n' +
+    'Last updated: ' + LEGAL_UPDATED + '\n\n' +
+    '**Getting in**\n\n' +
+    'Signing in goes through **Google**, so Bella never sees or stores a password. ' +
+    'Registration additionally sends a one-time code to your mobile number.\n\n' +
+    '**In transit**\n\n' +
+    'Everything between your device and Bella travels over an encrypted HTTPS connection. ' +
+    'The keys that let Bella talk to Google and ElevenLabs are held on the server, never in this page.\n\n' +
+    '**At rest**\n\n' +
+    'Your conversations live in your own browser storage. Your profile and memories live in a private ' +
+    'Google account belonging to Savio, protected by his Google security including two-factor authentication.\n\n' +
+    '**Being straight with you about the limits**\n\n' +
+    'Bella is a personal project, not a bank:\n\n' +
+    '- Because conversations are stored in your browser, they stay **on that device**. Signing in on your phone will not show the conversations from your laptop\n' +
+    '- Clearing your browser data will remove conversations held on that device\n' +
+    '- A wider security review is planned for 2027\n\n' +
+    '**A sensible habit**\n\n' +
+    'Treat Bella like any online service. Do not paste in bank passwords, card numbers, one-time codes ' +
+    'or anything you would not put in an email.\n\n' +
+    'Security concerns: ' + LEGAL_CONTACT
+};
+
+// Rendered as its own scrollable overlay rather than a chat message. Two
+// reasons: a 2,000-word notice would swamp the conversation (and be handed to
+// the summariser and the voice), and the notice has to be readable from the
+// REGISTRATION GATE, which sits above the chat and would hide it entirely.
+// DPDP requires the notice to be available BEFORE consent is given.
+function showLegalDoc(key){
+  const txt = LEGAL_DOCS[key];
+  if(!txt) return;
+  const prev = document.getElementById('legal-overlay');
+  if(prev) prev.remove();
+  // Escape first, then apply the small amount of markup these documents use.
+  const esc = txt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const html = esc.split('\n\n').map(function(para){
+    var b = para.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    if(/^- /.test(b)){
+      return '<ul style="margin:0 0 14px;padding-left:20px">' +
+        b.split('\n').map(function(li){ return '<li style="margin-bottom:6px">' + li.replace(/^- /,'') + '</li>'; }).join('') +
+        '</ul>';
+    }
+    return '<p style="margin:0 0 14px">' + b.replace(/\n/g,'<br>') + '</p>';
+  }).join('');
+  const o = document.createElement('div');
+  o.id = 'legal-overlay';
+  // z-index 200 — above the registration gate (150), so it is reachable from
+  // the sign-in screen as well as from the account menu.
+  o.style.cssText = 'position:fixed;inset:0;background:rgba(11,37,69,0.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box';
+  o.innerHTML =
+    '<div style="background:#0B2545;border:1px solid rgba(212,175,55,0.3);border-radius:20px;width:560px;max-width:100%;max-height:86vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.5)">' +
+      '<div style="padding:18px 22px;border-bottom:1px solid rgba(212,175,55,0.2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0">' +
+        '<span style="font-family:\'Cormorant Garamond\',serif;font-size:19px;font-weight:600;color:#F5E6C8">Bella.ai</span>' +
+        '<button onclick="closeLegalDoc()" aria-label="Close" style="min-width:44px;min-height:44px;border-radius:10px;border:1px solid rgba(245,230,200,0.2);background:transparent;color:#F5E6C8;font-size:20px;cursor:pointer;line-height:1">&times;</button>' +
+      '</div>' +
+      '<div style="padding:20px 22px;overflow-y:auto;-webkit-overflow-scrolling:touch;font-family:\'DM Sans\',sans-serif;font-size:13px;line-height:1.75;color:rgba(245,230,200,0.85)">' + html + '</div>' +
+    '</div>';
+  o.addEventListener('click', function(e){ if(e.target===o) closeLegalDoc(); });
+  document.body.appendChild(o);
+}
+function closeLegalDoc(){
+  const o = document.getElementById('legal-overlay');
+  if(o) o.remove();
+}
+
+// "Download My Data" — a real export, replacing a button that did nothing.
+// DPDP gives a right of access; this is how it is honoured.
+//
+// Format: a self-contained HTML DOCUMENT, not JSON. JSON satisfies the letter
+// of a portability right but is unreadable to the person it belongs to — they
+// open it and see brackets. HTML opens in any browser on any device, reads like
+// a document, and the user can Print > Save as PDF themselves if they want one.
+// PDF/Word would both need a backend call, which costs money and can fail; this
+// costs nothing, works offline, and cannot fail once the file is written.
+// The machine-readable JSON is still embedded in a <script type="application/json">
+// block at the end, so portability to another service is not lost.
+function _expEsc(v){
+  return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function _expDate(v){
+  if(!v) return '';
+  const d=new Date(v);
+  if(isNaN(d)) return _expEsc(v);
+  return d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+}
+// Pull the text out of a history entry. The real shape is Gemini's
+// {role, parts:[{text}]}; older or partial entries may carry {text} instead, so
+// handle both rather than throwing on somebody's export.
+function _expText(entry){
+  if(!entry) return '';
+  if(entry.parts && entry.parts.length && entry.parts[0] && typeof entry.parts[0].text==='string') return entry.parts[0].text;
+  if(typeof entry.text==='string') return entry.text;
+  return '';
+}
+function _expThreads(obj, deleted){
+  const ids=Object.keys(obj||{});
+  if(ids.length===0) return '<p class="none">None.</p>';
+  return ids.map(function(id){
+    const t=obj[id]||{};
+    const hist=Array.isArray(t.hist)?t.hist:[];
+    const meta=[];
+    if(t.created) meta.push('Started ' + _expDate(t.created));
+    if(deleted && t.deletedAt) meta.push('Deleted ' + _expDate(t.deletedAt));
+    meta.push(hist.length + (hist.length===1?' message':' messages'));
+    const rows = hist.length===0
+      ? '<p class="none">No messages in this conversation.</p>'
+      : hist.map(function(e){
+          const who = (e && e.role==='model') ? 'Bella' : 'You';
+          const cls = (e && e.role==='model') ? 'bella' : 'you';
+          const txt = _expText(e);
+          if(!txt) return '';
+          return '<div class="msg ' + cls + '"><div class="who">' + who + '</div><div class="txt">' + _expEsc(txt).replace(/\n/g,'<br>') + '</div></div>';
+        }).join('');
+    return '<section class="thread"><h3>' + _expEsc(t.name||'Untitled conversation') + '</h3>' +
+           '<div class="meta">' + _expEsc(meta.join('  \u00b7  ')) + '</div>' + rows + '</section>';
+  }).join('');
+}
+function downloadMyData(){
+  try{
+    const acct = JSON.parse(localStorage.getItem('b_registered_user')||'null') || {};
+    const conv = JSON.parse(localStorage.getItem('b_threads')||'{}') || {};
+    const del  = JSON.parse(localStorage.getItem(TRASH_KEY)||'{}') || {};
+    const prefs = {
+      theme: localStorage.getItem('b_theme')||null,
+      clockFormat: localStorage.getItem('b_clock_fmt')||null,
+      voiceLanguage: localStorage.getItem('b_voice_lang')||null
+    };
+    const payload = {
+      exportedAt:new Date().toISOString(),
+      note:'Your Bella.ai data, exported from this device. Conversations are stored per-device, so this file covers this browser only.',
+      account:acct, userId:localStorage.getItem('b_userid')||null,
+      conversations:conv, deletedConversations:del, preferences:prefs
+    };
+
+    const FIELDS=[['Name','fullName'],['Known to Bella as','preferredName'],['Email','email'],
+      ['Mobile','mobile'],['Gender','gender'],['Date of birth','dob'],['Registered','registeredDate'],
+      ['User ID','userId'],['Consent given','consentedAt'],['Notice version','consentNoticeVersion']];
+    const acctRows = FIELDS.map(function(f){
+      let v = f[1]==='userId' ? (acct.userId||localStorage.getItem('b_userid')||'') : acct[f[1]];
+      if(f[1]==='consentedAt') v=_expDate(v);
+      if(!v) return '';
+      return '<tr><th>' + f[0] + '</th><td>' + _expEsc(v) + '</td></tr>';
+    }).join('') || '<tr><td class="none">No account details stored on this device.</td></tr>';
+
+    const nConv=Object.keys(conv).length, nDel=Object.keys(del).length;
+    const doc =
+'<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+'<meta name="viewport" content="width=device-width,initial-scale=1">' +
+'<title>My Bella.ai Data</title><style>' +
+'*{box-sizing:border-box}body{margin:0;padding:32px 20px;background:#F5F3EF;color:#1B2A4A;' +
+'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65}' +
+'.wrap{max-width:760px;margin:0 auto;background:#fff;border:1px solid #E3DED3;border-radius:16px;padding:32px;box-shadow:0 2px 18px rgba(27,42,74,.06)}' +
+'.brand{display:flex;align-items:center;gap:12px;border-bottom:2px solid #D4AF37;padding-bottom:16px;margin-bottom:8px}' +
+'.dot{width:40px;height:40px;border-radius:50%;background:#D4AF37;color:#0B2545;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0}' +
+'h1{font-size:22px;margin:0;color:#0B2545}h2{font-size:15px;margin:34px 0 10px;color:#0B2545;border-bottom:1px solid #E3DED3;padding-bottom:6px}' +
+'h3{font-size:14px;margin:0 0 2px;color:#0B2545}.sub{font-size:12px;color:#6B7280;margin:0 0 4px}' +
+'table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;width:38%;padding:7px 10px 7px 0;color:#6B7280;font-weight:500;vertical-align:top}' +
+'td{padding:7px 0;border-bottom:1px solid #F0EDE6}' +
+'.thread{margin:16px 0 22px;padding:14px 16px;background:#FAF8F4;border:1px solid #EDE8DE;border-radius:12px;page-break-inside:avoid}' +
+'.meta{font-size:11px;color:#8A8A8A;margin-bottom:10px}' +
+'.msg{margin:0 0 10px;padding-left:12px;border-left:3px solid #E3DED3}' +
+'.msg.bella{border-left-color:#D4AF37}.who{font-size:11px;font-weight:700;color:#6B7280;margin-bottom:2px}' +
+'.txt{font-size:13px;white-space:pre-wrap;word-wrap:break-word}' +
+'.none{font-size:13px;color:#9AA0A6;font-style:italic}' +
+'.foot{margin-top:34px;padding-top:14px;border-top:1px solid #E3DED3;font-size:11px;color:#6B7280}' +
+'@media print{body{background:#fff;padding:0}.wrap{border:0;box-shadow:none;padding:0}}' +
+'</style></head><body><div class="wrap">' +
+'<div class="brand"><div class="dot">B</div><div><h1>My Bella.ai Data</h1>' +
+'<p class="sub">Exported ' + _expDate(payload.exportedAt) + '</p></div></div>' +
+'<p class="sub">Everything Bella holds about you on this device: ' + nConv + ' conversation' + (nConv===1?'':'s') +
+', ' + nDel + ' in Deleted, and your account details.</p>' +
+'<h2>Your details</h2><table>' + acctRows + '</table>' +
+'<h2>Your conversations (' + nConv + ')</h2>' + _expThreads(conv,false) +
+'<h2>Deleted conversations (' + nDel + ')</h2>' +
+'<p class="sub">These are recoverable in Bella for 30 days from the date they were deleted.</p>' + _expThreads(del,true) +
+'<h2>Your preferences</h2><table>' +
+'<tr><th>Theme</th><td>' + _expEsc(prefs.theme||'default') + '</td></tr>' +
+'<tr><th>Clock</th><td>' + (prefs.clockFormat==='12'?'12-hour':'24-hour') + '</td></tr>' +
+'<tr><th>Voice language</th><td>' + _expEsc(prefs.voiceLanguage||'English') + '</td></tr></table>' +
+'<div class="foot"><strong>About this file.</strong> Conversations are stored on the device you used, ' +
+'so this covers this browser only. Sign in elsewhere and that device would have its own.<br>' +
+'To keep a PDF, open this file and choose Print, then "Save as PDF".<br>' +
+'The same information is embedded below in machine-readable form, so you can move it to another service.<br>' +
+'Questions: ' + LEGAL_CONTACT + '</div></div>' +
+'<script type="application/json" id="bella-data">' +
+JSON.stringify(payload).replace(/</g,'\\u003c') +
+'<\/script></body></html>';
+
+    const blob = new Blob([doc],{type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'My-Bella-Data-' + new Date().toISOString().slice(0,10) + '.html';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    bellaMsg('**Your data is on its way down** \ud83d\udcc1\n\nI have put everything I hold on this device into one file in your Downloads folder — your details, all ' + nConv + ' conversation' + (nConv===1?'':'s') + ', anything in Deleted, and your preferences.\n\nIt opens in any browser and reads like a document. If you want a PDF, open it and choose **Print**, then **Save as PDF**.\n\nOne thing worth knowing: conversations are kept on the device you are using, so this file covers this browser. Signing in elsewhere would give you that device\'s conversations instead.');
+  }catch(e){
+    bellaMsg('I could not build the export just now. Please try again, and if it keeps happening let Savio know.');
+  }
+}
+
+// "Clear All Threads" — also a dead button until now. Routed through the same
+// 30-day Deleted bin as a single deletion, so nothing is destroyed outright
+// and the DPDP erasure right stays reversible for a month.
+function clearAllThreads(){
+  const n = Object.keys(threads||{}).length;
+  if(n===0){ bellaMsg('There are no conversations to clear — we are starting fresh already.'); return; }
+  if(!confirm('Move all ' + n + ' conversation' + (n===1?'':'s') + ' to Deleted?\n\nYou can restore them for the next ' + TRASH_DAYS + ' days.')) return;
+  const when = new Date().toISOString();
+  Object.keys(threads).forEach(id=>{ deletedThreads[id] = Object.assign({}, threads[id], {deletedAt: when}); });
+  threads = {};
+  currentThreadId = null;
+  const m = document.getElementById('msgs'); if(m) m.innerHTML='';
+  saveTrash(); saveThreadsLocal(); renderThreadList(); renderTrashList();
+  bellaMsg('**Cleared** 🧹\n\nAll ' + n + ' conversation' + (n===1?'':'s') + ' moved to **Deleted**. They are recoverable for ' + TRASH_DAYS + ' days from the sidebar, then they go for good.');
+}
+
 function showMemoryPromise(){
   const msg=`**Bella's Memory Promise** 🔒
 
@@ -3500,18 +4243,12 @@ function showMyMemory(){
 }
 
 function signOut(){
-  fbAuth.signOut().catch(()=>{});
-  localStorage.removeItem('b_registered_user');
-  localStorage.removeItem('b_gmail');
-  localStorage.removeItem('b_threads');
-  localStorage.removeItem('bella_threads_ts');
-  localStorage.removeItem('b_location_perm');
-  localStorage.removeItem('b_userid');
-  localStorage.removeItem('b_returning_email');
-  localStorage.removeItem('b_returning_name');
-  localStorage.removeItem('b_returning_firstname');
-  localStorage.removeItem('b_returning_fullname');
-  localStorage.removeItem('b_returning_mobile');
+  // Ends the session ONLY. b_threads and bella_threads_ts are deliberately NOT
+  // removed — signing out must never destroy the user's conversations. They are
+  // restored at the next login. Deleting data is confirmDeleteAccount()'s job.
+  // The b_returning_* identifiers also stay, so the returning-user gate can
+  // still greet them by name.
+  endSession();
   sessionStorage.clear();
   location.reload();
 }
@@ -3578,7 +4315,7 @@ async function submitDeleteAccount(){
 
   try {
     // Write to Deletions tab in Sheets
-    await fetch(BACKEND+'/sheets-write', {
+    await bfetch(BACKEND+'/sheets-write', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         range:'Deletions!A:H', append:true,
@@ -3603,7 +4340,7 @@ async function submitDeleteAccount(){
       </table>
       <p style="margin-top:16px;color:#666">Account status set to <strong>deletion_requested</strong>. Please action within 72 hours.</p>`;
 
-    await fetch(BACKEND+'/send-email', {
+    await bfetch(BACKEND+'/send-email', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         to: 'savioabraham.miiraki@gmail.com',
@@ -3734,7 +4471,7 @@ function searchGifs(query){
   document.getElementById('gif-grid').innerHTML='<div style="text-align:center;color:#8A9BBF;font-size:12px;padding:20px;grid-column:span 2">Searching...</div>';
   _gifDebounce=setTimeout(async()=>{
     try{
-      const r=await fetch(BACKEND+'/gif-search?q='+encodeURIComponent(query));
+      const r=await bfetch(BACKEND+'/gif-search?q='+encodeURIComponent(query));
       if(!r.ok){showGifError();return;}
       const d=await r.json();
       const grid=document.getElementById('gif-grid');
@@ -3801,7 +4538,7 @@ async function submitFeedback(){
     const feedbackId='fb_'+Date.now();
     const now=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});
     // Save to Sheets via backend
-    await fetch(BACKEND+'/sheets-write',{
+    await bfetch(BACKEND+'/sheets-write',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -3945,7 +4682,7 @@ async function summariseThread(){
     {role:'user',parts:[{text:'Please summarise our conversation. Include: 1) Key topics discussed, 2) Important decisions or conclusions, 3) Action items with who is responsible, 4) Any follow-ups needed. Format clearly with headings.'}]}
   ];
   try{
-    const r=await fetch(BACKEND+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch:false})});
+    const r=await bfetch(BACKEND+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch:false})});
     const d=await r.json();
     let reply=d.candidates?.[0]?.content?.parts?.[0]?.text||null;
       // Strip chain-of-thought — never show internal reasoning to user
@@ -4084,6 +4821,22 @@ async function send(){
   for(const img of pImages){if(img)imagePartsForAPI.push({inlineData:{mimeType:img.mimeType,data:img.data}});}
   clearFiles();
   const lang=detectLanguage(fullMsg);
+  // A plain "what time is it in X" is answered from the browser's own timezone
+  // data — exact, instant, daylight-saving aware, and it costs nothing. Sending
+  // it to web search is what produced a list of zones instead of the time.
+  if(pTexts.length===0&&pImages.length===0){
+    const _tz=answerTimeQuery(disp);
+    if(_tz){
+      hideThinking();
+      bellaMsg(_tz);
+      speakText(_tz,lang);
+      const _h=getHist();
+      _h.push({role:'user',parts:[{text:`[User: ${currentAddressedName}]\n${fullMsg}`}]});
+      _h.push({role:'model',parts:[{text:_tz}]});
+      setHist(_h);
+      clearFiles();endTurn();return;
+    }
+  }
   const needsSearch=isTimeSensitive(fullMsg);
   if(needsSearch){const ack=`One moment while I look that up...`;bellaMsg(ack);speakText(ack,lang);}
   const userParts=[{text:`[User: ${currentAddressedName}]\n${fullMsg}`},...imagePartsForAPI];
@@ -4117,13 +4870,19 @@ async function send(){
     // Long answers (8+ sentences) speak only the short summary and point to
     // the screen for the rest. Short answers are spoken in full, as before.
     const sentenceCount=(reply.match(/[^.!?\n]+[.!?]+|[^.!?\n]+$/g)||[reply]).length;
-    const toSpeak=(sentenceCount>=8&&voiceSummary)?(voiceSummary+' The full detailed answer is on your screen.'):reply;
-    try{speakText(toSpeak,lang,bellaMsgId);}catch(e){}
+    if(sentenceCount>SPOKEN_FULL_SENTENCES && voiceSummary){
+      // Long answer. Speak the short version, then ASK — don't decide for them.
+      // Savio's rule: up to 7-8 sentences she just reads it out; beyond that she
+      // offers, and proceeds on their answer.
+      try{offerFullReading(bellaMsgId,reply,voiceSummary,lang);}catch(e){}
+    } else {
+      try{speakText(reply,lang,bellaMsgId);}catch(e){}
+    }
     try{checkSummariseBtn();}catch(e){}
     try{
       if(idState==='confirmed'){
         const sugs=generateSuggestions(reply);
-        addSuggestions(sugs, false);
+        addSuggestions(sugs, false, reply);
       }
     }catch(e){}
     try{
@@ -4139,7 +4898,7 @@ async function send(){
       const concern=['worried','problem','issue','surgery','sick','difficult','struggling','upset','grief','stress'];
       if(concern.some(k=>fullMsg.toLowerCase().includes(k))&&currentProfileKey){
         const fu=`Last time ${currentAddressedName} mentioned: "${disp.substring(0,80)}". Check in on them.`;
-        await fetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey:currentProfileKey,addressedName:currentAddressedName,memoryText:fu,type:'followup'})});
+        await bfetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey:currentProfileKey,addressedName:currentAddressedName,memoryText:fu,type:'followup'})});
       }
     }catch(e){}
   }
@@ -4157,7 +4916,7 @@ async function callBella(useSearch,memCtx,signal){
   const searchNote=useSearch?'\n\nNeeds current live web data. Search and present as 3-5 bullet points with verifiable source links where possible. For medical info cite medical sources, for government info cite official sources, for business data cite industry reports. Spoken summary: 2 sentences max — do not speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).':'';
   const voiceNote='\n\nAt the very end of your reply, on its own new line, always add a short spoken-friendly version of your answer in this exact format: [VOICE]a natural 2-3 sentence summary, in plain conversational language[/VOICE]. This tag is never shown to the user — it is only used to decide what to speak aloud for long answers.';
   const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote}]},{role:'model',parts:[{text:`Understood. I am Bella, ready to assist ${_activeAddressedName}.`}]},...getHist()];
-  const r=await fetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch}),signal});
+  const r=await bfetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch}),signal});
   if(!r.ok)throw new Error('Backend error: '+r.status);
   const d=await r.json();
   return d.candidates?.[0]?.content?.parts?.[0]?.text||null;
@@ -4187,10 +4946,27 @@ const speechQueue={
   // Splits on sentence boundaries and caps chunk size well under any TTS
   // backend limit, so nothing gets dropped for long answers.
   splitToChunks(text){
+    // Chunk caps RAMP rather than sitting flat at 1400.
+    //
+    // Synthesis time is roughly 0.55s + 8.7ms per character, so a flat 1400-cap
+    // meant the very first chunk could take ~12s to come back — the user saw the
+    // written answer and then waited in silence. A small opening chunk starts the
+    // voice almost immediately; later chunks are allowed to be long because each
+    // one is fetched while the previous is still playing, and playback runs at
+    // about chars/14.7 seconds. The later caps must stay large enough that
+    // synth(next) finishes before play(current) ends, or the gaps come back.
+    const CAPS=[180,900];
     const CAP=1400;
+    const capFor=i=>(i<CAPS.length?CAPS[i]:CAP);
     const sentences=text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g)||[text];
     const chunks=[];let cur='';
     for(let s of sentences){
+      // Close the opening chunk on a clause boundary as soon as it has enough
+      // to say. Never split a sentence just to honour the smaller early cap —
+      // speech should always begin on a natural boundary.
+      if(cur && cur.length>=capFor(chunks.length) && chunks.length<CAPS.length){
+        chunks.push(cur.trim()); cur='';
+      }
       // A single "sentence" can itself exceed CAP (a long run-on with no
       // terminal punctuation) — hard-wrap it on whitespace so no chunk sent
       // to /speak is ever over the cap, regardless of punctuation.
@@ -4212,7 +4988,7 @@ const speechQueue={
     this.msgId=msgId||null;
     const allowedLangs=['en','hi','bn','mr'];
     if(!allowedLangs.includes(lang))lang='en';
-    const clean=text.replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'').replace(/<[^>]+>/g,'').replace(/•/g,'').replace(/(\d)\s*[-–—]\s*(\d)/g,'$1 to $2');
+    const clean=speakableText(text);
     if(!clean.trim()||!audioUnlocked)return;
     this.playing=true;
     setSpeakingState(true);
@@ -4229,7 +5005,7 @@ const speechQueue={
   },
   async _fetchChunkAudio(text,lang,myToken){
     try{
-      const r=await fetch(BACKEND+'/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang})});
+      const r=await bfetch(BACKEND+'/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang})});
       if(myToken!==this.stopToken)return null;
       if(!r.ok){console.warn('Bella /speak:',r.status);return null;}
       const blob=await r.blob();
@@ -4247,6 +5023,123 @@ const speechQueue={
     });
   }
 };
+// ── Preparing written text so it SOUNDS right when spoken ──
+// Everything the voice reads passes through here. Three of Savio's reported
+// faults live in this one function, so they are fixed in one place rather than
+// at each of the call sites that send text to /speak.
+const CURRENCY_WORDS={
+  '$':['dollar','dollars'], '£':['pound','pounds'], '€':['euro','euros'],
+  '₹':['rupee','rupees'], '¥':['yen','yen'], '₩':['won','won'],
+  '₪':['shekel','shekels'], '₦':['naira','naira'], '₫':['dong','dong'],
+  '₱':['peso','pesos'], '₴':['hryvnia','hryvnia'], '₺':['lira','lira'],
+  '฿':['baht','baht'], '₡':['colon','colones'], '₲':['guarani','guarani']
+};
+// Three-letter codes people actually use in conversation. Spoken in full because
+// "USD" read aloud letter by letter is not how anyone says it out loud.
+const CURRENCY_CODES={
+  USD:'US dollars', GBP:'British pounds', EUR:'euros', INR:'rupees',
+  JPY:'Japanese yen', AUD:'Australian dollars', CAD:'Canadian dollars',
+  CHF:'Swiss francs', CNY:'Chinese yuan', SGD:'Singapore dollars',
+  AED:'dirhams', SAR:'riyals', NZD:'New Zealand dollars', HKD:'Hong Kong dollars',
+  ZAR:'rand', THB:'Thai baht', MYR:'ringgit', BDT:'taka', LKR:'Sri Lankan rupees',
+  NPR:'Nepali rupees', PKR:'Pakistani rupees', VND:'Vietnamese dong'
+};
+function speakableText(text){
+  let s=String(text==null?'':text);
+  // 1. Markdown and markup first, so the voice never reads "star star".
+  s=s.replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'')
+     .replace(/<[^>]+>/g,'').replace(/•/g,'');
+
+  // 2. Currency (Savio's item 7 — every currency was being read as "dong").
+  //    A bare symbol in front of a number has no pronunciation of its own, so
+  //    whatever the voice guessed was arbitrary. Say the word instead, and put
+  //    it AFTER the amount, which is how it is spoken in English.
+  //    Ranges first: "$50-60" must become "50 to 60 dollars", not
+  //    "50 dollars-60" — converting the single amount first strands the dash.
+  Object.keys(CURRENCY_WORDS).forEach(sym=>{
+    const many=CURRENCY_WORDS[sym][1];
+    const esc=sym.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    s=s.replace(new RegExp(esc+'\\s?(\\d[\\d,]*(?:\\.\\d+)?)\\s*[-‐‑‒–—―−]\\s*'+esc+'?\\s?(\\d[\\d,]*(?:\\.\\d+)?)','g'),
+      (m,a,b)=>a+' to '+b+' '+many);
+  });
+  Object.keys(CURRENCY_WORDS).forEach(sym=>{
+    const [one,many]=CURRENCY_WORDS[sym];
+    const esc=sym.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    s=s.replace(new RegExp(esc+'\\s?(\\d[\\d,]*(?:\\.\\d+)?)','g'),
+      (m,amt)=>amt+' '+(parseFloat(String(amt).replace(/,/g,''))===1?one:many));
+  });
+  s=s.replace(/\b([A-Z]{3})\b\s?(\d[\d,]*(?:\.\d+)?)/g,
+      (m,code,amt)=>CURRENCY_CODES[code]?(amt+' '+CURRENCY_CODES[code]):m);
+  s=s.replace(/(\d[\d,]*(?:\.\d+)?)\s?\b([A-Z]{3})\b/g,
+      (m,amt,code)=>CURRENCY_CODES[code]?(amt+' '+CURRENCY_CODES[code]):m);
+
+  // 3. Number ranges (item 16 — "2-3" was being read as "two, three").
+  //    The old pattern covered only hyphen, en dash and em dash. Gemini also
+  //    emits U+2010/2011/2012/2015 and the true minus U+2212, which is exactly
+  //    why this worked "sometimes" and not others.
+  s=s.replace(/(\d)\s*[-‐‑‒–—―−]\s*(?=\d)/g,'$1 to ');
+
+  return s;
+}
+
+// ── Long answers: offer rather than decide (Savio's item 6) ──
+// Anything up to this many sentences is simply spoken in full. Past it, Bella
+// reads the short version and then asks whether the user wants the rest — in
+// their own language — instead of silently truncating or reading for 90 seconds.
+const SPOKEN_FULL_SENTENCES = 8;
+const OFFER_TEXT = {
+  en:{ask:'That\u2019s a long answer. Shall I read it all, or summarise the important points?',
+      full:'Read it all',sum:'Summarise',other:'Discuss another topic',
+      prompt:'So, what would you like to talk about{name}?'},
+  hi:{ask:'\u091c\u0935\u093e\u092c \u0925\u094b\u095c\u093e \u0932\u0902\u092c\u093e \u0939\u0948\u0964 \u092a\u0942\u0930\u093e \u092a\u095d\u0942\u0901 \u092f\u093e \u0936\u0949\u0930\u094d\u091f \u092e\u0947\u0902 \u092e\u0947\u0928 \u092a\u0949\u0907\u0902\u091f \u092c\u0924\u093e\u090a\u0901?',
+      full:'\u092a\u0942\u0930\u093e \u092a\u095d\u0947\u0902',sum:'\u0936\u0949\u0930\u094d\u091f \u092e\u0947\u0902 \u092c\u0924\u093e\u090f\u0901',other:'\u0915\u0941\u091b \u0914\u0930 \u092c\u093e\u0924 \u0915\u0930\u0947\u0902',
+      prompt:'\u0924\u094b {name}\u0915\u093f\u0938 \u092c\u093e\u0930\u0947 \u092e\u0947\u0902 \u092c\u093e\u0924 \u0915\u0930\u0947\u0902?'},
+  mr:{ask:'\u0909\u0924\u094d\u0924\u0930 \u0925\u094b\u0921\u0902 \u092e\u094b\u0920\u0902 \u0906\u0939\u0947. \u092a\u0942\u0930\u094d\u0923 \u0935\u093e\u091a\u0942\u0928 \u0926\u093e\u0916\u0935\u0942 \u0915\u093e \u092e\u0939\u0924\u094d\u0924\u094d\u0935\u093e\u091a\u0947 \u092a\u0949\u0907\u0902\u091f \u0938\u093e\u0902\u0917\u0942?',
+      full:'\u092a\u0942\u0930\u094d\u0923 \u0935\u093e\u091a\u093e',sum:'\u0925\u094b\u0921\u0915\u094d\u092f\u093e\u0924 \u0938\u093e\u0902\u0917\u093e',other:'\u0926\u0941\u0938\u0930\u0902 \u0915\u093e\u0939\u0940 \u092c\u094b\u0932\u0942',
+      prompt:'\u092e\u0917 {name}\u0915\u0936\u093e\u092c\u0926\u094d\u0926\u0932 \u092c\u094b\u0932\u0942\u092f\u093e?'},
+  bn:{ask:'\u0989\u09a4\u09cd\u09a4\u09b0\u099f\u09be \u09ac\u09c7\u09b6 \u09ac\u09dc \u09b9\u09df\u09c7 \u0997\u09c7\u099b\u09c7\u0964 \u09aa\u09c1\u09b0\u09cb\u099f\u09be \u09aa\u09dc\u09c7 \u09b6\u09cb\u09a8\u09be\u09ac, \u09a8\u09be\u0995\u09bf \u09a6\u09b0\u0995\u09be\u09b0\u09bf \u09aa\u09df\u09c7\u09a8\u09cd\u099f\u0997\u09c1\u09b2\u09cb \u09ac\u09b2\u09c7 \u09a6\u09c7\u09ac?',
+      full:'\u09aa\u09c1\u09b0\u09cb\u099f\u09be \u09aa\u09dc\u09c1\u09a8',sum:'\u09b8\u0982\u0995\u09cd\u09b7\u09c7\u09aa\u09c7 \u09ac\u09b2\u09c1\u09a8',other:'\u0985\u09a8\u09cd\u09af \u0995\u09a5\u09be \u09ac\u09b2\u09bf',
+      prompt:'\u09a4\u09be\u09b9\u09b2\u09c7 {name}\u0995\u09c0 \u09a8\u09bf\u09df\u09c7 \u0995\u09a5\u09be \u09ac\u09b2\u09a4\u09c7 \u099a\u09be\u09a8?'}
+};
+window._offerStore = window._offerStore || {};
+function offerFullReading(msgId, fullText, summary, lang){
+  const bub=document.getElementById(msgId);
+  if(!bub) return;
+  const wrap=bub.closest('.msg-wrap'); if(!wrap) return;
+  const t=OFFER_TEXT[lang]||OFFER_TEXT.en;
+  window._offerStore[msgId]={full:fullText,sum:summary,lang:lang};
+  const box=document.createElement('div');
+  box.className='read-offer'; box.id='offer-'+msgId;
+  box.innerHTML='<span class="read-offer-q"></span>'+
+    '<button class="read-offer-btn" data-act="full"></button>'+
+    '<button class="read-offer-btn" data-act="sum"></button>'+
+    '<button class="read-offer-btn ghost" data-act="other"></button>';
+  box.querySelector('.read-offer-q').textContent=t.ask;
+  box.querySelector('[data-act="full"]').textContent=t.full;
+  box.querySelector('[data-act="sum"]').textContent=t.sum;
+  box.querySelector('[data-act="other"]').textContent=t.other;
+  box.addEventListener('click',function(e){
+    const b=e.target.closest('.read-offer-btn'); if(!b) return;
+    const st=window._offerStore[msgId]||{}; const act=b.dataset.act;
+    box.remove(); delete window._offerStore[msgId];
+    try{ speechQueue.stop(); }catch(err){}
+    if(act==='full'){ try{ speakText(st.full, st.lang, msgId); }catch(err){} }
+    else if(act==='sum'){ try{ speakText(st.sum, st.lang, msgId); }catch(err){} }
+    else {
+      // "Discuss another topic" — Bella hands the floor back, by name.
+      // This is the behaviour Savio described for his 4th chip (item 17).
+      const nm=(typeof currentAddressedName!=='undefined'&&currentAddressedName)?currentAddressedName:'';
+      const q=(t.prompt||OFFER_TEXT.en.prompt).replace('{name}', nm?(lang==='en'?(', '+nm):(nm+' ')):'');
+      bellaMsg(q); try{ speakText(q, st.lang, null); }catch(err){}
+      const ti=document.getElementById('ti'); if(ti) ti.focus();
+    }
+  });
+  wrap.appendChild(box);
+  // Ask out loud too, so it works with the screen ignored.
+  try{ speakText(t.ask, lang, msgId); }catch(e){}
+}
+function speakQueueStopSafe(){ try{ speechQueue.stop(); }catch(e){} }
+
 // Stops any message's speech in progress — wired to the per-message "Voice off" button.
 function stopMsgSpeech(msgId){
   if(!speechQueue.msgId||speechQueue.msgId===msgId)speechQueue.stop();
@@ -4259,6 +5152,10 @@ async function speakAlways(text,lang,msgId){
 }
 
 function setSpeakingState(speaking){
+  // Single choke point for half-duplex: every path that starts or stops Bella's
+  // voice passes through here, so the mic follows her automatically rather than
+  // each call site having to remember to suspend it.
+  try{ if(speaking) suspendMicForSpeech(); else resumeMicAfterSpeech(); }catch(e){}
   const lbl=document.getElementById('mic-status-lbl');
   const wave=document.getElementById('inp-wave');
   if(lbl){
@@ -4298,6 +5195,63 @@ function detectLanguage(t){
   }
   return'en';
 }
+// ── "What time is it in X?" answered exactly, not searched for ──
+// Item 5 on Savio's list. A time question used to be routed to Gemini web
+// search, which came back with a paragraph listing several zones and often not
+// the actual time. The browser already knows every timezone offset and applies
+// daylight saving correctly, and the app already carries a 70-city table for the
+// converter panel — so this is answerable precisely, instantly, and for free.
+// It also skips a Gemini call, so it is cheaper than the old path.
+const TZ_EXTRA=[
+  // Birmingham is the classic trap: Alabama is CST/CDT, England is GMT/BST.
+  // The handover doc calls this out because Jishnu studies at UAB in Alabama.
+  {city:'Birmingham',state:'Alabama',country:'USA',tz:'America/Chicago',abbr:'CST'},
+  {city:'Birmingham',state:'England',country:'UK',tz:'Europe/London',abbr:'GMT'},
+  {city:'Alabama',state:'Alabama',country:'USA',tz:'America/Chicago',abbr:'CST'},
+  {city:'Boston',state:'Massachusetts',country:'USA',tz:'America/New_York',abbr:'EST'},
+  {city:'Hyderabad',state:'Telangana',country:'India',tz:'Asia/Kolkata',abbr:'IST'}
+];
+function tzLookup(place){
+  const p=place.toLowerCase().trim().replace(/[?.,!]+$/,'');
+  if(!p) return [];
+  const all=(typeof TIMEZONES!=='undefined'?TIMEZONES:[]).concat(TZ_EXTRA);
+  const hit=[];
+  all.forEach(z=>{
+    const fields=[z.city,z.state,z.country].filter(Boolean).map(x=>String(x).toLowerCase());
+    if(fields.some(f=>f===p||p===f)) hit.push(z);
+    else if(fields.some(f=>p.includes(f)&&f.length>3)) hit.push(z);
+  });
+  // De-duplicate by timezone so "Mumbai" and "Delhi" don't read as two answers.
+  const seen={},out=[];
+  hit.forEach(z=>{ if(!seen[z.tz]){seen[z.tz]=1;out.push(z);} });
+  return out;
+}
+function timeInZone(tz){
+  // 24-hour, per the global TIME FORMAT rule.
+  return new Intl.DateTimeFormat('en-GB',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
+}
+function dateInZone(tz){
+  return new Intl.DateTimeFormat('en-GB',{timeZone:tz,weekday:'long',day:'numeric',month:'long'}).format(new Date());
+}
+// Returns an answer string, or null if this isn't a plain "time in X" question.
+function answerTimeQuery(text){
+  const t=String(text||'').trim();
+  const m=t.match(/(?:what(?:'s| is)?\s+(?:the\s+)?(?:current\s+)?time|current time|time)\s*(?:is it\s*)?(?:in|at)\s+([a-z\s,]+)/i);
+  if(!m) return null;
+  const zones=tzLookup(m[1]);
+  if(!zones.length) return null;
+  // Genuinely ambiguous place name — ask rather than guess.
+  if(zones.length>1){
+    const opts=zones.map(z=>`${z.city}, ${z.state||z.country} — ${timeInZone(z.tz)}`);
+    return `There's more than one place by that name. Here's the time in each:\n\n`+
+           opts.map(o=>`- ${o}`).join('\n')+
+           `\n\nWhich one did you mean?`;
+  }
+  const z=zones[0];
+  const where=[z.city,z.state&&z.state!==z.city?z.state:null,z.country].filter(Boolean).join(', ');
+  return `It's ${timeInZone(z.tz)} in ${where} right now — ${dateInZone(z.tz)}.`;
+}
+
 function isTimeSensitive(t){const l=t.toLowerCase();return['today','tonight','now','current','latest','recent','live','score','weather','price','news','update','right now','this week','this month','happening','2026','2025','breaking','just','aaj','abhi','kal','what time','time is it','what\'s the time','current time in','time zone in','timezone','time zone',"o'clock"].some(w=>l.includes(w));}
 
 // ============================================================
@@ -4407,17 +5361,46 @@ function generateSuggestions(text){
   return suggestions.slice(0,3);
 }
 
-function addSuggestions(suggestions, skipOnIdentity){
-  if(skipOnIdentity)return;
-  if(!suggestions||suggestions.length===0)return;
-  const m=document.getElementById('msgs');
-  // Remove previous suggestions if any
-  const prev=document.getElementById('active-suggestions');
-  if(prev)prev.remove();
-  const wrap=document.createElement('div');
-  wrap.className='suggestions';
-  wrap.id='active-suggestions';
-  suggestions.forEach(sug=>{
+// ── Contextual suggestion chips (Savio's item 17) ─────────────────────
+// The chips were hardcoded. generateSuggestions() keyword-matches Bella's reply
+// and, when nothing matches, picks at RANDOM from three fixed triples — which is
+// why they read as irrelevant. The backend has always carried /suggest-replies
+// for exactly this job, but index.html never called it, and that endpoint was
+// itself silently broken until the 2026-09-17 deploy: its thinking budget
+// consumed the whole token allowance, so it returned its own hardcoded fallback
+// while still reporting ok:true.
+//
+// /suggest-replies takes 1.8-3.5s — far too slow to make the user wait for. So
+// the local keyword chips are painted INSTANTLY and swapped in place when the
+// real ones arrive. If the call fails, times out, or the user has already moved
+// on, the local chips simply stay. No gap, no spinner, no empty row.
+const CHIP_LANG_NAMES={en:'English',hi:'Hindi',bn:'Bengali',mr:'Marathi'};
+// generateSuggestions() keyword-matches ENGLISH words, so under a Hindi, Marathi
+// or Bengali answer it falls through to its English generic set — and the user
+// saw English chips for the ~2s before the contextual ones landed. These are the
+// instant stand-ins for those languages: everyday spoken register, English
+// loanwords kept where that is how people actually speak.
+const GENERIC_CHIPS={
+  hi:['\u0914\u0930 \u092c\u0924\u093e\u0907\u090f','\u092e\u0941\u0916\u094d\u092f \u092c\u093e\u0924\u0947\u0902 \u0915\u094d\u092f\u093e \u0939\u0948\u0902?','\u0907\u0938\u0947 \u0938\u0947\u0935 \u0915\u0930 \u0932\u0940\u091c\u093f\u090f'],
+  mr:['\u0906\u0923\u0916\u0940 \u0938\u093e\u0902\u0917\u093e','\u092e\u0941\u0916\u094d\u092f \u092e\u0941\u0926\u094d\u0926\u0947 \u0915\u093e\u092f \u0906\u0939\u0947\u0924?','\u0939\u0947 \u0938\u0947\u0935\u094d\u0939 \u0915\u0930\u093e'],
+  bn:['\u0986\u09b0\u0993 \u09ac\u09b2\u09c1\u09a8','\u09ae\u09c2\u09b2 \u09ac\u09bf\u09b7\u09df\u0997\u09c1\u09b2\u09cb \u0995\u09c0?','\u098f\u099f\u09be \u09b8\u09c7\u09ad \u0995\u09b0\u09c1\u09a8']
+};
+// The action chip arrives as a bare verb ("Remind Me"), which reads oddly when
+// sent to Bella as a message. Expand the known English ones. Anything else —
+// including the translated chips the other languages return — is used verbatim.
+const ACTION_CHIP_PHRASES={
+  'translate':'Translate this for me','summarise':'Summarise this',
+  'summarize':'Summarise this','remind me':'Remind me about this',
+  'forward':'Forward this for me','save':'Save this for me',
+  'transcribe':'Transcribe this','ask bella':'Tell me more about this'
+};
+// Guards against a slow reply landing after the user has already moved on.
+let _sugSeq=0;
+
+function _paintChips(wrap,labels,lang){
+  const t=OFFER_TEXT[lang]||OFFER_TEXT.en;
+  wrap.innerHTML='';
+  labels.slice(0,3).forEach(sug=>{
     const chip=document.createElement('button');
     chip.className='sug-chip';
     chip.textContent=sug;
@@ -4431,18 +5414,75 @@ function addSuggestions(suggestions, skipOnIdentity){
     wrap.appendChild(chip);
   });
   // Always-present fourth chip — an easy escape hatch to change subject.
+  // Wording and behaviour come from OFFER_TEXT, so this chip and the long-answer
+  // offer's third button read word-for-word the same in all four languages.
   const discussChip=document.createElement('button');
   discussChip.className='sug-chip';
-  discussChip.textContent='Discuss another topic';
+  discussChip.textContent=t.other;
   discussChip.onclick=()=>{
     wrap.remove();
-    const askMsg='Of course! What would you like to talk about?';
+    const nm=(typeof currentAddressedName!=='undefined'&&currentAddressedName)?currentAddressedName:'';
+    const askMsg=(t.prompt||OFFER_TEXT.en.prompt).replace('{name}', nm?(lang==='en'?(', '+nm):(nm+' ')):'');
     bellaMsg(askMsg);
-    try{speakText(askMsg,'en');}catch(e){}
+    try{speakText(askMsg,lang);}catch(e){}
+    const ti=document.getElementById('ti'); if(ti) ti.focus();
   };
   wrap.appendChild(discussChip);
+}
+
+async function _upgradeChips(sourceText,seq,lang){
+  try{
+    const body={message:sourceText.substring(0,1200)};
+    if(lang!=='en'){
+      const nm=CHIP_LANG_NAMES[lang]||'English';
+      // The endpoint takes no language parameter, but it does fold `context`
+      // into its prompt — verified returning correct Marathi and Bengali.
+      body.context='Write the replies and the action chip ONLY in '+nm+', in that language\'s own script. The user speaks '+nm+'.';
+    }
+    const ctl=new AbortController();
+    const kill=setTimeout(()=>ctl.abort(),9000);
+    const r=await bfetch(BACKEND+'/suggest-replies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctl.signal});
+    clearTimeout(kill);
+    if(!r.ok)return;
+    const d=await r.json();
+    if(!d||!Array.isArray(d.replies))return;
+    const labels=d.replies.filter(x=>typeof x==='string'&&x.trim()).map(x=>x.trim()).slice(0,2);
+    if(d.actionChip&&typeof d.actionChip==='string'&&d.actionChip.trim()){
+      const key=d.actionChip.trim().toLowerCase();
+      labels.push(ACTION_CHIP_PHRASES[key]||d.actionChip.trim());
+    }
+    if(!labels.length)return;
+    // Stale — the user has sent something else, or the row has gone.
+    if(seq!==_sugSeq)return;
+    const wrap=document.getElementById('active-suggestions');
+    if(!wrap||wrap.dataset.seq!==String(seq))return;
+    _paintChips(wrap,labels,lang);
+  }catch(e){ /* keep the local chips — never leave the user with none */ }
+}
+
+function addSuggestions(suggestions, skipOnIdentity, sourceText){
+  if(skipOnIdentity)return;
+  if(!suggestions||suggestions.length===0)return;
+  const m=document.getElementById('msgs');
+  // Remove previous suggestions if any
+  const prev=document.getElementById('active-suggestions');
+  if(prev)prev.remove();
+  const wrap=document.createElement('div');
+  wrap.className='suggestions';
+  wrap.id='active-suggestions';
+  const seq=++_sugSeq;
+  wrap.dataset.seq=String(seq);
+  // Language follows the text being replied to, not the user's last message —
+  // a romanised question would otherwise put English chips under a Marathi answer.
+  const lang=sourceText?detectLanguage(sourceText):'en';
+  // Never show English stand-ins under a non-English answer, even briefly.
+  _paintChips(wrap,(lang!=='en'&&GENERIC_CHIPS[lang])?GENERIC_CHIPS[lang]:suggestions,lang);
   m.appendChild(wrap);
   m.scrollTop=m.scrollHeight;
+  // Upgrade to genuinely contextual chips in the background. Skipped for very
+  // short replies, where a generic chip is no worse and the call is not worth
+  // the ~Rs 0.017 it costs.
+  if(sourceText&&sourceText.trim().length>=40)_upgradeChips(sourceText,seq,lang);
 }
 
 // Monotonic id source. Date.now() collided when a saved thread was replayed in a
@@ -4681,6 +5721,9 @@ function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSp
   recog.continuous=true;recog.interimResults=false;recog.lang='en-IN';recog.onstart=()=>{listening=true;_setListenIndicator(true);setSpeakingState(false);document.getElementById('mbtn').classList.add('voice-on');};
   let _voiceAccumulated='';let _voiceFinalizeTimer=null;
   recog.onresult=e=>{
+    // Anything arriving while Bella is speaking is Bella, not the user — see
+    // suspendMicForSpeech(). Without this guard she answers herself forever.
+    if(speechQueue.playing || _micSuspendedForSpeech) return;
     const r=e.results[e.results.length-1];
     const transcript=r[0].transcript;
     const ti=document.getElementById('ti');
@@ -4698,9 +5741,24 @@ function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSp
       // A brief pause mid-sentence shouldn't be read as "I'm done talking" —
       // wait to see if more speech follows before actually sending.
       if(_voiceFinalizeTimer)clearTimeout(_voiceFinalizeTimer);
+      // How long to wait before deciding the user has finished.
+      //
+      // A flat 1.2s cut people off mid-thought — that is item 2 on Savio's list.
+      // Ordinary speech pauses run well past a second, and longer still when
+      // someone is thinking or code-mixing between languages. Wait longer by
+      // default, and longer again when the words so far do not sound finished:
+      // a trailing conjunction or a sentence with no end punctuation usually
+      // means more is coming.
+      const _sofar=_voiceAccumulated.trim();
+      const _unfinished=/\b(and|but|so|because|or|then|aur|ani|ebong|je|ki|to)$/i.test(_sofar)
+                        || !/[.!?]$/.test(_sofar);
+      const _wait = _unfinished ? 2200 : 1600;
       _voiceFinalizeTimer=setTimeout(()=>{
-        _voiceFinalizeTimer=null;_voiceAccumulated='';send();
-      },1200);
+        _voiceFinalizeTimer=null;
+        // Never send on top of Bella — if she is mid-answer this was her voice.
+        if(speechQueue.playing||_micSuspendedForSpeech){_voiceAccumulated='';return;}
+        _voiceAccumulated='';send();
+      },_wait);
     }
   };
   recog.onerror=err=>{
@@ -4715,9 +5773,53 @@ function startContinuousMic(){const SR=window.SpeechRecognition||window.webkitSp
     // restarts listening automatically. Previously this called stopMic(),
     // which destroyed the recognizer and left Bella silently stuck until the
     // user manually re-toggled voice mode.
-  };recog.onend=()=>{if(continuousVoice)recog.start();};recog.start();}
+  };recog.onend=()=>{if(continuousVoice)safeRestartRecog();};recog.start();}
+// ── HALF-DUPLEX: the mic must not be live while Bella is speaking ──
+// Browsers only echo-cancel WebRTC streams, never <audio>. With the recogniser
+// left running, Bella's own voice was transcribed as if the user had spoken:
+// onresult fired, abortCurrentTurn() cut her off mid-sentence, and her own words
+// were posted back as the next question. That is the "mic never stops" and the
+// "she interrupts me" behaviour — she was talking to herself.
+//
+// Cost of this fix: no voice barge-in. Interrupting her needs the mic button.
+let _micSuspendedForSpeech=false;
+function suspendMicForSpeech(){
+  if(!continuousVoice || !recog) return;
+  _micSuspendedForSpeech=true;
+  try{ recog.stop(); }catch(e){}
+}
+function resumeMicAfterSpeech(){
+  if(!_micSuspendedForSpeech) return;
+  _micSuspendedForSpeech=false;
+  // Wait out the tail of the audio before listening again, or the last word
+  // she spoke gets captured as the opening word of the user's next question.
+  setTimeout(()=>{
+    if(continuousVoice && !speechQueue.playing) safeRestartRecog();
+  },500);
+}
+
+// recog.start() throws if the recogniser is already running, and the browser
+// ends recognition by itself after a few seconds of silence. The old code called
+// start() bare inside onend, so a single throw killed voice mode silently and the
+// user had to toggle it off and on again — item 3 on Savio's list.
+let _recogRestartDelay=250;
+function safeRestartRecog(){
+  if(!continuousVoice || _micSuspendedForSpeech || speechQueue.playing) return;
+  try{
+    recog.start();
+    _recogRestartDelay=250; // success — reset the backoff
+  }catch(e){
+    // Already running is harmless; anything else gets a widening retry so a
+    // transient fault cannot permanently strand voice mode.
+    if(String(e&&e.name)==='InvalidStateError') return;
+    _recogRestartDelay=Math.min(_recogRestartDelay*2,4000);
+    setTimeout(()=>{ if(continuousVoice) safeRestartRecog(); },_recogRestartDelay);
+  }
+}
+
 function stopMic(){
   listening=false;
+  _micSuspendedForSpeech=false;
   const mb=document.getElementById('mbtn');
   if(mb){mb.classList.remove('act','voice-on');mb.style.background='';mb.style.borderColor='';const svg=mb.querySelector('svg');if(svg)svg.style.stroke='';}
   if(recog){recog.stop();recog=null;}
@@ -5102,15 +6204,29 @@ function deliverGreeting(addressedName){
   bellaMsg(msg);speakText(msg,'en');
 }
 
+// Splits the thought into its words and its trailing emoji, and puts each into
+// its own element. Keeping them separate is what stops the ellipsis eating the
+// emoji on a long thought.
+function setThought(thought){
+  const textEl = document.getElementById('tb-thought');
+  const emojiEl = document.getElementById('tb-thought-emoji');
+  if(!textEl) return;
+  const m = String(thought).match(/(\p{Emoji_Presentation}|\p{Extended_Pictographic})(\uFE0F)?\s*$/u);
+  if(m && emojiEl){
+    const emoji = m[0].trim();
+    textEl.textContent = String(thought).slice(0, String(thought).lastIndexOf(emoji)).trim();
+    emojiEl.textContent = emoji;
+  } else {
+    textEl.textContent = String(thought).trim();
+    if(emojiEl) emojiEl.textContent = '✨';
+  }
+}
+
 async function loadThoughtOfDay(addressedName, city){
-  const cacheKey = 'b_thought_cache_v2'; // versioned so anyone's older cached (pre-animation) thought gets bypassed automatically
+  const cacheKey = 'b_thought_cache_v3'; // versioned so anyone's older cached (pre-animation) thought gets bypassed automatically
   try{
     const cached = sessionStorage.getItem(cacheKey);
-    if(cached){
-      const el = document.getElementById('tb-thought');
-      if(el) el.innerHTML = cached;
-      return;
-    }
+    if(cached){ setThought(cached); return; }
   }catch(e){}
   const thoughtEl = document.getElementById('tb-thought');
   if(!thoughtEl) return;
@@ -5138,7 +6254,7 @@ The emoji must be chosen to match the mood. Examples:
 
 Example output: "Every Sunrise Is A New Invitation To Begin Again" ✨`;
 
-    const r = await fetch(`${BACKEND}/chat`, {
+    const r = await bfetch(`${BACKEND}/chat`, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
@@ -5150,17 +6266,10 @@ Example output: "Every Sunrise Is A New Invitation To Begin Again" ✨`;
     const d = await r.json();
     let thought = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '"Every Day Holds The Seed Of Something Wonderful" ✨';
     // Extract emoji from end of thought for animation
-    const emojiMatch = thought.match(/(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*$/u);
-    let displayHtml = thought;
-    if(emojiMatch){
-      const emoji = emojiMatch[0].trim();
-      const textPart = thought.slice(0, thought.lastIndexOf(emoji)).trim();
-      displayHtml = `${textPart} <span class="tb-thought-emoji">${emoji}</span>`;
-    }
-    thoughtEl.innerHTML = displayHtml;
-    try{ sessionStorage.setItem(cacheKey, displayHtml); }catch(e){}
+    setThought(thought);
+    try{ sessionStorage.setItem(cacheKey, thought); }catch(e){}
   }catch(e){
-    thoughtEl.innerHTML = '"Every Day Holds The Seed Of Something Wonderful" <span class="tb-thought-emoji">✨</span>';
+    setThought('"Every Day Holds The Seed Of Something Wonderful" ✨');
   }
 }
 
@@ -5644,24 +6753,31 @@ function updateMobileDigitLimit() {
 
 window.onload=()=>{};
 
-// ── SESSION SECURITY: Tab close / browser shut = complete wipe — identical to manual sign out ──
-window.addEventListener('pagehide', function() {
-  // Sign out of Firebase
-  if (typeof fbAuth !== 'undefined') {
-    fbAuth.signOut().catch(() => {});
-  }
-  // Wipe session and security data — next login requires full Gmail OAuth + OTP
-  localStorage.removeItem('b_registered_user');
-  localStorage.removeItem('b_gmail');
-  localStorage.removeItem('b_threads');
-  localStorage.removeItem('bella_threads_ts');
-  localStorage.removeItem('b_location_perm');
-  localStorage.removeItem('b_userid');
-  // Keep b_returning_email, b_returning_name, b_returning_mobile
-  // These only show the returning user gate — they do NOT bypass Gmail OAuth or OTP
-  // Full re-authentication is always required regardless
-  sessionStorage.clear();
+// Keep the 48-hour idle clock honest. sessionTouch() throttles itself to one
+// write a minute, so binding to these high-frequency events is cheap. Passive
+// listeners so they never delay scrolling or input.
+['pointerdown','keydown','visibilitychange'].forEach(function(ev){
+  window.addEventListener(ev, function(){
+    if(ev === 'visibilitychange' && document.visibilityState !== 'visible') return;
+    try{ sessionTouch(); }catch(e){}
+  }, {passive:true});
 });
+
+// ── SESSION: unload is NOT a sign-out ──
+// This handler used to wipe the session and delete every thread on pagehide.
+// pagehide fires on a reload exactly as it does on a real tab close and the two
+// are indistinguishable here, so that wipe ran on every refresh — signing the
+// user out and destroying their history. Savio's rule (2026-09-16): only an
+// explicit sign-out or a deliberate timeout ends a session, and neither deletes
+// data. Session expiry is enforced on load by sessionValid(); all we do on the
+// way out is record that the user was here.
+//
+// This handler is deliberately EMPTY, and must stay that way. An earlier version
+// called sessionTouch() here "to record that the user was leaving" — but pagehide
+// fires on every reload, so that stamped lastActive with the current time on each
+// refresh and the 48-hour idle timeout could never elapse. lastActive must only
+// ever be set by genuine activity while the page is open.
+window.addEventListener('pagehide', function() { /* intentionally nothing */ });
 </script>
 
 
@@ -5727,6 +6843,83 @@ window.addEventListener('pagehide', function() {
 .drive-box svg{
   width:18px;
   height:18px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE & TABLET — Savio's item 15
+   Measured in headless Chrome at 360x800, 375x667, 393x852, 768x1024 and
+   1024x768. Three real faults were found, not guessed at:
+     1. The sidebar toggle sits INSIDE #sidebar, which is translated off
+        screen below 680px — it measured at x=-45, so a phone user could
+        never open the sidebar. That is a functional blocker, not cosmetic.
+     2. The topbar is ~941px of fixed-width cells with overflow visible, so
+        below 1024px the date, clock, thought, Convert and even the account
+        button were clipped away and unreachable.
+     3. Ten controls were under Apple's 44x44 minimum, including the mic
+        (36) and send (40) — the two most-used buttons in the app.
+   Page width never exceeded the viewport at any size, so there was no
+   horizontal-scroll bug to fix; the content was being cut off instead.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+#tb-menu-btn{display:none;width:40px;height:40px;min-width:40px;border-radius:10px;
+  align-items:center;justify-content:center;flex-shrink:0;margin:0 6px;
+  background:var(--white);border:1px solid var(--border);color:var(--navy);cursor:pointer}
+/* Keyed off the ID: the blanket `body.dark button{...!important}` rule would
+   otherwise win against any class-based override. */
+/* Hardcoded #D4AF37, NOT var(--gold): the brand tokens INVERT in dark mode
+   (body.dark sets --gold:#0B2545), so var(--gold) here rendered a navy icon on
+   a navy button — invisible. Caught by reading back computed styles, where
+   background and color came out identical. The icon uses stroke="currentColor",
+   so `color` is what makes it visible at all. */
+body.dark #tb-menu-btn{background:#0B2545!important;color:#D4AF37!important;
+  border-color:rgba(212,175,55,.3)!important}
+
+@media(max-width:1024px){
+  /* Scroll the dashboard rather than clip it. Nothing is hidden — every cell
+     stays reachable, because these are real features, not decoration. */
+  .chat-topbar{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none}
+  .chat-topbar::-webkit-scrollbar{display:none}
+  .tb-cell-expand{flex:0 0 auto;width:240px}
+  /* Search and account must never scroll out of reach — sign-out lives there. */
+  .tb-actions{position:sticky;right:0;z-index:3;background:var(--white);
+    box-shadow:-8px 0 12px -6px rgba(0,0,0,.12)}
+  body.dark .tb-actions{background:#0B2545!important}
+}
+
+@media(max-width:680px){
+  :root{--tb-col:150px}
+  .chat-topbar{height:60px}
+  #tb-menu-btn{display:flex;position:sticky;left:0;z-index:4;
+    box-shadow:8px 0 12px -6px rgba(0,0,0,.12)}
+  .tb-cell-expand{width:210px}
+  /* Secondary line under the welcome — a bare "\2014" when no user id is set.
+     In a 60px topbar that half-line of nothing is worth more than it costs. */
+  #topbar-userid{display:none}
+  .msg-wrap{max-width:92%}
+  .suggestions{padding-left:12px}
+  /* The text box shared one row with five buttons. At 44px touch targets those
+     buttons claim ~250px of a 375px screen, leaving the box about 60px and
+     wrapping "Ask Bella anything..." onto two lines. Give the box its own row
+     and drop the buttons beneath it, right-aligned. */
+  .inp-row{flex-wrap:wrap;padding:10px 12px}
+  #ti{flex:1 1 100%;width:100%;min-height:44px;order:1}
+  .inp-actions{order:2;flex:1 1 100%;width:100%;justify-content:flex-end;padding-bottom:0}
+  /* Three columns of 9px text in 375px is unreadable. Toggles share a row,
+     the disclaimer gets its own line under them. */
+  .inp-footer{flex-wrap:wrap;row-gap:6px}
+  .inp-footer .disc{flex:1 1 100%!important;order:3;text-align:center;padding-top:2px}
+}
+
+/* Touch targets — only for touch pointers, so the desktop layout is untouched. */
+@media(pointer:coarse){
+  .ibtn,#rec-btn,#mbtn,.sbtn,.topbar-btn,#search-btn{min-width:44px;min-height:44px}
+  .sb-new-chat,#sb-shutter-btn{min-height:44px}
+  #sb-toggle-btn{width:44px!important;height:44px!important}
+  .user-menu-close{min-width:44px;min-height:44px}
+  #tb-menu-btn{width:44px!important;height:44px!important;min-width:44px}
+  #loc-allow-btn,#loc-deny-btn{min-height:44px}
+  .sug-chip{padding:10px 14px}
 }
 </style>
 
