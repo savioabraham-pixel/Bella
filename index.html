@@ -2126,10 +2126,89 @@ function createThread(name){
   saveThreadsLocal();
   return id;
 }
+// ══ Conversations that follow you between devices ══════════════════════
+// localStorage stays the PRIMARY store and the safety net: it is written first
+// and never waits on the network. The backend is written THROUGH to, so a
+// failed sync costs a delay and never a conversation.
+//
+// Google Sheets caps a single cell at roughly 50,000 characters — measured on
+// the live service: 42k of history saved fine, 62k returned HTTP 500. So only
+// the recent tail of a long conversation is synced. Bella cross-references
+// older ones from the summary in `Conversations`, not from every word.
+const THREAD_SYNC_CAP=45000;
+const _threadSyncTimers={};
+// Set while merging backend rows into `threads`, so the save that follows does
+// not immediately queue a write back out — which would loop.
+let _suppressThreadSync=false;
+
+function _trimHistoryForSync(hist){
+  if(!Array.isArray(hist))return[];
+  const out=hist.slice();
+  // Drop from the OLDEST end until it fits. Recent turns are what she needs.
+  while(out.length>1 && JSON.stringify(out).length>THREAD_SYNC_CAP) out.shift();
+  return out;
+}
+async function syncThreadToBackend(id){
+  const t=threads[id];
+  if(!t||!currentProfileKey||currentProfileKey==='_guest')return;
+  try{
+    await bfetch(BACKEND+'/threads-write',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({profileKey:currentProfileKey,threadId:id,
+        threadName:t.name||'',history:_trimHistoryForSync(t.hist||[])})});
+  }catch(e){ /* the local copy is already saved; the next save retries */ }
+}
+// Debounced: a conversation is saved on every message, and there is no reason
+// to write the whole history to a spreadsheet that often.
+function queueThreadSync(id){
+  if(!id)return;
+  clearTimeout(_threadSyncTimers[id]);
+  _threadSyncTimers[id]=setTimeout(function(){ syncThreadToBackend(id); },2500);
+}
+// Pulls this person's conversations from the backend and merges them in.
+// Additive only — a conversation is never removed because the backend has not
+// heard of it yet, and anything sitting in the recycle bin is skipped so a
+// deleted conversation cannot come back from the dead on the next sync.
+async function syncThreadsFromBackend(){
+  if(!currentProfileKey||currentProfileKey==='_guest')return;
+  try{
+    const r=await bfetch(BACKEND+'/threads-read',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({profileKey:currentProfileKey})});
+    if(!r.ok)return;
+    const d=await r.json();
+    const rows=Array.isArray(d.threads)?d.threads:[];
+    let changed=0;
+    rows.forEach(function(row){
+      const id=row&&row.threadId;
+      if(!id)return;
+      if(deletedThreads&&deletedThreads[id])return;   // deleted here, stay deleted
+      let hist=row.history;
+      if(typeof hist==='string'){ try{hist=JSON.parse(hist);}catch(e){hist=[];} }
+      if(!Array.isArray(hist))hist=[];
+      const local=threads[id];
+      if(!local){
+        threads[id]={name:row.threadName||'Conversation',hist:hist,created:row.created||new Date().toISOString()};
+        changed++;
+      }else if(hist.length>((local.hist||[]).length)){
+        // The other device has more of this conversation than this one does.
+        local.hist=hist;
+        if(!local.name&&row.threadName)local.name=row.threadName;
+        changed++;
+      }
+    });
+    if(changed){
+      _suppressThreadSync=true;
+      try{ saveThreadsLocal(); }finally{ _suppressThreadSync=false; }
+      renderThreadList();
+    }
+  }catch(e){ /* offline or backend down — local conversations are unaffected */ }
+}
+
 function saveThreadsLocal(){
   try{
     localStorage.setItem('bella_threads_ts',Date.now());
     const slim={};for(const[k,v]of Object.entries(threads)){slim[k]={name:v.name,hist:v.hist.slice(-20),created:v.created};}localStorage.setItem('b_threads',JSON.stringify(slim));}catch{}
+  // Local is safe at this point. Everything below is best-effort.
+  if(!_suppressThreadSync&&currentThreadId)queueThreadSync(currentThreadId);
 }
 function loadThreadsLocal(){
   loadTrash();
@@ -3655,6 +3734,10 @@ async function handleIdentityInput(text){
 }
 async function confirmIdentity(profileKey,addressedName){
   idState='confirmed';currentProfileKey=profileKey;currentAddressedName=addressedName;
+  // Conversations from this person's other devices. Deliberately not awaited —
+  // the sidebar renders from localStorage immediately and fills in when the
+  // backend answers, exactly like the suggestion chips.
+  try{ syncThreadsFromBackend(); }catch(e){}
   // Sidebar shows First + Last name (real name)
   const userId = localStorage.getItem('b_userid') || '';
   const savedUser = JSON.parse(localStorage.getItem('b_registered_user') || '{}');
@@ -4979,15 +5062,33 @@ const speechQueue={
   playing:false,
   msgId:null,
   stopToken:0,
+  // Mute is a PAUSE, not a stop. The per-message speaker button used to call
+  // stop(), which killed the whole queue with no way back — one click and the
+  // rest of the answer was silent for good. Pausing lets unmute resume the same
+  // clip mid-sentence and carry on through the remaining chunks.
+  muted:false,
+  // A paused clip never fires onended, so the promise inside _playBlobUrl would
+  // wait forever and the queue would hang. stop() calls this to release it.
+  _release:null,
   // Stops whatever is currently playing/queued. Always call before starting
   // something new — this is what prevents overlap.
   stop(){
     this.stopToken++;
     this.playing=false;
     this.msgId=null;
+    this.muted=false;
     if(curAudio){try{curAudio.pause();curAudio.currentTime=0;}catch(e){}curAudio=null;}
+    if(this._release){const r=this._release;this._release=null;try{r();}catch(e){}}
     setSpeakingState(false);
     const spk=document.getElementById('spk');if(spk)spk.style.display='none';
+  },
+  setMuted(m){
+    this.muted=!!m;
+    if(!curAudio)return;
+    try{
+      if(this.muted) curAudio.pause();
+      else curAudio.play().catch(()=>{});
+    }catch(e){}
   },
   // Splits on sentence boundaries and caps chunk size well under any TTS
   // backend limit, so nothing gets dropped for long answers.
@@ -5063,9 +5164,19 @@ const speechQueue={
     return new Promise(resolve=>{
       if(myToken!==this.stopToken){URL.revokeObjectURL(url);resolve();return;}
       curAudio=new Audio(url);
-      const done=()=>{URL.revokeObjectURL(url);if(myToken===this.stopToken)curAudio=null;resolve();};
+      const done=()=>{
+        if(this._release===done)this._release=null;
+        URL.revokeObjectURL(url);
+        if(myToken===this.stopToken)curAudio=null;
+        resolve();
+      };
+      // Registered so stop() can end a clip that is sitting paused and would
+      // otherwise never fire onended.
+      this._release=done;
       curAudio.onended=done;curAudio.onerror=done;
-      curAudio.play().catch(()=>{URL.revokeObjectURL(url);resolve();});
+      // Starting a chunk while muted leaves it paused at 0:00 — correct, and it
+      // resumes from there the moment the user unmutes.
+      if(!this.muted) curAudio.play().catch(()=>{done();});
     });
   }
 };
@@ -5187,10 +5298,29 @@ function offerFullReading(msgId, fullText, summary, lang){
 function speakQueueStopSafe(){ try{ speechQueue.stop(); }catch(e){} }
 
 // Stops any message's speech in progress — wired to the per-message "Voice off" button.
+// Icons kept here so the button and its two states cannot drift apart.
+const _SPK_ON='<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+const _SPK_OFF='<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+function paintSpeechBtn(msgId){
+  const btn=document.getElementById('mute-'+msgId);
+  if(!btn)return;
+  const muted=speechQueue.muted;
+  btn.innerHTML=(muted?_SPK_OFF:_SPK_ON)+(muted?'Unmute':'Mute');
+  btn.title=muted?'Resume from where she stopped':'Pause her voice — the words stay on screen';
+  btn.classList.toggle('muted',muted);
+}
+// Toggles the voice for the message currently being spoken. Deliberately a
+// pause: click again and she carries on from the same word, rather than the
+// answer being lost. Only acts on the message that is actually speaking.
+function toggleMsgSpeech(msgId){
+  if(speechQueue.msgId && speechQueue.msgId!==msgId)return;
+  speechQueue.setMuted(!speechQueue.muted);
+  paintSpeechBtn(msgId);
+}
+// Kept for any caller that genuinely wants speech ended rather than paused.
 function stopMsgSpeech(msgId){
   if(!speechQueue.msgId||speechQueue.msgId===msgId)speechQueue.stop();
-  const btn=document.getElementById('mute-'+msgId);
-  if(btn){btn.classList.add('done');btn.title='Voice stopped';}
+  paintSpeechBtn(msgId);
 }
 async function speakAlways(text,lang,msgId){
   if(!audioUnlocked)return;
@@ -5585,7 +5715,7 @@ function bellaMsg(text,audioUrl){
   // Restore rendered tables last so their markup is never touched by the inline passes.
   formatted=formatted.replace(/@@BELLATABLE(\d+)@@/g,(m0,i)=>_tbl.tables[+i]||'');
   const msgId='msg-'+(++_msgSeq);
-  w.innerHTML=`<div class="mav b">B</div><div class="msg-wrap"><div class="mbub" id="${msgId}">${formatted}</div><div class="msg-actions">${audioUrl?`<button class="msg-act-btn" onclick="autoPlay('${audioUrl}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>Replay</button>`:''}<button class="msg-act-btn" id="mute-${msgId}" onclick="stopMsgSpeech('${msgId}')" title="Stop voice — read silently"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>Voice off</button><button class="msg-act-btn" onclick="copyMsg('${msgId}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button></div></div>`;
+  w.innerHTML=`<div class="mav b">B</div><div class="msg-wrap"><div class="mbub" id="${msgId}">${formatted}</div><div class="msg-actions">${audioUrl?`<button class="msg-act-btn" onclick="autoPlay('${audioUrl}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>Replay</button>`:''}<button class="msg-act-btn" id="mute-${msgId}" onclick="toggleMsgSpeech('${msgId}')" title="Pause her voice — the words stay on screen"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>Mute</button><button class="msg-act-btn" onclick="copyMsg('${msgId}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button></div></div>`;
   m.appendChild(w);m.scrollTop=m.scrollHeight;
   return msgId;
 }
@@ -7021,6 +7151,20 @@ body.dark #mic-lang button{background:transparent!important;color:#F5E6C8!import
 body.dark #mic-lang button.on{background:#D4AF37!important;color:#0B2545!important}
 @media(pointer:coarse){ #mic-lang button{height:44px;min-width:44px} }
 @media(max-width:680px){ #mic-lang{order:1} }
+
+/* Muted state for the per-message speaker button. Keyed through .msg-actions
+   and with hardcoded hex in dark, because body.dark carries a blanket
+   `button{...!important}` rule and INVERTS --gold/--navy — a class-based
+   override using the tokens would render invisible. Documented trap. */
+.msg-actions .msg-act-btn.muted{background:#0B2545;border-color:#0B2545;color:#D4AF37}
+/* The repeated .muted is deliberate, not a typo. `<style id="v82-final-system">`
+   carries `body.dark, body.dark *:not(.msg.user .mbub):not(.msg.user .mbub *)
+   {color:#F5E6C8!important}` which scores roughly (0,7,1). SPECIFICITY BEATS
+   SOURCE ORDER, so a later rule at (0,4,1) still loses however many !importants
+   it carries — measured: the text stayed cream on gold at 1.71:1, effectively
+   invisible. Repeating the class lifts this to (0,8,1) and wins. Verified with
+   CSS.getMatchedStylesForNode, not by reading the file. */
+body.dark .msg-actions .msg-act-btn.muted.muted.muted.muted.muted{background:#D4AF37!important;border-color:#D4AF37!important;color:#0B2545!important}
 </style>
 
 
