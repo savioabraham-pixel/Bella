@@ -2151,6 +2151,10 @@ function _trimHistoryForSync(hist){
 async function syncThreadToBackend(id){
   const t=threads[id];
   if(!t||!currentProfileKey||currentProfileKey==='_guest')return;
+  // A conversation with nothing in it is not worth a row. Opening Bella creates
+  // a thread before a word is typed, and those were filling the sheet with
+  // entries named "Welcome..." holding nothing.
+  if(!Array.isArray(t.hist)||t.hist.length===0)return;
   try{
     await bfetch(BACKEND+'/threads-write',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({profileKey:currentProfileKey,threadId:id,
@@ -2298,7 +2302,12 @@ function switchThread(id){
   document.getElementById('msgs').innerHTML='';
   document.getElementById('empty-state')&&document.getElementById('msgs').appendChild(Object.assign(document.createElement('div'),{className:'empty-state',id:'empty-state',innerHTML:'<div class="empty-logo">B</div><div class="empty-text">'+threads[id].name+'<br><span style="font-size:11px;color:var(--tsoft)">Ask Bella anything</span></div>'}));
   threads[id].hist.forEach(m=>{if(m.role==='user')userMsg(m.parts[0].text.replace(/^\[User: [^\]]+\]\n/,''),[]);else bellaMsg(m.parts[0].text);});
-  document.getElementById('topbar-thread').textContent=threads[id].name;
+  // #topbar-thread was removed from the markup (see the comment near deliverGreeting)
+  // but three places still addressed it. Each threw a silent TypeError — and the
+  // one in send() threw BEFORE saveThreadsLocal(), so the first message of every
+  // conversation was never saved and never synced. That is why the Threads tab
+  // filled with conversations named "Welcome..." and holding nothing.
+  {const _tt=document.getElementById('topbar-thread');if(_tt)_tt.textContent=threads[id].name;}
   document.getElementById('topbar-sub').textContent=threads[id].hist.length>0?threads[id].hist.length+' messages':'Start a conversation';
   renderThreadList();
   saveThreadsLocal();
@@ -2307,7 +2316,7 @@ function renameCurrentThread(){if(currentThreadId)startRename(currentThreadId,{s
 function startRename(id,e){
   e.stopPropagation();
   const name=prompt('Rename conversation:',threads[id].name);
-  if(name&&name.trim()){threads[id].name=name.trim();renderThreadList();if(id===currentThreadId)document.getElementById('topbar-thread').textContent=name.trim();saveThreadsLocal();}
+  if(name&&name.trim()){threads[id].name=name.trim();renderThreadList();if(id===currentThreadId){const _tt=document.getElementById('topbar-thread');if(_tt)_tt.textContent=name.trim();}saveThreadsLocal();}
 }
 // ── Deleted conversations: a 30-day recycle bin, not a shredder ──
 // Savio's rule (2026-09-16): nothing is ever destroyed unless the user asks.
@@ -4992,7 +5001,7 @@ async function send(){
       if(currentThreadId&&threads[currentThreadId]){
         if(threads[currentThreadId].name==='New Conversation'||threads[currentThreadId].name.startsWith('Welcome')){
           threads[currentThreadId].name=disp.substring(0,30)+(disp.length>30?'...':'');
-          document.getElementById('topbar-thread').textContent=threads[currentThreadId].name;
+          {const _tt=document.getElementById('topbar-thread');if(_tt)_tt.textContent=threads[currentThreadId].name;}
         }
       }
       saveThreadsLocal();renderThreadList();
