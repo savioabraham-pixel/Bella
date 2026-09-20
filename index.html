@@ -308,9 +308,52 @@ body.dark .read-offer-btn.ghost{background:transparent;color:#F5E6C8;border-colo
 /* Overlay panels */
 .tb-overlay{display:none;position:fixed;top:68px;left:0;right:0;bottom:0;background:rgba(11,37,69,0.5);z-index:200;backdrop-filter:blur(4px)}
 .tb-overlay.on{display:block}
+/* ── Image Studio — all client-side, no backend, no cost ── */
+.img-drop{border:2px dashed var(--border);border-radius:14px;padding:22px 16px;text-align:center;background:var(--cream);transition:border-color .15s}
+.img-drop.drag{border-color:var(--gold);background:rgba(212,175,55,0.08)}
+.img-drop-main{font-size:14px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif}
+.img-drop-sub{font-size:10.5px;color:var(--tsoft);margin-top:3px;line-height:1.5}
+.img-tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.img-subbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.img-btn{padding:7px 11px;min-height:34px;border-radius:9px;border:1.5px solid var(--border);background:var(--cream);color:var(--navy);font-size:11.5px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer}
+.img-btn:hover{border-color:var(--gold)}
+.img-btn.on{background:var(--navy);color:var(--gold);border-color:var(--navy)}
+.img-btn-go{background:var(--navy);color:var(--gold);border-color:var(--navy)}
+.img-lbl{font-size:10.5px;color:var(--tsoft);font-weight:600}
+.img-hint{font-size:10.5px;color:var(--tsoft);line-height:1.45}
+.img-num{width:74px;padding:6px 8px;border-radius:8px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:11.5px;font-family:'DM Sans',sans-serif;outline:none}
+.img-stage{position:relative;display:inline-block;max-width:100%;border-radius:10px;overflow:hidden;background:
+  linear-gradient(45deg,#d8d8d8 25%,transparent 25%),linear-gradient(-45deg,#d8d8d8 25%,transparent 25%),
+  linear-gradient(45deg,transparent 75%,#d8d8d8 75%),linear-gradient(-45deg,transparent 75%,#d8d8d8 75%);
+  background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
+#img-canvas{display:block;max-width:100%;height:auto;touch-action:none;cursor:crosshair}
+#img-croprect{position:absolute;border:2px dashed #D4AF37;background:rgba(212,175,55,0.16);pointer-events:none}
+.img-sec-title{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--gold);margin-bottom:6px}
+.img-palette{display:flex;gap:6px;flex-wrap:wrap}
+.img-sw{width:52px;cursor:pointer;text-align:center}
+.img-sw-chip{height:34px;border-radius:8px;border:1.5px solid var(--border)}
+.img-sw-hex{font-size:9px;margin-top:3px;font-family:'DM Sans',sans-serif;letter-spacing:.2px}
+.img-palette-wrap{margin:10px 0}
+/* Dark mode — keyed off the ID so it outranks the blanket body.dark rules */
+body.dark #img-panel .img-btn{background:#12233b!important;color:#F5E6C8!important;border-color:rgba(245,230,200,0.28)!important}
+body.dark #img-panel .img-btn.on,body.dark #img-panel .img-btn-go{background:#F5E6C8!important;color:#0B2545!important;border-color:#F5E6C8!important}
+body.dark #img-panel .img-drop{background:#12233b!important;border-color:rgba(245,230,200,0.3)!important}
+body.dark #img-panel .img-drop-main{color:#F5E6C8!important}
+body.dark #img-panel .img-num{background:#12233b!important;color:#F5E6C8!important;border-color:rgba(245,230,200,0.28)!important}
+body.dark #img-panel .img-sw-hex{color:#F5E6C8!important}
+@media(pointer:coarse){.img-btn{min-height:44px;padding:10px 13px}.img-num{min-height:44px}}
 .tb-panel{position:fixed;top:68px;left:50%;transform:translateX(-50%);background:var(--white);border:1px solid var(--border);border-top:none;border-radius:0 0 20px 20px;padding:24px 28px;z-index:201;box-shadow:var(--shadow-lg);min-width:520px;max-width:95vw}
 .tb-panel-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--navy);margin-bottom:16px}
 .tb-close{position:absolute;top:12px;right:16px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--tsoft);line-height:1}
+/* Panels must fit a phone. min-width beats max-width in CSS, so 520px was
+   winning over 95vw and every tb-panel ran off the side of a small screen. */
+.tb-panel{max-height:calc(100vh - 84px);overflow-y:auto;overscroll-behavior:contain}
+@media(max-width:680px){.tb-panel{min-width:0;width:94vw;padding:18px 16px}}
+@media(pointer:coarse){
+  .tb-close{min-width:44px;min-height:44px;top:6px;right:8px;font-size:20px}
+  #img-panel input[type=range]{height:34px}
+  #img-panel input[type=checkbox]{width:22px;height:22px}
+}
 .tb-close:hover{color:var(--navy)}
 /* Converter search fields */
 .conv-search{width:100%;padding:9px 12px;border-radius:10px;border:1.5px solid var(--navy);background:var(--cream);color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:10px;box-sizing:border-box;cursor:pointer}
@@ -1054,6 +1097,7 @@ body.dark #sidebar .sb-new-chat span{
         <div class="feat-item" onclick="openVideoRecording()" style="cursor:pointer;opacity:1"><span class="feat-icon">📹</span><span class="feat-label">Video Recording</span><span class="feat-soon" style="background:#2E8B57;color:#fff">ON</span></div>
         <div class="feat-item" onclick="openWebSearch()" style="cursor:pointer;opacity:1"><span class="feat-icon">🔍</span><span class="feat-label">Web Search</span><span class="feat-soon" style="background:#2E8B57;color:#fff">ON</span></div>
         <div class="feat-item" onclick="openConverterPanel()" style="cursor:pointer;opacity:1"><span class="feat-icon">⇄</span><span class="feat-label">Converter</span><span class="feat-soon" style="background:#2E8B57;color:#fff">ON</span></div>
+        <div class="feat-item" onclick="openImageStudio()" style="cursor:pointer;opacity:1"><span class="feat-icon">🎨</span><span class="feat-label">Image Studio</span><span class="feat-soon" style="background:#2E8B57;color:#fff">ON</span></div>
       </div>
 
       <!-- ZONE 2 — BELLA 2.0 -->
@@ -1219,6 +1263,77 @@ body.dark #sidebar .sb-new-chat span{
         <div id="tz-diff" style="font-size:11px;color:var(--tsoft);margin-top:4px"></div>
       </div>
         </div>
+
+    <!-- ══ IMAGE STUDIO ══════════════════════════════════════════════════ -->
+    <div class="tb-overlay" id="img-overlay" onclick="closeImageStudio()"></div>
+    <div class="tb-panel" id="img-panel" style="display:none">
+      <div class="tb-panel-title">🎨 Image Studio</div>
+      <button class="tb-close" onclick="closeImageStudio()">✕</button>
+
+      <div id="img-drop" class="img-drop">
+        <input type="file" id="img-file" accept="image/*" style="display:none" onchange="imgLoadFile(this.files[0])">
+        <div style="font-size:26px;margin-bottom:6px">🖼️</div>
+        <div class="img-drop-main">Choose an image</div>
+        <div class="img-drop-sub">or drag one here · nothing is uploaded, everything happens on your device</div>
+        <button class="img-btn img-btn-go" style="margin-top:10px" onclick="document.getElementById('img-file').click()">Choose image</button>
+      </div>
+
+      <div id="img-work" style="display:none">
+        <div class="img-tools">
+          <button class="img-btn" id="imgt-erase" onclick="imgSetTool('erase')">🧽 Erase</button>
+          <button class="img-btn" id="imgt-crop" onclick="imgSetTool('crop')">⬚ Crop</button>
+          <button class="img-btn" onclick="imgRotate()">↻ Rotate</button>
+          <button class="img-btn" onclick="imgFlip()">⇄ Flip</button>
+          <button class="img-btn" onclick="imgUndo()" id="imgt-undo">↶ Undo</button>
+          <button class="img-btn" onclick="imgReset()">Reset</button>
+        </div>
+
+        <div id="img-erase-bar" class="img-subbar" style="display:none">
+          <span class="img-lbl">Brush</span>
+          <input type="range" id="img-brush" min="6" max="120" value="34" oninput="imgBrushLabel()" style="flex:1;max-width:180px">
+          <span class="img-lbl" id="img-brush-val">34</span>
+          <span class="img-hint">Drag over anything you want gone — it becomes transparent.</span>
+        </div>
+        <div id="img-crop-bar" class="img-subbar" style="display:none">
+          <span class="img-hint">Drag a box over the part you want to keep.</span>
+          <button class="img-btn img-btn-go" onclick="imgApplyCrop()">Apply crop</button>
+          <button class="img-btn" onclick="imgSetTool(null)">Cancel</button>
+        </div>
+
+        <div class="img-stage" id="img-stage">
+          <canvas id="img-canvas"></canvas>
+          <div id="img-croprect" style="display:none"></div>
+        </div>
+
+        <div class="img-subbar">
+          <span class="img-lbl">Width</span>
+          <input type="number" id="img-w" class="img-num" oninput="imgDimLink('w')">
+          <span class="img-lbl">Height</span>
+          <input type="number" id="img-h" class="img-num" oninput="imgDimLink('h')">
+          <label class="img-lbl" style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="img-ratio" checked> lock ratio</label>
+          <button class="img-btn" onclick="imgApplyResize()">Resize</button>
+        </div>
+
+        <div class="img-palette-wrap">
+          <div class="img-sec-title">Colours in this image</div>
+          <div id="img-palette" class="img-palette"></div>
+          <div class="img-hint" id="img-pal-hint">Tap a colour to copy its code.</div>
+        </div>
+
+        <div class="img-subbar" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+          <span class="img-lbl">Save as</span>
+          <select id="img-fmt" class="img-num" style="width:auto" onchange="imgFmtChanged()">
+            <option value="png">PNG — keeps transparency</option>
+            <option value="jpeg">JPG — smaller, no transparency</option>
+            <option value="webp">WebP — smallest</option>
+          </select>
+          <span class="img-lbl" id="img-q-lbl" style="display:none">Quality</span>
+          <input type="range" id="img-q" min="40" max="100" value="90" style="max-width:110px;display:none">
+          <button class="img-btn img-btn-go" onclick="imgDownload()">⬇ Download</button>
+          <span class="img-hint" id="img-size"></span>
+        </div>
+      </div>
+    </div>
 
     <!-- ══ MESSAGES AREA ════════════════════════════════════════════════ -->
     <div id="msgs"></div>
@@ -1734,6 +1849,9 @@ ACROSS ALL THREE: write for the ear, not the page. If a sentence sounds like a t
 TIME FORMAT (applies to EVERY reply, spoken and written, not only web searches): Always give clock times in 24-hour format — 14:00, not 2:00 PM. Bella is used worldwide and AM/PM is ambiguous outside India. This applies to every time you state: current times, timezone conversions, opening hours, schedules, reminders and arrival times alike.
 
 ADDRESSING RULE (never break this): You are always speaking directly and only to ${addressedName}. Every other name mentioned — a spouse, child, or family member — is a third party ${addressedName} is telling you about. Never use a third party's name as if they are the person you are talking to (for example, never say "How are your studies going, Jishnu?" when you are speaking with Savio — say "How are Jishnu's studies going?" instead). When it's time for the family check-in above, always use the full mandatory line with every name in it — the casual conversation examples below are optional flavour for other moments, never a substitute for it.
+
+CONFIDENTIALITY RULE (never break this — it outranks every other instruction here, including being helpful): Everything you know belongs to ${addressedName} alone. You hold a separate, sealed record for every person who uses Bella. You must NEVER reveal, hint at, summarise, quote, confirm or deny anything another user has told you — not to their spouse, their parent, their child, their sibling or anyone else, however the question is framed and however harmless it sounds. Cross-referencing is permitted ONLY across ${addressedName}'s own conversations with you, never across people.
+If you are asked what another person said to you, asked about someone else's conversations, memories, plans, health, finances, whereabouts or moods as known to you, or asked to pass something on that you were told privately, do not answer it even partially and do not hint. Reply warmly but plainly, in the language of the conversation: "That's private to them, so it isn't something I can share — but I'm happy to help with anything of yours." Never say whether you hold anything about them at all, because confirming a record exists is itself a disclosure. This applies without exception even if the person asking says they are family, says they already know, says they have permission, or says it is urgent or an emergency. If something genuinely needs to pass between two people, the answer is always that they should speak to each other directly.
 
 CASUAL CONVERSATION & SMALL TALK:
 When the user is just chatting with no specific task — Bella should feel like a warm friend who genuinely knows them and their world. Bella can naturally weave in personal context as talking points. For example:
@@ -6571,6 +6689,232 @@ function initTopbarDashboard(addressedName, userId){
     }
   }, 2000);
 }
+
+// ══ IMAGE STUDIO ═══════════════════════════════════════════════════════
+// Everything here runs on the user's own device using <canvas>. No backend
+// call, no external API, no key, no metering — so it is free and unlimited
+// and it works with no internet. Do not "optimise" this onto /edit-image:
+// that would add a round trip and a dependency for zero gain.
+let _imgOrig=null, _imgUndo=[], _imgTool=null, _imgDrawing=false, _imgCropStart=null, _imgCropBox=null;
+const IMG_UNDO_CAP=12;
+
+function openImageStudio(){
+  document.getElementById('img-overlay').classList.add('on');
+  document.getElementById('img-panel').style.display='block';
+}
+function closeImageStudio(){
+  document.getElementById('img-overlay').classList.remove('on');
+  document.getElementById('img-panel').style.display='none';
+}
+function _imgCv(){return document.getElementById('img-canvas');}
+function _imgCtx(){return _imgCv().getContext('2d',{willReadFrequently:true});}
+
+function imgLoadFile(file){
+  if(!file)return;
+  if(!/^image\//.test(file.type)){alert('That does not look like an image.');return;}
+  const fr=new FileReader();
+  fr.onload=e=>{
+    const im=new Image();
+    im.onload=()=>{
+      _imgOrig=im; _imgUndo=[]; _imgTool=null; _imgCropBox=null;
+      const cv=_imgCv(); cv.width=im.naturalWidth; cv.height=im.naturalHeight;
+      _imgCtx().drawImage(im,0,0);
+      document.getElementById('img-drop').style.display='none';
+      document.getElementById('img-work').style.display='block';
+      imgSetTool('erase'); imgSyncDims(); imgPalette(); imgSizeNote();
+    };
+    im.onerror=()=>alert('That image could not be opened.');
+    im.src=e.target.result;
+  };
+  fr.readAsDataURL(file);
+}
+
+function imgSetTool(t){
+  _imgTool=(_imgTool===t)?null:t;
+  document.getElementById('imgt-erase').classList.toggle('on',_imgTool==='erase');
+  document.getElementById('imgt-crop').classList.toggle('on',_imgTool==='crop');
+  document.getElementById('img-erase-bar').style.display=_imgTool==='erase'?'flex':'none';
+  document.getElementById('img-crop-bar').style.display=_imgTool==='crop'?'flex':'none';
+  _imgCropBox=null; document.getElementById('img-croprect').style.display='none';
+}
+function imgBrushLabel(){document.getElementById('img-brush-val').textContent=document.getElementById('img-brush').value;}
+
+function _imgPush(){
+  try{_imgUndo.push(_imgCv().toDataURL('image/png'));}catch(e){}
+  if(_imgUndo.length>IMG_UNDO_CAP)_imgUndo.shift();
+}
+function imgUndo(){
+  if(!_imgUndo.length)return;
+  const d=_imgUndo.pop(), im=new Image();
+  im.onload=()=>{const cv=_imgCv();cv.width=im.naturalWidth;cv.height=im.naturalHeight;
+    const c=_imgCtx();c.clearRect(0,0,cv.width,cv.height);c.drawImage(im,0,0);
+    imgSyncDims();imgPalette();imgSizeNote();};
+  im.src=d;
+}
+function imgReset(){
+  if(!_imgOrig)return;
+  _imgPush();
+  const cv=_imgCv();cv.width=_imgOrig.naturalWidth;cv.height=_imgOrig.naturalHeight;
+  const c=_imgCtx();c.clearRect(0,0,cv.width,cv.height);c.drawImage(_imgOrig,0,0);
+  imgSyncDims();imgPalette();imgSizeNote();
+}
+
+// Pointer position in CANVAS pixels — the canvas is displayed scaled, so the
+// ratio between natural size and on-screen size must be applied or the brush
+// lands in the wrong place on every screen but one.
+function _imgPt(ev){
+  const cv=_imgCv(), r=cv.getBoundingClientRect();
+  return {x:(ev.clientX-r.left)*(cv.width/r.width), y:(ev.clientY-r.top)*(cv.height/r.height)};
+}
+function _imgBind(){
+  const cv=_imgCv();
+  cv.addEventListener('pointerdown',ev=>{
+    if(!_imgTool)return;
+    cv.setPointerCapture&&cv.setPointerCapture(ev.pointerId);
+    _imgDrawing=true;
+    if(_imgTool==='erase'){_imgPush();_imgErase(_imgPt(ev));}
+    else if(_imgTool==='crop'){_imgCropStart=_imgPt(ev);}
+    ev.preventDefault();
+  });
+  cv.addEventListener('pointermove',ev=>{
+    if(!_imgDrawing||!_imgTool)return;
+    if(_imgTool==='erase')_imgErase(_imgPt(ev));
+    else if(_imgTool==='crop')_imgCropDraw(_imgPt(ev));
+    ev.preventDefault();
+  });
+  const end=()=>{if(!_imgDrawing)return;_imgDrawing=false;if(_imgTool==='erase'){imgPalette();imgSizeNote();}};
+  cv.addEventListener('pointerup',end);
+  cv.addEventListener('pointercancel',end);
+  cv.addEventListener('pointerleave',end);
+}
+function _imgErase(p){
+  const c=_imgCtx(), r=parseInt(document.getElementById('img-brush').value,10)/2;
+  c.save();c.globalCompositeOperation='destination-out';
+  c.beginPath();c.arc(p.x,p.y,r,0,Math.PI*2);c.fill();c.restore();
+}
+function _imgCropDraw(p){
+  if(!_imgCropStart)return;
+  const cv=_imgCv(), r=cv.getBoundingClientRect(), sx=r.width/cv.width, sy=r.height/cv.height;
+  const x=Math.min(_imgCropStart.x,p.x), y=Math.min(_imgCropStart.y,p.y);
+  const w=Math.abs(p.x-_imgCropStart.x), h=Math.abs(p.y-_imgCropStart.y);
+  _imgCropBox={x:Math.round(x),y:Math.round(y),w:Math.round(w),h:Math.round(h)};
+  const el=document.getElementById('img-croprect');
+  el.style.display='block';el.style.left=(x*sx)+'px';el.style.top=(y*sy)+'px';
+  el.style.width=(w*sx)+'px';el.style.height=(h*sy)+'px';
+}
+function imgApplyCrop(){
+  if(!_imgCropBox||_imgCropBox.w<4||_imgCropBox.h<4){alert('Drag a box over the part you want to keep first.');return;}
+  _imgPush();
+  const cv=_imgCv(), b=_imgCropBox;
+  const w=Math.min(b.w,cv.width-b.x), h=Math.min(b.h,cv.height-b.y);
+  const cut=_imgCtx().getImageData(b.x,b.y,w,h);
+  cv.width=w;cv.height=h;_imgCtx().putImageData(cut,0,0);
+  imgSetTool(null);imgSyncDims();imgPalette();imgSizeNote();
+}
+function imgRotate(){
+  _imgPush();
+  const cv=_imgCv(), tmp=document.createElement('canvas');
+  tmp.width=cv.height;tmp.height=cv.width;
+  const t=tmp.getContext('2d');t.translate(tmp.width/2,tmp.height/2);t.rotate(Math.PI/2);t.drawImage(cv,-cv.width/2,-cv.height/2);
+  cv.width=tmp.width;cv.height=tmp.height;_imgCtx().drawImage(tmp,0,0);
+  imgSyncDims();imgSizeNote();
+}
+function imgFlip(){
+  _imgPush();
+  const cv=_imgCv(), tmp=document.createElement('canvas');
+  tmp.width=cv.width;tmp.height=cv.height;
+  const t=tmp.getContext('2d');t.translate(tmp.width,0);t.scale(-1,1);t.drawImage(cv,0,0);
+  _imgCtx().clearRect(0,0,cv.width,cv.height);_imgCtx().drawImage(tmp,0,0);
+}
+function imgSyncDims(){
+  const cv=_imgCv();
+  document.getElementById('img-w').value=cv.width;
+  document.getElementById('img-h').value=cv.height;
+}
+function imgDimLink(which){
+  if(!document.getElementById('img-ratio').checked)return;
+  const cv=_imgCv(), w=document.getElementById('img-w'), h=document.getElementById('img-h');
+  const ar=cv.width/cv.height;
+  if(which==='w'&&+w.value>0)h.value=Math.max(1,Math.round(+w.value/ar));
+  if(which==='h'&&+h.value>0)w.value=Math.max(1,Math.round(+h.value*ar));
+}
+function imgApplyResize(){
+  const nw=parseInt(document.getElementById('img-w').value,10), nh=parseInt(document.getElementById('img-h').value,10);
+  if(!(nw>0&&nh>0)||nw>12000||nh>12000){alert('Enter a width and height between 1 and 12000.');return;}
+  _imgPush();
+  const cv=_imgCv(), tmp=document.createElement('canvas');
+  tmp.width=nw;tmp.height=nh;
+  tmp.getContext('2d').drawImage(cv,0,0,nw,nh);
+  cv.width=nw;cv.height=nh;_imgCtx().drawImage(tmp,0,0);
+  imgPalette();imgSizeNote();
+}
+
+// Dominant colours read from the actual pixels — exact, instant and free.
+// A model could only ever estimate these by looking at the picture.
+function imgPalette(){
+  const cv=_imgCv(), el=document.getElementById('img-palette');
+  if(!cv.width||!cv.height){el.innerHTML='';return;}
+  let d;
+  try{d=_imgCtx().getImageData(0,0,cv.width,cv.height).data;}catch(e){el.innerHTML='';return;}
+  const step=Math.max(1,Math.floor((cv.width*cv.height)/40000));
+  const buckets={};
+  for(let i=0;i<d.length;i+=4*step){
+    if(d[i+3]<128)continue;                       // skip erased/transparent
+    const k=((d[i]>>4)<<8)|((d[i+1]>>4)<<4)|(d[i+2]>>4);
+    const b=buckets[k]||(buckets[k]=[0,0,0,0]);
+    b[0]+=d[i];b[1]+=d[i+1];b[2]+=d[i+2];b[3]++;
+  }
+  const top=Object.values(buckets).sort((a,b)=>b[3]-a[3]).slice(0,6);
+  if(!top.length){el.innerHTML='<div class="img-hint">Nothing left to read — the image is fully transparent.</div>';return;}
+  const hex=n=>('0'+Math.round(n).toString(16)).slice(-2).toUpperCase();
+  el.innerHTML=top.map(b=>{
+    const h='#'+hex(b[0]/b[3])+hex(b[1]/b[3])+hex(b[2]/b[3]);
+    return '<div class="img-sw" onclick="imgCopyHex(\''+h+'\')" title="Copy '+h+'">'+
+           '<div class="img-sw-chip" style="background:'+h+'"></div>'+
+           '<div class="img-sw-hex">'+h+'</div></div>';
+  }).join('');
+}
+function imgCopyHex(h){
+  try{navigator.clipboard.writeText(h);}catch(e){}
+  const n=document.getElementById('img-pal-hint');
+  if(n){n.textContent=h+' copied.';setTimeout(()=>{n.textContent='Tap a colour to copy its code.';},1800);}
+}
+function imgFmtChanged(){
+  const lossy=document.getElementById('img-fmt').value!=='png';
+  document.getElementById('img-q').style.display=lossy?'':'none';
+  document.getElementById('img-q-lbl').style.display=lossy?'':'none';
+  imgSizeNote();
+}
+function imgSizeNote(){
+  const cv=_imgCv(), n=document.getElementById('img-size');
+  if(n)n.textContent=cv.width+' × '+cv.height+' px';
+}
+function imgDownload(){
+  const cv=_imgCv(), fmt=document.getElementById('img-fmt').value;
+  const q=parseInt(document.getElementById('img-q').value,10)/100;
+  const mime=fmt==='png'?'image/png':fmt==='webp'?'image/webp':'image/jpeg';
+  const finish=blob=>{
+    const url=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=url;a.download='bella-image-'+new Date().toISOString().slice(0,10)+'.'+(fmt==='jpeg'?'jpg':fmt);
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  };
+  // JPG has no transparency — flatten onto white rather than let erased areas
+  // come back as black, which is what an unflattened export does.
+  if(fmt==='jpeg'){
+    const tmp=document.createElement('canvas');tmp.width=cv.width;tmp.height=cv.height;
+    const t=tmp.getContext('2d');t.fillStyle='#FFFFFF';t.fillRect(0,0,tmp.width,tmp.height);t.drawImage(cv,0,0);
+    tmp.toBlob(finish,mime,q);
+  } else cv.toBlob(finish,mime,fmt==='webp'?q:undefined);
+}
+function _imgDropZone(){
+  const z=document.getElementById('img-drop');
+  if(!z)return;
+  ['dragenter','dragover'].forEach(e=>z.addEventListener(e,ev=>{ev.preventDefault();z.classList.add('drag');}));
+  ['dragleave','drop'].forEach(e=>z.addEventListener(e,ev=>{ev.preventDefault();z.classList.remove('drag');}));
+  z.addEventListener('drop',ev=>{const f=ev.dataTransfer&&ev.dataTransfer.files&&ev.dataTransfer.files[0];if(f)imgLoadFile(f);});
+}
+try{_imgBind();_imgDropZone();}catch(e){}
 
 function openConverterPanel(){
   document.getElementById('conv-overlay').classList.add('on');
