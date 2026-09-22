@@ -5004,6 +5004,18 @@ async function send(){
   const _currentUserEmail = (JSON.parse(localStorage.getItem('b_registered_user')||'{}').email||'').toLowerCase();
   const _isAdmin = _currentUserEmail === SAVIO_ADMIN_EMAIL.toLowerCase();
 
+  // ── Admin: trigger a spreadsheet backup by asking for it ────────────
+  // /backup-sheet works and emails a real .xlsx, but NOTHING called it — no
+  // schedule, no button — so the backup Savio was told to watch for was never
+  // going to arrive (my error, 2026-09-22). It is owner-only now, so it needs
+  // HIS signed-in session; nobody else can trigger it on his behalf.
+  // The proper fix is Cloud Scheduler (backend 4.1) so it runs weekly by
+  // itself. This is the manual trigger until then.
+  if(_isAdmin && /bella[,\s]*(please\s+)?(back\s?up|backup)\b.*(spreadsheet|sheet|memory|data)/i.test(disp)){
+    await backupSheetNow();
+    clearFiles(); endTurn(); return;
+  }
+
   if(_isAdmin && /bella[,\s]+i'?m testing (.+?)'?s profile/i.test(disp)){
     const _nameMatch = disp.match(/bella[,\s]+i'?m testing (.+?)'?s profile/i);
     const _testName = _nameMatch ? _nameMatch[1].trim() : 'that user';
@@ -5621,6 +5633,40 @@ function clearFiles(){pFiles=[];pTexts=[];pImages=[];document.getElementById('fb
 // ============================================================
 // UI HELPERS
 // ============================================================
+// Asks the backend to build a full .xlsx of every tab and email it. Owner
+// only, enforced server-side — this just carries the signed-in session.
+async function backupSheetNow(){
+  const start=Date.now();
+  bellaMsg('Backing up the spreadsheet now — this takes a moment.');
+  try{
+    const ctl=new AbortController();
+    const kill=setTimeout(()=>ctl.abort(),120000);   // reading every tab is slow
+    const r=await bfetch(BACKEND+'/backup-sheet',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({force:true}),signal:ctl.signal
+    });
+    clearTimeout(kill);
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){
+      bellaMsg(r.status===403
+        ? 'That one is owner-only, and this account is not the owner.'
+        : ('The backup did not complete: '+((d&&d.error)||('HTTP '+r.status))));
+      return;
+    }
+    if(d&&d.skipped){ bellaMsg('There is already a recent backup — '+d.skipped+'.'); return; }
+    const secs=Math.round((Date.now()-start)/1000);
+    bellaMsg('Backup done in '+secs+'s. I have emailed '+(d.tabs||0)+' tabs and '+
+             (d.rows||0).toLocaleString('en-IN')+' rows to '+(d.to||'you')+
+             ' as '+(d.fileName||'a spreadsheet')+'.'+
+             ((d.unreadable&&d.unreadable.length)
+               ? ' Tabs I could not read: '+d.unreadable.map(u=>u.tab).join(', ')+'.' : ''));
+  }catch(e){
+    bellaMsg(e&&e.name==='AbortError'
+      ? 'The backup is taking longer than two minutes. It may still finish — check your email shortly.'
+      : ('The backup could not run: '+(e&&e.message?e.message:'unknown error')));
+  }
+}
+
 function generateSuggestions(text){
   // Generate contextual follow-up suggestions based on Bella's response
   const t=text.toLowerCase();
@@ -5657,6 +5703,21 @@ function generateSuggestions(text){
   // about the answer. Now the chips are chosen from what the reply actually
   // contains, and are ACTIONS rather than replies to click as your own words.
   else{
+    // Savio, 2026-09-22: "Not necessary every answer will have chips right?"
+    // Correct, and until now EVERY reply got three. When Bella has simply
+    // acknowledged something — "Saved that for you." — there is nothing to
+    // suggest, and three guesses just add noise to a finished exchange.
+    // Returning [] is enough: addSuggestions() already draws no row for it.
+    //
+    // Deliberately NARROW. A short reply that ends in a question still gets
+    // chips: Bella asking "How are you today?" is exactly where he liked
+    // having alternatives to offer back. Only genuinely contentless
+    // acknowledgements are suppressed.
+    const trimmed=text.trim();
+    const hasSignal=/\d[\d,.]{2,}/.test(trimmed)
+      ||/(^|\n)\s*(?:[-*\u2022]|\d+[.)])\s/.test(trimmed)
+      ||/[?]\s*$/.test(trimmed);
+    if(trimmed.length<70&&!hasSignal)return [];
     const long=text.length>600;
     const hasNumbers=/\d[\d,.]{2,}/.test(text);
     const hasList=/(^|\n)\s*(?:[-*\u2022]|\d+[.)])\s/.test(text);
