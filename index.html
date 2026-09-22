@@ -5651,17 +5651,24 @@ function generateSuggestions(text){
   else if(t.includes('search')||t.includes('found')||t.includes('result')||t.includes('according')){
     suggestions.push('Tell me more','Save this as a report','What are the next steps?');
   }
-  // General helpful suggestions
+  // Nothing matched. This branch used to pick at RANDOM from three fixed
+  // triples, which is precisely why the chips read as irrelevant — the same
+  // answer could produce different suggestions twice, and none of them were
+  // about the answer. Now the chips are chosen from what the reply actually
+  // contains, and are ACTIONS rather than replies to click as your own words.
   else{
-    const general=[
-      ['Tell me more','Summarise this','What should I do next?'],
-      ['Give me more details','Create a to-do list','How does this affect me?'],
-      ['Explain this simply','What are the key points?','Save this information'],
-    ];
-    const pick=general[Math.floor(Math.random()*general.length)];
-    suggestions.push(...pick);
+    const long=text.length>600;
+    const hasNumbers=/\d[\d,.]{2,}/.test(text);
+    const hasList=/(^|\n)\s*(?:[-*\u2022]|\d+[.)])\s/.test(text);
+    const hasDate=/\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i.test(text);
+    if(hasList||long)      suggestions.push('Summarise this');
+    if(hasNumbers)         suggestions.push('Put this in a spreadsheet');
+    if(hasDate)            suggestions.push('Remind me about this');
+    if(long)               suggestions.push('Make this a document');
+    suggestions.push('Tell me more','What should I do next?','Save this for me');
   }
-  return suggestions.slice(0,3);
+  // De-duplicate, because two tests can suggest the same action.
+  return suggestions.filter((v,i)=>suggestions.indexOf(v)===i).slice(0,3);
 }
 
 // ── Contextual suggestion chips (Savio's item 17) ─────────────────────
@@ -5782,10 +5789,20 @@ function addSuggestions(suggestions, skipOnIdentity, sourceText){
   _paintChips(wrap,(lang!=='en'&&GENERIC_CHIPS[lang])?GENERIC_CHIPS[lang]:suggestions,lang);
   m.appendChild(wrap);
   m.scrollTop=m.scrollHeight;
-  // Upgrade to genuinely contextual chips in the background. Skipped for very
-  // short replies, where a generic chip is no worse and the call is not worth
-  // the ~Rs 0.017 it costs.
-  if(sourceText&&sourceText.trim().length>=40)_upgradeChips(sourceText,seq,lang);
+  // Savio, 2026-09-22: "the first set of 4 were better and preferred than the
+  // second set which again are just automated replies which I have to click as
+  // a reply." He is right, and it is worth naming WHY.
+  //
+  // generateSuggestions() offers ACTIONS — "Remind me what you know about me",
+  // "Extract all action items", "Add to my calendar". /suggest-replies offers
+  // CONVERSATIONAL REPLIES — "I'm good, thanks!" — words put in his mouth for
+  // him to click as if he had said them. Replacing the first with the second
+  // made the chips worse every time the first set had matched properly.
+  //
+  // So the swap is off. It also saves the ~Rs 0.017 per reply it was costing,
+  // roughly Rs 16 a month. One constant to turn back on if ever wanted.
+  const CHIPS_USE_BACKEND=false;
+  if(CHIPS_USE_BACKEND&&sourceText&&sourceText.trim().length>=40)_upgradeChips(sourceText,seq,lang);
 }
 
 // Monotonic id source. Date.now() collided when a saved thread was replayed in a
