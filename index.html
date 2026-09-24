@@ -2306,6 +2306,11 @@ async function syncThreadsFromBackend(){
       let hist=row.history;
       if(typeof hist==='string'){ try{hist=JSON.parse(hist);}catch(e){hist=[];} }
       if(!Array.isArray(hist))hist=[];
+      // A row with no messages is not a conversation. Rows like this were written
+      // on 18-19 Sep by the first-message-lost bug (fixed in 3b55346): the push
+      // side has skipped empty threads ever since, but the pull side did not, so
+      // every login re-imported them into the sidebar.
+      if(hist.length===0)return;
       const local=threads[id];
       if(!local){
         threads[id]={name:row.threadName||'Conversation',hist:hist,created:row.created||new Date().toISOString()};
@@ -2332,9 +2337,24 @@ function saveThreadsLocal(){
   // Local is safe at this point. Everything below is best-effort.
   if(!_suppressThreadSync&&currentThreadId)queueThreadSync(currentThreadId);
 }
+// Opening Bella creates a conversation before a word is typed, so every login
+// left one more empty "Welcome, ..." entry behind. They are an artefact, not
+// history — drop them, except the one being looked at right now. Nothing is
+// lost: an empty conversation has nothing in it to recover, which is why these
+// do not go to the recycle bin.
+function pruneEmptyThreads(){
+  let n=0;
+  Object.keys(threads).forEach(function(id){
+    if(id===currentThreadId)return;
+    const h=threads[id]&&threads[id].hist;
+    if(!Array.isArray(h)||h.length===0){delete threads[id];n++;}
+  });
+  return n;
+}
 function loadThreadsLocal(){
   loadTrash();
   try{const d=localStorage.getItem('b_threads');if(d){threads=JSON.parse(d);if(Object.keys(threads).length===0)threads={};}else threads={};}catch{threads={};}
+  try{ pruneEmptyThreads(); }catch(e){}
 }
 function renderThreadList(){
   const list=document.getElementById('thread-list');
