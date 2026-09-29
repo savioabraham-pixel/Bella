@@ -64,3 +64,8 @@ __pycache__/
 .coverage
 *.tsbuildinfo
 next-env.d.ts
+
+# Screenshots Savio drops in for me to look at. They capture whatever else was
+# on his screen (bank alerts, real conversations) and the repo is public.
+Screenshots for Changes/
+Screenshot*.png

@@ -275,30 +275,23 @@ body.dark .read-offer-btn.ghost{background:transparent;color:#F5E6C8;border-colo
 /* The cell is a fixed-width flex child; without min-width:0 its contents
    refuse to shrink and the emoji gets pushed past the right-hand edge. */
 #tb-thought-cell{min-width:0;overflow:hidden}
-@keyframes thoughtFloat{
-  0%   {transform:translateY(0)    scale(1)    rotate(0deg)}
-  15%  {transform:translateY(-3px) scale(1.18) rotate(-9deg)}
-  30%  {transform:translateY(-4px) scale(1.24) rotate(8deg)}
-  45%  {transform:translateY(-2px) scale(1.14) rotate(-5deg)}
-  60%  {transform:translateY(0)    scale(1.06) rotate(3deg)}
-  75%  {transform:translateY(1px)  scale(0.97) rotate(0deg)}
-  100% {transform:translateY(0)    scale(1)    rotate(0deg)}
-}
-@keyframes thoughtGlow{
-  0%,100%{filter:drop-shadow(0 0 2px rgba(212,175,55,.55)) saturate(1.15)}
-  50%    {filter:drop-shadow(0 0 7px rgba(212,175,55,.95)) saturate(1.5)}
-}
+/* The emoji is now a real animated GIF (Noto Animated Emoji, /emoji/*.gif) that
+   blinks and smiles on its own, so the old CSS bounce+glow keyframes are gone —
+   two motions at once read as jitter, and dropping them costs no compositing.
+
+   COLOUR — this is issue 8 on Savio's list, and the previous fix here was wrong.
+   It said "the topbar is dark navy" and put a GOLD halo behind the emoji. The
+   topbar is `background:var(--white)` (see .chat-topbar) — WHITE in normal mode,
+   navy only in dark mode, which is deferred. So it was a gold halo behind a
+   gold-yellow emoji on a white bar: invisible. That is the blending he reported.
+   A yellow smiley needs a DARK edge on the light bar and a warm glow on the dark
+   one, so the shadow is keyed to the real background in each theme. */
 .tb-thought-emoji{
-  display:inline-block;flex:0 0 auto;font-size:19px;line-height:1;
-  /* The topbar is dark navy. A gold halo lifts any emoji off it, including the
-     paler ones, so visibility no longer depends on which emoji Gemini picks. */
-  animation:thoughtFloat 3.2s cubic-bezier(.34,1.56,.64,1) infinite, thoughtGlow 3.2s ease-in-out infinite;
-  transform-origin:center bottom;will-change:transform,filter;
+  display:inline-block;flex:0 0 auto;line-height:0;
+  filter:drop-shadow(0 1px 1.5px rgba(11,37,69,.55));
 }
-/* Respect users who ask their device to reduce motion. */
-@media (prefers-reduced-motion:reduce){
-  .tb-thought-emoji{animation:thoughtGlow 4s ease-in-out infinite}
-}
+.tb-thought-emoji img{width:26px;height:26px;display:block;pointer-events:none}
+body.dark .tb-thought-emoji{filter:drop-shadow(0 0 5px rgba(212,175,55,.8))}
 /* Convert cell */
 .tb-conv-btn{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 16px;border-right:1px solid var(--border);height:100%;cursor:pointer;flex-shrink:0;width:var(--tb-col);transition:background .15s}
 .tb-conv-btn:hover{background:var(--goldpale)}
@@ -4079,7 +4072,10 @@ function showAboutBella(){
 *Bella is there, steady and true…*
 *just a tap away, always with you.*
 
-— *Bella, your personal AI companion* 🤍`);
+— *Bella, your personal AI companion* 🤍
+
+---
+*Bella's Food For Thought uses Noto Animated Emoji by Google, licensed under CC BY 4.0.*`);
 
   // Show About Bella suggestion chips
   setTimeout(()=>{
@@ -4120,7 +4116,7 @@ function showAboutBella(){
 // completeRegistration(), the real third parties, the real retention. If any
 // of that changes, change these too, or the notice becomes false.
 // ══════════════════════════════════════════════════════════════════════
-const LEGAL_CONTACT = 'savioabraham.miiraki@gmail.com';
+const LEGAL_CONTACT = 'support.bella.ai@gmail.com';
 const LEGAL_UPDATED = '17 September 2026';
 
 const LEGAL_DOCS = {
@@ -4593,7 +4589,7 @@ async function submitDeleteAccount(){
     await bfetch(BACKEND+'/send-email', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        to: 'savioabraham.miiraki@gmail.com',
+        to: 'support.bella.ai@gmail.com',
         subject: `Urgent - Deletion of Account - ${userName} / ${userId}`,
         body: emailBody,
         profileKey: currentProfileKey||'_guest'
@@ -5099,14 +5095,21 @@ async function send(){
       clearFiles();endTurn();return;
     }
   }
-  const needsSearch=isTimeSensitive(fullMsg);
-  if(needsSearch){const ack=`One moment while I look that up...`;bellaMsg(ack);speakText(ack,lang);}
+  // The search tool is now attached to EVERY message and Gemini decides whether to
+  // use it. It used to be gated on isTimeSensitive(), a ~30-word keyword list, which
+  // decided for the model: "how much does a Tesla cost" (list has 'price', not 'cost')
+  // and "who runs Twitter now" both missed it, so the tool was never attached and the
+  // answer came from training data — stale, with no sign anything was wrong.
+  // isTimeSensitive survives only to decide whether to show the "looking that up" line,
+  // which is a UX cue and must not fire on every message.
+  const likelyLookup=isTimeSensitive(fullMsg);
+  if(likelyLookup){const ack=`One moment while I look that up...`;bellaMsg(ack);speakText(ack,lang);}
   const userParts=[{text:`[User: ${currentAddressedName}]\n${fullMsg}`},...imagePartsForAPI];
   const hist=getHist();hist.push({role:'user',parts:userParts});setHist(hist);
   let reply=null;
   window._chatAbortController=new AbortController();
   try{
-    reply=await callBella(needsSearch,userMemory.memories||'',window._chatAbortController.signal);
+    reply=await callBella(true,userMemory.memories||'',window._chatAbortController.signal);
   }catch(err){
     window._chatAbortController=null;
     hideThinking();
@@ -5201,7 +5204,11 @@ async function callBella(useSearch,memCtx,signal){
   const _activeProfileKey = (_testMode && _testProfileKey) ? _testProfileKey : currentProfileKey;
   const _activeAddressedName = (_testMode && _testAddressedName) ? _testAddressedName : currentAddressedName;
   const systemPrompt=buildSystemPrompt(_activeProfileKey,_activeAddressedName,_testMode?'':memCtx);
-  const searchNote=useSearch?'\n\nNeeds current live web data. Search and present as 3-5 bullet points with verifiable source links where possible. For medical info cite medical sources, for government info cite official sources, for business data cite industry reports. Spoken summary: 2 sentences max — do not speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).':'';
+  // RESEARCH RULE. Google Search is now attached to every request, so this note is
+  // always present and tells Gemini WHEN to reach for it. Previously the tool was
+  // only attached when a keyword matched, so anything phrased outside that list was
+  // answered from training data and came back out of date.
+  const searchNote='\n\nRESEARCH RULE — applies to every question. You have Google Search available and you must use it whenever the correct answer could have changed since your training data: prices, costs, rates, valuations, who currently holds a role or office, company and product facts, laws and rules, sports results, schedules, opening hours, news, and any question containing "current", "latest", "still", "now" or a year. If you are not certain your information is current, search — do not answer from memory and do not guess. Never state a fact that could be out of date without checking it first. When you have searched, give 3-5 bullet points with verifiable source links, and say when the information is from: cite medical sources for medical questions, official sources for government ones, industry reports for business data. When the question is personal, emotional, creative, or ordinary conversation, do not search — answer warmly as Bella normally would. Spoken summary: 2 sentences max — never speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).';
   const voiceNote='\n\nAt the very end of your reply, on its own new line, always add a short spoken-friendly version of your answer in this exact format: [VOICE]a natural 2-3 sentence summary, in plain conversational language[/VOICE]. This tag is never shown to the user — it is only used to decide what to speak aloud for long answers.';
   const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_replyLangNote()}]},{role:'model',parts:[{text:`Understood. I am Bella, ready to assist ${_activeAddressedName}.`}]},...getHist()];
   const r=await bfetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch}),signal});
@@ -6646,23 +6653,58 @@ function deliverGreeting(addressedName){
 // Splits the thought into its words and its trailing emoji, and puts each into
 // its own element. Keeping them separate is what stops the ellipsis eating the
 // emoji on a long thought.
+// The 15 animated moods that ship in /emoji — Noto Animated Emoji, re-encoded to
+// 48px (43 KB average, against the 836 KB–1.76 MB 512px originals Google serves).
+// Held in the repo rather than loaded from Google's CDN, so opening Bella does not
+// announce itself to Google on every visit.
+const THOUGHT_MOODS={'😀':'1f600','😊':'1f60a','🙂':'1f642','😉':'1f609','😍':'1f60d','🥰':'1f970','😘':'1f618','🤗':'1f917','😂':'1f602','🥳':'1f973','😎':'1f60e','🤩':'1f929','😇':'1f607','😌':'1f60c','🤔':'1f914'};
+
+// Stable fallback: the same face all day, a different one tomorrow. Never random
+// per render, or it would change every time the topbar redrew.
+function _moodForToday(){
+  const f=Object.values(THOUGHT_MOODS),d=new Date();
+  return f[(d.getFullYear()*372+d.getMonth()*31+d.getDate())%f.length];
+}
+
 function setThought(thought){
   const textEl = document.getElementById('tb-thought');
   const emojiEl = document.getElementById('tb-thought-emoji');
   if(!textEl) return;
-  const m = String(thought).match(/(\p{Emoji_Presentation}|\p{Extended_Pictographic})(\uFE0F)?\s*$/u);
-  if(m && emojiEl){
+  const m = String(thought).match(/(\p{Emoji_Presentation}|\p{Extended_Pictographic})(️)?\s*$/u);
+  let code = null;
+  if(m){
     const emoji = m[0].trim();
+    code = THOUGHT_MOODS[emoji] || THOUGHT_MOODS[emoji.replace(/️/g,'')] || null;
     textEl.textContent = String(thought).slice(0, String(thought).lastIndexOf(emoji)).trim();
-    emojiEl.textContent = emoji;
   } else {
     textEl.textContent = String(thought).trim();
-    if(emojiEl) emojiEl.textContent = '✨';
+  }
+  if(emojiEl){
+    // Built as a node, never as an HTML string, so a stray character in the
+    // model's reply can never become markup in the topbar.
+    const img = document.createElement('img');
+    img.src = 'emoji/' + (code || _moodForToday()) + '.gif';
+    img.alt = ''; img.setAttribute('aria-hidden','true');
+    img.loading = 'lazy'; img.decoding = 'async';
+    emojiEl.replaceChildren(img);
   }
 }
 
+// Local calendar day, not UTC — a UTC key would roll the thought over at 05:30 IST.
+function _thoughtDayKey(){
+  const d=new Date();
+  return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+}
+let _thoughtDay=null, _thoughtName='', _thoughtCity='';
+
 async function loadThoughtOfDay(addressedName, city){
-  const cacheKey = 'b_thought_cache_v3'; // versioned so anyone's older cached (pre-animation) thought gets bypassed automatically
+  // Keyed on the DAY. The old key was not, so a tab left open — which is exactly
+  // what a home-screen app does — served the same thought indefinitely. Savio had
+  // the same one for a week. sessionStorage, not localStorage, so it stays clear
+  // of the pagehide security wipe.
+  _thoughtName = addressedName; _thoughtCity = city;
+  _thoughtDay = _thoughtDayKey();
+  const cacheKey = 'b_thought_v4_' + _thoughtDay;
   try{
     const cached = sessionStorage.getItem(cacheKey);
     if(cached){ setThought(cached); return; }
@@ -6670,28 +6712,24 @@ async function loadThoughtOfDay(addressedName, city){
   const thoughtEl = document.getElementById('tb-thought');
   if(!thoughtEl) return;
   try{
-    const prompt = `You are Bella, a warm personal AI companion. Generate a single uplifting "Food For Thought" for ${addressedName}.
+    const prompt = `You are Bella, a warm personal AI companion. Generate a single uplifting "Food For Thought" for ${addressedName}. Today is ${_thoughtDay} — make today's different from anything obvious or generic.
 
 Format rules — follow exactly:
 - Title Case throughout
 - Opening curly quote " at start
-- Closing curly quote " at end  
-- ONE animated emoji that matches the emotional mood of the thought — placed after the closing quote. This sits on a dark navy background, so only choose bright, colourful emoji (e.g. ✨🌟💛🌸🌞🎈🌈🍀) — never dark, black, or low-contrast ones (e.g. 🖤🌑⚫🕶️🦇🌚) that would be invisible against a dark background
+- Closing curly quote " at end
 - No full stop
 - MUST be 10 words or fewer, short enough to fit on a single line — this is a hard limit
 - Universal and timeless — never reference the user's city, weather, or current location
-- Return ONLY the quote with emoji, nothing else
+- Return ONLY the quote and its emoji, nothing else
 
-The emoji must be chosen to match the mood. Examples:
-- Curiosity/discovery -> 🧭 or 🔭
-- Growth/nature -> 🌱 or 🌿
-- Joy/happiness -> ✨ or 🌟
-- Courage/strength -> 🦋 or 🔥
-- Peace/calm -> 🌊 or 🕊️
-- Love/warmth -> 🌸 or 💫
-- Wisdom -> 🌙 or ⭐
+End with exactly ONE emoji, chosen from THIS list and nothing outside it, matching the mood:
+😀 bright · 😊 warm · 🙂 gentle · 😉 playful · 😍 loving · 🥰 affectionate · 😘 fond · 🤗 comforting · 😂 light-hearted · 🥳 celebratory · 😎 confident · 🤩 excited · 😇 kind · 😌 calm · 🤔 reflective
 
-Example output: "Every Sunrise Is A New Invitation To Begin Again" ✨`;
+Vary it day to day — do not keep returning the same face.
+
+This shows the SHAPE only. Never copy its wording, and choose your own emoji:
+"Every Sunrise Is A New Invitation To Begin Again"`;
 
     const r = await bfetch(`${BACKEND}/chat`, {
       method:'POST',
@@ -6703,14 +6741,22 @@ Example output: "Every Sunrise Is A New Invitation To Begin Again" ✨`;
     });
     if(!r.ok) throw new Error('Failed');
     const d = await r.json();
-    let thought = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '"Every Day Holds The Seed Of Something Wonderful" ✨';
-    // Extract emoji from end of thought for animation
+    let thought = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '"Every Day Holds The Seed Of Something Wonderful" 😊';
     setThought(thought);
     try{ sessionStorage.setItem(cacheKey, thought); }catch(e){}
   }catch(e){
-    setThought('"Every Day Holds The Seed Of Something Wonderful" ✨');
+    setThought('"Every Day Holds The Seed Of Something Wonderful" 😊');
   }
 }
+
+// A phone home-screen app can stay open for days. Without this the thought is
+// fetched once at sign-in and never again, which is the other half of why it
+// never changed. Checks every 10 minutes; costs one Gemini call a day.
+setInterval(function(){
+  if(!_thoughtDay) return;                       // never loaded — nothing to refresh
+  if(_thoughtDayKey() === _thoughtDay) return;   // still the same day
+  loadThoughtOfDay(_thoughtName, _thoughtCity);
+}, 600000);
 
 function initClock(){
   const saved = localStorage.getItem('b_clock_fmt');
