@@ -222,7 +222,13 @@ body.dark #rec-lbl{color:#0B2545}
 .chat-topbar{padding:0;border-bottom:1px solid var(--border);display:flex;align-items:stretch;gap:0;flex-shrink:0;background:var(--white);height:68px;position:relative}
 .chat-topbar-left{display:flex;align-items:center;gap:10px;flex-shrink:0}
 /* Base column width — all fixed cells use this */
-:root{--tb-col:180px}
+/* 160, not 180. Five fixed cells at 180px claimed 900px before the Food For
+   Thought cell got anything, so the thought was truncating. Measured minimums for
+   the real content: date cell 157px (the binding one), Convert 151px, Welcome
+   149px, location 105px. 160 would leave the date just 3px of slack — too tight to
+   trust when font loading can shift text width — so 165, which still frees 75px for
+   the thought. Below 1024px the bar scrolls instead, and below 680px this drops to 150. */
+:root{--tb-col:165px}
 /* Dashboard panel cells — all equal width */
 .tb-cell{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 16px;border-right:1px solid var(--border);height:100%;flex-shrink:0;cursor:default;width:var(--tb-col)}
 .tb-cell-expand{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 20px;border-right:1px solid var(--border);height:100%;text-align:center}
@@ -6728,7 +6734,10 @@ Format rules — follow exactly:
 - Opening curly quote " at start
 - Closing curly quote " at end
 - No full stop
-- MUST be 10 words or fewer, short enough to fit on a single line — this is a hard limit
+- MUST be 50 characters or fewer INCLUDING the quote marks. This is a hard limit, not a
+  guideline — count the characters before you answer. It has to sit on ONE line in a narrow
+  panel, and what decides that is characters, not words: ten short words fit, ten long ones
+  do not. Roughly seven or eight ordinary words is the right length
 - Universal and timeless — never reference the user's city, weather, or current location
 - Return ONLY the quote and its emoji, nothing else
 
