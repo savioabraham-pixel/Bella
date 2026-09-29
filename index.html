@@ -231,7 +231,11 @@ body.dark #rec-lbl{color:#0B2545}
 .tb-secondary{font-size:11px;font-weight:400;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;font-family:'DM Sans',sans-serif;letter-spacing:.2px}
 .tb-tz-label{font-size:11px;font-weight:400;color:var(--text);white-space:nowrap;margin-left:4px;font-family:'DM Sans',sans-serif}
 /* Thought cell */
-.tb-thought-title{font-size:13px;font-weight:600;color:var(--text);font-family:'DM Sans',sans-serif;margin-bottom:3px}
+/* Flex so the emoji sits on the TITLE line, just after the last word. Savio's
+   call. The title is a fixed string, so the face lands in the same place every
+   day instead of shifting as the thought gets longer or shorter — and it hands
+   the thought line back its full width, which was truncating before. */
+.tb-thought-title{font-size:13px;font-weight:600;color:var(--text);font-family:'DM Sans',sans-serif;margin-bottom:3px;display:flex;align-items:center;justify-content:center;gap:5px}
 .tb-thought-text{font-size:11px;font-weight:400;color:var(--text);line-height:1.5;font-family:'DM Sans',sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Food For Thought emoji — genuinely animated, and never clipped.
    It used to live INSIDE .tb-thought-text, which is overflow:hidden with an
@@ -270,7 +274,10 @@ body.dark .read-offer{background:rgba(212,175,55,.10);border-color:rgba(212,175,
 body.dark .read-offer-q{color:#F5E6C8}
 body.dark .read-offer-btn{background:#D4AF37;color:#0B2545;border-color:#D4AF37}
 body.dark .read-offer-btn.ghost{background:transparent;color:#F5E6C8;border-color:rgba(245,230,200,.35)}
-.tb-thought-row{display:flex;align-items:center;gap:7px;min-width:0;width:100%;max-width:100%;box-sizing:border-box;overflow:visible}
+/* The emoji has moved up to the title line, so this row holds only the thought and
+   the text gets the full cell width back — it truncates later than it used to.
+   min-width:0 is what lets it shrink to an ellipsis instead of overflowing. */
+.tb-thought-row{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;max-width:100%;box-sizing:border-box;overflow:hidden}
 .tb-thought-row .tb-thought-text{flex:1 1 auto;min-width:0;max-width:100%}
 /* The cell is a fixed-width flex child; without min-width:0 its contents
    refuse to shrink and the emoji gets pushed past the right-hand edge. */
@@ -290,7 +297,10 @@ body.dark .read-offer-btn.ghost{background:transparent;color:#F5E6C8;border-colo
   display:inline-block;flex:0 0 auto;line-height:0;
   filter:drop-shadow(0 1px 1.5px rgba(11,37,69,.55));
 }
-.tb-thought-emoji img{width:26px;height:26px;display:block;pointer-events:none}
+/* 13px, not 26. The thought text is 11px, so 26 made the emoji 2.4x the height of
+   the words it decorates and it overpowered them — Savio's call, and correct. The
+   old static emoji was 19px; 13 sits just above the text rather than above it. */
+.tb-thought-emoji img{width:15px;height:15px;display:block;pointer-events:none}
 body.dark .tb-thought-emoji{filter:drop-shadow(0 0 5px rgba(212,175,55,.8))}
 /* Convert cell */
 .tb-conv-btn{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 16px;border-right:1px solid var(--border);height:100%;cursor:pointer;flex-shrink:0;width:var(--tb-col);transition:background .15s}
@@ -1157,10 +1167,9 @@ body.dark #sidebar .sb-new-chat span{
 
       <!-- CELL — Bella's Food For Thought (expands to fill remaining space) -->
       <div class="tb-cell-expand" id="tb-thought-cell">
-        <div class="tb-thought-title">Bella's Food For Thought</div>
+        <div class="tb-thought-title">Bella's Food For Thought<span class="tb-thought-emoji" id="tb-thought-emoji" aria-hidden="true"></span></div>
         <div class="tb-thought-row">
           <div class="tb-thought-text" id="tb-thought">"Loading..."</div>
-          <span class="tb-thought-emoji" id="tb-thought-emoji" aria-hidden="true"></span>
         </div>
       </div>
 
