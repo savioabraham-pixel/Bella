@@ -1632,6 +1632,17 @@ body.dark #sidebar .sb-new-chat span{
         <span class="menu-section-arrow">▲</span>
       </div>
     </div>
+    <!-- Admin — owner only. Revealed by revealAdminUI(); the real gate is
+         the backend, which checks the signed-in token, not this display rule. -->
+    <div class="menu-section" id="admin-section" style="display:none">
+      <div class="menu-section-header" onclick="toggleMenuSection('sec-admin')">
+        <span class="menu-section-title">🛡️ Admin</span>
+        <span class="menu-section-arrow" id="arr-admin">▲</span>
+      </div>
+      <div class="menu-items" id="sec-admin">
+        <div class="menu-item" onclick="openAdminPanel();closeUserMenu()">Manage Accounts</div>
+      </div>
+    </div>
     <!-- Sign Out -->
     <div class="menu-section" id="signout-section">
       <div class="menu-section-header" onclick="toggleMenuSection('sec-signout')">
@@ -1658,7 +1669,41 @@ body.dark #sidebar .sb-new-chat span{
 // ============================================================
 // CONFIG
 // ============================================================
-const BACKEND='https://bella-backend-299648732006.asia-south1.run.app';
+// ══ STAGING BUILD ═════════════════════════════════════════════════════
+// This file is the release candidate. It is served from the SAME origin as
+// the live site on purpose: Firebase's authorised-domain check and the
+// backend's CORS rules are both origin-scoped, so a staging copy on another
+// host would fail to sign in and have every call refused — you would end up
+// debugging staging instead of testing Bella.
+//
+//   .../Bella/              -> index.html    the family's Bella, live
+//   .../Bella/staging.html  -> this file     the candidate
+//
+// By default it talks to the SAME backend as live, so a frontend-only change
+// can be tested without deploying anything. Add ?backend=test to point it at
+// a tagged Cloud Run revision instead, for when backend changes need proving
+// first:
+//   .../Bella/staging.html?backend=test
+const _BELLA_LIVE_BACKEND = 'https://bella-backend-299648732006.asia-south1.run.app';
+const _BELLA_TEST_BACKEND = 'https://test---bella-backend-299648732006.asia-south1.run.app';
+const _IS_STAGING = /staging\.html$/i.test(location.pathname);
+const _WANT_TEST_BACKEND = _IS_STAGING &&
+  new URLSearchParams(location.search).get('backend') === 'test';
+const BACKEND = _WANT_TEST_BACKEND ? _BELLA_TEST_BACKEND : _BELLA_LIVE_BACKEND;
+
+// An unmistakable marker. Testing on staging and believing you fixed the live
+// site is the one mistake this whole arrangement exists to prevent, so the
+// badge is loud, fixed, and cannot be confused with Bella's own styling.
+if (_IS_STAGING) {
+  document.addEventListener('DOMContentLoaded', function () {
+    var b = document.createElement('div');
+    b.textContent = 'STAGING' + (_WANT_TEST_BACKEND ? ' \u00b7 test backend' : '');
+    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;' +
+      'background:#B71C1C;color:#fff;font:600 11px/1.9 -apple-system,system-ui,sans-serif;' +
+      'text-align:center;letter-spacing:.14em;pointer-events:none';
+    document.body.appendChild(b);
+  });
+}
 
 // ══ Stage 1 of securing the backend (2026-09-17) ══════════════════════
 // Every call to BACKEND now carries the signed-in user's Firebase ID token.
@@ -1708,7 +1753,18 @@ async function bfetch(url, opts){
   const headers = Object.assign({}, opts.headers || {});
   const auth = await bellaAuthHeader();
   if(auth) headers['Authorization'] = auth;
-  return fetch(url, Object.assign({}, opts, {headers: headers}));
+  const _r = await fetch(url, Object.assign({}, opts, {headers: headers}));
+  // An account frozen or locked out mid-session would otherwise just look like
+  // Bella breaking. Read the reason once and act on it, without consuming the
+  // body the caller is about to read.
+  if((_r.status === 403 || _r.status === 401) && url.indexOf('/account-state') === -1){
+    try{
+      const _d = await _r.clone().json();
+      if(_d && _d.code === 'account_frozen'){ showFrozenNotice(_d.error); }
+      else if(_d && _d.code === 'session_revoked'){ hardResetDevice(); }
+    }catch(e){}
+  }
+  return _r;
 }
 // OAUTH_CLIENT_ID / SHEET_ID / SHEETS_API removed — the browser no longer talks to
 // the Sheets API directly; the backend owns that credential and the sheet id.
@@ -3689,6 +3745,13 @@ async function completeRegistration() {
       body: JSON.stringify({
         type: 'user',
         profileKey,
+        // userId was generated above, shown in the sidebar and put in the
+        // welcome email -- but it was never SENT here, so the backend read
+        // req.body.userId as undefined and its "never blank a filled field"
+        // rule skipped column Q. Every account therefore had a User ID on the
+        // device and a blank one in the record. Found 2026-09-30 by looking at
+        // the admin account list, which showed "no ID" for everybody.
+        userId,
         addressedName: userData.preferredName,
         email: userData.email,
         language: 'en',
@@ -3720,17 +3783,30 @@ async function completeRegistration() {
           <p style="color:rgba(245,230,200,0.6);font-size:12px;line-height:1.7">You can always find your User ID displayed in the Bella sidebar next to your name.<br>Visit Bella anytime at <a href="https://savioabraham-pixel.github.io/Bella" style="color:#D4AF37">savioabraham-pixel.github.io/Bella</a></p>
         </div>
       </div>`;
-    await bfetch(BACKEND + '/send-email', {
+    // The backend does NOT relay {to, subject, body} — /send-email is a typed
+    // template sender that reads `name` and `email` and 400s without them
+    // ("name and email are required for welcome email"). This call sent `to`
+    // and no `name`, so every welcome email since it was written was rejected
+    // and NOT ONE new user ever received one. fetch() does not reject on 400,
+    // so the catch below never fired and nothing said a word. `userId` is sent
+    // for the queued backend change that puts it back in the template; the
+    // backend's own welcome email does not carry it yet.
+    const r = await bfetch(BACKEND + '/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'welcome',
+        name: userData.preferredName || userData.fullName || '',
+        email: userData.email,
+        userId,
         to: userData.email,
         subject: `Welcome to Bella — Your User ID is ${userId}`,
         body: welcomeBody,
         profileKey: resolveAndStoreProfileKey(userData)
       })
     });
+    // A 4xx here is silent otherwise, which is how this went unnoticed.
+    if(!r.ok) console.warn('Welcome email refused:', r.status, await r.text().catch(()=>''));
   } catch(e){ console.warn('Welcome email error:', e); }
 
   completeLogin(userData);
@@ -3762,6 +3838,183 @@ function completeLogin(userData) {
   const gate = document.getElementById('bella-gate');
   if (gate) gate.remove();
   initAndLaunch(userData);
+  // Owner-only menu, and the reset/freeze instruction from the server. Both
+  // run after the gate is gone so nothing delays Bella appearing.
+  try{ revealAdminUI(); }catch(e){}
+  // If this load is the one right after a reset, tell the server the device
+  // complied so the person is not sent round the loop a second time.
+  try{
+    if(localStorage.getItem('b_reset_just_ran')){
+      localStorage.removeItem('b_reset_just_ran');
+      bfetch(BACKEND + '/account-reset-done', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>{});
+    } else {
+      enforceAccountState();
+    }
+  }catch(e){}
+}
+
+// ============================================================
+// BELLA ADMIN — ACCOUNT POWERS
+// Savio, 2026-09-30. Four powers, deliberately separate:
+//   wipe       — data archived then removed; they re-register from zero
+//   clear-data — data archived then removed; they stay signed up
+//   lockout    — every session revoked, must re-verify; NO data touched
+//   freeze     — suspended entirely until unfrozen (profanity / nuisance)
+// Deletion is NOT here and never will be: it is the user's own to request.
+//
+// This UI is a convenience, NOT the security boundary. Anyone can edit
+// localStorage and make these buttons appear; the backend checks the
+// Firebase-verified email on every call and refuses everyone else.
+// ============================================================
+const BELLA_ADMIN_EMAIL = 'savioabraham.miiraki@gmail.com';
+
+function _bellaIsAdmin(){
+  try{
+    const e = (JSON.parse(localStorage.getItem('b_registered_user')||'{}').email||'').toLowerCase();
+    return e === BELLA_ADMIN_EMAIL.toLowerCase();
+  }catch(e){ return false; }
+}
+
+function revealAdminUI(){
+  const s = document.getElementById('admin-section');
+  if(s) s.style.display = _bellaIsAdmin() ? '' : 'none';
+}
+
+// Deliberately NOT voice-triggered. A misheard name on a wipe is unrecoverable,
+// so these need a deliberate tap and a typed confirmation.
+async function openAdminPanel(){
+  const ov = document.createElement('div');
+  ov.id = 'admin-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:400;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML = '<div style="background:#0B2545;border:1px solid rgba(212,175,55,0.4);border-radius:16px;max-width:760px;width:100%;max-height:86vh;overflow:auto;padding:22px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;color:#F5E6C8">🛡️ Manage Accounts</div>' +
+      '<button onclick="document.getElementById(\'admin-overlay\').remove()" style="background:none;border:none;color:#D4AF37;font-size:22px;cursor:pointer;line-height:1">×</button>' +
+    '</div>' +
+    '<div id="admin-body" style="color:rgba(245,230,200,0.65);font-size:13px">Loading…</div></div>';
+  document.body.appendChild(ov);
+  try{
+    const r = await bfetch(BACKEND + '/admin-users', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok){ document.getElementById('admin-body').textContent = 'Could not load accounts: ' + (d.error||r.status); return; }
+    renderAdminUsers(d.users||[]);
+  }catch(e){
+    const b = document.getElementById('admin-body'); if(b) b.textContent = 'Could not load accounts: ' + e.message;
+  }
+}
+
+function renderAdminUsers(users){
+  const body = document.getElementById('admin-body');
+  if(!body) return;
+  if(!users.length){ body.textContent = 'No accounts found.'; return; }
+  const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const badge = st => {
+    const m = {active:['#2E7D32','Active'],frozen:['#B71C1C','Frozen'],locked:['#E65100','Locked out'],reset_pending:['#6A1B9A','Reset pending']};
+    const v = m[st] || ['#555', st||'—'];
+    return '<span style="background:'+v[0]+';color:#fff;border-radius:6px;padding:2px 8px;font-size:11px">'+esc(v[1])+'</span>';
+  };
+  body.innerHTML = '<div style="margin-bottom:12px;color:rgba(245,230,200,0.5)">' + users.length + ' account(s). Every action is written to the Audit tab, and anything removed is copied to Archive first.</div>' +
+    users.map(u => {
+      const me = (u.email||'').toLowerCase() === BELLA_ADMIN_EMAIL.toLowerCase();
+      const e = esc(u.email||'');
+      const btn = (act,label,col) => '<button onclick="adminAct(\''+e+'\',\''+act+'\')" style="margin:3px 4px 0 0;padding:6px 10px;border-radius:8px;border:1px solid '+col+';background:transparent;color:'+col+';font-size:12px;cursor:pointer">'+label+'</button>';
+      return '<div style="border:1px solid rgba(212,175,55,0.25);border-radius:12px;padding:12px;margin-bottom:10px">' +
+        '<div style="color:#F5E6C8;font-size:15px">' + esc(u.preferredName||u.fullName||u.profileKey) + ' ' + badge(u.state) + (me?' <span style="color:#D4AF37;font-size:11px">(you)</span>':'') + '</div>' +
+        '<div style="margin-top:3px">' + e + ' · ' + esc(u.userId||'no ID') + ' · ' + esc(u.mobile||'') + '</div>' +
+        '<div style="margin-top:3px;color:rgba(245,230,200,0.45)">' + u.memories + ' memories · ' + u.threads + ' conversations · last seen ' + esc((u.lastSeen||'—').slice(0,10)) + '</div>' +
+        (u.stateReason ? '<div style="margin-top:3px;color:rgba(245,230,200,0.45)">Reason on file: ' + esc(u.stateReason) + '</div>' : '') +
+        '<div style="margin-top:8px">' +
+          btn('wipe','Wipe completely','#EF5350') +
+          btn('clear-data','Clear data, keep account','#FFA726') +
+          (me ? '' : btn('lockout','Security lock-out','#29B6F6')) +
+          (me ? '' : (u.state==='frozen' ? btn('unfreeze','Unfreeze','#66BB6A') : btn('freeze','Freeze','#AB47BC'))) +
+        '</div></div>';
+    }).join('');
+}
+
+function adminAct(email, action){
+  const words = {
+    'wipe':['Wipe completely','Everything this person has said to Bella is archived, then removed, and their account is sent back through joining from zero. Their device clears itself the next time they open Bella.'],
+    'clear-data':['Clear data, keep account','Their memories and conversations are archived, then removed. They stay signed up and will NOT have to register again.'],
+    'lockout':['Security lock-out','Every session is ended and they must verify their phone again. No data is touched.'],
+    'freeze':['Freeze account','They are blocked from Bella entirely until you unfreeze them. No data is touched.'],
+    'unfreeze':['Unfreeze account','They get their access back immediately.']
+  }[action] || [action,''];
+  const ov = document.createElement('div');
+  ov.id = 'admin-confirm';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML = '<div style="background:#0B2545;border:1px solid rgba(212,175,55,0.5);border-radius:16px;max-width:460px;width:100%;padding:22px">' +
+    '<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;color:#F5E6C8;margin-bottom:8px">' + words[0] + '</div>' +
+    '<div style="font-size:13px;color:rgba(245,230,200,0.7);line-height:1.6;margin-bottom:14px">' + words[1] + '</div>' +
+    '<div style="font-size:12px;color:rgba(245,230,200,0.55);margin-bottom:6px">Why? (recorded in the audit log)</div>' +
+    '<input id="admin-reason" style="width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid rgba(212,175,55,0.35);background:#0a1f3c;color:#F5E6C8;font-size:13px;margin-bottom:12px">' +
+    '<div style="font-size:12px;color:rgba(245,230,200,0.55);margin-bottom:6px">Type <b style="color:#D4AF37">' + email + '</b> to confirm</div>' +
+    '<input id="admin-confirm-email" autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid rgba(212,175,55,0.35);background:#0a1f3c;color:#F5E6C8;font-size:13px">' +
+    '<div id="admin-confirm-msg" style="font-size:12px;color:#EF5350;margin-top:8px;min-height:16px"></div>' +
+    '<div style="display:flex;gap:8px;margin-top:10px">' +
+      '<button onclick="document.getElementById(\'admin-confirm\').remove()" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(245,230,200,0.3);background:transparent;color:#F5E6C8;font-size:13px;cursor:pointer">Cancel</button>' +
+      '<button id="admin-go" style="flex:1;padding:10px;border-radius:10px;border:none;background:#D4AF37;color:#0B2545;font-size:13px;font-weight:600;cursor:pointer">Confirm</button>' +
+    '</div></div>';
+  document.body.appendChild(ov);
+  document.getElementById('admin-go').onclick = async function(){
+    const msg = document.getElementById('admin-confirm-msg');
+    const typed = (document.getElementById('admin-confirm-email').value||'').trim().toLowerCase();
+    const reason = (document.getElementById('admin-reason').value||'').trim();
+    if(typed !== email.toLowerCase()){ msg.textContent = 'That does not match the email.'; return; }
+    if(!reason){ msg.textContent = 'A reason is required.'; return; }
+    this.disabled = true; this.textContent = 'Working…';
+    try{
+      const r = await bfetch(BACKEND + '/admin-account-action', {method:'POST',headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({email:email, action:action, reason:reason, confirm:email})});
+      const d = await r.json().catch(()=>({}));
+      if(!r.ok){ msg.textContent = d.error || ('Failed (' + r.status + ')'); this.disabled=false; this.textContent='Confirm'; return; }
+      ov.remove();
+      const done = document.getElementById('admin-overlay');
+      if(done) done.remove();
+      showAuthAlert(words[0] + ' done for ' + email + '.' + (d.deleted!==undefined ? ' ' + d.deleted + ' row(s) archived and removed.' : ''));
+    }catch(e){ msg.textContent = e.message; this.disabled=false; this.textContent='Confirm'; }
+  };
+}
+
+// ── The device half of a reset ───────────────────────────────────────
+// Nothing on the server can reach into a browser's storage, so the browser has
+// to come and ask. Checked AFTER sign-in, so it is not an unauthenticated way
+// to discover whether an address is registered.
+async function enforceAccountState(){
+  try{
+    const r = await bfetch(BACKEND + '/account-state', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    if(!r.ok) return false;
+    const d = await r.json().catch(()=>({}));
+    if(d.state === 'reset_pending'){ hardResetDevice(); return true; }
+    if(d.state === 'frozen'){ showFrozenNotice(d.reason); return true; }
+  }catch(e){ /* offline or backend down: never strand the user */ }
+  return false;
+}
+
+// Forget everything this browser knows, so the joining protocol runs from the
+// top exactly as it would for somebody who had never opened Bella.
+function hardResetDevice(){
+  try{
+    const kill = [];
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && (k.indexOf('b_')===0 || k.indexOf('bella_')===0)) kill.push(k);
+    }
+    kill.forEach(k => localStorage.removeItem(k));
+    sessionStorage.clear();
+  }catch(e){}
+  try{ fbAuth.signOut().catch(()=>{}); }catch(e){}
+  try{ localStorage.setItem('b_reset_just_ran','1'); }catch(e){}
+  location.reload();
+}
+
+function showFrozenNotice(reason){
+  document.body.innerHTML = '<div style="position:fixed;inset:0;background:#0B2545;display:flex;align-items:center;justify-content:center;padding:24px">' +
+    '<div style="max-width:380px;text-align:center">' +
+      '<div style="font-size:40px;margin-bottom:14px">🔒</div>' +
+      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;color:#F5E6C8;margin-bottom:10px">This account is suspended</div>' +
+      '<div style="font-size:13px;color:rgba(245,230,200,0.65);line-height:1.7">Please contact <a href="mailto:support.bella.ai@gmail.com" style="color:#D4AF37">support.bella.ai@gmail.com</a> and we will sort it out.</div>' +
+    '</div></div>';
 }
 
 function showAuthAlert(message) {
@@ -4603,15 +4856,30 @@ async function submitDeleteAccount(){
       </table>
       <p style="margin-top:16px;color:#666">Account status set to <strong>deletion_requested</strong>. Please action within 72 hours.</p>`;
 
-    await bfetch(BACKEND+'/send-email', {
+    // This call carried NO `type` at all, and /send-email's first line is
+    // `if (!type) return 400`. So every deletion request ever made was written
+    // to the Deletions tab and then emailed to nobody — the 72-hour notice
+    // never arrived. `type:'delete'` is what was missing; `name` and `userId`
+    // are the backend's other two required fields.
+    // Recipient: the backend sends this to ADMIN_EMAIL and ignores `to`.
+    // ADMIN_EMAIL must stay Savio's personal address — index.js:614 uses it as
+    // the authorisation gate — so routing this to support.bella.ai needs a
+    // separate backend variable, not a change here. Queued.
+    const rd = await bfetch(BACKEND+'/send-email', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
+        type: 'delete',
+        name: userName,
+        userId,
+        email: userEmail,
+        reason: fullReason,
         to: 'support.bella.ai@gmail.com',
         subject: `Urgent - Deletion of Account - ${userName} / ${userId}`,
         body: emailBody,
         profileKey: currentProfileKey||'_guest'
       })
     });
+    if(!rd.ok) console.warn('Deletion alert refused:', rd.status, await rd.text().catch(()=>''));
   } catch(e){ console.warn('Delete account error:', e); }
 
   // Remove modal and show goodbye message
