@@ -3840,13 +3840,15 @@ function completeLogin(userData) {
   initAndLaunch(userData);
   // Owner-only menu, and the reset/freeze instruction from the server. Both
   // run after the gate is gone so nothing delays Bella appearing.
-  try{ revealAdminUI(); }catch(e){}
+  // The Admin menu stays hidden until the SERVER says who this is; the page no
+  // longer decides that for itself.
   // If this load is the one right after a reset, tell the server the device
   // complied so the person is not sent round the loop a second time.
   try{
     if(localStorage.getItem('b_reset_just_ran')){
       localStorage.removeItem('b_reset_just_ran');
-      bfetch(BACKEND + '/account-reset-done', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>{});
+      bfetch(BACKEND + '/account-reset-done', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
+        .then(function(){ refreshAdminFlag(); }).catch(()=>{});
     } else {
       enforceAccountState();
     }
@@ -3866,18 +3868,29 @@ function completeLogin(userData) {
 // localStorage and make these buttons appear; the backend checks the
 // Firebase-verified email on every call and refuses everyone else.
 // ============================================================
-const BELLA_ADMIN_EMAIL = 'savioabraham.miiraki@gmail.com';
-
-function _bellaIsAdmin(){
-  try{
-    const e = (JSON.parse(localStorage.getItem('b_registered_user')||'{}').email||'').toLowerCase();
-    return e === BELLA_ADMIN_EMAIL.toLowerCase();
-  }catch(e){ return false; }
-}
+// Savio's address is NOT in this file and must never be put back. It used to
+// be, and index.html is a public page — anyone could read it with View Source.
+// It now lives in exactly one place, the backend's ADMIN_EMAIL setting, and
+// the server tells us `admin: true` on /account-state after checking the
+// Firebase-verified token. Default false: if we never hear, no menu.
+let _bellaAdmin = false;
 
 function revealAdminUI(){
   const s = document.getElementById('admin-section');
-  if(s) s.style.display = _bellaIsAdmin() ? '' : 'none';
+  if(s) s.style.display = _bellaAdmin ? '' : 'none';
+}
+
+// Ask only who we are, WITHOUT acting on account state. Used on the load right
+// after a reset, where acting on the state would send the person round the
+// loop a second time.
+async function refreshAdminFlag(){
+  try{
+    const r = await bfetch(BACKEND + '/account-state', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    if(!r.ok) return;
+    const d = await r.json().catch(()=>({}));
+    _bellaAdmin = !!d.admin;
+    revealAdminUI();
+  }catch(e){}
 }
 
 // Deliberately NOT voice-triggered. A misheard name on a wipe is unrecoverable,
@@ -3915,7 +3928,10 @@ function renderAdminUsers(users){
   };
   body.innerHTML = '<div style="margin-bottom:12px;color:rgba(245,230,200,0.5)">' + users.length + ' account(s). Every action is written to the Audit tab, and anything removed is copied to Archive first.</div>' +
     users.map(u => {
-      const me = (u.email||'').toLowerCase() === BELLA_ADMIN_EMAIL.toLowerCase();
+      // Whose row is mine: read from the account signed in on THIS device. That
+      // is the person's own address on their own machine, so it reveals nothing.
+      const _mine = (function(){ try{ return (JSON.parse(localStorage.getItem('b_registered_user')||'{}').email||'').toLowerCase(); }catch(e){ return ''; } })();
+      const me = !!_mine && (u.email||'').toLowerCase() === _mine;
       const e = esc(u.email||'');
       const btn = (act,label,col) => '<button onclick="adminAct(\''+e+'\',\''+act+'\')" style="margin:3px 4px 0 0;padding:6px 10px;border-radius:8px;border:1px solid '+col+';background:transparent;color:'+col+';font-size:12px;cursor:pointer">'+label+'</button>';
       return '<div style="border:1px solid rgba(212,175,55,0.25);border-radius:12px;padding:12px;margin-bottom:10px">' +
@@ -3985,6 +4001,9 @@ async function enforceAccountState(){
     const r = await bfetch(BACKEND + '/account-state', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
     if(!r.ok) return false;
     const d = await r.json().catch(()=>({}));
+    // Same answer carries who we are, so this costs no extra call.
+    _bellaAdmin = !!d.admin;
+    revealAdminUI();
     if(d.state === 'reset_pending'){ hardResetDevice(); return true; }
     if(d.state === 'frozen'){ showFrozenNotice(d.reason); return true; }
   }catch(e){ /* offline or backend down: never strand the user */ }
@@ -5300,10 +5319,9 @@ async function send(){
     const handled=await handleIdentityInput(disp);if(handled){clearFiles();endTurn();return;}
   }
 
-  // SECURITY RULE 2 — Admin test mode (Savio Gmail only)
-  const SAVIO_ADMIN_EMAIL = 'savioabraham.miiraki@gmail.com';
-  const _currentUserEmail = (JSON.parse(localStorage.getItem('b_registered_user')||'{}').email||'').toLowerCase();
-  const _isAdmin = _currentUserEmail === SAVIO_ADMIN_EMAIL.toLowerCase();
+  // SECURITY RULE 2 — Admin test mode. The address used to be hardcoded right
+  // here in a public page; it is the server's answer now, same flag as the menu.
+  const _isAdmin = _bellaAdmin;
 
   // ── Admin: trigger a spreadsheet backup by asking for it ────────────
   // /backup-sheet works and emails a real .xlsx, but NOTHING called it — no
@@ -6579,9 +6597,9 @@ function toggleRecord(){
       window._mediaRecorder.stop();
     }
     window._recording=false;
-    // Button returns to default black
+    // Button returns to its normal self in whichever theme is on
     const rb=document.getElementById('rec-btn');
-    if(rb){rb.style.background='#0B2545';rb.style.borderColor='#0B2545';}
+    if(rb){ rb.classList.remove('recording'); rb.title='Record'; }
     return;
   }
   // Show recording type modal
@@ -6640,35 +6658,39 @@ function startSelectedRecording(){
         const msgDiv=document.createElement('div');
         msgDiv.className='msg bella-msg';
         const fname=`bella-recording-${Date.now()}.${ext}`;
-        msgDiv.innerHTML=`<div class="mbub" style="background:var(--goldpale);border:1px solid rgba(212,175,55,.3);padding:10px 14px;display:flex;align-items:center;gap:10px">
-          <span style="font-size:13px">🎙️</span>
-          <span style="font-size:12px;font-weight:600;color:var(--navy);flex:1">${fname}</span>
-          <button onclick="saveRecordingToDrive('${url}','${fname}')" title="Save to Google Drive" style="width:32px;height:32px;border-radius:8px;background:#0B2545;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg width="16" height="16" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#D4AF37"/><path d="M43.65 25L29.9 1.2C28.55.4 27 0 25.45 0c-1.55 0-3.1.4-4.5 1.2L6.6 11.1l13.75 23.8H43.65z" fill="#D4AF37"/><path d="M80.7 66.85l-13.75-23.75H43.65l13.75 23.8h23.1c0-1.55-.4-3.1-1.2-4.5z" fill="#D4AF37"/><path d="M43.65 25L57.4 1.2C56 .4 54.45 0 52.9 0H34.4c-1.55 0-3.1.4-4.5 1.2z" fill="#D4AF37"/><path d="M57.4 43.1H29.9L16.15 66.9h54.5z" fill="#D4AF37"/><path d="M80.75 11.1L66.95 1.2C65.6.4 64.05 0 62.5 0h0L48.75 23.8 62.5 47.6h1.35L87.3 15.6c0-1.55-.4-3.1-1.2-4.5z" fill="#D4AF37"/></svg>
+        // Classes, not inline styles. Inline styles cannot survive dark mode here:
+        // the Drive control is a <button>, so `body.dark button{...!important}`
+        // repainted it cream while the download <a> beside it stayed navy — the
+        // pair stopped matching, and a gold icon on cream is 1.71:1, unreadable.
+        // Everything below is driven by the tokens in the v85-recording-file block.
+        msgDiv.innerHTML=`<div class="mbub rec-file">
+          <span class="rec-emoji">\u{1F399}\uFE0F</span>
+          <span class="rec-name">${fname}</span>
+          <button class="rec-act" onclick="saveRecordingToDrive('${url}','${fname}')" title="Save to Google Drive" aria-label="Save to Google Drive">
+            <svg class="rec-drive" width="17" height="17" viewBox="0 0 87.3 78" aria-hidden="true"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z"/></svg>
           </button>
-          <a href="${url}" download="${fname}" title="Download" style="width:32px;height:32px;border-radius:8px;background:#0B2545;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;text-decoration:none">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <a class="rec-act" href="${url}" download="${fname}" title="Download to this computer" aria-label="Download to this computer">
+            <svg class="rec-dl" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           </a>
         </div>`;
         document.getElementById('msgs').appendChild(msgDiv);
         msgDiv.scrollIntoView({behavior:'smooth'});
       },500);
-      // Reset REC button to default black
+      // Reset the button once the recorder has actually stopped
       const rb=document.getElementById('rec-btn');
-      if(rb){rb.style.background='';rb.style.borderColor='';}
-      const rdot=document.getElementById('rec-dot');const rlbl=document.getElementById('rec-lbl');if(rdot)rdot.style.background='';if(rlbl)rlbl.style.color='';
+      if(rb){ rb.classList.remove('recording'); rb.title='Record'; }
       window._recording=false;
     };
     // Disclosure BEFORE recording starts — required
     const discMsg=type==='voice'?'🔴 Voice recording started. Your audio is being captured.':type==='screen'?'🔴 Screen recording started. Your screen is being captured.':'🔴 Video recording started. Your camera and audio are being captured.';
     bellaMsg(discMsg);
-    // Button turns red — dot and REC stay white (set in HTML)
+    // Button goes red with a white ring. A CLASS, not an inline style: dark
+    // mode carries `body.dark button{...!important}`, which an inline style
+    // cannot beat — that is why the red never appeared in dark mode.
+    // #rec-dot and #rec-lbl were removed from the markup long ago; the lines
+    // that coloured them were dead and are gone.
     const rb=document.getElementById('rec-btn');
-    if(rb){
-      rb.style.background='#cc0000';rb.style.borderColor='#cc0000';
-      const dot=document.getElementById('rec-dot');if(dot)dot.style.background='#fff';
-      const lbl=document.getElementById('rec-lbl');if(lbl)lbl.style.color='#fff';
-    }
+    if(rb){ rb.classList.add('recording'); rb.title='Recording — click to stop'; }
     window._mediaRecorder.start();
     window._recording=true;
   }).catch(err=>{
@@ -7983,6 +8005,358 @@ body.dark #mic-lang button.on{background:#D4AF37!important;color:#0B2545!importa
    invisible. Repeating the class lifts this to (0,8,1) and wins. Verified with
    CSS.getMatchedStylesForNode, not by reading the file. */
 body.dark .msg-actions .msg-act-btn.muted.muted.muted.muted.muted{background:#D4AF37!important;border-color:#D4AF37!important;color:#0B2545!important}
+</style>
+
+
+<style id="v83-dark-surface-system">
+/* ══════════════════════════════════════════════════════════════════════════
+   DARK THEME — ONE SURFACE SYSTEM.   Added 2026-10-01.
+
+   WHAT THIS FIXES.  Dark mode showed six cream slabs scattered over a navy
+   page ("patchy"), and fourteen things measured unreadable in real Chrome:
+
+     message box          cream on cream    1.13:1   typed text invisible
+     Mute / Copy / close  cream on cream    1.13:1
+     active conversation  cream on cream    1.00:1   row looked empty
+     My Workshop bar      cream on cream    1.13:1
+     Activated tiles      cream on #FAF8F4  1.16:1
+     avatars, My Account  cream on gold     1.71:1
+     attach paperclip     navy on navy      1.00:1   button looked missing
+
+   THE CAUSE.  <style id="v82-final-system"> carries
+
+     body.dark, body.dark *:not(.msg.user .mbub):not(.msg.user .mbub *)
+       { color:#F5E6C8 !important; }
+
+   which scores (0,7,1) and sets ONLY colour.  Any rule that gives an element
+   a light background still applies its background but LOSES its colour, so
+   the element lands cream-on-cream.  A rule half-applying is the signature.
+
+   THE APPROACH.  Stop painting controls cream in dark mode.  Everything
+   becomes one raised navy surface (#12233B), so the inherited cream text is
+   then CORRECT and no specificity fight is needed at all.  Only the gold
+   surfaces still need navy text forced, and those selectors carry an #id —
+   an id outranks (0,7,1) outright, which no number of classes can do.
+
+   DO NOT swap the #id selectors for classes, and do not merge this into the
+   earlier v7x/v8x blocks.  See CLAUDE.md -> dark-mode CSS traps.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* 1 — the raised surface, replacing every cream slab */
+html body.dark .msg-act-btn,
+html body.dark #sb-shutter-btn,
+html body.dark #sb-toggle-btn,
+html body.dark .feat-item,
+html body.dark .inp-actions .ibtn{
+  background:#12233B !important;
+  border:1px solid rgba(245,230,200,.22) !important;
+}
+html body.dark .inp-actions .ibtn svg,
+html body.dark #sb-shutter-btn svg,
+html body.dark #sb-toggle-btn svg{
+  stroke:#F5E6C8 !important;
+}
+
+/* 2 — the message box joins the input panel instead of sitting on it as a
+       cream block. What you type was 1.13:1 against its own background. */
+html body.dark #ti{
+  background:transparent !important;
+  color:#F5E6C8 !important;
+  border:none !important;
+}
+html body.dark #ti::placeholder{ color:rgba(245,230,200,.55) !important; }
+
+/* every other text field keeps a visible field, raised rather than cream */
+html body.dark textarea,
+html body.dark input[type="text"]{
+  background:#12233B !important;
+  color:#F5E6C8 !important;
+  border:1px solid rgba(245,230,200,.22) !important;
+}
+html body.dark textarea::placeholder,
+html body.dark input[type="text"]::placeholder{
+  color:rgba(245,230,200,.55) !important;
+}
+
+/* 3 — the selected conversation: a gold tint, not a cream block */
+html body.dark #sidebar .thread-item.active{
+  background:rgba(212,175,55,.16) !important;
+  border:1px solid rgba(212,175,55,.45) !important;
+}
+
+/* 4 — gold surfaces keep their gold and get their navy text back.
+       Every selector here carries an #id deliberately (see header). */
+html body.dark #sidebar .sb-logo,
+html body.dark #sb-av,
+html body.dark #msgs .mav,
+html body.dark #user-menu-panel .user-menu-header,
+html body.dark #user-menu-panel .user-menu-title,
+html body.dark #user-menu-panel .user-menu-close{
+  color:#0B2545 !important;
+}
+html body.dark #user-menu-panel .user-menu-close{
+  background:transparent !important;
+  border:none !important;
+}
+
+/* 5 — the two primary actions become gold carrying navy, which is the
+       brand's own dark pairing and makes them read as the main action */
+html body.dark #sidebar .sb-new-chat,
+html body.dark .inp-actions .sbtn{
+  background:#D4AF37 !important;
+  border:none !important;
+}
+html body.dark #sidebar .sb-new-chat,
+html body.dark #sidebar .sb-new-chat *,
+html body.dark .inp-actions .sbtn{
+  color:#0B2545 !important;
+}
+html body.dark #sidebar .sb-new-chat svg,
+html body.dark .inp-actions .sbtn svg{
+  stroke:#0B2545 !important;
+}
+
+/* 6 — the Workshop drawer itself was a light panel (#FAF8F4) that never got a
+       dark rule at all. It is collapsed by default, so the whole drawer opened
+       cream. The raised tiles above sit on it, so it takes the page navy. */
+html body.dark #sb-shutter{ background:#0B2545 !important; }
+
+/* 7 — Workshop tile labels sit on the raised surface now */
+html body.dark .feat-item .feat-label,
+html body.dark .feat-item .feat-icon{ color:#F5E6C8 !important; }
+</style>
+
+
+<style id="v84-recording-state">
+/* ══════════════════════════════════════════════════════════════════════════
+   THE RECORD BUTTON WHILE IT IS RECORDING.   Added 2026-10-01.
+
+   TWO BUGS THIS FIXES.
+   1. The red never appeared in DARK mode. The code set an inline
+      `rb.style.background='#cc0000'`, but dark mode carries
+      `body.dark button{background:...!important}` — and an inline style
+      without !important LOSES to a stylesheet !important. It worked in
+      light and silently did nothing in dark.
+   2. The code also coloured `#rec-dot` and `#rec-lbl` white. NEITHER
+      ELEMENT EXISTS in the page — they are leftovers from an older button.
+      Those lines were dead and have been removed.
+
+   WHY RED FILL WITH A WHITE RING, rather than a white button with red
+   accents — measured, not chosen by eye:
+      white button on Bella's cream page   1.06:1   invisible
+      white icon on red                    5.89:1   clear
+      red against the cream page           5.55:1   clear
+      red against the navy page            2.61:1   needs the white ring
+   So red carries the state and the white ring is what separates it from
+   the dark theme's navy. One treatment, correct in both themes.
+
+   WHY AN #id: an id outranks every class rule, including the dark-mode
+   blanket and the v83 surface rule. This is the only form that holds in
+   both themes. See CLAUDE.md -> dark-mode CSS traps.
+   ══════════════════════════════════════════════════════════════════════════ */
+#rec-btn.recording{
+  background:#CC0000 !important;
+  border:2px solid #FFFFFF !important;
+  animation:bella-rec-pulse 1.6s ease-in-out infinite;
+}
+#rec-btn.recording svg{ stroke:#FFFFFF !important; }
+
+/* a slow halo so it is obviously live, not just a colour change */
+@keyframes bella-rec-pulse{
+  0%,100%{ box-shadow:0 0 0 0 rgba(204,0,0,.55); }
+  50%    { box-shadow:0 0 0 6px rgba(204,0,0,0); }
+}
+@media (prefers-reduced-motion:reduce){
+  #rec-btn.recording{ animation:none !important; }
+}
+</style>
+
+
+<style id="v85-recording-file">
+/* ══════════════════════════════════════════════════════════════════════════
+   THE SAVED-RECORDING PILL, AND THE GOOGLE DRIVE ICON.   Added 2026-10-01.
+
+   THE DRIVE ICON.  The real Drive mark is SIX separate facets. The old icon
+   filled all six in one flat gold, so they merged into a shape with no
+   internal edges and read as a flag, not a drive. (Several of its paths were
+   wrong as well.) This is the authentic geometry, filled in the icon colour
+   with a hairline of the BUTTON'S OWN BACKGROUND drawn between the facets —
+   that hairline is the whole trick, and it is what was missing.
+
+   WHY IT IS TOKEN-DRIVEN, not hardcoded.  Savio asked for it to adapt to
+   both themes. The separator must always equal whatever the button is
+   painted, or the facets stop separating. Both come from the same pair of
+   variables below, so the icon can never fall out of step with its button.
+
+   WHAT WAS BROKEN IN DARK MODE.  The pill was built from inline styles. The
+   Drive control is a <button> and the download is an <a>, so in dark
+   `body.dark button{background:#E8D9B8!important}` repainted ONLY the Drive
+   button cream — the two stopped matching, and the gold icon on cream sat at
+   1.71:1, invisible. Classes plus these tokens fix both halves at once.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  --rec-pill-bg:#F5E6C8;            /* the file pill itself          */
+  --rec-pill-bd:rgba(212,175,55,.30);
+  --rec-pill-fg:#0B2545;            /* the file name                 */
+  --rec-btn-bg:#0B2545;             /* the two round controls        */
+  --rec-btn-bd:transparent;
+  --rec-icon:#D4AF37;               /* both glyphs                   */
+  --rec-drive-sep:#0B2545;          /* MUST equal --rec-btn-bg       */
+}
+html body.dark{
+  --rec-pill-bg:#12233B;
+  --rec-pill-bd:rgba(245,230,200,.22);
+  --rec-pill-fg:#F5E6C8;
+  --rec-btn-bg:#0B2545;
+  --rec-btn-bd:rgba(212,175,55,.45); /* a gold hairline, or the button
+                                        disappears into the dark pill */
+  --rec-icon:#D4AF37;
+  --rec-drive-sep:#0B2545;
+}
+
+.rec-file{
+  background:var(--rec-pill-bg) !important;
+  border:1px solid var(--rec-pill-bd) !important;
+  padding:10px 14px !important;
+  display:flex !important; align-items:center !important; gap:10px !important;
+}
+.rec-file .rec-emoji{ font-size:13px; line-height:1 }
+.rec-file .rec-name{
+  font-size:12px; font-weight:600; flex:1; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:var(--rec-pill-fg);
+}
+.rec-file .rec-act{
+  width:32px; height:32px; border-radius:8px;
+  background:var(--rec-btn-bg) !important;
+  border:1px solid var(--rec-btn-bd) !important;
+  cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+  flex-shrink:0; text-decoration:none; padding:0;
+  transition:transform .12s ease;
+}
+.rec-file .rec-act:hover{ transform:translateY(-1px) }
+.rec-file .rec-act:active{ transform:scale(.94) }
+.rec-file .rec-act:focus-visible{ outline:2px solid var(--rec-icon); outline-offset:2px }
+
+/* download glyph — a stroked icon */
+.rec-file .rec-dl{ stroke:var(--rec-icon) !important; fill:none !important }
+
+/* Drive glyph — filled facets, hairline of the button colour between them */
+.rec-file .rec-drive path{
+  fill:var(--rec-icon) !important;
+  stroke:var(--rec-drive-sep) !important;
+  stroke-width:3.5 !important;
+  stroke-linejoin:round !important;
+}
+</style>
+
+
+<style id="v86-palette-g">
+/* ══════════════════════════════════════════════════════════════════════════
+   DARK PALETTE — OPTION G.   Savio's choice, 2026-10-01.
+
+   THE RULE: navy ground, cream for everything you read, and GOLD RESERVED
+   FOR THE THINGS YOU PRESS. Gold lands on exactly two elements in the whole
+   page — New Conversation and Send — so it still pulls the eye. Everything
+   else that used to be gold (avatars, hairlines, labels, the selected
+   conversation, every icon stroke) is now cream.
+
+   This supersedes the gold choices made in v83 above. To go back to option A
+   — gold avatars as well — delete this block; nothing else depends on it.
+
+   Chosen on a measured argument, not taste: gold is the brightest, most
+   saturated colour on screen, and Bella's "B" avatar repeats beside EVERY
+   reply. In gold it competed with the Send button on every line of a long
+   conversation. In cream it sits back.
+
+   VERIFIED: 0 gold elements outside the two buttons, 0 unreadable elements,
+   at both 1280px and 375px. Scanned, not eyeballed.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. every gold fill becomes cream ───────────────────────────────── */
+html body.dark #sidebar .sb-logo,
+html body.dark #sb-av,
+html body.dark #msgs .mav,
+html body.dark #user-menu-panel .user-menu-header,
+html body.dark .sug-chip,
+html body.dark #theme-tog,
+html body.dark .topbar-btn,
+html body.dark .ibtn,
+html body.dark .toggle-sw,
+html body.dark .toggle-sw.on,
+html body.dark .rec-ibtn,
+html body.dark .read-offer-btn,
+html body.dark #mic-lang button.on,
+html body.dark #img-panel .img-btn.on,
+html body.dark #img-panel .img-btn-go{
+  background:#F5E6C8 !important; border-color:#F5E6C8 !important;
+}
+
+/* ── 2. raised controls keep their surface, cream-edged ──────────────── */
+html body.dark .msg-act-btn,
+html body.dark #sb-shutter-btn,
+html body.dark #sb-toggle-btn,
+html body.dark .feat-item,
+html body.dark .inp-actions .ibtn,
+html body.dark #tb-menu-btn{
+  background:#12233B !important;
+  border:1px solid rgba(245,230,200,.26) !important;
+}
+/* the mobile menu button only exists below 640px, which is why it was missed
+   at desktop width — its icon was cream on a cream fill, 1.00:1. */
+html body.dark #tb-menu-btn svg{ stroke:#F5E6C8 !important; }
+html body.dark .inp-box{ border-color:rgba(245,230,200,.30) !important; }
+
+/* ── 3. the selected conversation: a cream tint, not a gold one ──────── */
+html body.dark #sidebar .thread-item.active{
+  background:rgba(245,230,200,.13) !important;
+  border:1px solid rgba(245,230,200,.45) !important;
+}
+
+/* ── 4. every gold hairline and label becomes cream ──────────────────── */
+html body.dark{
+  --border:rgba(245,230,200,0.14) !important;
+  --bordermid:rgba(245,230,200,0.26) !important;
+  --navy3:#F5E6C8 !important;
+}
+html body.dark svg{ stroke:#F5E6C8 !important; }
+html body.dark .disc,
+html body.dark .voice-toggle span,
+html body.dark #shutter-label,
+html body.dark #sb-shutter .feat-label,
+html body.dark .trash-count,
+html body.dark .read-offer-q,
+html body.dark #tb-menu-btn,
+html body.dark #mic-lang button{ color:#F5E6C8 !important; }
+html body.dark .topbar-sep-rhs{ background:rgba(245,230,200,.45) !important; }
+html body.dark .tb-thought-emoji{ filter:drop-shadow(0 0 5px rgba(245,230,200,.8)) !important; }
+html body.dark .trash-head:hover,
+html body.dark .trash-item:hover{ background:rgba(245,230,200,.12) !important; }
+html body.dark .read-offer{
+  background:rgba(245,230,200,.10) !important;
+  border-color:rgba(245,230,200,.42) !important;
+}
+html body.dark #mem-badge{
+  background:rgba(245,230,200,.12) !important;
+  border-color:rgba(245,230,200,.40) !important;
+  color:#F5E6C8 !important;
+}
+html body.dark #mic-lang{ border-color:rgba(245,230,200,.30) !important; }
+html body.dark #sb-shutter > div{ border-top-color:rgba(245,230,200,.18) !important; }
+html body.dark #ti::placeholder{ color:rgba(245,230,200,.55) !important; }
+
+/* ── 5. and gold returns to the two things you press, and only those ── */
+html body.dark #sidebar .sb-new-chat,
+html body.dark .inp-actions .sbtn{
+  background:#D4AF37 !important;
+  border-color:#D4AF37 !important;
+}
+html body.dark #sidebar .sb-new-chat,
+html body.dark #sidebar .sb-new-chat *,
+html body.dark .inp-actions .sbtn{ color:#0B2545 !important; }
+html body.dark #sidebar .sb-new-chat svg,
+html body.dark .inp-actions .sbtn svg{ stroke:#0B2545 !important; }
 </style>
 
 
