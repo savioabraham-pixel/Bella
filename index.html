@@ -428,6 +428,31 @@ body.dark #img-panel .img-sw-hex{color:#F5E6C8!important}
 .msg.bella .mbub{background:var(--white);border:1px solid var(--border);border-bottom-left-radius:4px;box-shadow:var(--shadow)}
 .msg.user .mbub{background:var(--navy);color:#fff;border-bottom-right-radius:4px}
 .msg-actions{display:flex;align-items:center;gap:5px}
+/* THE MEMORY METER — Savio spotted this in dark mode, 2026-10-02.
+   The track was rgba(11,37,69,.1): a navy tint that reads as a faint grey on
+   white and, on the navy page, flattens to EXACTLY the page colour. Measured
+   1.00:1 -- not faint, identical. So the bar had no visible extent and a 2%
+   fill was a 1.19px speck floating on navy with nothing to read it against.
+   Light mode was barely better at 1.22:1.
+   Colours are hardcoded per theme on purpose: --gold inverts under body.dark,
+   which is the trap that has bitten this page before. The border is his idea
+   and it is the part that does the real work -- at 2% the fill is about one
+   pixel, so the OUTLINE is what tells you how much is used. */
+#mem-progress-track{
+  box-sizing:border-box;width:100%;height:7px;border-radius:4px;overflow:hidden;
+  background:#E7E9EC;border:1px solid rgba(11,37,69,.58);
+}
+body.dark #mem-progress-track{
+  background:rgba(245,230,200,.16);border-color:rgba(245,230,200,.48);
+}
+/* 8px is not a size you read a number at, and this number is the whole point. */
+#mem-progress-label{font-size:10px;font-weight:600;letter-spacing:.01em}
+/* On navy the two ALERT fills were the least visible of the five, which is
+   backwards -- #CC0000 measured 2.61:1 against the page and 100% is the state
+   that stops Bella making new conversations. Lightened for dark mode only;
+   light mode keeps the deeper reds, which already pass there. */
+body.dark #mem-progress-bar[data-level="full"]{background:#FF6B6B!important}
+body.dark #mem-progress-bar[data-level="high"]{background:#FF9A4D!important}
 #lang-pick{position:fixed;z-index:9000;display:flex;flex-direction:column;gap:2px;padding:5px;
 border-radius:10px;background:#FFFDF7;border:1px solid rgba(11,37,69,.18);box-shadow:0 8px 24px rgba(11,37,69,.18)}
 #lang-pick .lang-pick-opt{appearance:none;cursor:pointer;text-align:left;white-space:nowrap;
@@ -1157,9 +1182,9 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         <div class="mem-badge" id="mem-badge" title="Memory status">💾</div>
         <div id="mem-progress-wrap" style="display:none;width:60px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
-            <span style="font-size:8px;color:var(--tsoft)" id="mem-progress-label">0%</span>
+            <span style="color:var(--tsoft)" id="mem-progress-label">0%</span>
           </div>
-          <div style="width:100%;height:4px;background:rgba(11,37,69,0.1);border-radius:2px;overflow:hidden">
+          <div id="mem-progress-track">
             <div id="mem-progress-bar" style="height:100%;border-radius:2px;background:var(--gold);width:0%;transition:width .5s ease"></div>
           </div>
         </div>
@@ -2308,22 +2333,30 @@ function _renderMemoryBar(pct, memCount, threadCount){
   bar.style.width=pct+'%';
   label.textContent=pct+'%';
   if(pct>=100){
+    bar.dataset.level='full';   label.dataset.level='full';
     bar.style.background='#cc0000';
     label.style.color='#cc0000';
     _showMemAlert(100,memCount,threadCount);
   } else if(pct>=90){
+    bar.dataset.level='high';   label.dataset.level='high';
     bar.style.background='#E05A00';
-    label.style.color='#E05A00';
+    // Text needs a darker orange than the fill: #E05A00 on white is 3.73:1.
+    label.style.color='#A33E00';
     _showMemAlert(90,memCount,threadCount);
   } else if(pct>=80){
+    bar.dataset.level='warn';   label.dataset.level='warn';
     bar.style.background='#D4AF37';
-    label.style.color='#D4AF37';
+    // Gold text on white measured 2.10:1 -- the same reason the cream email
+    // palette went to bronze. The fill stays gold; the number goes bronze.
+    label.style.color='#6B4E0F';
     _showMemAlert(80,memCount,threadCount);
   } else if(pct>=60){
+    bar.dataset.level='notice'; label.dataset.level='notice';
     bar.style.background='#D4AF37';
     label.style.color='var(--tsoft)';
     _showMemAlert(60,memCount,threadCount);
   } else {
+    bar.dataset.level='ok';     label.dataset.level='ok';
     bar.style.background='#2E8B57';
     label.style.color='var(--tsoft)';
     _lastMemAlert=0;
