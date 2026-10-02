@@ -3788,14 +3788,15 @@ async function completeRegistration() {
     // ("name and email are required for welcome email"). This call sent `to`
     // and no `name`, so every welcome email since it was written was rejected
     // and NOT ONE new user ever received one. fetch() does not reject on 400,
-    // so the catch below never fired and nothing said a word. `userId` is sent
-    // for the queued backend change that puts it back in the template; the
-    // backend's own welcome email does not carry it yet.
+    // so the catch below never fired and nothing said a word. `userId` is read
+    // by the backend template as of v5.8 (2026-10-01) and shown on the welcome
+    // email as a card, so this field is no longer sent into a void.
     const r = await bfetch(BACKEND + '/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'welcome',
+        palette: emailPalette(),   // the reader's device decides; see emailPalette()
         name: userData.preferredName || userData.fullName || '',
         email: userData.email,
         userId,
@@ -3808,6 +3809,33 @@ async function completeRegistration() {
     // A 4xx here is silent otherwise, which is how this went unnoticed.
     if(!r.ok) console.warn('Welcome email refused:', r.status, await r.text().catch(()=>''));
   } catch(e){ console.warn('Welcome email error:', e); }
+
+  // Format 3 of his four, built 2026-10-01. Until now NOTHING told support that
+  // somebody had registered -- /send-email knew only 'welcome' and 'delete'.
+  // Deliberately its own try/catch: a failure telling support must never cost
+  // the new user their welcome email, and the reverse is equally true.
+  try{
+    const nj = await bfetch(BACKEND + '/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'newjoiner',
+        name: userData.fullName || userData.preferredName || '',
+        email: userData.email,
+        userId,
+        phone: userData.mobile || '',
+        dob: userData.dob || '',
+        // The anti-relay guard reads `to`. The backend routes this one to
+        // support from the type alone and ignores `to`, so changing it here
+        // cannot point one of Bella's templates at an outsider.
+        to: 'support.bella.ai@gmail.com'
+        // No profileKey: resolveAndStoreProfileKey() WRITES as well as reads,
+        // and the welcome call above has already run it. Calling it twice per
+        // registration would be a side effect for nothing.
+      })
+    });
+    if(!nj.ok) console.warn('New-joiner alert refused:', nj.status, await nj.text().catch(()=>''));
+  } catch(e){ console.warn('New-joiner alert error:', e); }
 
   completeLogin(userData);
 }
@@ -4591,7 +4619,8 @@ function downloadMyData(){
     const conv = JSON.parse(localStorage.getItem('b_threads')||'{}') || {};
     const del  = JSON.parse(localStorage.getItem(TRASH_KEY)||'{}') || {};
     const prefs = {
-      theme: localStorage.getItem('b_theme')||null,
+      theme: (localStorage.getItem('b_dark')==='1') ? 'dark'
+            : (localStorage.getItem('b_dark')==='0') ? 'light' : null,
       clockFormat: localStorage.getItem('b_clock_fmt')||null,
       voiceLanguage: localStorage.getItem('b_voice_lang')||null
     };
@@ -4807,7 +4836,7 @@ function confirmDeleteAccount(){
       <div style="padding:28px 28px 20px;text-align:center;border-bottom:1px solid rgba(212,175,55,0.15)">
         <div style="font-size:36px;margin-bottom:12px">💔</div>
         <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:#F5E6C8;margin-bottom:8px">We're sorry to see you go, ${userName}</div>
-        <div style="font-size:12px;color:rgba(245,230,200,0.6);line-height:1.7">Your deletion request will be processed within <strong style="color:#D4AF37">72 hours</strong>. During this time your account remains accessible. Once deleted, all your conversations, memories, and preferences will be permanently wiped from our servers.<br><br>If you ever decide to return, you'll be welcomed as a new user — though Bella won't remember you. 🤍</div>
+        <div style="font-size:12px;color:rgba(245,230,200,0.6);line-height:1.7">Your request goes to Bella's owner and will be actioned within <strong style="color:#D4AF37">72 hours</strong>. Until then your account stays accessible, so you can still change your mind. You'll get an email confirming the request, with your User ID.<br><br>When it is actioned your conversations, memories and preferences are removed. If you ever decide to return, you'll be welcomed as a new user — though Bella won't remember you. 🤍</div>
       </div>
       <div style="padding:20px 28px">
         <div style="font-size:11px;color:rgba(245,230,200,0.5);letter-spacing:.6px;margin-bottom:8px">REASON FOR LEAVING *</div>
@@ -4901,9 +4930,29 @@ async function submitDeleteAccount(){
     if(!rd.ok) console.warn('Deletion alert refused:', rd.status, await rd.text().catch(()=>''));
   } catch(e){ console.warn('Delete account error:', e); }
 
+  // Format 4 of his four, built 2026-10-01. A person asked to be deleted and
+  // heard NOTHING back -- no record, no reference, no way to cancel. Its own
+  // try/catch so it cannot interfere with the alert to support above.
+  try{
+    if(userEmail){
+      const ack = await bfetch(BACKEND+'/send-email', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          type:'delete-ack',
+          palette: emailPalette(),   // the reader's device decides; see emailPalette()
+          name: userName,
+          userId,
+          email: userEmail,
+          to: userEmail   // read by the anti-relay guard; the backend routes by type
+        })
+      });
+      if(!ack.ok) console.warn('Deletion acknowledgement refused:', ack.status, await ack.text().catch(()=>''));
+    }
+  } catch(e){ console.warn('Deletion acknowledgement error:', e); }
+
   // Remove modal and show goodbye message
   document.getElementById('delete-account-modal').remove();
-  bellaMsg(`Goodbye, ${userName}. 🤍\n\nYour deletion request has been received and will be processed within **72 hours**. During this time, your account remains accessible.\n\nOnce deleted, all your conversations, memories, and preferences will be permanently removed from our servers. You're always welcome back — though it'll be a fresh start.\n\nWishing you all the very best. It was a privilege to be your companion. 🌸`);
+  bellaMsg(`Goodbye, ${userName}. 🤍\n\nYour request has been received and will be actioned within **72 hours**. Until then your account stays accessible, in case you change your mind — I've sent you an email confirming it, with your User ID.\n\nWhen it is actioned, your conversations, memories and preferences are removed. You're always welcome back — though it'll be a fresh start.\n\nWishing you all the very best. It was a privilege to be your companion. 🌸`);
 }
 function toggleShutter(){
   const shutter=document.getElementById('sb-shutter');
@@ -5086,17 +5135,27 @@ async function submitFeedback(){
   btn.disabled=true;
   try{
     const feedbackId='fb_'+Date.now();
-    const now=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});
-    // Save to Sheets via backend
-    await bfetch(BACKEND+'/sheets-write',{
+    // This used to call /sheets-write, which saved the row and told NOBODY.
+    // /user-feedback appends the very same 14-column row AND emails support.
+    // Found 2026-10-01: the only endpoint that alerts support had never had a
+    // caller, so every piece of feedback the family ever sent sat unread in a
+    // spreadsheet while the form said "You'll hear from Bella".
+    const fr=await bfetch(BACKEND+'/user-feedback',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        range:'Feedback!A:N',
-        values:[[feedbackId,currentProfileKey||'_guest',currentAddressedName||'Guest',cfg.userEmail||'',_selectedFeedbackCat,text,'pending','false',now,'','false','false','','']],
-        append:true
+        feedbackId,
+        profileKey:currentProfileKey||'_guest',
+        name:currentAddressedName||'Guest',
+        email:cfg.userEmail||'',
+        userId:localStorage.getItem('b_userid')||'',
+        category:_selectedFeedbackCat,
+        text
       })
     });
+    // A 4xx was silent here too: the thank-you appeared whether or not the
+    // feedback was stored. Now a refusal reaches the catch below.
+    if(!fr.ok) throw new Error('feedback refused: '+fr.status+' '+await fr.text().catch(()=>''));
     closeFeedback();
     // Thank the user in chat
     const catLabels={bug:'bug report',improve:'improvement suggestion',feature:'new feature idea',praise:'kind words',voice:'voice feedback',mobile:'mobile feedback'};
@@ -6716,6 +6775,29 @@ function applyLight(){
   const btn=document.getElementById('theme-btn');
   if(btn)btn.style.background='#0B2545';
   isDark=false;document.body.classList.remove('dark');}
+
+// Which palette a Bella email should use for the person about to READ it.
+// Savio's rule, 2026-10-02: every email follows the reader's own device, with no
+// exception for family, friends or anyone else, and falls back to navy when the
+// device has not said. The email itself cannot do this -- @media
+// (prefers-color-scheme) sits at ~42% support across mail clients and Gmail
+// ignores it outright -- but the page knows before it ever asks the backend to
+// send, so the choice is made here and travels as one word.
+// It also sidesteps Gmail on Android, which inverts email backgrounds only when
+// they are not already dark: send a dark reader a dark email and there is
+// nothing left for it to invert.
+// Bella's own toggle wins when they have actually touched it; otherwise the
+// operating system decides. 'navy' on anything unexpected, which is also the
+// backend's own default, so a missing value can never produce an unstyled email.
+function emailPalette(){
+  try{
+    const set = localStorage.getItem('b_dark');
+    if(set === '1') return 'navy';
+    if(set === '0') return 'cream';
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'navy' : 'cream';
+  }catch(e){ return 'navy'; }
+}
 
 // ============================================================
 // UTILS
