@@ -943,9 +943,48 @@ body.dark button:hover{
 <style id="v82-final-system">
 /* ===== FINAL DARK THEME SYSTEM (STRUCTURE SAFE) ===== */
 
-/* 1. All text on navy */
+/* 1. All text on navy.
+   BUTTONS ARE EXCLUDED, and that exclusion is load-bearing. `body.dark button`
+   below gives every button a CREAM fill (#E8D9B8) and navy text -- but this
+   blanket rule used to beat it on specificity (its :not() arguments inflate it
+   to 7 classes) and repaint that navy text cream. Cream on cream, 1.13:1.
+   Measured 2026-10-02 across 20 panels: it had silently destroyed 32 controls,
+   including BOTH buttons of the location permission prompt, the whole feedback
+   category grid, the converter tabs, and both buttons of the delete-account
+   confirmation. Buttons now keep the navy text their own rule gives them, and
+   the handful that sit on a DARK surface get their cream back explicitly in
+   section 2b below -- stated once, where it can be seen, rather than inherited
+   by accident. */
 body.dark,
-body.dark *:not(.msg.user .mbub):not(.msg.user .mbub *){
+body.dark *:not(.msg.user .mbub):not(.msg.user .mbub *):not(button):not(button *){
+  color:#F5E6C8 !important;
+}
+
+/* 2b. The buttons that are deliberately given a DARK surface elsewhere in this
+   sheet. They used to rely on inheriting cream from the blanket above; now that
+   buttons are excluded from it, they must say so themselves or they would turn
+   navy-on-navy -- the very bug this change fixes, in mirror image. */
+body.dark .msg-act-btn, body.dark .msg-act-btn *,
+body.dark #sb-shutter-btn, body.dark #sb-shutter-btn *,
+body.dark #sb-toggle-btn, body.dark #sb-toggle-btn *,
+body.dark .feat-item, body.dark .feat-item *,
+body.dark .inp-actions .ibtn, body.dark .inp-actions .ibtn *,
+body.dark #tb-menu-btn, body.dark #tb-menu-btn *,
+body.dark #mic-lang button{
+  color:#F5E6C8 !important;
+}
+
+/* 2c. The feedback panel's card is hardcoded #FFFFFF -- it is a WHITE card in
+   both themes. The blanket rule was painting its labels cream, so "What kind of
+   feedback is this?", "Tell us more" and the reassurance line underneath all sat
+   cream-on-white at 1.23:1. Measured 2026-10-02. Scoped by #id so it outranks
+   the blanket (an id beats any number of classes), with the navy header given
+   its cream back immediately after. If this panel is ever given a dark surface
+   of its own, delete this block rather than fighting it. */
+body.dark #feedback-overlay *{
+  color:#0B2545 !important;
+}
+body.dark #feedback-head, body.dark #feedback-head *{
   color:#F5E6C8 !important;
 }
 
@@ -966,7 +1005,13 @@ body.dark *:not(.msg.user .mbub):not(.msg.user .mbub *){
    fighting it here would be a second source of truth. */
 body.dark .msg.bella .mbub{
   background:rgba(245,230,200,.13) !important;
-  border:1px solid rgba(245,230,200,.30) !important;
+  /* The hairline is deliberately the thing doing the work, not the fill.
+     Raising the FILL to lift the bubble off the page costs text contrast
+     (20% wash drops cream text from 8.87:1 to 7.2:1); raising the LINE costs
+     nothing at all. So this sits at .45 -- the exact value the active sidebar
+     thread item uses -- which both answers Savio's worry about the bubble
+     blending into the navy and keeps the two surfaces visually consistent. */
+  border:1px solid rgba(245,230,200,.45) !important;
   box-shadow:0 2px 12px rgba(0,0,0,.25) !important;
 }
 
@@ -1040,6 +1085,27 @@ body.dark #sidebar .sb-new-chat span{
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 </head>
 <body>
+<script>
+/* The saved theme, applied BEFORE anything is painted.
+   It used to be applied only inside splashTap() -- i.e. only once the user had
+   tapped "Tap anywhere to begin" -- so every single launch rendered the light
+   theme first and then flipped. A user who had chosen dark got a white flash on
+   every load, which on a phone at night is a flash in the face. Worse, that tap
+   was the ONLY path that applied it, so anything that ever auto-dismissed the
+   splash would have lost dark mode altogether.
+   This runs as the first thing inside <body>, so the class is on the element
+   before the browser paints a single frame.
+   It deliberately touches NOTHING but the class. `isDark` is not declared until
+   line ~2039 and `applyDark()` is defined further down still -- referencing
+   either from here would be a ReferenceError at parse time, which is the exact
+   class of bug that once blanked the page for every new user. splashTap() still
+   calls applyDark() as before, which syncs `isDark` and the knob; adding the
+   class a second time is a no-op.
+   This does NOT make Bella follow the operating system's theme -- that is a
+   separate change that would alter what every existing user sees, and it has
+   not been approved. This only honours a choice the user already made. */
+try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'); }catch(e){}
+</script>
 
 <!-- SPLASH -->
 <div id="splash" onclick="splashTap()">
@@ -1516,7 +1582,7 @@ body.dark #sidebar .sb-new-chat span{
 <div id="feedback-overlay" style="display:none;position:fixed;inset:0;background:rgba(11,37,69,0.6);backdrop-filter:blur(8px);z-index:150;align-items:center;justify-content:center">
   <div style="background:#FFFFFF;border-radius:24px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.25)">
     <!-- Header -->
-    <div style="background:#0B2545;border-radius:24px 24px 0 0;padding:24px 28px;display:flex;align-items:center;justify-content:space-between">
+    <div id="feedback-head" style="background:#0B2545;border-radius:24px 24px 0 0;padding:24px 28px;display:flex;align-items:center;justify-content:space-between">
       <div>
         <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:#F5E6C8">Help Bella Improve</div>
         <div style="font-size:11px;color:rgba(245,230,200,0.6);margin-top:2px">Your feedback shapes Bella's future</div>
