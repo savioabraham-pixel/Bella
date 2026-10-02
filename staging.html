@@ -951,12 +951,25 @@ body.dark *:not(.msg.user .mbub):not(.msg.user .mbub *){
   color:#F5E6C8 !important;
 }
 
-/* 2. Bella message = NO bubble */
-body.dark .msg.bot .mbub{
-  background:transparent !important;
-  border:none !important;
-  box-shadow:none !important;
-  padding:0 !important;
+/* 2. Bella message bubble in dark mode.
+   THIS RULE WAS DEAD AND IT COST THE WHOLE APP. It said `.msg.bot`, but Bella's
+   messages are built with className 'msg bella' -- `.msg.bot` was the only such
+   string in the file and matched no element ever. So the bubble kept the cream
+   background forced later in the sheet, while the blanket dark rule painted its
+   text cream too: #F5E6C8 on #F6EFE2, measured 1.08:1. Bella's replies -- the
+   entire content of the app -- were invisible in dark mode on the live site.
+   Savio reported it from a screenshot; it had passed an earlier dark-mode audit
+   only because that audit ran on a page with no messages on it.
+   Now built as Savio asked: the same surface the LHS thread items use, a cream
+   wash over the navy ground with a cream hairline, so a reply reads as the same
+   kind of object in both themes. Specificity (0,4,1) beats the `.msg.bella
+   .mbub` (0,3,0) rule that forces the cream background, so this wins wherever
+   it sits in the sheet. The cream TEXT is left to the blanket rule above --
+   fighting it here would be a second source of truth. */
+body.dark .msg.bella .mbub{
+  background:rgba(245,230,200,.13) !important;
+  border:1px solid rgba(245,230,200,.30) !important;
+  box-shadow:0 2px 12px rgba(0,0,0,.25) !important;
 }
 
 /* 3. User message = cream bubble */
