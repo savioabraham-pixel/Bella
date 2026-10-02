@@ -428,6 +428,17 @@ body.dark #img-panel .img-sw-hex{color:#F5E6C8!important}
 .msg.bella .mbub{background:var(--white);border:1px solid var(--border);border-bottom-left-radius:4px;box-shadow:var(--shadow)}
 .msg.user .mbub{background:var(--navy);color:#fff;border-bottom-right-radius:4px}
 .msg-actions{display:flex;align-items:center;gap:5px}
+#lang-pick{position:fixed;z-index:9000;display:flex;flex-direction:column;gap:2px;padding:5px;
+border-radius:10px;background:#FFFDF7;border:1px solid rgba(11,37,69,.18);box-shadow:0 8px 24px rgba(11,37,69,.18)}
+#lang-pick .lang-pick-opt{appearance:none;cursor:pointer;text-align:left;white-space:nowrap;
+padding:7px 13px;border-radius:7px;border:1px solid transparent;background:transparent;
+color:#0B2545;font-size:13px;font-family:inherit}
+#lang-pick .lang-pick-opt:hover{background:rgba(11,37,69,.07)}
+#lang-pick .lang-pick-opt.on{background:#0B2545;border-color:#0B2545;color:#F5E6C8;font-weight:600}
+body.dark #lang-pick{background:#0E2B50;border-color:rgba(245,230,200,.22);box-shadow:0 8px 24px rgba(0,0,0,.45)}
+body.dark #lang-pick .lang-pick-opt{color:#F5E6C8}
+body.dark #lang-pick .lang-pick-opt:hover{background:rgba(245,230,200,.12)}
+body.dark #lang-pick .lang-pick-opt.on.on.on.on.on{background:#D4AF37!important;border-color:#D4AF37!important;color:#0B2545!important}
 .msg-act-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;border:1px solid var(--border);background:transparent;color:var(--tsoft)}
 .user-actions{justify-content:flex-end}
 .user-actions .msg-act-btn{color:var(--tmid)}
@@ -5378,7 +5389,7 @@ async function summariseThread(){
         reply=reply.replace(/\[Thinking:[^\]]*\]/gi,'').replace(/\[Searching:[^\]]*\]/gi,'').replace(/\[Source Link Example:[^\]]*\]/gi,'').trim();
       }
     hideThinking();
-    if(reply){bellaMsg('**Thread Summary**\n\n'+reply);speakText('Here is a summary of our conversation so far.',detectLanguage(reply));}
+    if(reply){bellaMsg('**Thread Summary**\n\n'+reply);speakText('Here is a summary of our conversation so far.',chosenLang()||detectLanguage(reply));}
   }catch(e){hideThinking();bellaMsg('Sorry, I could not summarise this thread right now.');}
 }
 
@@ -5519,7 +5530,7 @@ async function send(){
   if(pTexts.length>0)fullMsg+='\n\n'+pTexts.map((t,i)=>`[DOCUMENT ${i+1}: ${pFiles[i]?.name||'file'}]\n${t.substring(0,15000)}`).join('\n\n');
   for(const img of pImages){if(img)imagePartsForAPI.push({inlineData:{mimeType:img.mimeType,data:img.data}});}
   clearFiles();
-  const lang=detectLanguage(fullMsg);
+  const lang=chosenLang()||detectLanguage(fullMsg);
   // A plain "what time is it in X" is answered from the browser's own timezone
   // data — exact, instant, daylight-saving aware, and it costs nothing. Sending
   // it to web search is what produced a list of zones instead of the time.
@@ -5624,6 +5635,18 @@ async function send(){
 // Bengali, Hindi or Marathi. Costs about 20 tokens a message.
 function _replyLangNote(){
   const NAMES={bn:'Bengali',hi:'Hindi',mr:'Marathi'};
+  // A deliberate press of the language button OUTRANKS script detection. This is
+  // the line that makes romanised typing work: "kaise ho" is Latin script, so
+  // detectLanguage() calls it English, but a user who chose Hindi wants Hindi.
+  try{
+    const CH = chosenLang();
+    if(CH){
+      const L = NAMES[CH];
+      return L
+        ? '\n\nREPLY LANGUAGE FOR THIS MESSAGE: '+L+'. Write your entire reply in '+L+', in its own script.'
+        : '\n\nREPLY LANGUAGE FOR THIS MESSAGE: English. Write your entire reply in English, whatever language the user wrote in. Do not mirror their language.';
+    }
+  }catch(e){}
   try{
     const h=getHist();
     for(let i=h.length-1;i>=0;i--){
@@ -6389,7 +6412,7 @@ function bellaMsg(text,audioUrl){
   // Restore rendered tables last so their markup is never touched by the inline passes.
   formatted=formatted.replace(/@@BELLATABLE(\d+)@@/g,(m0,i)=>_tbl.tables[+i]||'');
   const msgId='msg-'+(++_msgSeq);
-  w.innerHTML=`<div class="mav b">B</div><div class="msg-wrap"><div class="mbub" id="${msgId}">${formatted}</div><div class="msg-actions">${audioUrl?`<button class="msg-act-btn" onclick="autoPlay('${audioUrl}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>Replay</button>`:''}<button class="msg-act-btn" id="mute-${msgId}" onclick="toggleMsgSpeech('${msgId}')" title="Pause her voice — the words stay on screen"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>Mute</button><button class="msg-act-btn" onclick="copyMsg('${msgId}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button></div></div>`;
+  w.innerHTML=`<div class="mav b">B</div><div class="msg-wrap"><div class="mbub" id="${msgId}">${formatted}</div><div class="msg-actions"><button class="msg-act-btn lang-act-btn" onclick="openLangPick(event)" title="Bella writes and speaks in this language"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 010 20a15 15 0 010-20"/></svg><span class="lang-act-label">${langBtnLabel()}</span></button>${audioUrl?`<button class="msg-act-btn" onclick="autoPlay('${audioUrl}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>Replay</button>`:''}<button class="msg-act-btn" id="mute-${msgId}" onclick="toggleMsgSpeech('${msgId}')" title="Pause her voice — the words stay on screen"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>Mute</button><button class="msg-act-btn" onclick="copyMsg('${msgId}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button></div></div>`;
   m.appendChild(w);m.scrollTop=m.scrollHeight;
   return msgId;
 }
@@ -6544,6 +6567,83 @@ function toggleMic(){
 // everything downstream follows: the transcript arrives in the right script,
 // detectLanguage() sees it, and Bella's LANGUAGE rule replies in kind.
 const SPEECH_LANGS = { en:'en-IN', bn:'bn-IN', hi:'hi-IN', mr:'mr-IN' };
+// ── THE LANGUAGE BUTTON — Savio, 2026-10-02 ──────────────────────────────────
+// "i want Bella to be able to write & speak English, Marathi, Hindi & Bengali
+// whenever the language tab on the LHS next to the mute & copy tabs is pressed."
+//
+// Both halves of that already existed and were driven by detectLanguage(), which
+// reads only the SCRIPT of what was typed -- so romanised "kaise ho" came back as
+// English and Bella answered in English. This button replaces that driver with a
+// deliberate choice, and drives all THREE paths from one value: the written reply
+// (_replyLangNote), the voice (/speak takes `lang`), and the recogniser
+// (setMicLang -> recog.lang, which the Web Speech API cannot auto-detect).
+//
+// Stored under its own key `b_lang`, NOT `b_voice_lang`. They are different
+// promises: the footer picker has always been mic-only, so reusing its key would
+// silently convert somebody's old microphone setting into a rule about what
+// language Bella WRITES in. A deliberate press sets both; the old picker still
+// sets only the mic.
+//
+// No choice made = null = today's auto-detect behaviour, unchanged. Nothing
+// regresses for anyone who never presses it.
+const LANG_NATIVE = { en:'English', bn:'বাংলা', hi:'हिन्दी', mr:'मराठी' };
+function chosenLang(){
+  try{ const v = localStorage.getItem('b_lang'); return SPEECH_LANGS[v] ? v : null; }
+  catch(e){ return null; }
+}
+function setChosenLang(code){
+  if(!SPEECH_LANGS[code]) return;
+  try{ localStorage.setItem('b_lang', code); }catch(e){}
+  // setMicLang persists b_voice_lang, repaints the footer picker and restarts a
+  // listening recogniser -- a language change that left the mic behind would be
+  // half a feature.
+  try{ setMicLang(code); }catch(e){}
+  closeLangPick();
+  paintLangBtns();
+}
+// The label is the language's OWN name in its OWN script. A user who cannot read
+// English cannot find an English label, which is the whole point of the control.
+function langBtnLabel(){ return LANG_NATIVE[chosenLang() || 'en'] || 'English'; }
+function paintLangBtns(){
+  const lab = langBtnLabel();
+  document.querySelectorAll('.lang-act-label').forEach(function(el){ el.textContent = lab; });
+}
+function closeLangPick(){
+  const ex = document.getElementById('lang-pick');
+  if(ex && ex.parentNode) ex.parentNode.removeChild(ex);
+}
+// A four-way choice is a list, not a cycle: a cycle costs three taps to reach
+// Marathi and never shows what the options are.
+function openLangPick(ev){
+  try{ ev.stopPropagation(); }catch(e){}
+  if(document.getElementById('lang-pick')){ closeLangPick(); return; }
+  const btn = (ev && (ev.currentTarget || ev.target)) || null;
+  const box = document.createElement('div');
+  box.id = 'lang-pick';
+  const cur = chosenLang() || 'en';
+  box.innerHTML = ['en','bn','hi','mr'].map(function(c){
+    return '<button type="button" class="lang-pick-opt' + (c===cur?' on':'') +
+           '" onclick="setChosenLang(\'' + c + '\')">' + LANG_NATIVE[c] + '</button>';
+  }).join('');
+  document.body.appendChild(box);
+  // Positioned against the button that opened it, then nudged back inside the
+  // viewport -- on a 320px phone an un-nudged popup hangs off the edge.
+  try{
+    const r = btn.getBoundingClientRect();
+    const bw = box.offsetWidth || 150;
+    let left = r.left;
+    if(left + bw > window.innerWidth - 8) left = window.innerWidth - bw - 8;
+    if(left < 8) left = 8;
+    let top = r.bottom + 6;
+    if(top + box.offsetHeight > window.innerHeight - 8) top = r.top - box.offsetHeight - 6;
+    box.style.left = left + 'px';
+    box.style.top  = Math.max(8, top) + 'px';
+  }catch(e){ box.style.left='12px'; box.style.top='60px'; }
+  setTimeout(function(){
+    document.addEventListener('click', closeLangPick, { once:true });
+  }, 0);
+}
+
 // Reflect the saved choice as soon as the footer exists.
 document.addEventListener('DOMContentLoaded', function(){ try{ paintMicLang(); }catch(e){} });
 function micLang(){
