@@ -481,6 +481,19 @@ body.dark #lang-pick{background:#0E2B50;border-color:rgba(245,230,200,.22);box-s
 body.dark #lang-pick .lang-pick-opt{color:#F5E6C8}
 body.dark #lang-pick .lang-pick-opt:hover{background:rgba(245,230,200,.12)}
 body.dark #lang-pick .lang-pick-opt.on.on.on.on.on{background:#D4AF37!important;border-color:#D4AF37!important;color:#0B2545!important}
+/* Voice-source picker. Same look as the language picker; rules duplicated
+   rather than shared, because they beat dark mode on ID specificity. */
+#voice-pick{position:fixed;z-index:9000;display:flex;flex-direction:column;gap:2px;padding:5px;
+border-radius:10px;background:#FFFDF7;border:1px solid rgba(11,37,69,.18);box-shadow:0 8px 24px rgba(11,37,69,.18)}
+#voice-pick .lang-pick-opt{appearance:none;cursor:pointer;text-align:left;white-space:nowrap;
+padding:7px 13px;border-radius:7px;border:1px solid transparent;background:transparent;
+color:#0B2545;font-size:13px;font-family:inherit}
+#voice-pick .lang-pick-opt:hover{background:rgba(11,37,69,.07)}
+#voice-pick .lang-pick-opt.on{background:#0B2545;border-color:#0B2545;color:#F5E6C8;font-weight:600}
+body.dark #voice-pick{background:#0E2B50;border-color:rgba(245,230,200,.22);box-shadow:0 8px 24px rgba(0,0,0,.45)}
+body.dark #voice-pick .lang-pick-opt{color:#F5E6C8}
+body.dark #voice-pick .lang-pick-opt:hover{background:rgba(245,230,200,.12)}
+body.dark #voice-pick .lang-pick-opt.on.on.on.on.on{background:#D4AF37!important;border-color:#D4AF37!important;color:#0B2545!important}
 .msg-act-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:10px;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;transition:all .15s;border:1px solid var(--border);background:transparent;color:var(--tsoft)}
 .user-actions{justify-content:flex-end}
 .user-actions .msg-act-btn{color:var(--tmid)}
@@ -1727,6 +1740,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         <div class="menu-item" onclick="closeUserMenu()">Change Preferred Name</div>
         <div class="menu-item" onclick="closeUserMenu()">Notification Settings</div>
         <div class="menu-item" onclick="closeUserMenu()">Language Preference</div>
+        <div class="menu-item" onclick="openVoicePick(event)">Bella's Voice</div>
       </div>
     </div>
     <!-- Data & Privacy -->
@@ -5773,12 +5787,24 @@ const speechQueue={
     this.msgId=null;
     this.muted=false;
     if(curAudio){try{curAudio.pause();curAudio.currentTime=0;}catch(e){}curAudio=null;}
+    // The local-voice fallback is a separate audio path from <audio>, so pausing
+    // curAudio does not touch it. Without this, interrupting Bella leaves the
+    // device voice talking over her next answer.
+    try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){}
     if(this._release){const r=this._release;this._release=null;try{r();}catch(e){}}
     setSpeakingState(false);
     const spk=document.getElementById('spk');if(spk)spk.style.display='none';
   },
   setMuted(m){
     this.muted=!!m;
+    // Mute has to reach the local voice as well, or the button lies when Bella is
+    // speaking through the device rather than through ElevenLabs.
+    try{
+      if(window.speechSynthesis){
+        if(this.muted) window.speechSynthesis.pause();
+        else window.speechSynthesis.resume();
+      }
+    }catch(e){}
     if(!curAudio)return;
     try{
       if(this.muted) curAudio.pause();
@@ -5842,10 +5868,96 @@ const speechQueue={
       if(myToken!==this.stopToken)return;
       if(i+1<chunks.length)nextAudio=this._fetchChunkAudio(chunks[i+1],lang,myToken);
       if(url)await this._playBlobUrl(url,myToken);
+      // No fallback in 'cloud' mode -- he asked to hear ElevenLabs exactly as it is.
+      else if(voiceSrc()!=='cloud') await this._speakLocally(chunks[i],lang,myToken);
     }
     if(myToken===this.stopToken){this.playing=false;this.msgId=null;setSpeakingState(false);}
   },
+  // ── LOCAL VOICE FALLBACK — Savio, 2026-10-03 ──────────────────────────────
+  // Measured that day: /speak failing (empty ElevenLabs credits) logged a console
+  // warning the user never sees and played nothing, so Bella went SILENT with no
+  // explanation and no way to tell that apart from being muted.
+  //
+  // HIS CONDITION, and the whole design: this must not interfere when he tops
+  // ElevenLabs up again. It cannot -- it is only ever reached when
+  // _fetchChunkAudio() returned null. A working /speak never gets here. If he
+  // later chooses to run on the Mac's own voice instead, this same function
+  // becomes the primary path behind a flag; nothing here would be thrown away.
+  //
+  // GUARDED ON AN EXACT LANGUAGE MATCH, deliberately. With no guard, Marathi text
+  // is handed to whatever voice the browser defaults to -- an English voice
+  // sounding out Devanagari, which is worse than silence. Measured on his Mac:
+  // en_IN 4 voices, hi_IN 1, bn_IN 1, mr_IN 0. So Marathi stays quiet here until
+  // a Marathi voice is installed, and that is the correct behaviour, not a bug.
+  // ── WHICH VOICE, Savio's decision 2026-10-03 ──────────────────────────────
+  // His requirement, in his words: a solution that "works now at ~0 cost so i can
+  // use it for testing", that still works "after a year when i refill ElevenLabs
+  // with my selected voices", and that lets him "stick with the Mac voices" if he
+  // prefers them and save the ElevenLabs cost entirely.
+  //
+  // So this is a CHOICE, not just a failure path:
+  //   auto   - ElevenLabs, falling back to the device if it returns nothing.
+  //   device - never calls /speak at all. Free, instant, works with no credits.
+  //            Choosing this SPENDS NOTHING -- the network call is skipped, not
+  //            made and discarded.
+  //   cloud  - ElevenLabs only, no fallback, so he hears exactly what he is
+  //            paying for when he A/Bs the two.
+  // Default is auto, which is what everyone has today.
+  async _localVoiceFor(lang){
+    try{
+      if(!('speechSynthesis' in window)) return null;
+      const want=(SPEECH_LANGS[lang]||'en-IN').toLowerCase();
+      const base=want.split('-')[0];
+      const pick=()=>{
+        const vs=window.speechSynthesis.getVoices()||[];
+        const norm=v=>(v.lang||'').toLowerCase().replace('_','-');
+        return vs.find(v=>norm(v)===want) || vs.find(v=>norm(v).split('-')[0]===base) || null;
+      };
+      let v=pick();
+      // Chrome populates getVoices() asynchronously, so a cold first call can
+      // return an empty list. Wait once for voiceschanged rather than wrongly
+      // concluding the language is unsupported.
+      if(!v && !(window.speechSynthesis.getVoices()||[]).length){
+        await new Promise(r=>{
+          let fired=false;
+          const on=()=>{ if(fired)return; fired=true; try{window.speechSynthesis.removeEventListener('voiceschanged',on);}catch(e){} r(); };
+          try{ window.speechSynthesis.addEventListener('voiceschanged',on); }catch(e){}
+          setTimeout(on,600);
+        });
+        v=pick();
+      }
+      return v;
+    }catch(e){ return null; }
+  },
+  async _speakLocally(text,lang,myToken){
+    if(myToken!==this.stopToken) return;
+    const v=await this._localVoiceFor(lang);
+    if(!v || myToken!==this.stopToken) return;
+    return new Promise(resolve=>{
+      let finished=false;
+      const fin=()=>{ if(finished)return; finished=true; if(this._release===fin)this._release=null; resolve(); };
+      try{
+        const u=new SpeechSynthesisUtterance(text);
+        // lang FIRST, and the voice assignment isolated. Setting .voice to
+        // anything that is not a real SpeechSynthesisVoice throws a TypeError,
+        // and when that sat inside the outer try it killed the whole utterance --
+        // Bella fell silent for a reason that had nothing to do with the language
+        // being unsupported. .lang alone is enough for the browser to choose.
+        u.lang=(v.lang||SPEECH_LANGS[lang]||'en-IN'); u.rate=0.98;
+        try{ u.voice=v; }catch(e){}
+        u.onend=fin; u.onerror=fin;
+        // Registered so stop() can release a clip that will never fire onend.
+        this._release=fin;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+        if(this.muted){ try{ window.speechSynthesis.pause(); }catch(e){} }
+      }catch(e){ fin(); }
+    });
+  },
   async _fetchChunkAudio(text,lang,myToken){
+    // Device-only: skip the network entirely. Returning null here routes straight
+    // to the local voice and costs nothing at all.
+    if(voiceSrc()==='device') return null;
     try{
       const r=await bfetch(BACKEND+'/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang})});
       if(myToken!==this.stopToken)return null;
@@ -6839,6 +6951,53 @@ function setChosenLang(code){
 // The label is the language's OWN name in its OWN script. A user who cannot read
 // English cannot find an English label, which is the whole point of the control.
 function langBtnLabel(){ return LANG_NATIVE[chosenLang() || 'en'] || 'English'; }
+// ── Bella's voice: which engine speaks ────────────────────────────────────────
+const VOICE_SRC = {
+  auto:  ['Automatic',           'Bella\u2019s own voice, and this device\u2019s voice if hers is unavailable'],
+  device:['This device\u2019s voice', 'Always free. Works with no ElevenLabs credits at all'],
+  cloud: ['Bella\u2019s own voice',   'ElevenLabs only. Silent if there are no credits']
+};
+function voiceSrc(){
+  try{ const v=localStorage.getItem('b_voice_src'); return VOICE_SRC[v] ? v : 'auto'; }
+  catch(e){ return 'auto'; }
+}
+function setVoiceSrc(v){
+  if(!VOICE_SRC[v]) return;
+  try{ localStorage.setItem('b_voice_src', v); }catch(e){}
+  closeVoicePick();
+  try{ speechQueue.stop(); }catch(e){}   // don't leave the old engine mid-sentence
+  try{ closeUserMenu(); }catch(e){}
+}
+function closeVoicePick(){
+  const ex=document.getElementById('voice-pick');
+  if(ex&&ex.parentNode) ex.parentNode.removeChild(ex);
+}
+// A list, not a cycle -- same reasoning as the language picker: a cycle never
+// shows what the options are.
+function openVoicePick(ev){
+  try{ ev.stopPropagation(); }catch(e){}
+  if(document.getElementById('voice-pick')){ closeVoicePick(); return; }
+  const btn=(ev&&(ev.currentTarget||ev.target))||null;
+  const box=document.createElement('div');
+  box.id='voice-pick';
+  const cur=voiceSrc();
+  box.innerHTML=Object.keys(VOICE_SRC).map(function(k){
+    const t=VOICE_SRC[k];
+    return '<button type="button" class="lang-pick-opt'+(k===cur?' on':'')+
+           '" onclick="setVoiceSrc(\''+k+'\')" title="'+t[1]+'">'+t[0]+'</button>';
+  }).join('');
+  document.body.appendChild(box);
+  try{
+    const r=btn.getBoundingClientRect();
+    const bw=box.offsetWidth||200;
+    let left=r.left; if(left+bw>window.innerWidth-8) left=window.innerWidth-bw-8;
+    if(left<8) left=8;
+    let top=r.bottom+6;
+    if(top+box.offsetHeight>window.innerHeight-8) top=r.top-box.offsetHeight-6;
+    box.style.left=left+'px'; box.style.top=Math.max(8,top)+'px';
+  }catch(e){ box.style.left='12px'; box.style.top='60px'; }
+  setTimeout(function(){ document.addEventListener('click', closeVoicePick, { once:true }); },0);
+}
 // Savio's rule, 2026-10-03: "the language change ... should directly relate to the
 // language it will display in text & voice FROM THEREON till the next change is
 // effected. However the past will continue to live in the language the User had
