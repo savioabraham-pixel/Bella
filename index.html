@@ -5927,15 +5927,35 @@ const speechQueue={
         const vs=window.speechSynthesis.getVoices()||[];
         const norm=v=>(v.lang||'').toLowerCase().replace('_','-');
         const nm=v=>(v.name||'').toLowerCase();
-        // 1) a voice Savio has actually listened to and approved, by name.
+        // 1) a voice Savio has actually listened to and approved, by name --
+        //    but ONLY among voices already in the right language.
+        //    Apple reuses voice names across Indian languages: there is a Tara in
+        //    English (India) AND a Tara in Marathi (India), and likewise an Aman.
+        //    Searching all voices by name would hand Marathi text to the English
+        //    Tara, which is the exact failure this whole table exists to prevent.
+        const inLang=vs.filter(v=>norm(v)===want || norm(v).split('-')[0]===base);
         for(const p of prefer){
-          const hit=vs.find(v=>nm(v)===p) || vs.find(v=>nm(v).indexOf(p)===0);
+          const hit=inLang.find(v=>nm(v)===p) || inLang.find(v=>nm(v).indexOf(p)===0);
           if(hit) return hit;
         }
         // 2) then any voice in the right language. On a device that has none of
         //    the named voices this is all we have, and it may well pick a male
         //    one -- unavoidable, since the Web Speech API does not report gender.
-        return vs.find(v=>norm(v)===want) || vs.find(v=>norm(v).split('-')[0]===base) || null;
+        const any=vs.find(v=>norm(v)===want) || vs.find(v=>norm(v).split('-')[0]===base);
+        if(any) return any;
+        // 3) LAST RESORT, and only for a language the device has NO voice for at
+        //    all. Savio's decision 2026-10-03, taken by ear: with no Marathi voice
+        //    in existence he would rather hear the English Tara read Marathi than
+        //    hear nothing. He turned down the Hindi voice doing the same job, so
+        //    this is a judgement about a specific voice, not a general rule.
+        //    Restricted to the NAMED voices he has approved, so this can never
+        //    quietly grab an arbitrary wrong voice -- which was the original
+        //    objection to cross-language fallback and still stands.
+        for(const p of prefer){
+          const hit=vs.find(v=>nm(v)===p) || vs.find(v=>nm(v).indexOf(p)===0);
+          if(hit) return hit;
+        }
+        return null;
       };
       let v=pick();
       // Chrome populates getVoices() asynchronously, so a cold first call can
@@ -6981,7 +7001,17 @@ const PREFERRED_VOICE = {
   en:['Tara'],      // not Aman or Rishi -- both male, and Bella is not
   hi:['Lekha'],
   bn:['Piya'],
-  mr:[]             // open until he chooses one after installing it
+  mr:['Tara']       // MEASURED 2026-10-03 and the finding matters: macOS 27 OFFERS
+                    // "Marathi (India) -> Tara" in System Settings, but selecting it
+                    // downloads nothing and `say -v '?'` still reports 0 mr_IN voices
+                    // out of 190. Rendering Marathi through it produced audio
+                    // BYTE-FOR-BYTE IDENTICAL to the English Tara (sha 2743027550e6…),
+                    // with Hindi Lekha as a control proving the test distinguishes
+                    // voices. So Apple lists Marathi as a speech LANGUAGE but ships no
+                    // Marathi VOICE. The name is kept here only so that the day Apple
+                    // does ship one it is picked up automatically; until then the
+                    // language filter finds nothing and Marathi stays silent, which is
+                    // what Savio chose after listening to the alternative.
 };
 // ── Bella's voice: which engine speaks ────────────────────────────────────────
 const VOICE_SRC = {
