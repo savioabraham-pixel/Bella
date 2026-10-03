@@ -1528,16 +1528,16 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
           </div>
         </div>
         <div class="inp-footer">
-          <!-- Speech language. The Web Speech API CANNOT auto-detect a language:
-               recog.lang must name one before listening starts, and it was
-               hardcoded 'en-IN', so speaking Bengali produced garbled Latin and
-               Bella never saw Bengali at all. This is the only reliable fix. -->
-          <div id="mic-lang" role="group" aria-label="Speech language">
-            <button type="button" data-l="en" onclick="setMicLang('en')" title="Speak English">EN</button>
-            <button type="button" data-l="bn" onclick="setMicLang('bn')" title="Speak Bengali (বাংলা)">বা</button>
-            <button type="button" data-l="hi" onclick="setMicLang('hi')" title="Speak Hindi (हिन्दी)">हि</button>
-            <button type="button" data-l="mr" onclick="setMicLang('mr')" title="Speak Marathi (मराठी)">मर</button>
-          </div>
+          <!-- THE EN / বা / হি / মর SPEECH PICKER WAS REMOVED FROM HERE 2026-10-03,
+               Savio's decision, and it is NOT lost -- it belongs on the separate
+               voice page in his redesign, because the Web Speech API cannot
+               auto-detect a language and voice mode must always be told one.
+               It was redundant on this page: setChosenLang() already calls
+               setMicLang(), so the language button sets the microphone too. All
+               its CSS (#mic-lang, four blocks incl. the dark-mode overrides) is
+               DELIBERATELY LEFT IN PLACE -- inert with no element to match, and
+               needed again the day the voice page is built. The recogniser is
+               unaffected: micLang()/micLangTag() read localStorage, not the DOM. -->
           <!-- Light/Dark toggle -->
           <div style="display:flex;align-items:center;gap:3px">
             <span style="font-size:9px;color:#0B2545;font-weight:500">Light</span>
@@ -5299,14 +5299,13 @@ async function submitFeedback(){
     if(!fr.ok) throw new Error('feedback refused: '+fr.status+' '+await fr.text().catch(()=>''));
     closeFeedback();
     // Thank the user in chat
-    const catLabels={bug:'bug report',improve:'improvement suggestion',feature:'new feature idea',praise:'kind words',voice:'voice feedback',mobile:'mobile feedback'};
-    const catLabel=catLabels[_selectedFeedbackCat]||'feedback';
+    const catLabel=uiText('fb_cat_'+_selectedFeedbackCat)||uiText('fb_cat_improve');
     const isPraise=_selectedFeedbackCat==='praise';
-    const thankMsg=isPraise
-      ?`Thank you so much for your kind words, ${currentAddressedName||''}! 🙏 It truly means everything to hear that. If you ever have ideas on how I can serve you better, please don't hesitate to share — your thoughts help me grow. ❤️`
-      :`Thank you for your ${catLabel}, ${currentAddressedName||''}! 🙏 I've received it and it will be reviewed carefully. You'll hear from me as soon as it's been addressed. Your voice matters and helps make Bella better for everyone. ✨`;
+    const thankMsg=uiText(isPraise?'fb_thanks_praise':'fb_thanks_other',{name:currentAddressedName||'',cat:catLabel});
     bellaMsg(thankMsg);
-    if(continuousVoice)speakText(thankMsg,'en');
+    // Was speakText(thankMsg,'en') -- hardcoded, so a Hindi user heard an English
+    // voice read out a Hindi sentence. Savio flagged this on 2026-10-03.
+    if(continuousVoice)speakText(thankMsg,chosenLang()||'en');
   }catch(e){
     alert('Something went wrong. Please try again.');
     btn.textContent='Send Feedback';
@@ -5423,13 +5422,17 @@ function checkSummariseBtn(){
 
 async function summariseThread(){
   const hist=threads[currentThreadId]?.hist||[];
-  if(hist.length<4){bellaMsg('This conversation is too short to summarise yet.');return;}
+  if(hist.length<4){bellaMsg(uiText('summary_tooshort'));return;}
   showThinking();
   const contents=[
     {role:'user',parts:[{text:buildSystemPrompt(currentProfileKey,currentAddressedName,userMemory.memories||'')}]},
     {role:'model',parts:[{text:'Understood. I am Bella.'}]},
     ...hist,
-    {role:'user',parts:[{text:'Please summarise our conversation. Include: 1) Key topics discussed, 2) Important decisions or conclusions, 3) Action items with who is responsible, 4) Any follow-ups needed. Format clearly with headings.'}]}
+    // THE BUG Savio found 2026-10-03: this request was built by hand and never
+    // carried _replyLangNote(), the one line the ordinary chat path attaches to
+    // every message. So Summarise asked in English and got English back -- in
+    // Bengali, Hindi and Marathi alike, deterministically, every single time.
+    {role:'user',parts:[{text:'Please summarise our conversation. Include: 1) Key topics discussed, 2) Important decisions or conclusions, 3) Action items with who is responsible, 4) Any follow-ups needed. Format clearly with headings.'+_replyLangNote()}]}
   ];
   try{
     const r=await bfetch(BACKEND+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch:false})});
@@ -5440,8 +5443,8 @@ async function summariseThread(){
         reply=reply.replace(/\[Thinking:[^\]]*\]/gi,'').replace(/\[Searching:[^\]]*\]/gi,'').replace(/\[Source Link Example:[^\]]*\]/gi,'').trim();
       }
     hideThinking();
-    if(reply){bellaMsg('**Thread Summary**\n\n'+reply);speakText('Here is a summary of our conversation so far.',chosenLang()||detectLanguage(reply));}
-  }catch(e){hideThinking();bellaMsg('Sorry, I could not summarise this thread right now.');}
+    if(reply){bellaMsg('**'+uiText('summary_heading')+'**\n\n'+reply);speakText(uiText('summary_spoken'),chosenLang()||detectLanguage(reply));}
+  }catch(e){hideThinking();bellaMsg(uiText('summary_failed'));}
 }
 
 function retryMsg(id){
@@ -5700,7 +5703,7 @@ function _replyLangNote(){
     if(CH){
       const L = NAMES[CH];
       return L
-        ? '\n\nREPLY LANGUAGE FOR THIS MESSAGE: '+L+'. Write your entire reply in '+L+', in its own script.'
+        ? '\n\nREPLY LANGUAGE FOR THIS MESSAGE: '+L+'. Write your entire reply in '+L+', in its own script. THIS OUTRANKS EVERY OTHER LANGUAGE INSTRUCTION, INCLUDING THE SCRIPT THE USER TYPED IN. The user pressed a button to choose '+L+'; that is a deliberate choice and it stands until they press it again. If they write to you in English, in Latin letters, in romanised '+L+', or in any other language at all, you still reply entirely in '+L+' and in its own script. Worked example: they type \'hello\' or \'kasa kai\' -- you still answer in '+L+'. Never mirror the language of their message.'
         : '\n\nREPLY LANGUAGE FOR THIS MESSAGE: English. Write your entire reply in English, whatever language the user wrote in. Do not mirror their language.';
     }
   }catch(e){}
@@ -6697,6 +6700,121 @@ const LANG_SWITCH = {
   hi:'अब से हम हिन्दी में बात करेंगे। भाषा बदलनी हो तो कभी भी उस बटन पर टैप कीजिए।',
   mr:'आता आपण मराठीत बोलूया. भाषा बदलायची असेल तर कधीही त्या बटणावर टॅप करा.'
 };
+
+// ──────────────────────────────────────────────────────────────────────────────
+// UI PHRASEBOOK. Savio, 2026-10-03, after testing all four languages live.
+//
+// His test showed the language button was not being disobeyed by the model -- it
+// was being DROWNED OUT by our own hardcoded English. The opening greeting, the
+// Summarise wrapper, the recording notices and the feedback thank-you are strings
+// WE write; Gemini never sees them and cannot translate them. Every user-facing
+// sentence the app writes itself belongs in this table and nowhere else.
+//
+// uiText() reads chosenLang() -- the SAME single source every other language-aware
+// part of the page already uses. That is deliberate and was his instruction: when
+// the setting moves from the device to the account, every line below follows with
+// no rework.
+//
+// Register follows his own guides: Kolkata Bengali (আপনি, keep the English
+// loanwords), Mumbai Hindi (आप), colloquial Mumbai Marathi (तुम्ही).
+// ADMIN TEXT IS DELIBERATELY ABSENT -- his decision 2026-10-03: the admin side
+// stays English. This table is what a USER sees.
+// ──────────────────────────────────────────────────────────────────────────────
+const UI_TEXT = {
+  greet_morning:{
+    en:'Good morning, {name}! How are you today?',
+    bn:'সুপ্রভাত, {name}! আজ কেমন আছেন?',
+    hi:'सुप्रभात, {name}! आज आप कैसे हैं?',
+    mr:'सुप्रभात, {name}! आज कसे आहात?'},
+  greet_afternoon:{
+    en:'Good afternoon, {name}! How are you today?',
+    bn:'নমস্কার, {name}! আজ কেমন আছেন?',
+    hi:'नमस्ते, {name}! आज आप कैसे हैं?',
+    mr:'नमस्कार, {name}! आज कसे आहात?'},
+  greet_evening:{
+    en:'Good evening, {name}! How are you today?',
+    bn:'শুভ সন্ধ্যা, {name}! আজ কেমন আছেন?',
+    hi:'शुभ संध्या, {name}! आज आप कैसे हैं?',
+    mr:'शुभ संध्याकाळ, {name}! आज कसे आहात?'},
+  // The follow-up variant keeps {note} verbatim: it comes from her memory of the
+  // last session and may itself be English. Flagged to Savio as a separate item --
+  // translating the frame around an English sentence would be a half-fix pretending
+  // to be a whole one.
+  greet_followup:{
+    en:'Good {tod}, {name}! {note} How are you?',
+    bn:'{name}, {note} কেমন আছেন?',
+    hi:'{name}, {note} आप कैसे हैं?',
+    mr:'{name}, {note} कसे आहात?'},
+  summary_heading:{
+    en:'Thread Summary',
+    bn:'কথোপকথনের সারসংক্ষেপ',
+    hi:'बातचीत का सारांश',
+    mr:'संभाषणाचा सारांश'},
+  summary_spoken:{
+    en:'Here is a summary of our conversation so far.',
+    bn:'এতক্ষণের কথোপকথনের সারসংক্ষেপ এই রইল।',
+    hi:'अब तक की हमारी बातचीत का सारांश यह रहा।',
+    mr:'आतापर्यंतच्या आपल्या संभाषणाचा सारांश हा आहे.'},
+  summary_tooshort:{
+    en:'This conversation is too short to summarise yet.',
+    bn:'সারসংক্ষেপ করার মতো কথা এখনও যথেষ্ট হয়নি।',
+    hi:'सारांश बनाने के लिए बातचीत अभी बहुत छोटी है।',
+    mr:'सारांश करण्याइतकं संभाषण अजून झालेलं नाही.'},
+  summary_failed:{
+    en:'Sorry, I could not summarise this thread right now.',
+    bn:'দুঃখিত, এখন এই কথোপকথনের সারসংক্ষেপ করতে পারলাম না।',
+    hi:'क्षमा कीजिए, अभी इस बातचीत का सारांश नहीं बना सकी।',
+    mr:'क्षमस्व, आत्ता या संभाषणाचा सारांश करता आला नाही.'},
+  rec_voice:{
+    en:'\u{1F534} Voice recording started. Your audio is being captured.',
+    bn:'\u{1F534} ভয়েস রেকর্ডিং শুরু হয়েছে। আপনার অডিও রেকর্ড করা হচ্ছে।',
+    hi:'\u{1F534} वॉइस रिकॉर्डिंग शुरू हो गई है। आपका ऑडियो रिकॉर्ड हो रहा है।',
+    mr:'\u{1F534} व्हॉइस रेकॉर्डिंग सुरू झाली आहे. तुमचा ऑडिओ रेकॉर्ड होत आहे.'},
+  rec_screen:{
+    en:'\u{1F534} Screen recording started. Your screen is being captured.',
+    bn:'\u{1F534} স্ক্রিন রেকর্ডিং শুরু হয়েছে। আপনার স্ক্রিন রেকর্ড করা হচ্ছে।',
+    hi:'\u{1F534} स्क्रीन रिकॉर्डिंग शुरू हो गई है। आपकी स्क्रीन रिकॉर्ड हो रही है।',
+    mr:'\u{1F534} स्क्रीन रेकॉर्डिंग सुरू झाली आहे. तुमची स्क्रीन रेकॉर्ड होत आहे.'},
+  rec_video:{
+    en:'\u{1F534} Video recording started. Your camera and audio are being captured.',
+    bn:'\u{1F534} ভিডিও রেকর্ডিং শুরু হয়েছে। আপনার ক্যামেরা ও অডিও রেকর্ড করা হচ্ছে।',
+    hi:'\u{1F534} वीडियो रिकॉर्डिंग शुरू हो गई है। आपका कैमरा और ऑडियो रिकॉर्ड हो रहा है।',
+    mr:'\u{1F534} व्हिडिओ रेकॉर्डिंग सुरू झाली आहे. तुमचा कॅमेरा आणि ऑडिओ रेकॉर्ड होत आहे.'},
+  rec_saving:{
+    en:'Your recording is being saved\u2026',
+    bn:'আপনার রেকর্ডিং সেভ করা হচ্ছে\u2026',
+    hi:'आपकी रिकॉर्डिंग सेव हो रही है\u2026',
+    mr:'तुमचं रेकॉर्डिंग सेव्ह होत आहे\u2026'},
+  // The category is parenthesised in bn/hi/mr on purpose. All three decline their
+  // nouns, so gluing a postposition onto a variable produces real grammatical
+  // errors. Parentheses sidestep declension entirely and still read naturally.
+  fb_thanks_praise:{
+    en:'Thank you so much for your kind words, {name}! \u{1F64F} It truly means everything to hear that. If you ever have ideas on how I can serve you better, please don\u2019t hesitate to share \u2014 your thoughts help me grow. \u2764\uFE0F',
+    bn:'আপনার এই কথাগুলোর জন্য অনেক ধন্যবাদ, {name}! \u{1F64F} সত্যিই খুব ভালো লাগল। আরও ভালোভাবে কীভাবে কাজে লাগতে পারি, কোনো ভাবনা থাকলে নিশ্চয়ই বলবেন \u2014 আপনার মতামতেই আমি বড় হই। \u2764\uFE0F',
+    hi:'आपके इन शब्दों के लिए बहुत-बहुत धन्यवाद, {name}! \u{1F64F} यह सुनकर सचमुच बहुत अच्छा लगा। मैं आपके और काम कैसे आ सकती हूँ, इस पर कोई विचार हो तो ज़रूर बताइएगा \u2014 आपकी बातों से ही मैं बेहतर होती हूँ। \u2764\uFE0F',
+    mr:'तुमच्या या शब्दांसाठी खूप खूप धन्यवाद, {name}! \u{1F64F} हे ऐकून खरंच खूप छान वाटलं. मी तुमच्या आणखी कशी उपयोगी पडू शकते, याबद्दल काही सुचलं तर नक्की सांगा \u2014 तुमच्या सूचनांमुळेच मी अधिक चांगली होते. \u2764\uFE0F'},
+  fb_thanks_other:{
+    en:'Thank you for your {cat}, {name}! \u{1F64F} I\u2019ve received it and it will be reviewed carefully. You\u2019ll hear from me as soon as it\u2019s been addressed. Your voice matters and helps make Bella better for everyone. \u2728',
+    bn:'ধন্যবাদ, {name}! \u{1F64F} আপনার মতামত ({cat}) আমি পেয়েছি, ভালো করে দেখা হবে। কাজ হয়ে গেলেই আপনাকে জানাব। আপনার মতামতেই বেলা সবার জন্য আরও ভালো হয়। \u2728',
+    hi:'धन्यवाद, {name}! \u{1F64F} आपकी बात ({cat}) मुझे मिल गई है और उसे ध्यान से देखा जाएगा। काम हो जाते ही मैं आपको बताऊँगी। आपकी राय से ही बेला सबके लिए बेहतर बनती है। \u2728',
+    mr:'धन्यवाद, {name}! \u{1F64F} तुमचा अभिप्राय ({cat}) मला मिळाला आहे, तो काळजीपूर्वक पाहिला जाईल. काम होताच मी तुम्हाला कळवेन. तुमच्या अभिप्रायामुळेच बेला सर्वांसाठी अधिक चांगली होते. \u2728'},
+  fb_cat_bug:{en:'bug report',bn:'বাগ রিপোর্ট',hi:'बग रिपोर्ट',mr:'बग रिपोर्ट'},
+  fb_cat_improve:{en:'improvement suggestion',bn:'উন্নতির পরামর্শ',hi:'सुधार का सुझाव',mr:'सुधारणेची सूचना'},
+  fb_cat_feature:{en:'new feature idea',bn:'নতুন ফিচারের ভাবনা',hi:'नए फ़ीचर का विचार',mr:'नव्या फीचरची कल्पना'},
+  fb_cat_praise:{en:'kind words',bn:'আপনার কথা',hi:'आपके शब्द',mr:'तुमचे शब्द'},
+  fb_cat_voice:{en:'voice feedback',bn:'ভয়েস সম্পর্কে মতামত',hi:'आवाज़ पर प्रतिक्रिया',mr:'आवाजाबद्दल अभिप्राय'},
+  fb_cat_mobile:{en:'mobile feedback',bn:'মোবাইল সম্পর্কে মতামত',hi:'मोबाइल पर प्रतिक्रिया',mr:'मोबाइलबद्दल अभिप्राय'}
+};
+// One lookup for the whole app. `lang` is passed only when a caller already knows
+// the language; everything else follows the user's single stored choice.
+function uiText(key, vars, lang){
+  const L = lang || chosenLang() || 'en';
+  const row = UI_TEXT[key];
+  if(!row) return '';
+  let out = row[L] || row.en || '';
+  if(vars) for(const k in vars) out = out.split('{'+k+'}').join(vars[k]);
+  return out;
+}
 function setChosenLang(code){
   if(!SPEECH_LANGS[code]) return;
   // Only speak up on a REAL change. Pressing the language you are already in should
@@ -6721,10 +6839,19 @@ function setChosenLang(code){
 // The label is the language's OWN name in its OWN script. A user who cannot read
 // English cannot find an English label, which is the whole point of the control.
 function langBtnLabel(){ return LANG_NATIVE[chosenLang() || 'en'] || 'English'; }
-function paintLangBtns(){
-  const lab = langBtnLabel();
-  document.querySelectorAll('.lang-act-label').forEach(function(el){ el.textContent = lab; });
-}
+// Savio's rule, 2026-10-03: "the language change ... should directly relate to the
+// language it will display in text & voice FROM THEREON till the next change is
+// effected. However the past will continue to live in the language the User had
+// started communicating."
+//
+// This used to rewrite the label on EVERY message in the thread, so switching to
+// Hindi retro-labelled a reply that was genuinely written in Bengali and the thread
+// stopped being an honest record. It needs to do nothing at all: bellaMsg() calls
+// langBtnLabel() when it BUILDS each message, and setChosenLang() writes b_lang
+// before painting the confirmation, so every new message is already stamped with
+// the new language while every old one keeps its own. Deleting the loop IS the fix.
+// Kept as a function because setChosenLang() calls it.
+function paintLangBtns(){ /* intentionally empty — see the note above */ }
 function closeLangPick(){
   const ex = document.getElementById('lang-pick');
   if(ex && ex.parentNode) ex.parentNode.removeChild(ex);
@@ -7007,7 +7134,7 @@ function startSelectedRecording(){
       const url=URL.createObjectURL(blob);
       stream.getTracks().forEach(t=>t.stop());
       // Show saving message
-      bellaMsg('Your recording is being saved…');
+      bellaMsg(uiText('rec_saving'));
       // Show clip in chat with download + save buttons
       setTimeout(()=>{
         const msgDiv=document.createElement('div');
@@ -7037,7 +7164,7 @@ function startSelectedRecording(){
       window._recording=false;
     };
     // Disclosure BEFORE recording starts — required
-    const discMsg=type==='voice'?'🔴 Voice recording started. Your audio is being captured.':type==='screen'?'🔴 Screen recording started. Your screen is being captured.':'🔴 Video recording started. Your camera and audio are being captured.';
+    const discMsg=uiText(type==='voice'?'rec_voice':type==='screen'?'rec_screen':'rec_video');
     bellaMsg(discMsg);
     // Button goes red with a white ring. A CLASS, not an inline style: dark
     // mode carries `body.dark button{...!important}`, which an inline style
@@ -7356,8 +7483,14 @@ function initLocationWithCoords(lat, lon){
 function deliverGreeting(addressedName){
   const tod=timeOfDay();
   // Clean greeting — no motivation suffix — Thought of the Day handles that in the topbar
-  let msg=`Good ${tod}, ${addressedName}! How are you today?`;
-  if(userMemory.proactiveFollowUp)msg=`Good ${tod}, ${addressedName}! ${userMemory.proactiveFollowUp} How are you?`;
+  // Savio, 2026-10-03: this sentence was hardcoded English and spoken with the
+  // voice forced to English, so it reappeared in every language he tested and was
+  // the single biggest reason a Bengali or Hindi session "moved back to English".
+  // It is OUR sentence -- Gemini never sees it -- so no prompt rule could have
+  // fixed it.
+  const _gl=chosenLang()||'en';
+  let msg=uiText('greet_'+tod,{name:addressedName},_gl);
+  if(userMemory.proactiveFollowUp)msg=uiText('greet_followup',{tod:tod,name:addressedName,note:userMemory.proactiveFollowUp},_gl);
   playNotifSound();
   // Gemini cannot see this. bellaMsg only draws on screen — it never writes to the
   // thread history — so without this line the model opens every session believing
@@ -7365,7 +7498,7 @@ function deliverGreeting(addressedName){
   // throws away whatever the user actually typed first. Recorded here and replayed
   // into the model's opening turn by callBella.
   _sessionGreeting=msg;
-  bellaMsg(msg);speakText(msg,'en');
+  bellaMsg(msg);speakText(msg,_gl);
 }
 
 // Splits the thought into its words and its trailing emoji, and puts each into
