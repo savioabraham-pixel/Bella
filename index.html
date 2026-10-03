@@ -5890,6 +5890,20 @@ const speechQueue={
   // en_IN 4 voices, hi_IN 1, bn_IN 1, mr_IN 0. So Marathi stays quiet here until
   // a Marathi voice is installed, and that is the correct behaviour, not a bug.
   // ── WHICH VOICE, Savio's decision 2026-10-03 ──────────────────────────────
+  // NAMED VOICES, each one Savio listened to on 2026-10-03 and approved by ear.
+  //
+  // THE DEFECT THIS FIXES: the chooser took the FIRST voice matching the
+  // language. On his Mac the first en_IN voice is **Aman, who is male** -- so
+  // Bella, who is a woman in every other respect, answered in a man's voice.
+  // The Web Speech API does not expose gender, so there is no way to detect this
+  // automatically; the only honest fix is to name the voices a human has heard.
+  //
+  // Order matters: first match wins. Unknown names are skipped harmlessly, so
+  // this is safe on Android, Windows and any Mac without these voices -- it just
+  // falls through to the language match below.
+  // Marathi is deliberately EMPTY: he rejected the Hindi voice reading Marathi
+  // after listening to it, and has not yet chosen a Marathi voice.
+  
   // His requirement, in his words: a solution that "works now at ~0 cost so i can
   // use it for testing", that still works "after a year when i refill ElevenLabs
   // with my selected voices", and that lets him "stick with the Mac voices" if he
@@ -5908,9 +5922,19 @@ const speechQueue={
       if(!('speechSynthesis' in window)) return null;
       const want=(SPEECH_LANGS[lang]||'en-IN').toLowerCase();
       const base=want.split('-')[0];
+      const prefer=(PREFERRED_VOICE[lang]||[]).map(n=>n.toLowerCase());
       const pick=()=>{
         const vs=window.speechSynthesis.getVoices()||[];
         const norm=v=>(v.lang||'').toLowerCase().replace('_','-');
+        const nm=v=>(v.name||'').toLowerCase();
+        // 1) a voice Savio has actually listened to and approved, by name.
+        for(const p of prefer){
+          const hit=vs.find(v=>nm(v)===p) || vs.find(v=>nm(v).indexOf(p)===0);
+          if(hit) return hit;
+        }
+        // 2) then any voice in the right language. On a device that has none of
+        //    the named voices this is all we have, and it may well pick a male
+        //    one -- unavoidable, since the Web Speech API does not report gender.
         return vs.find(v=>norm(v)===want) || vs.find(v=>norm(v).split('-')[0]===base) || null;
       };
       let v=pick();
@@ -6951,6 +6975,14 @@ function setChosenLang(code){
 // The label is the language's OWN name in its OWN script. A user who cannot read
 // English cannot find an English label, which is the whole point of the control.
 function langBtnLabel(){ return LANG_NATIVE[chosenLang() || 'en'] || 'English'; }
+// ── Bella's voice: WHICH VOICE, per language ─────────────────────────────────
+// Approved by Savio by ear, 2026-10-03. See the note in _localVoiceFor().
+const PREFERRED_VOICE = {
+  en:['Tara'],      // not Aman or Rishi -- both male, and Bella is not
+  hi:['Lekha'],
+  bn:['Piya'],
+  mr:[]             // open until he chooses one after installing it
+};
 // ── Bella's voice: which engine speaks ────────────────────────────────────────
 const VOICE_SRC = {
   auto:  ['Automatic',           'Bella\u2019s own voice, and this device\u2019s voice if hers is unavailable'],
