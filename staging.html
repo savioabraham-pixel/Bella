@@ -1796,7 +1796,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
       <div class="menu-items" id="sec-profile">
         <div class="menu-item" onclick="closeUserMenu()">My Profile</div>
         <div class="menu-item" onclick="closeUserMenu()">Change Preferred Name</div>
-        <div class="menu-item" onclick="closeUserMenu()">Notification Settings</div>
+        <div class="menu-item" onclick="openNotificationSettings();closeUserMenu()">Notification Settings</div>
         <div class="menu-item" onclick="closeUserMenu()">Language Preference</div>
         <div class="menu-item" onclick="openVoicePick(event)">Bella's Voice</div>
       </div>
@@ -3369,6 +3369,11 @@ function submitReturningMobile(){
 }
 
 function showReturningOTPGate(savedUser) {
+  // Hold the details HERE rather than relying on sendReturningOTP() having set
+  // them. That function is the one that talks to Firebase, and the moment a
+  // person most needs the recovery panel is the moment that call is failing.
+  // The recovery panel must not depend on the thing that is broken.
+  _returningUserData = savedUser || _returningUserData;
   // Show OTP verification for returning user
   const existing = document.getElementById('bella-gate');
   if(existing) existing.remove();
@@ -3399,11 +3404,124 @@ function showReturningOTPGate(savedUser) {
       <button onclick="verifyReturningOTP('${savedUser.mobile}')" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif">
         Verify &amp; Enter Bella
       </button>
+      <!-- THE WAY OUT. Without this a changed SIM is a PERMANENT lockout: the
+           code goes to the number on record, and there was no other door.
+           Savio asked the question that found it, 2026-10-04. -->
+      <button onclick="showRecoveryHelp()" style="width:100%;margin-top:14px;padding:10px;border-radius:10px;border:none;background:transparent;color:rgba(245,230,200,0.55);font-size:12px;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;text-decoration:underline">
+        I no longer have this number
+      </button>
     </div>`;
 
   document.body.appendChild(gate);
   // Auto-send OTP to registered mobile
   sendReturningOTP(savedUser.mobile, savedUser);
+}
+
+// Deliberately SMALL and deliberately honest. The only thing Bella can notify
+// with today is the sound -- there is no browser-notification code in this file
+// at all (checked: zero uses of the Notification API). Inventing switches for
+// things that do not exist is how a settings page starts lying, so the panel
+// says plainly what is not here yet rather than offering dead toggles.
+function openNotificationSettings(){
+  const prev=document.getElementById('notif-settings'); if(prev) prev.remove();
+  const on = notifSoundOn();
+  const box=document.createElement('div');
+  box.id='notif-settings';
+  box.style.cssText='position:fixed;inset:0;background:rgba(11,37,69,0.72);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:520;padding:18px';
+  box.innerHTML =
+    '<div style="background:#FFFFFF;border-radius:20px;max-width:400px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.3)">' +
+      '<div style="background:#0B2545;border-radius:20px 20px 0 0;padding:22px 24px">' +
+        '<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:600;color:#F5E6C8">Notification Settings</div>' +
+        '<div style="font-size:11px;color:rgba(245,230,200,0.6);margin-top:2px">How Bella gets your attention</div>' +
+      '</div>' +
+      '<div style="padding:22px 24px">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px">' +
+          '<div style="min-width:0">' +
+            '<div style="font-size:13px;font-weight:600;color:#0B2545">Notification sound</div>' +
+            '<div style="font-size:11px;color:#5A6B8A;line-height:1.6;margin-top:3px">A short chime when Bella opens and when she answers.</div>' +
+          '</div>' +
+          '<button id="notif-sound-tog" role="switch" aria-checked="' + (on?'true':'false') + '" onclick="toggleNotifSound()" ' +
+            'style="flex:none;width:52px;height:30px;border-radius:999px;border:none;cursor:pointer;position:relative;transition:background .18s;' +
+            'background:' + (on?'#0B2545':'rgba(11,37,69,0.18)') + '">' +
+            '<span id="notif-sound-knob" style="position:absolute;top:3px;left:' + (on?'25px':'3px') + ';width:24px;height:24px;border-radius:50%;background:' + (on?'#D4AF37':'#FFFFFF') + ';transition:left .18s,background .18s;box-shadow:0 1px 4px rgba(0,0,0,.25)"></span>' +
+          '</button>' +
+        '</div>' +
+        '<div style="height:1px;background:rgba(11,37,69,0.10);margin:18px 0"></div>' +
+        '<div style="font-size:11px;color:#5A6B8A;line-height:1.8">' +
+          '<strong style="color:#0B2545">Not here yet.</strong> Bella does not send browser or phone ' +
+          'notifications, so there is nothing else to switch. When she can reach you while she is ' +
+          'closed, the choice will appear here.' +
+        '</div>' +
+        '<button onclick="document.getElementById(\'notif-settings\').remove()" style="width:100%;margin-top:20px;padding:12px;border-radius:12px;border:none;background:#0B2545;color:#F5E6C8;font-size:13px;font-weight:600;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Done</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(box);
+}
+function toggleNotifSound(){
+  const now = !notifSoundOn();
+  try{ localStorage.setItem('b_notif_sound', now ? 'on' : 'off'); }catch(e){}
+  const t=document.getElementById('notif-sound-tog'), k=document.getElementById('notif-sound-knob');
+  if(t){ t.style.background = now ? '#0B2545' : 'rgba(11,37,69,0.18)'; t.setAttribute('aria-checked', now?'true':'false'); }
+  if(k){ k.style.left = now ? '25px' : '3px'; k.style.background = now ? '#D4AF37' : '#FFFFFF'; }
+  // Play it when switching ON, so you hear what you just chose.
+  if(now) playNotifSound();
+}
+
+// Shown when somebody cannot receive the code because the number is gone.
+// Deliberately NOT a backend call: the person is NOT SIGNED IN at this point,
+// so any endpoint would have to be auth-exempt -- a new unauthenticated door
+// into the backend, for a problem a mail link solves at zero cost and zero
+// risk. mailto opens their mail app with everything already filled in.
+// The address is also shown as plain text, because mailto does nothing on a
+// desktop with no mail client configured and a dead button is worse than none.
+function showRecoveryHelp(){
+  const u = _returningUserData || (function(){
+    try{ return JSON.parse(localStorage.getItem('b_registered_user')||'null')||{}; }catch(e){ return {}; }
+  })();
+  const name   = u.fullName || u.name || u.preferredName || '';
+  const email  = u.email || '';
+  const mobile = u.mobile || '';
+  const uid    = (function(){ try{ return localStorage.getItem('b_userid')||''; }catch(e){ return ''; } })();
+  const subject = 'Bella — I cannot receive my sign-in code';
+  const body =
+    'Hello Savio,\n\n' +
+    'I cannot sign in to Bella because I no longer have the mobile number my account uses.\n\n' +
+    'My details as Bella has them:\n' +
+    '  Name: ' + (name || '(not shown on this device)') + '\n' +
+    '  User ID: ' + (uid || '(not shown on this device)') + '\n' +
+    '  Email on record: ' + (email || '(not shown on this device)') + '\n' +
+    '  Number on record: ' + (mobile || '(not shown on this device)') + '\n\n' +
+    'My new mobile number is: \n\n' +
+    'Thank you.\n';
+  const mailto = 'mailto:' + LEGAL_CONTACT +
+                 '?subject=' + encodeURIComponent(subject) +
+                 '&body=' + encodeURIComponent(body);
+  const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const prev = document.getElementById('recovery-help'); if(prev) prev.remove();
+  const box = document.createElement('div');
+  box.id = 'recovery-help';
+  box.style.cssText = 'position:fixed;inset:0;background:rgba(11,37,69,0.88);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:900;padding:18px';
+  box.innerHTML =
+    '<div style="background:#0B2545;border:1px solid rgba(212,175,55,0.3);border-radius:20px;max-width:420px;width:100%;max-height:88vh;overflow-y:auto;padding:26px 24px;box-shadow:0 24px 80px rgba(0,0,0,0.5)">' +
+      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:600;color:#F5E6C8;margin-bottom:10px">Lost the number on your account?</div>' +
+      '<div style="font-size:13px;color:rgba(245,230,200,0.7);line-height:1.75;margin-bottom:18px">' +
+        'Your sign-in code can only go to the number Bella has on record, so Savio has to change it for you. ' +
+        'That is deliberate — it is what stops somebody else moving your account to their own phone.' +
+      '</div>' +
+      '<div style="background:rgba(245,230,200,0.06);border:1px solid rgba(245,230,200,0.14);border-radius:12px;padding:13px 15px;margin-bottom:18px;font-size:12px;color:rgba(245,230,200,0.75);line-height:1.9">' +
+        '<div style="font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:rgba(245,230,200,0.45);margin-bottom:6px">What Bella has for you</div>' +
+        (name   ? '<div>Name: <strong style="color:#F5E6C8">'+esc(name)+'</strong></div>' : '') +
+        (uid    ? '<div>User ID: <strong style="color:#F5E6C8">'+esc(uid)+'</strong></div>' : '') +
+        (email  ? '<div>Email: <strong style="color:#F5E6C8">'+esc(email)+'</strong></div>' : '') +
+        (mobile ? '<div>Number: <strong style="color:#F5E6C8">'+esc(mobile)+'</strong></div>' : '') +
+      '</div>' +
+      '<a href="' + esc(mailto) + '" style="display:block;text-align:center;width:100%;padding:13px;border-radius:12px;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;text-decoration:none;font-family:\'BellaIndic\',\'DM Sans\',sans-serif;box-sizing:border-box">Write to Savio</a>' +
+      '<div style="font-size:11px;color:rgba(245,230,200,0.5);line-height:1.8;margin-top:14px;text-align:center">' +
+        'If that button does nothing, write to<br><strong style="color:#F5E6C8;user-select:all">' + esc(LEGAL_CONTACT) + '</strong><br>and say which number to change it to.' +
+      '</div>' +
+      '<button onclick="document.getElementById(\'recovery-help\').remove()" style="width:100%;margin-top:16px;padding:10px;border-radius:10px;border:1px solid rgba(245,230,200,0.15);background:transparent;color:rgba(245,230,200,0.6);font-size:12px;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Back</button>' +
+    '</div>';
+  document.body.appendChild(box);
 }
 
 function notYouGate() {
@@ -5504,7 +5622,13 @@ async function submitFeedback(){
 // ============================================================
 // NOTIFICATION SOUND
 // ============================================================
+// Three call sites, and until now no way to switch it off. It fires when Bella
+// opens, which is the one most likely to be unwelcome.
+function notifSoundOn(){
+  try{ return localStorage.getItem('b_notif_sound') !== 'off'; }catch(e){ return true; }
+}
 function playNotifSound(){
+  if(!notifSoundOn()) return;
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)();
     const o=ctx.createOscillator(),g=ctx.createGain();
