@@ -1794,10 +1794,8 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         <span class="menu-section-arrow" id="arr-profile">▲</span>
       </div>
       <div class="menu-items" id="sec-profile">
-        <div class="menu-item" onclick="closeUserMenu()">My Profile</div>
-        <div class="menu-item" onclick="closeUserMenu()">Change Preferred Name</div>
+        <div class="menu-item" onclick="openMyProfile();closeUserMenu()">My Profile</div>
         <div class="menu-item" onclick="openNotificationSettings();closeUserMenu()">Notification Settings</div>
-        <div class="menu-item" onclick="closeUserMenu()">Language Preference</div>
         <div class="menu-item" onclick="openVoicePick(event)">Bella's Voice</div>
       </div>
     </div>
@@ -3415,6 +3413,129 @@ function showReturningOTPGate(savedUser) {
   document.body.appendChild(gate);
   // Auto-send OTP to registered mobile
   sendReturningOTP(savedUser.mobile, savedUser);
+}
+
+// ══ MY PROFILE ════════════════════════════════════════════════════════════
+// What Bella holds about you, and the one thing you may change yourself.
+//
+// The split is NOT a UI choice -- it mirrors what the backend will actually
+// accept. /update-profile lets a non-admin change only preferredName, photo,
+// city and language, and refuses name/email/mobile with `needs_verification`,
+// because those are checked against the registration and changing a mobile
+// silently is how somebody takes an account over. So the page offers an edit
+// for what will succeed, and a REQUEST for what will not. A form that submits
+// something the server refuses is just a lie with a button on it.
+function _myProfileData(){
+  try{ return JSON.parse(localStorage.getItem('b_registered_user')||'null') || {}; }catch(e){ return {}; }
+}
+function _profRow(label, value, note){
+  const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const shown = value ? esc(value) : '<span style="color:#9AA8BF">Not recorded</span>';
+  return '<div style="padding:12px 0;border-bottom:1px solid rgba(11,37,69,0.08)">' +
+    '<div style="font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#5A6B8A">' + esc(label) + '</div>' +
+    '<div style="font-size:14px;color:#0B2545;margin-top:3px;word-break:break-word">' + shown + '</div>' +
+    (note ? '<div style="font-size:10px;color:#5A6B8A;margin-top:3px">' + esc(note) + '</div>' : '') +
+  '</div>';
+}
+function openMyProfile(){
+  const d = _myProfileData();
+  const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const uid = d.userId || (function(){ try{ return localStorage.getItem('b_userid')||''; }catch(e){ return ''; } })();
+  const joined = d.registeredDate ? new Date(d.registeredDate).toLocaleDateString('en-IN',
+      {day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Kolkata'}) : '';
+  const consent = d.consentedAt ? new Date(d.consentedAt).toLocaleDateString('en-IN',
+      {day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Kolkata'}) : '';
+  const prev=document.getElementById('my-profile'); if(prev) prev.remove();
+  const box=document.createElement('div');
+  box.id='my-profile';
+  box.style.cssText='position:fixed;inset:0;background:rgba(11,37,69,0.72);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:520;padding:16px';
+  const photo = d.photoUrl
+    ? '<img src="' + esc(d.photoUrl) + '" alt="" referrerpolicy="no-referrer" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid rgba(245,230,200,0.35)">'
+    : '<div style="width:72px;height:72px;border-radius:50%;background:#D4AF37;display:flex;align-items:center;justify-content:center;font-family:\'Cormorant Garamond\',serif;font-size:30px;font-weight:600;color:#0B2545">' +
+      esc((d.preferredName||d.fullName||'?').trim().charAt(0).toUpperCase()) + '</div>';
+  box.innerHTML =
+    '<div style="background:#FFFFFF;border-radius:20px;max-width:430px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.3)">' +
+      '<div style="background:#0B2545;border-radius:20px 20px 0 0;padding:22px 24px;display:flex;align-items:center;gap:15px">' +
+        photo +
+        '<div style="min-width:0">' +
+          '<div style="font-family:\'Cormorant Garamond\',serif;font-size:21px;font-weight:600;color:#F5E6C8;word-break:break-word">' + esc(d.preferredName || d.fullName || 'My Profile') + '</div>' +
+          '<div style="font-size:11px;color:rgba(245,230,200,0.6);margin-top:2px">' + esc(uid || 'My Profile') + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="padding:18px 24px 22px">' +
+        '<div style="font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#5A6B8A;margin-bottom:6px">What Bella calls you</div>' +
+        '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">' +
+          '<input id="prof-preferred" value="' + esc(d.preferredName||'') + '" maxlength="40" ' +
+            'style="flex:1;min-width:0;padding:11px 13px;border-radius:12px;border:1.5px solid rgba(11,37,69,0.15);background:#FAF8F4;color:#0B2545;font-size:14px;font-family:\'BellaIndic\',\'DM Sans\',sans-serif;outline:none">' +
+          '<button id="prof-save" onclick="saveMyPreferredName()" style="flex:none;padding:11px 16px;border-radius:12px;border:none;background:#0B2545;color:#F5E6C8;font-size:13px;font-weight:600;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Save</button>' +
+        '</div>' +
+        '<div id="prof-msg" style="font-size:11px;min-height:15px;color:#5A6B8A"></div>' +
+        '<div style="margin-top:12px">' +
+          _profRow('Full name', d.fullName) +
+          _profRow('Email', d.email) +
+          _profRow('Mobile', d.mobile) +
+          _profRow('Date of birth', d.dob) +
+          _profRow('Gender', d.gender) +
+          _profRow('User ID', uid) +
+          _profRow('Member since', joined) +
+          (consent ? _profRow('You accepted the privacy notice', consent,
+              d.consentNoticeVersion ? 'The notice dated ' + d.consentNoticeVersion : '') : '') +
+        '</div>' +
+        '<div style="background:#FAF8F4;border:1px solid rgba(11,37,69,0.10);border-radius:12px;padding:13px 15px;margin-top:16px">' +
+          '<div style="font-size:12px;color:#0B2545;line-height:1.75">' +
+            '<strong>Your name, email and mobile are checked against your registration</strong>, so Savio changes those for you rather than you changing them here. It is what stops somebody moving your account to their own phone.' +
+          '</div>' +
+          '<button onclick="requestProfileChange()" style="width:100%;margin-top:11px;padding:11px;border-radius:11px;border:1.5px solid #0B2545;background:transparent;color:#0B2545;font-size:13px;font-weight:600;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Ask for one of these to be changed</button>' +
+        '</div>' +
+        '<button onclick="document.getElementById(\'my-profile\').remove()" style="width:100%;margin-top:14px;padding:12px;border-radius:12px;border:none;background:#0B2545;color:#F5E6C8;font-size:13px;font-weight:600;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Done</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(box);
+}
+
+async function saveMyPreferredName(){
+  const inp=document.getElementById('prof-preferred'), msg=document.getElementById('prof-msg'), btn=document.getElementById('prof-save');
+  if(!inp||!msg) return;
+  const name=(inp.value||'').trim();
+  if(!name){ msg.style.color='#A32B22'; msg.textContent='Please give me something to call you.'; return; }
+  btn.disabled=true; btn.textContent='Saving...'; msg.style.color='#5A6B8A'; msg.textContent='';
+  try{
+    // No profileKey is sent. The backend finds the row from the VERIFIED token,
+    // and ignores a profileKey from the body for anyone who is not the owner.
+    const r=await bfetch(BACKEND+'/update-profile',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({updates:{preferredName:name}})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
+    // Keep the device in step with the sheet, and the screen in step with both.
+    try{ const d=_myProfileData(); d.preferredName=name;
+         localStorage.setItem('b_registered_user',JSON.stringify(d)); }catch(e){}
+    currentAddressedName=name;
+    try{ updateTopbarUser(name, (document.getElementById('topbar-userid')||{}).textContent||''); }catch(e){}
+    msg.style.color='#1C6446'; msg.textContent='Saved. I will call you ' + name + ' from now on.';
+  }catch(e){
+    msg.style.color='#A32B22';
+    msg.textContent = (e && e.message) ? e.message : 'That did not save. Please try again.';
+  }finally{ btn.disabled=false; btn.textContent='Save'; }
+}
+
+// Same mail route as the lockout panel, and for the same reason: the change
+// has to be made by a person who can check it, and a mail link needs no new
+// endpoint and no new door.
+function requestProfileChange(){
+  const d=_myProfileData();
+  const uid = d.userId || (function(){ try{ return localStorage.getItem('b_userid')||''; }catch(e){ return ''; } })();
+  const body =
+    'Hello Savio,\n\nPlease change something on my Bella account.\n\n' +
+    'What Bella has now:\n' +
+    '  Name: ' + (d.fullName||'') + '\n' +
+    '  User ID: ' + (uid||'') + '\n' +
+    '  Email: ' + (d.email||'') + '\n' +
+    '  Mobile: ' + (d.mobile||'') + '\n\n' +
+    'Please change (delete the ones that do not apply):\n' +
+    '  Full name to: \n  Email to: \n  Mobile to: \n\nThank you.\n';
+  window.location.href = 'mailto:' + LEGAL_CONTACT +
+    '?subject=' + encodeURIComponent('Bella — please change my account details') +
+    '&body=' + encodeURIComponent(body);
 }
 
 // Deliberately SMALL and deliberately honest. The only thing Bella can notify
