@@ -1375,29 +1375,73 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         <button onclick="switchConvTab('time')" id="ctab-time" class="conv-tab-btn">🌍 Time Zone</button>
       </div>
 
+      <!-- ══ ANSWER FIRST ════════════════════════════════════════════════
+           Savio's choice, 2026-10-04: Decision 1-A (the top-bar cell stays a
+           plain label) + Decision 2-3 (this panel puts the ANSWER first).
+
+           What this replaced, and why. Every tab used to be ONE flex row of
+           controls with the answer as an afterthought underneath. Measured in
+           real Chrome at 390px, the Units tab gave its two unit fields 37px
+           each -- "Kilometres" rendered as "Kil" and "Miles" as "M". Two
+           controls also overflowed the panel on desktop, no field said whether
+           it was from or to, results carried six decimal places, and it said
+           "1 Kilometres".
+
+           So: the answer is the biggest thing and sits at the top; the controls
+           are a quiet LABELLED grid underneath that collapses to one full-width
+           column on a phone. Nothing can truncate, because nothing shares a row
+           below 560px.
+
+           The one weakness of answer-first is a big empty dash on first open,
+           which makes the quiet controls easy to miss. There is no empty state
+           here: Units and Time Zone already pre-fill (buildUnitSearchLists and
+           the clock), and Currency now says what it is waiting for instead of
+           showing a bare dash. ============================================ -->
+
       <!-- Currency Tab -->
       <div id="conv-currency" class="conv-tab-content">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-          <input id="conv-amt" type="number" value="1" placeholder="Amount" style="width:80px;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none" oninput="doConvert()">
-          <div style="position:relative;flex:1">
-            <input type="text" id="curr-from-search" placeholder="Search currency..." class="conv-search" style="margin:0" oninput="filterCurrencyList('from')" onfocus="showCurrencyList('from')" value="🇮🇳 INR — Indian Rupee">
-            <div id="curr-from-list" class="conv-select-list" style="min-width:220px"></div>
+        <div class="cv-ans">
+          <div class="cv-big" id="conv-result">—</div>
+          <div class="cv-big-unit" id="conv-result-unit"></div>
+          <div class="cv-sub" id="conv-rate-info"></div>
+        </div>
+        <div class="cv-ctl">
+          <div class="cv-field">
+            <div class="cv-lbl">Amount</div>
+            <input id="conv-amt" type="number" value="1" inputmode="decimal" placeholder="Amount" class="cv-input" oninput="doConvert()">
           </div>
-          <span style="font-size:16px;color:var(--tsoft)">-></span>
-          <div style="position:relative;flex:1">
-            <input type="text" id="curr-to-search" placeholder="Search currency..." class="conv-search" style="margin:0" oninput="filterCurrencyList('to')" onfocus="showCurrencyList('to')" value="🇺🇸 USD — US Dollar">
-            <div id="curr-to-list" class="conv-select-list" style="min-width:220px"></div>
+          <div class="cv-field">
+            <div class="cv-lbl">From</div>
+            <div class="cv-pos">
+              <input type="text" id="curr-from-search" placeholder="Search currency..." class="conv-search" oninput="filterCurrencyList('from')" onfocus="showCurrencyList('from')" value="🇮🇳 INR — Indian Rupee">
+              <div id="curr-from-list" class="conv-select-list" style="min-width:220px"></div>
+            </div>
+          </div>
+          <div class="cv-swap-cell">
+            <button type="button" class="cv-swap" onclick="cvSwap('curr')" title="Swap from and to" aria-label="Swap from and to"><span>⇄</span><span class="cv-swap-txt">Swap</span></button>
+          </div>
+          <div class="cv-field">
+            <div class="cv-lbl">To</div>
+            <div class="cv-pos">
+              <input type="text" id="curr-to-search" placeholder="Search currency..." class="conv-search" oninput="filterCurrencyList('to')" onfocus="showCurrencyList('to')" value="🇺🇸 USD — US Dollar">
+              <div id="curr-to-list" class="conv-select-list" style="min-width:220px"></div>
+            </div>
           </div>
         </div>
-        <div id="conv-result" style="font-size:22px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif;font-variant-numeric:lining-nums">—</div>
-        <div id="conv-rate-info" style="font-size:10px;color:var(--tsoft);margin-top:4px"></div>
       </div>
 
       <!-- Unit Tab -->
+      <!-- The category select gets its OWN row. It was the fourth control in a
+           row built for three, and it is what squeezed the unit fields to 37px. -->
       <div id="conv-unit" class="conv-tab-content" style="display:none">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;margin-bottom:8px">
-          <input id="unit-amt" type="number" value="1" placeholder="Value" style="width:80px;flex-shrink:0;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none" oninput="doUnitConvert()">
-          <select id="unit-cat" onchange="buildUnitSelects();doUnitConvert();" style="flex-shrink:0;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:12px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none">
+        <div class="cv-ans">
+          <div class="cv-big" id="unit-result">—</div>
+          <div class="cv-big-unit" id="unit-result-unit"></div>
+          <div class="cv-sub" id="unit-sub"></div>
+        </div>
+        <div class="cv-field cv-cat">
+          <div class="cv-lbl">Measure</div>
+          <select id="unit-cat" class="cv-input" onchange="buildUnitSelects()">
             <option value="length">📏 Length</option>
             <option value="weight">⚖️ Weight</option>
             <option value="temp">🌡️ Temperature</option>
@@ -1405,34 +1449,62 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
             <option value="area">⬛ Area</option>
             <option value="speed">💨 Speed</option>
           </select>
-          <div style="position:relative;flex:1">
-            <input type="text" id="unit-from-search" placeholder="Search unit..." class="conv-search" style="margin:0" oninput="filterUnitList('from')" onfocus="showUnitList('from')">
-            <div id="unit-from-list" class="conv-select-list"></div>
+        </div>
+        <div class="cv-ctl">
+          <div class="cv-field">
+            <div class="cv-lbl">Value</div>
+            <input id="unit-amt" type="number" value="1" inputmode="decimal" placeholder="Value" class="cv-input" oninput="doUnitConvert()">
           </div>
-          <span style="font-size:14px;color:var(--tsoft);flex-shrink:0">-></span>
-          <div style="position:relative;flex:1">
-            <input type="text" id="unit-to-search" placeholder="Search unit..." class="conv-search" style="margin:0" oninput="filterUnitList('to')" onfocus="showUnitList('to')">
-            <div id="unit-to-list" class="conv-select-list"></div>
+          <div class="cv-field">
+            <div class="cv-lbl">From</div>
+            <div class="cv-pos">
+              <input type="text" id="unit-from-search" placeholder="Search unit..." class="conv-search" oninput="filterUnitList('from')" onfocus="showUnitList('from')">
+              <div id="unit-from-list" class="conv-select-list"></div>
+            </div>
+          </div>
+          <div class="cv-swap-cell">
+            <button type="button" class="cv-swap" onclick="cvSwap('unit')" title="Swap from and to" aria-label="Swap from and to"><span>⇄</span><span class="cv-swap-txt">Swap</span></button>
+          </div>
+          <div class="cv-field">
+            <div class="cv-lbl">To</div>
+            <div class="cv-pos">
+              <input type="text" id="unit-to-search" placeholder="Search unit..." class="conv-search" oninput="filterUnitList('to')" onfocus="showUnitList('to')">
+              <div id="unit-to-list" class="conv-select-list"></div>
+            </div>
           </div>
         </div>
-        <div id="unit-result" style="font-size:22px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif;font-variant-numeric:lining-nums">—</div>
       </div>
+
       <!-- Timezone Tab -->
       <div id="conv-time" class="conv-tab-content" style="display:none">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;margin-bottom:8px">
-          <input id="tz-time-in" type="time" style="flex-shrink:0;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none" oninput="doTZConvert()">
-          <div style="position:relative;flex:1">
-            <input type="text" id="tz-from-search" placeholder="Search state, country or IST..." class="conv-search" style="margin:0" oninput="filterTZList('from')" onfocus="showTZList('from')">
-            <div id="tz-from-list" class="conv-select-list" style="min-width:260px"></div>
+        <div class="cv-ans">
+          <div class="cv-big" id="tz-result">—</div>
+          <div class="cv-big-unit" id="tz-result-sub"></div>
+          <div class="cv-sub" id="tz-diff"></div>
+        </div>
+        <div class="cv-ctl">
+          <div class="cv-field">
+            <div class="cv-lbl">Time</div>
+            <input id="tz-time-in" type="time" class="cv-input" oninput="doTZConvert()">
           </div>
-          <span style="font-size:14px;color:var(--tsoft);flex-shrink:0">-></span>
-          <div style="position:relative;flex:1">
-            <input type="text" id="tz-to-search" placeholder="Search state, country or CST..." class="conv-search" style="margin:0" oninput="filterTZList('to')" onfocus="showTZList('to')">
-            <div id="tz-to-list" class="conv-select-list" style="min-width:260px"></div>
+          <div class="cv-field">
+            <div class="cv-lbl">From</div>
+            <div class="cv-pos">
+              <input type="text" id="tz-from-search" placeholder="Search state, country or IST..." class="conv-search" oninput="filterTZList('from')" onfocus="showTZList('from')">
+              <div id="tz-from-list" class="conv-select-list" style="min-width:260px"></div>
+            </div>
+          </div>
+          <div class="cv-swap-cell">
+            <button type="button" class="cv-swap" onclick="cvSwap('tz')" title="Swap from and to" aria-label="Swap from and to"><span>⇄</span><span class="cv-swap-txt">Swap</span></button>
+          </div>
+          <div class="cv-field">
+            <div class="cv-lbl">To</div>
+            <div class="cv-pos">
+              <input type="text" id="tz-to-search" placeholder="Search state, country or CST..." class="conv-search" oninput="filterTZList('to')" onfocus="showTZList('to')">
+              <div id="tz-to-list" class="conv-select-list" style="min-width:260px"></div>
+            </div>
           </div>
         </div>
-        <div id="tz-result" style="font-size:20px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif;font-variant-numeric:lining-nums">—</div>
-        <div id="tz-diff" style="font-size:11px;color:var(--tsoft);margin-top:4px"></div>
       </div>
         </div>
 
@@ -2359,13 +2431,21 @@ const TIMEZONES=[
 ];
 
 // UNIT DATA — 6 categories
+// EXACT factors, corrected 2026-10-04. These were rounded to 6 digits, which
+// was invisible while the readout showed a rounded answer -- but "1 Foot =
+// 12.000006 Inches" appeared the moment the panel started showing the precise
+// figure underneath. Twelve inches in a foot is exact, and Bella must not print
+// a wrong number and call it exact. Every value below is the DEFINED conversion
+// (1 inch = 25.4mm, 1 mile = 1609.344m, 1 lb = 0.45359237kg, 1 US gal =
+// 3.785411784L, 1 acre = 4046.8564224m2, 1 knot = 1.852km/h), so this only adds
+// precision -- each one agrees with the old value to every digit it had.
 const UNIT_DATA={
-  length:{km:{f:1,l:'Kilometres'},mi:{f:0.621371,l:'Miles'},m:{f:1000,l:'Metres'},ft:{f:3280.84,l:'Feet'},cm:{f:100000,l:'Centimetres'},inch:{f:39370.1,l:'Inches'}},
-  weight:{kg:{f:1,l:'Kilograms'},lb:{f:2.20462,l:'Pounds'},g:{f:1000,l:'Grams'},oz:{f:35.274,l:'Ounces'},t:{f:0.001,l:'Metric Tonnes'}},
+  length:{km:{f:1,l:'Kilometres'},mi:{f:0.621371192237334,l:'Miles'},m:{f:1000,l:'Metres'},ft:{f:3280.8398950131235,l:'Feet'},cm:{f:100000,l:'Centimetres'},inch:{f:39370.07874015748,l:'Inches'}},
+  weight:{kg:{f:1,l:'Kilograms'},lb:{f:2.2046226218487757,l:'Pounds'},g:{f:1000,l:'Grams'},oz:{f:35.27396194958041,l:'Ounces'},t:{f:0.001,l:'Metric Tonnes'}},
   temp:{c:{f:1,l:'Celsius'},f:{f:1,l:'Fahrenheit'},k:{f:1,l:'Kelvin'}},
-  volume:{l:{f:1,l:'Litres'},ml:{f:1000,l:'Millilitres'},gal:{f:0.264172,l:'US Gallons'},pt:{f:2.11338,l:'Pints'},fl_oz:{f:33.814,l:'Fluid Ounces'}},
-  area:{sqkm:{f:1,l:'Sq Kilometres'},sqmi:{f:0.386102,l:'Sq Miles'},sqm:{f:1000000,l:'Sq Metres'},sqft:{f:10763910.4,l:'Sq Feet'},acre:{f:247.105,l:'Acres'},hectare:{f:100,l:'Hectares'}},
-  speed:{kmh:{f:1,l:'km/h'},mph:{f:0.621371,l:'mph'},ms:{f:0.277778,l:'m/s'},knot:{f:0.539957,l:'Knots'}}
+  volume:{l:{f:1,l:'Litres'},ml:{f:1000,l:'Millilitres'},gal:{f:0.26417205235814843,l:'US Gallons'},pt:{f:2.1133764188651876,l:'Pints'},fl_oz:{f:33.814022701843,l:'Fluid Ounces'}},
+  area:{sqkm:{f:1,l:'Sq Kilometres'},sqmi:{f:0.3861021585424458,l:'Sq Miles'},sqm:{f:1000000,l:'Sq Metres'},sqft:{f:10763910.41670972,l:'Sq Feet'},acre:{f:247.10538146716533,l:'Acres'},hectare:{f:100,l:'Hectares'}},
+  speed:{kmh:{f:1,l:'km/h'},mph:{f:0.621371192237334,l:'mph'},ms:{f:0.2777777777777778,l:'m/s'},knot:{f:0.5399568034557235,l:'Knots'}}
 };
 
 async function fetchExchangeRates(){
@@ -3312,6 +3392,31 @@ async function signInReturningUser() {
       photoUrl: '',
       userId: localStorage.getItem('b_userid') || ''
     };
+    // ── THE NUMBER ON RECORD WINS ────────────────────────────────────────
+    // Until this existed, the gate took the mobile from THIS BROWSER
+    // (b_returning_mobile) and never from the record -- so when Savio corrected
+    // a member's number after they changed SIM, the correction reached a cell
+    // in a spreadsheet and nothing else, and Bella went on texting the dead
+    // number forever. This is the half that makes the admin button mean
+    // something. We are past the Google popup here, so the call carries a
+    // verified token and the server answers for THIS person only.
+    // Feature-detected on purpose: a backend that does not return `mobile` is
+    // simply left alone, so the page is correct before and after that deploy.
+    try{
+      const _as = await bfetch(BACKEND + '/account-state', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+      if(_as.ok){
+        const _d = await _as.json().catch(()=>({}));
+        if(_d && typeof _d.mobile === 'string' && _d.mobile.length >= 8 && _d.mobile !== savedUser.mobile){
+          savedUser.mobile = _d.mobile;
+          localStorage.setItem('b_returning_mobile', _d.mobile);
+          try{
+            const _st = JSON.parse(localStorage.getItem('b_registered_user') || 'null');
+            if(_st){ _st.mobile = _d.mobile; localStorage.setItem('b_registered_user', JSON.stringify(_st)); }
+          }catch(e){}
+        }
+      }
+    }catch(e){ /* offline or backend down: never strand someone at the gate */ }
+
     // If mobile missing — ask user to enter it
     if(!savedUser.mobile || savedUser.mobile.length < 8){
       showReturningMobileInput(savedUser);
@@ -4396,9 +4501,16 @@ async function openAdminPanel(){
   }
 }
 
+// Held so the row buttons can pass an INDEX. The destructive actions below
+// interpolate an email straight into an onclick string; a change-of-number
+// needs the profileKey too, and two values in a quoted attribute is how an
+// apostrophe in somebody's data turns into broken markup.
+let _adminUsers = [];
+
 function renderAdminUsers(users){
   const body = document.getElementById('admin-body');
   if(!body) return;
+  _adminUsers = users || [];
   if(!users.length){ body.textContent = 'No accounts found.'; return; }
   const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const badge = st => {
@@ -4407,7 +4519,7 @@ function renderAdminUsers(users){
     return '<span style="background:'+v[0]+';color:#fff;border-radius:6px;padding:2px 8px;font-size:11px">'+esc(v[1])+'</span>';
   };
   body.innerHTML = '<div style="margin-bottom:12px;color:rgba(245,230,200,0.5)">' + users.length + ' account(s). Every action is written to the Audit tab, and anything removed is copied to Archive first.</div>' +
-    users.map(u => {
+    users.map((u,_i) => {
       // Whose row is mine: read from the account signed in on THIS device. That
       // is the person's own address on their own machine, so it reveals nothing.
       const _mine = (function(){ try{ return (JSON.parse(localStorage.getItem('b_registered_user')||'{}').email||'').toLowerCase(); }catch(e){ return ''; } })();
@@ -4420,12 +4532,90 @@ function renderAdminUsers(users){
         '<div style="margin-top:3px;color:rgba(245,230,200,0.45)">' + u.memories + ' memories · ' + u.threads + ' conversations · last seen ' + esc((u.lastSeen||'—').slice(0,10)) + '</div>' +
         (u.stateReason ? '<div style="margin-top:3px;color:rgba(245,230,200,0.45)">Reason on file: ' + esc(u.stateReason) + '</div>' : '') +
         '<div style="margin-top:8px">' +
+          '<button onclick="adminChangeMobile(' + _i + ')" style="margin:3px 4px 0 0;padding:6px 10px;border-radius:8px;border:1px solid #D4AF37;background:transparent;color:#D4AF37;font-size:12px;cursor:pointer">Change mobile number</button>' +
           btn('wipe','Wipe completely','#EF5350') +
           btn('clear-data','Clear data, keep account','#FFA726') +
           (me ? '' : btn('lockout','Security lock-out','#29B6F6')) +
           (me ? '' : (u.state==='frozen' ? btn('unfreeze','Unfreeze','#66BB6A') : btn('freeze','Freeze','#AB47BC'))) +
         '</div></div>';
     }).join('');
+}
+
+// ── CHANGE A MEMBER'S MOBILE NUMBER ──────────────────────────────────────
+// Savio asked for this because a changed SIM was a PERMANENT lockout: the
+// returning gate sends the code to the number on record and there was no way
+// to correct it. `/update-profile` as owner is the only thing that may write
+// somebody else's mobile -- a member cannot change their own, by design, since
+// rewriting a mobile is exactly how you would steal an account.
+//
+// READ THIS BEFORE BELIEVING THE BUTTON IS ENOUGH. Changing the record only
+// reaches the member's phone because `signInReturningUser` now asks the server
+// for the number on record and PREFERS it over the stale one in their browser.
+// Without that half, this writes a cell and the member is still locked out.
+// Deliberately NOT paired with a lock-out: the gate picks the new number up on
+// its own the next time they open Bella, and revoking their sessions as well
+// would just be a second disruption that buys nothing.
+function adminChangeMobile(i){
+  const u = _adminUsers[i];
+  if(!u) return;
+  const who = u.preferredName || u.fullName || u.email || '';
+  const ov = document.createElement('div');
+  ov.id = 'admin-confirm';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px';
+  const esc = x => String(x==null?'':x).replace(/[&<>"\']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  ov.innerHTML = '<div style="background:#0B2545;border:1px solid rgba(212,175,55,0.5);border-radius:16px;max-width:460px;width:100%;padding:22px;max-height:90vh;overflow:auto">' +
+    '<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;color:#F5E6C8;margin-bottom:8px">Change mobile number</div>' +
+    '<div style="font-size:13px;color:rgba(245,230,200,0.7);line-height:1.6;margin-bottom:6px">For <b>' + esc(who) + '</b>.</div>' +
+    '<div style="font-size:12px;color:rgba(245,230,200,0.55);margin-bottom:14px;line-height:1.6">On record now: <b style="color:#F5E6C8">' + (esc(u.mobile) || 'nothing') + '</b>.<br>' +
+      'Their sign-in code goes to whatever is on record here, so this is what lets someone back in after changing their SIM. ' +
+      'It takes effect the next time they open Bella. No data is touched and they are not signed out.</div>' +
+    '<div style="font-size:12px;color:rgba(245,230,200,0.55);margin-bottom:6px">New mobile number</div>' +
+    '<div style="display:flex;gap:8px;margin-bottom:12px">' +
+      '<input id="admin-mob-cc" value="+91" style="width:64px;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid rgba(212,175,55,0.35);background:#0a1f3c;color:#F5E6C8;font-size:13px;text-align:center">' +
+      '<input id="admin-mob-num" inputmode="numeric" autocomplete="off" placeholder="Digits only" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')" style="flex:1;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid rgba(212,175,55,0.35);background:#0a1f3c;color:#F5E6C8;font-size:13px">' +
+    '</div>' +
+    '<div style="font-size:12px;color:rgba(245,230,200,0.55);margin-bottom:6px">Why? (recorded in the audit log)</div>' +
+    '<input id="admin-reason" style="width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid rgba(212,175,55,0.35);background:#0a1f3c;color:#F5E6C8;font-size:13px;margin-bottom:12px">' +
+    '<div style="font-size:12px;color:rgba(245,230,200,0.55);margin-bottom:6px">Type <b style="color:#D4AF37">' + esc(u.email) + '</b> to confirm</div>' +
+    '<input id="admin-confirm-email" autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid rgba(212,175,55,0.35);background:#0a1f3c;color:#F5E6C8;font-size:13px">' +
+    '<div id="admin-confirm-msg" style="font-size:12px;color:#EF5350;margin-top:8px;min-height:16px"></div>' +
+    '<div style="display:flex;gap:8px;margin-top:10px">' +
+      '<button onclick="document.getElementById(\'admin-confirm\').remove()" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(245,230,200,0.3);background:transparent;color:#F5E6C8;font-size:13px;cursor:pointer">Cancel</button>' +
+      '<button id="admin-go" style="flex:1;padding:10px;border-radius:10px;border:none;background:#D4AF37;color:#0B2545;font-size:13px;font-weight:600;cursor:pointer">Save number</button>' +
+    '</div></div>';
+  document.body.appendChild(ov);
+  document.getElementById('admin-go').onclick = async function(){
+    const msg = document.getElementById('admin-confirm-msg');
+    const cc = (document.getElementById('admin-mob-cc').value||'').trim();
+    const num = (document.getElementById('admin-mob-num').value||'').trim();
+    const reason = (document.getElementById('admin-reason').value||'').trim();
+    const typed = (document.getElementById('admin-confirm-email').value||'').trim().toLowerCase();
+    if(!/^\+[0-9]{1,4}$/.test(cc)){ msg.textContent = 'Country code should look like +91.'; return; }
+    if(num.length < 7 || num.length > 15){ msg.textContent = 'That does not look like a mobile number.'; return; }
+    const mobile = cc + num;
+    if(mobile === (u.mobile||'')){ msg.textContent = 'That is already the number on record.'; return; }
+    // HIS PROTOCOL: one number per account, unique across users. Checked here
+    // against the list already on screen -- a courtesy, NOT a guarantee, since
+    // the backend does not enforce uniqueness yet. Queued.
+    const clash = _adminUsers.find(x => x !== u && (x.mobile||'') === mobile);
+    if(clash){ msg.textContent = 'That number is already on another account (' + (clash.preferredName || clash.email) + ').'; return; }
+    if(!reason){ msg.textContent = 'A reason is required.'; return; }
+    if(typed !== String(u.email||'').toLowerCase()){ msg.textContent = 'That does not match the email.'; return; }
+    this.disabled = true; this.textContent = 'Saving...';
+    try{
+      const r = await bfetch(BACKEND + '/update-profile', {method:'POST',headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({profileKey: u.profileKey, updates: {mobile: mobile}, reason: reason})});
+      const d = await r.json().catch(()=>({}));
+      if(!r.ok){ msg.textContent = d.error || ('Failed (' + r.status + ')'); this.disabled=false; this.textContent='Save number'; return; }
+      // Proof, not assumption: the server says whose row it wrote and as what.
+      if(!d.asOwner){ msg.textContent = 'Refused: that did not go through as the owner.'; this.disabled=false; this.textContent='Save number'; return; }
+      u.mobile = mobile;
+      ov.remove();
+      const panel = document.getElementById('admin-overlay');
+      if(panel) panel.remove();
+      showAuthAlert(who + ' is now on ' + mobile + '. The next time they open Bella, the code goes to that number.');
+    }catch(e){ msg.textContent = e.message; this.disabled=false; this.textContent='Save number'; }
+  };
 }
 
 function adminAct(email, action){
@@ -8823,6 +9013,10 @@ function openConverterPanel(){
   const tEl=document.getElementById('tz-time-in');
   if(tEl) tEl.value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   buildUnitSearchLists();
+  // Paint the Currency tab BEFORE the rate request goes out, so the panel never
+  // opens on a bare dash while the network is in flight. fetchExchangeRates()
+  // calls doConvert() again the moment it has an answer.
+  doConvert();
   fetchExchangeRates();
   doTZConvert();
   document.addEventListener('click',closeCurrencyLists,true);
@@ -8845,21 +9039,108 @@ function switchConvTab(tab){
   if(tab==='time') doTZConvert();
 }
 
+// ══ ANSWER FIRST — shared formatting ═════════════════════════════════════
+// Rounding. The Units readout used to print six decimals: "0.621371 Miles".
+// The big line now rounds and the small line carries the exact figure ONLY
+// WHEN IT DIFFERS -- printing "0.62 · exactly 0.62" is noise, not precision.
+function _cvRound(n){
+  if(!isFinite(n)) return '—';
+  const a=Math.abs(n);
+  // Under 0.01, two decimals would render "0.00" and state something untrue.
+  if(a!==0 && a<0.01) return String(parseFloat(n.toPrecision(4)));
+  const d = a>=1000 ? 0 : 2;
+  return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+
+// "1 Kilometres" was his issue. This is English, not arithmetic: at exactly 1
+// the label goes singular. Degree names and the speed symbols already are.
+const _CV_SING={'Feet':'Foot','Sq Feet':'Sq Foot','Inches':'Inch'};
+const _CV_NOSING=['Celsius','Fahrenheit','Kelvin','km/h','mph','m/s'];
+function _cvUnitLabel(label,amt){
+  if(Math.abs(amt)!==1) return label;
+  if(_CV_NOSING.indexOf(label)!==-1) return label;
+  if(_CV_SING[label]) return _CV_SING[label];
+  return label.slice(-1)==='s' ? label.slice(0,-1) : label;
+}
+
+// Same preference as the weather panel's sunrise/sunset, but this one is handed
+// hours and minutes in a FOREIGN zone, so it cannot use _wxClock's getHours().
+function _cvClock(h,m){
+  const mm=String(m).padStart(2,'0');
+  if(_clockFormat24) return String(h).padStart(2,'0')+':'+mm;
+  const ap = h>=12 ? 'PM' : 'AM'; const hh = h%12 || 12;
+  return hh+':'+mm+' '+ap;
+}
+
+// The typed amount, shown as typed. Plain toLocaleString() caps at three
+// decimals, so an input of 0.0001 printed as "0 Kilometres".
+function _cvAmt(n){ return n.toLocaleString(undefined,{maximumFractionDigits:20}); }
+
+// The precise figure for the small line -- returned only when it actually adds
+// something the big line rounded away. Below 0.01 it must count SIGNIFICANT
+// digits, not decimal places: toFixed(6) on 0.0000621371 gives 0.000062, which
+// is LESS precise than the rounded figure above it.
+function _cvExact(result,rounded){
+  const a=Math.abs(result);
+  const exact = (a!==0 && a<0.01) ? parseFloat(result.toPrecision(6))
+                                  : parseFloat(result.toFixed(6));
+  return exact!==parseFloat(String(rounded).replace(/,/g,'')) ? exact : null;
+}
+
+function _cvPaint(bigId,unitId,subId,big,unit,sub){
+  const b=document.getElementById(bigId); if(b) b.textContent=big;
+  const u=document.getElementById(unitId); if(u) u.textContent=unit||'';
+  const x=document.getElementById(subId); if(x) x.textContent=sub||'';
+}
+
+// Swap From and To in whichever tab asked. One function for all three, because
+// all three now read the same way and a third copy is a third thing to drift.
+function cvSwap(kind){
+  const ids={curr:['curr-from-search','curr-to-search'],
+             unit:['unit-from-search','unit-to-search'],
+             tz:['tz-from-search','tz-to-search']}[kind];
+  if(!ids) return;
+  if(kind==='curr'){ const t=_currFrom; _currFrom=_currTo; _currTo=t; }
+  else if(kind==='unit'){ const t=_unitFrom; _unitFrom=_unitTo; _unitTo=t; }
+  else { const t=_tzFrom; _tzFrom=_tzTo; _tzTo=t; }
+  const f=document.getElementById(ids[0]), t2=document.getElementById(ids[1]);
+  if(f&&t2){ const v=f.value; f.value=t2.value; t2.value=v; }
+  if(kind==='curr') doConvert(); else if(kind==='unit') doUnitConvert(); else doTZConvert();
+}
+
 function doConvert(){
-  if(!_exchangeRates) return;
   const amt=parseFloat(document.getElementById('conv-amt').value)||0;
+  // Answer-first has no room for a bare dash while the rate is in flight: the
+  // big empty space is exactly what makes the quiet controls hard to find.
+  if(!_exchangeRates){
+    _cvPaint('conv-result','conv-result-unit','conv-rate-info','…',_currTo,"Fetching today's rate…");
+    return;
+  }
   const rFrom=_exchangeRates[_currFrom],rTo=_exchangeRates[_currTo];
   // A missing rate used to silently default to 1 (USD parity) and show a wrong number.
   if(!rFrom||!rTo){
-    const el=document.getElementById('conv-result');
-    if(el)el.textContent=`Rate unavailable for ${!rFrom?_currFrom:_currTo}`;
+    _cvPaint('conv-result','conv-result-unit','conv-rate-info','—','',
+             'Rate unavailable for '+(!rFrom?_currFrom:_currTo)+'.');
     return;
   }
   const result=amt*(rTo/rFrom);
-  const resEl=document.getElementById('conv-result');
-  const rateEl=document.getElementById('conv-rate-info');
-  if(resEl) resEl.textContent=`${amt.toLocaleString()} ${_currFrom} = ${result.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} ${_currTo}`;
-  if(rateEl&&_ratesTimestamp){const ts=new Date(_ratesTimestamp);rateEl.textContent=`Live rate · Updated ${ts.toLocaleTimeString()}`;}
+  // Money normally keeps exactly two decimals -- that is the convention, and
+  // _cvRound is deliberately NOT used (it drops decimals above 1000). But two
+  // decimals ANNIHILATES a small result, and INR is the default From: "1 INR =
+  // 0.01 USD" is the first thing the tab ever shows and tells you nothing.
+  // Under 1, keep four significant digits instead: 0.0104.
+  const money = Math.abs(result)>0 && Math.abs(result)<1
+    ? String(parseFloat(result.toPrecision(4)))
+    : result.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  const one=rTo/rFrom;
+  const oneStr = one<0.01 ? String(parseFloat(one.toPrecision(4)))
+                          : one.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4});
+  let sub=_cvAmt(amt)+' '+_currFrom+'  ·  1 '+_currFrom+' = '+oneStr+' '+_currTo;
+  if(_ratesTimestamp){
+    const ts=new Date(_ratesTimestamp);
+    sub+='  ·  live rate, updated '+_cvClock(ts.getHours(),ts.getMinutes());
+  }
+  _cvPaint('conv-result','conv-result-unit','conv-rate-info',money,_currTo,sub);
 }
 
 function doUnitConvert(){
@@ -8879,13 +9160,22 @@ function doUnitConvert(){
   } else {
     result=(amt/units[_unitFrom].f)*units[_unitTo].f;
   }
-  const resEl=document.getElementById('unit-result');
-  if(resEl) resEl.textContent=`${amt} ${units[_unitFrom].l} = ${parseFloat(result.toFixed(6))} ${units[_unitTo].l}`;
+  const rounded=_cvRound(result);
+  let sub=_cvAmt(amt)+' '+_cvUnitLabel(units[_unitFrom].l,amt);
+  // Compared as NUMBERS, so "1.60" against "1.6" counts as the same figure and
+  // does not print a pointless "exactly 1.6" underneath.
+  const exact=_cvExact(result,rounded);
+  if(exact!==null) sub+='  ·  exactly '+exact;
+  _cvPaint('unit-result','unit-result-unit','unit-sub',
+           rounded,_cvUnitLabel(units[_unitTo].l,result),sub);
 }
 
 function doTZConvert(){
   const timeIn=document.getElementById('tz-time-in').value;
-  if(!timeIn){document.getElementById('tz-result').textContent='Enter a time above';return;}
+  if(!timeIn){
+    _cvPaint('tz-result','tz-result-sub','tz-diff','—','','Pick a time below.');
+    return;
+  }
   try{
     const[h,m]=timeIn.split(':').map(Number);
     // The typed time is wall-clock time in the SOURCE zone, not in the browser's zone.
@@ -8898,18 +9188,19 @@ function doTZConvert(){
     const dayName=p=>days[new Date(Date.UTC(p.y,p.mo-1,p.d)).getUTCDay()];
     const fromDayStr=`${dayName(fp)} ${fp.d} ${months[fp.mo-1]} ${fp.y}`;
     const toDayStr=`${dayName(tp)} ${tp.d} ${months[tp.mo-1]} ${tp.y}`;
-    const toH=String(tp.h).padStart(2,'0');
-    const toMin=String(tp.mi).padStart(2,'0');
     const diffMins=_tzOffsetMin(inst,_tzTo)-_tzOffsetMin(inst,_tzFrom);
     const diffSign=diffMins>=0?'+':'-';
     const absDiff=Math.abs(diffMins);
     const diffH=Math.floor(absDiff/60);const diffM=absDiff%60;
     const diffStr=diffM>0?`${diffSign}${diffH}h ${diffM}m`:`${diffSign}${diffH}h`;
-    const resEl=document.getElementById('tz-result');
-    const diffEl=document.getElementById('tz-diff');
-    if(resEl) resEl.textContent=`${fromDayStr} ${timeIn} hrs ${fromAbbr}  =  ${toH}:${toMin} hrs ${toAbbr} ${toDayStr}`;
-    if(diffEl) diffEl.textContent=`Time difference: ${diffStr}`;
-  }catch(e){document.getElementById('tz-result').textContent='Conversion error';}
+    // Answer first: the time you asked for IS the big line.
+    _cvPaint('tz-result','tz-result-sub','tz-diff',
+      _cvClock(tp.h,tp.mi),
+      `${toAbbr} · ${toDayStr}`,
+      `${_cvClock(fp.h,fp.mi)} ${fromAbbr}, ${fromDayStr}  ·  time difference ${diffStr}`);
+  }catch(e){
+    _cvPaint('tz-result','tz-result-sub','tz-diff','—','','Conversion error.');
+  }
 }
 
 function filterTZList(side){
@@ -9451,6 +9742,65 @@ html body.dark #conv-panel .conv-tab-btn{
   border:1.5px solid rgba(245,230,200,.26)!important}
 html body.dark #conv-panel .conv-tab-btn.active-tab{
   background:#F5E6C8!important;color:#0B2545!important;border-color:#F5E6C8!important}
+
+/* ══ CONVERTER — ANSWER FIRST ═════════════════════════════════════════════
+   Savio's Decision 2-3, 2026-10-04. Hardcoded hex rather than the brand
+   tokens, and keyed off #conv-panel, because body.dark INVERTS --navy and
+   --cream and carries blanket !important rules that beat a class. Exactly the
+   treatment the weather panel above already needed. */
+#conv-panel .cv-ans{background:#FAF8F4;border:1px solid var(--border);border-radius:14px;
+  padding:15px 18px;margin-bottom:14px}
+/* lining-nums for the same reason as #wx-now-temp: Cormorant Garamond ships
+   OLDSTYLE figures, so at display size "0.62" renders as "o.6ʒ". */
+#conv-panel .cv-big{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:600;
+  line-height:1.08;color:#0B2545;font-variant-numeric:lining-nums;overflow-wrap:break-word}
+#conv-panel .cv-big-unit{font-size:14px;font-weight:600;color:#0B2545;margin-top:2px}
+#conv-panel .cv-sub{font-size:11px;color:#5A6B8A;margin-top:7px;line-height:1.55}
+#conv-panel .cv-lbl{font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;
+  color:#5A6B8A;margin-bottom:4px}
+#conv-panel .cv-pos{position:relative}
+#conv-panel .cv-cat{margin-bottom:10px;max-width:260px}
+#conv-panel .cv-input{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:10px;
+  border:1.5px solid var(--navy);background:var(--cream);color:var(--text);font-size:13px;
+  font-family:'BellaIndic','DM Sans',sans-serif;outline:none}
+#conv-panel .cv-input:focus{border-color:var(--gold)}
+/* The shared .conv-search carries margin-bottom:10px for the old stacked
+   layout; inside this grid that reads as a stray gap under From and To. */
+#conv-panel .cv-ctl .conv-search{margin-bottom:0}
+#conv-panel .cv-ctl{display:grid;grid-template-columns:92px 1fr 42px 1fr;gap:10px;align-items:end}
+#conv-panel .cv-swap-cell{display:flex;align-items:end;justify-content:center;padding-bottom:1px}
+#conv-panel .cv-swap{width:38px;height:38px;border-radius:10px;border:1.5px solid var(--border);
+  background:#FAF8F4;color:#0B2545;font-size:15px;line-height:1;cursor:pointer;flex-shrink:0;
+  font-family:'BellaIndic','DM Sans',sans-serif;display:flex;align-items:center;
+  justify-content:center;gap:7px}
+/* On a phone the swap control is a full-width bar. A lone arrow glyph on a bar
+   that wide does not say what it does, so the word rides along -- but only
+   there; at desktop size it is a 38px square between two fields and obvious. */
+#conv-panel .cv-swap-txt{display:none;font-size:12px;font-weight:600}
+#conv-panel .cv-swap:hover{background:var(--goldpale);border-color:var(--gold)}
+html body.dark #conv-panel .cv-ans{background:#12233B!important;
+  border-color:rgba(245,230,200,.26)!important}
+html body.dark #conv-panel .cv-big,
+html body.dark #conv-panel .cv-big-unit{color:#F5E6C8!important}
+html body.dark #conv-panel .cv-sub,
+html body.dark #conv-panel .cv-lbl{color:rgba(245,230,200,.6)!important}
+html body.dark #conv-panel .cv-swap{background:#12233B!important;color:#F5E6C8!important;
+  border:1.5px solid rgba(245,230,200,.26)!important}
+/* Below 560px nothing shares a row, so no field can be squeezed. This is what
+   kills the measured 37px unit fields: each control gets the full panel. */
+@media(max-width:560px){
+  #conv-panel .cv-ctl{grid-template-columns:1fr}
+  #conv-panel .cv-cat{max-width:none}
+  #conv-panel .cv-swap-cell{justify-content:flex-start}
+  #conv-panel .cv-swap{width:100%;height:34px}
+  #conv-panel .cv-swap-txt{display:inline}
+}
+/* 320px is the floor — iPhone SE and the older Androids in the family. */
+@media(max-width:400px){
+  #conv-panel .cv-big{font-size:31px}
+  #conv-panel .cv-ans{padding:13px 14px}
+}
+@media(pointer:coarse){#conv-panel .cv-swap{min-height:44px}}
 
 #wx-now-ico{font-size:46px;line-height:1;flex-shrink:0}
 /* lining-nums is not cosmetic. Cormorant Garamond ships OLDSTYLE figures by
