@@ -4643,8 +4643,19 @@ function showAboutBella(){
 // of that changes, change these too, or the notice becomes false.
 // ══════════════════════════════════════════════════════════════════════
 const LEGAL_CONTACT = 'support.bella.ai@gmail.com';
-const LEGAL_UPDATED = '17 September 2026';
+const LEGAL_UPDATED = '4 October 2026';
 
+// LANGUAGE — DECIDED BY SAVIO 2026-10-04, AND THESE THREE ARE A SPECIAL CASE.
+// The rest of the My Account panel (About, What's New, Coming in Phase 2, Admin)
+// stays ENGLISH: he treats that panel as admin-facing and translating it buys
+// nothing. THESE THREE ARE DIFFERENT -- they are shown at the REGISTRATION GATE,
+// so every new user reads them at the moment they consent. Under the DPDP Act
+// consent has to be INFORMED, which an English-only notice weakens for a
+// Bengali, Hindi or Marathi speaker.
+//
+// They are NOT to be swept into a general translation pass. His rule: a badly
+// translated data-protection notice is worse than an English one, so these get
+// done deliberately, as their own piece of work, with his approval.
 const LEGAL_DOCS = {
   privacy: '**Bella.ai — Privacy Notice**\n\n' +
     'Last updated: ' + LEGAL_UPDATED + '\n\n' +
@@ -4653,8 +4664,10 @@ const LEGAL_DOCS = {
     '**What Bella collects**\n\n' +
     'When you register: your name, the name you prefer to be called, your email address (from your Google account), ' +
     'your mobile number, your gender, your date of birth, and your profile photo.\n\n' +
-    'While you use her: your conversations, anything you ask her to remember, your language preference, ' +
-    'and — only if you allow it — your approximate location, used to tell you the local weather and time.\n\n' +
+    'While you use her: your conversations, anything you ask her to remember, ' +
+    'and — only if you allow it — your approximate location, used to show your local weather and time.\n\n' +
+    'The language you choose with the EN / বা / হি / মর button is remembered on the device you chose it on. ' +
+    'It is never sent to Savio.\n\n' +
     '**Why**\n\n' +
     'So Bella can recognise you, hold a proper conversation, and remember what you have asked her to remember. ' +
     'That is the whole purpose.\n\n' +
@@ -4662,22 +4675,30 @@ const LEGAL_DOCS = {
     'It is **never** sold, rented or shared with anyone for their own purposes.\n\n' +
     '**Who else handles it**\n\n' +
     'Bella cannot work without a few services, and only what is needed is sent to each:\n\n' +
-    '- **Google** — signing you in, generating her replies, and storing your profile and memories\n' +
-    '- **ElevenLabs** — turning her replies into speech, and only when voice is switched on\n\n' +
+    '- **Google** — signing you in, generating her replies, and storing your profile, your memories and your conversations\n' +
+    '- **Google, again, if you SPEAK to her** — your browser sends a recording of your voice to Google to turn it into text. ' +
+    'That does not happen on your device, and it happens whenever the microphone is on\n' +
+    '- **ElevenLabs** — turning her replies into speech, and only when voice is switched on\n' +
+    '- **OpenStreetMap** — turning your coordinates into the name of your area, only if you allow location\n' +
+    '- **OpenWeather** — your coordinates, to fetch your local forecast, only if you allow location\n\n' +
+    'Your location goes to those last two on its own. No name, no email and no account goes with it.\n\n' +
     '**Where it is kept**\n\n' +
-    'Your conversations are stored in your own browser, on the device you are using. ' +
-    'Your profile and the things Bella remembers are stored in a private Google account belonging to Savio.\n\n' +
+    'Your conversations are kept in **two** places: in your own browser, and in a private Google account ' +
+    'belonging to Savio. That second copy is what lets a conversation you began on your laptop carry on ' +
+    'from your phone.\n\n' +
+    'Your profile and the things Bella remembers are kept in that same private Google account.\n\n' +
     '**How long**\n\n' +
     'Until you delete it. Nothing expires on its own.\n\n' +
     '- A conversation you delete goes to **Deleted** and stays recoverable for **30 days**, then is purged automatically\n' +
-    '- **Delete Account** removes everything within **72 hours**\n\n' +
+    '- **Delete Account** sends Savio a request to erase everything. He aims to do it within **72 hours**, ' +
+    'and he does it by hand — so until he has, your data is still there\n\n' +
     '**Your rights**\n\n' +
     'Under India\'s Digital Personal Data Protection Act 2023 you may see your data, correct it, erase it, ' +
     'withdraw your consent, and complain if something is wrong. All of it is in the **My Account** menu:\n\n' +
     '- **My Memory** — see everything Bella remembers about you\n' +
     '- **Download My Data** — take a copy away with you\n' +
     '- **Clear All Threads** — remove your conversations\n' +
-    '- **Delete Account** — erase everything. This is also how you withdraw your consent\n\n' +
+    '- **Delete Account** — ask for everything to be erased. This is also how you withdraw your consent\n\n' +
     '**Children**\n\n' +
     'Bella is not intended for anyone under 18 without a parent or guardian involved.\n\n' +
     '**Questions or complaints**\n\n' +
@@ -4714,12 +4735,15 @@ const LEGAL_DOCS = {
     'Everything between your device and Bella travels over an encrypted HTTPS connection. ' +
     'The keys that let Bella talk to Google and ElevenLabs are held on the server, never in this page.\n\n' +
     '**At rest**\n\n' +
-    'Your conversations live in your own browser storage. Your profile and memories live in a private ' +
-    'Google account belonging to Savio, protected by his Google security including two-factor authentication.\n\n' +
+    'Your conversations are kept both in your own browser and in a private Google account belonging to ' +
+    'Savio, protected by his Google security including two-factor authentication. Your profile and the ' +
+    'things Bella remembers live in that same account.\n\n' +
     '**Being straight with you about the limits**\n\n' +
     'Bella is a personal project, not a bank:\n\n' +
-    '- Because conversations are stored in your browser, they stay **on that device**. Signing in on your phone will not show the conversations from your laptop\n' +
-    '- Clearing your browser data will remove conversations held on that device\n' +
+    '- Your conversations **do** follow you between devices, because a copy is kept on the server. ' +
+    'If you would rather they did not, **Delete Account** is the only thing that removes that copy\n' +
+    '- Clearing your browser data removes the copy on that device, but not the copy on the server\n' +
+    '- Bella leans on services run by other companies, listed in the **Privacy Notice**. Their security is theirs, not Savio\'s\n' +
     '- A wider security review is planned for 2027\n\n' +
     '**A sensible habit**\n\n' +
     'Treat Bella like any online service. Do not paste in bank passwords, card numbers, one-time codes ' +
@@ -5001,11 +5025,47 @@ Just like JARVIS — the intelligence came first. The interface followed. That i
   bellaMsg(msg);
   if(continuousVoice) speakText(msg,'en');
 }
+// Keep this honest. It is the one place that claims to be current, so an
+// out-of-date list here is worse than no list -- and it WAS out of date:
+// it named nothing from the previous month and advertised a shutter of
+// "18 upcoming features" that no longer matches anything.
+// WHEN YOU SHIP SOMETHING A USER CAN SEE, ADD IT HERE IN THE SAME CHANGE.
 function showWhatsNew(){
-  bellaMsg("**What's New in Bella**\n\n- Suggestion chips after every response\n- Thread summarise button after 5 exchanges\n- Live transcription while speaking\n- Notification sound on open\n- Source links on all web searches\n- Coming Soon shutter with 18 upcoming features\n- Retry, Edit, Copy on every message\n- Recording capability with MP3 download\n- Search across all conversations");
+  bellaMsg("**What's New in Bella**\n\n" +
+    "**Updated 4 October 2026**\n\n" +
+    "- **Weather** has its own place in the top bar — tap it for now, 3 days and 5 days\n" +
+    "- **Feedback now answers you.** You get a reference number on screen and an email, and a reply within 48 to 72 hours\n" +
+    // "Speaks your language" was the first draft and Savio rejected it: it is
+    // FOUR languages, so that sentence overclaims to anyone who speaks a fifth.
+    // Same standard as the privacy notice -- say the true size of the thing.
+    // Savio chose "Multi-Language" over "Speaks four languages" -- it carries no
+    // count, so it does not go stale. The LIST after the dash still does, though:
+    // ADD THE FIFTH LANGUAGE TO THAT LIST when one ships.
+    "- **Multi-Language** — English, Bengali, Hindi and Marathi. Speak or type, and I answer in the same one, in my own voice for that language\n" +
+    "- If the voice credits run out I keep talking using your own device's voice, instead of going silent\n" +
+    "- **Bella's Voice** under My Account, to choose how I sound\n" +
+    "- **Dark mode** across the whole app\n" +
+    "- **Converter** in the top bar — currency, units and time zones\n" +
+    "- **Image Studio** — crop, erase and rotate, all on your device, nothing uploaded\n" +
+    "- Deleted conversations wait in **Deleted** for 30 days before they go\n" +
+    "- **Search** across every conversation, and Retry, Edit and Copy on every message");
 }
+// Two things were promised here that already exist -- documents and image
+// editing -- which makes the whole list read as guesswork. Anything that
+// ships must come OUT of this list in the same change that puts it into
+// "What's New".
 function showPhase2Preview(){
-  bellaMsg("**Coming in Phase 2**\n\n- Gmail and Calendar read and write\n- WhatsApp message drafting and sending\n- Send emails on your behalf\n- Document creation — PDF, Word, Excel, PowerPoint\n- Image generation and transformation\n- Travel planning agent\n- Proactive morning briefings\n- BKC Chat for family and friends\n- Expense tracking\n- Google Meet integration");
+  bellaMsg("**Coming in Phase 2**\n\n" +
+    "- **Gmail and Calendar** — reading them, and writing to them\n" +
+    "- **Sending** emails and WhatsApp messages on your behalf, always asking you first\n" +
+    "- **Proactive morning briefings** — I come to you, rather than waiting to be asked\n" +
+    "- **Reminders that reach you** when Bella is not even open\n" +
+    "- **Travel planning** — routes, hotels, places to eat, in one go\n" +
+    "- **Expense tracking**\n" +
+    "- **Google Meet** — joining a call and writing the minutes for you\n" +
+    "- **BKC Chat**, for family and friends\n\n" +
+    "**Already here, and no longer waiting:** documents as PDF, Word, Excel and PowerPoint; " +
+    "editing images on your device; the converter; and weather.");
 }
 function showMyMemory(){
   if(userMemory&&userMemory.memories){
