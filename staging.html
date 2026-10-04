@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
-  <!-- A release candidate has no business in anyone's search results. -->
+  <!-- A release candidate has no business in anyone's search results.
+       STRIPPING THIS META IS THE PROMOTION STEP. Leaving it in place on a
+       promotion is what would tell Google to drop the live site. -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -103,7 +105,7 @@ body.dark{
 }
 
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:'DM Sans',sans-serif;background:#FAF8F4;color:var(--text);height:100dvh;overflow:hidden}
+body{font-family:'BellaIndic','DM Sans',sans-serif;background:#FAF8F4;color:var(--text);height:100dvh;overflow:hidden}
 
 /* ============================================================
    SPLASH SCREEN
@@ -128,11 +130,11 @@ body{font-family:'DM Sans',sans-serif;background:#FAF8F4;color:var(--text);heigh
 .setup-title p{font-size:13px;color:var(--tmid);margin-top:4px;text-align:center;line-height:1.6}
 
 .setup-card label{display:block;font-size:10px;font-weight:500;color:var(--tsoft);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:5px}
-.setup-card input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:#FAF8F4;outline:none;transition:border-color .2s,box-shadow .2s}
+.setup-card input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;font-family:'BellaIndic','DM Sans',sans-serif;font-size:13px;color:var(--text);background:#FAF8F4;outline:none;transition:border-color .2s,box-shadow .2s}
 .setup-card input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
 .setup-card input::placeholder{color:var(--tsoft)}
 
-.btn-primary{width:100%;padding:14px;background:var(--navy);color:var(--gold);border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:background .2s,transform .1s;letter-spacing:.3px}
+.btn-primary{width:100%;padding:14px;background:var(--navy);color:var(--gold);border:none;border-radius:14px;font-family:'BellaIndic','DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:background .2s,transform .1s;letter-spacing:.3px}
 .btn-primary:hover{background:var(--navy2)}
 .btn-primary:active{transform:scale(.98)}
 
@@ -186,7 +188,7 @@ body{font-family:'DM Sans',sans-serif;background:#FAF8F4;color:var(--text);heigh
 .sb-dot{width:5px;height:5px;border-radius:50%;background:#5DCAA5;animation:blink 2s ease-in-out infinite;flex-shrink:0}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
 .mem-badge{font-size:9px;color:var(--gold);background:var(--goldpale);border:1px solid rgba(212,175,55,.3);border-radius:6px;padding:1px 5px;flex-shrink:0}
-.sb-new-chat{margin:12px 14px;padding:10px 14px;background:var(--navy);color:var(--gold);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:7px;transition:background .2s;flex-shrink:0}
+.sb-new-chat{margin:12px 14px;padding:10px 14px;background:var(--navy);color:var(--gold);border:none;border-radius:12px;font-family:'BellaIndic','DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:7px;transition:background .2s;flex-shrink:0}
 .sb-new-chat:hover{background:var(--navy2)}
 .sb-new-chat svg{flex-shrink:0}
 .sb-section{padding:8px 16px 4px;font-size:9px;font-weight:600;color:var(--tlight);letter-spacing:1.2px;text-transform:uppercase;flex-shrink:0}
@@ -204,7 +206,7 @@ body{font-family:'DM Sans',sans-serif;background:#FAF8F4;color:var(--text);heigh
 .thread-item:hover .thread-actions{display:flex}
 .thread-btn{width:22px;height:22px;border-radius:6px;background:transparent;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;color:var(--tsoft);transition:all .15s}
 .thread-btn:hover{background:var(--white);color:var(--text)}
-.thread-rename{display:none;font-size:11px;border:1px solid var(--gold);border-radius:6px;padding:3px 6px;color:var(--text);background:var(--white);outline:none;width:100%;font-family:'DM Sans',sans-serif}
+.thread-rename{display:none;font-size:11px;border:1px solid var(--gold);border-radius:6px;padding:3px 6px;color:var(--text);background:var(--white);outline:none;width:100%;font-family:'BellaIndic','DM Sans',sans-serif}
 .sb-features{padding:8px;border-top:1px solid var(--border);flex-shrink:0}
 .sb-feat-title{font-size:9px;font-weight:600;color:var(--tlight);letter-spacing:1.2px;text-transform:uppercase;padding:6px 8px 4px}
 .feat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:0 2px 6px}
@@ -235,16 +237,19 @@ body.dark #rec-lbl{color:#0B2545}
 .tb-cell{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 16px;border-right:1px solid var(--border);height:100%;flex-shrink:0;cursor:default;width:var(--tb-col)}
 .tb-cell-expand{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 20px;border-right:1px solid var(--border);height:100%;text-align:center}
 /* Typography — all primary text matches Welcome Savio */
-.tb-primary{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'DM Sans',sans-serif}
-.tb-secondary{font-size:11px;font-weight:400;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;font-family:'DM Sans',sans-serif;letter-spacing:.2px}
-.tb-tz-label{font-size:11px;font-weight:400;color:var(--text);white-space:nowrap;margin-left:4px;font-family:'DM Sans',sans-serif}
+.tb-primary{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'BellaIndic','DM Sans',sans-serif}
+.tb-secondary{font-size:11px;font-weight:400;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;font-family:'BellaIndic','DM Sans',sans-serif;letter-spacing:.2px}
+.tb-tz-label{font-size:11px;font-weight:400;color:var(--text);white-space:nowrap;margin-left:4px;font-family:'BellaIndic','DM Sans',sans-serif}
 /* Thought cell */
 /* Flex so the emoji sits on the TITLE line, just after the last word. Savio's
    call. The title is a fixed string, so the face lands in the same place every
    day instead of shifting as the thought gets longer or shorter — and it hands
    the thought line back its full width, which was truncating before. */
-.tb-thought-title{font-size:13px;font-weight:600;color:var(--text);font-family:'DM Sans',sans-serif;margin-bottom:3px;display:flex;align-items:center;justify-content:center;gap:5px}
-.tb-thought-text{font-size:11px;font-weight:400;color:var(--text);line-height:1.5;font-family:'DM Sans',sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* nowrap because this is a fixed LABEL, not content. Without it, a squeezed
+   cell wrapped it to three lines inside a 68px bar and clipped it to
+   "Bella's Food For hought". Measured in real Chrome. */
+.tb-thought-title{font-size:13px;font-weight:600;color:var(--text);font-family:'BellaIndic','DM Sans',sans-serif;margin-bottom:3px;display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}
+.tb-thought-text{font-size:11px;font-weight:400;color:var(--text);line-height:1.5;font-family:'BellaIndic','DM Sans',sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Food For Thought emoji — genuinely animated, and never clipped.
    It used to live INSIDE .tb-thought-text, which is overflow:hidden with an
    ellipsis, so on any thought long enough to truncate the emoji was simply cut
@@ -265,15 +270,15 @@ body.dark #rec-lbl{color:#0B2545}
 .trash-sub{font-size:9px;color:var(--tsoft);margin-top:1px}
 .trash-btn{border:none;background:transparent;cursor:pointer;font-size:11px;padding:2px 4px;border-radius:6px;flex:0 0 auto}
 .trash-btn:hover{background:rgba(212,175,55,.25)}
-.trash-empty{width:100%;margin-top:4px;padding:6px;border-radius:8px;border:1px solid rgba(11,37,69,.2);background:transparent;color:var(--tsoft);font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.trash-empty{width:100%;margin-top:4px;padding:6px;border-radius:8px;border:1px solid rgba(11,37,69,.2);background:transparent;color:var(--tsoft);font-size:10px;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif}
 body.dark .trash-head:hover,body.dark .trash-item:hover{background:rgba(212,175,55,.12)}
 body.dark .trash-count{background:rgba(212,175,55,.2);color:#F5E6C8}
 body.dark .trash-empty{border-color:rgba(245,230,200,.25);color:rgba(245,230,200,.65)}
 .read-offer{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;padding:9px 12px;
   background:var(--goldpale,#F6EFE2);border:1px solid rgba(212,175,55,.45);border-radius:12px}
-.read-offer-q{font-size:12px;color:var(--navy,#0B2545);font-family:'DM Sans',sans-serif;flex:1 1 100%;min-width:0;margin-bottom:2px}
+.read-offer-q{font-size:12px;color:var(--navy,#0B2545);font-family:'BellaIndic','DM Sans',sans-serif;flex:1 1 100%;min-width:0;margin-bottom:2px}
 .read-offer-btn{padding:6px 13px;border-radius:14px;border:1px solid #0B2545;background:#0B2545;color:#D4AF37;
-  font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;flex:0 0 auto}
+  font-size:11px;font-weight:600;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;flex:0 0 auto}
 .read-offer-btn.ghost{background:transparent;color:#0B2545;border-color:rgba(11,37,69,.35)}
 .read-offer-btn:hover{opacity:.88}
 /* Dark mode: keyed off the class-free ID-level specificity trap documented in
@@ -326,13 +331,13 @@ body.dark .tb-thought-emoji{filter:drop-shadow(0 0 5px rgba(212,175,55,.8))}
 .img-drop-sub{font-size:10.5px;color:var(--tsoft);margin-top:3px;line-height:1.5}
 .img-tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .img-subbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
-.img-btn{padding:7px 11px;min-height:34px;border-radius:9px;border:1.5px solid var(--border);background:var(--cream);color:var(--navy);font-size:11.5px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer}
+.img-btn{padding:7px 11px;min-height:34px;border-radius:9px;border:1.5px solid var(--border);background:var(--cream);color:var(--navy);font-size:11.5px;font-weight:600;font-family:'BellaIndic','DM Sans',sans-serif;cursor:pointer}
 .img-btn:hover{border-color:var(--gold)}
 .img-btn.on{background:var(--navy);color:var(--gold);border-color:var(--navy)}
 .img-btn-go{background:var(--navy);color:var(--gold);border-color:var(--navy)}
 .img-lbl{font-size:10.5px;color:var(--tsoft);font-weight:600}
 .img-hint{font-size:10.5px;color:var(--tsoft);line-height:1.45}
-.img-num{width:74px;padding:6px 8px;border-radius:8px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:11.5px;font-family:'DM Sans',sans-serif;outline:none}
+.img-num{width:74px;padding:6px 8px;border-radius:8px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:11.5px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none}
 .img-stage{position:relative;display:inline-block;max-width:100%;border-radius:10px;overflow:hidden;background:
   linear-gradient(45deg,#d8d8d8 25%,transparent 25%),linear-gradient(-45deg,#d8d8d8 25%,transparent 25%),
   linear-gradient(45deg,transparent 75%,#d8d8d8 75%),linear-gradient(-45deg,transparent 75%,#d8d8d8 75%);
@@ -343,7 +348,7 @@ body.dark .tb-thought-emoji{filter:drop-shadow(0 0 5px rgba(212,175,55,.8))}
 .img-palette{display:flex;gap:6px;flex-wrap:wrap}
 .img-sw{width:52px;cursor:pointer;text-align:center}
 .img-sw-chip{height:34px;border-radius:8px;border:1.5px solid var(--border)}
-.img-sw-hex{font-size:9px;margin-top:3px;font-family:'DM Sans',sans-serif;letter-spacing:.2px}
+.img-sw-hex{font-size:9px;margin-top:3px;font-family:'BellaIndic','DM Sans',sans-serif;letter-spacing:.2px}
 .img-palette-wrap{margin:10px 0}
 /* Dark mode — keyed off the ID so it outranks the blanket body.dark rules */
 body.dark #img-panel .img-btn{background:#12233b!important;color:#F5E6C8!important;border-color:rgba(245,230,200,0.28)!important}
@@ -367,12 +372,12 @@ body.dark #img-panel .img-sw-hex{color:#F5E6C8!important}
 }
 .tb-close:hover{color:var(--navy)}
 /* Converter search fields */
-.conv-search{width:100%;padding:9px 12px;border-radius:10px;border:1.5px solid var(--navy);background:var(--cream);color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:10px;box-sizing:border-box;cursor:pointer}
+.conv-search{width:100%;padding:9px 12px;border-radius:10px;border:1.5px solid var(--navy);background:var(--cream);color:var(--text);font-size:12px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;margin-bottom:10px;box-sizing:border-box;cursor:pointer}
 .conv-search:focus{border-color:var(--gold);background:#fff}
 .conv-select-wrap{position:relative;display:inline-block}
 .conv-select-list{position:absolute;top:100%;left:0;right:0;background:var(--white);border:1px solid var(--border);border-radius:10px;max-height:180px;overflow-y:auto;z-index:50;box-shadow:var(--shadow-lg);display:none}
 .conv-select-list.on{display:block}
-.conv-select-item{padding:8px 12px;font-size:12px;cursor:pointer;color:var(--text);font-family:'DM Sans',sans-serif;white-space:nowrap}
+.conv-select-item{padding:8px 12px;font-size:12px;cursor:pointer;color:var(--text);font-family:'BellaIndic','DM Sans',sans-serif;white-space:nowrap}
 .conv-select-item:hover{background:var(--goldpale)}
 .conv-select-item.selected{background:var(--goldpale);font-weight:600}
 .sb-toggle{width:32px;height:32px;border-radius:8px;background:#FAF8F4;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s}
@@ -392,7 +397,7 @@ body.dark #img-panel .img-sw-hex{color:#F5E6C8!important}
 #mbtn-wave{display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;border:1px solid rgba(212,175,55,.5);background:var(--goldpale)}
 #mbtn-wave.on{display:flex}
 #mbtn-wave .vwave span{background:var(--gold)}
-.conv-tab-btn{padding:7px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--tmid);font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.conv-tab-btn{padding:7px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--tmid);font-size:11px;font-weight:600;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;transition:all .15s}
 .conv-tab-btn.active-tab{background:var(--navy);color:#D4AF37;border-color:var(--navy)}
 .conv-tab-btn:hover:not(.active-tab){background:var(--goldpale)}
 
@@ -429,8 +434,74 @@ body.dark #img-panel .img-sw-hex{color:#F5E6C8!important}
 .mbub{padding:11px 15px;border-radius:18px;font-size:13px;line-height:1.65;color:var(--text);word-break:break-word}
 .msg.bella .mbub{background:var(--white);border:1px solid var(--border);border-bottom-left-radius:4px;box-shadow:var(--shadow)}
 .msg.user .mbub{background:var(--navy);color:#fff;border-bottom-right-radius:4px}
+/* DEVANAGARI AT font-weight:500 — measured 2026-10-02, from Savio's screenshot of
+   garbled suggestion chips. At weight 500 ONLY, and for Devanagari ONLY, Hindi and
+   Marathi rendered as Latin junk: कुछ और बात करें came out as "Mẞ S )g c5\ Mgɞ".
+   300, 400, 600 and 700 are all fine, Bengali is fine at every weight, and the size
+   and the element make no difference. The page's own literals are correct Unicode,
+   so this was never a data problem. Chrome's getPlatformFontsForNode even REPORTS
+   the right font while drawing the wrong glyphs -- only a screenshot catches it.
+   A locally installed "DM Sans 9pt" appears to win the match at 500 and draw
+   Devanagari codepoints with Latin glyph ids.
+   This face claims the Devanagari ranges and nothing else, so it is used for those
+   codepoints and Latin still falls through to DM Sans. Verified at weight 500 with
+   no change to how anything looks. */
+@font-face{
+  font-family:'BellaIndic';
+  src:local('Kohinoor Devanagari'),local('Noto Sans Devanagari'),local('Devanagari Sangam MN');
+  unicode-range:U+0900-097F,U+1CD0-1CFF,U+A8E0-A8FF,U+200C-200D;
+}
 .msg-actions{display:flex;align-items:center;gap:5px}
-.msg-act-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;border:1px solid var(--border);background:transparent;color:var(--tsoft)}
+/* THE MEMORY METER — Savio spotted this in dark mode, 2026-10-02.
+   The track was rgba(11,37,69,.1): a navy tint that reads as a faint grey on
+   white and, on the navy page, flattens to EXACTLY the page colour. Measured
+   1.00:1 -- not faint, identical. So the bar had no visible extent and a 2%
+   fill was a 1.19px speck floating on navy with nothing to read it against.
+   Light mode was barely better at 1.22:1.
+   Colours are hardcoded per theme on purpose: --gold inverts under body.dark,
+   which is the trap that has bitten this page before. The border is his idea
+   and it is the part that does the real work -- at 2% the fill is about one
+   pixel, so the OUTLINE is what tells you how much is used. */
+#mem-progress-track{
+  box-sizing:border-box;width:100%;height:7px;border-radius:4px;overflow:hidden;
+  background:#E7E9EC;border:1px solid rgba(11,37,69,.58);
+}
+body.dark #mem-progress-track{
+  background:rgba(245,230,200,.16);border-color:rgba(245,230,200,.48);
+}
+/* 8px is not a size you read a number at, and this number is the whole point. */
+#mem-progress-label{font-size:10px;font-weight:600;letter-spacing:.01em}
+/* On navy the two ALERT fills were the least visible of the five, which is
+   backwards -- #CC0000 measured 2.61:1 against the page and 100% is the state
+   that stops Bella making new conversations. Lightened for dark mode only;
+   light mode keeps the deeper reds, which already pass there. */
+body.dark #mem-progress-bar[data-level="full"]{background:#FF6B6B!important}
+body.dark #mem-progress-bar[data-level="high"]{background:#FF9A4D!important}
+#lang-pick{position:fixed;z-index:9000;display:flex;flex-direction:column;gap:2px;padding:5px;
+border-radius:10px;background:#FFFDF7;border:1px solid rgba(11,37,69,.18);box-shadow:0 8px 24px rgba(11,37,69,.18)}
+#lang-pick .lang-pick-opt{appearance:none;cursor:pointer;text-align:left;white-space:nowrap;
+padding:7px 13px;border-radius:7px;border:1px solid transparent;background:transparent;
+color:#0B2545;font-size:13px;font-family:inherit}
+#lang-pick .lang-pick-opt:hover{background:rgba(11,37,69,.07)}
+#lang-pick .lang-pick-opt.on{background:#0B2545;border-color:#0B2545;color:#F5E6C8;font-weight:600}
+body.dark #lang-pick{background:#0E2B50;border-color:rgba(245,230,200,.22);box-shadow:0 8px 24px rgba(0,0,0,.45)}
+body.dark #lang-pick .lang-pick-opt{color:#F5E6C8}
+body.dark #lang-pick .lang-pick-opt:hover{background:rgba(245,230,200,.12)}
+body.dark #lang-pick .lang-pick-opt.on.on.on.on.on{background:#D4AF37!important;border-color:#D4AF37!important;color:#0B2545!important}
+/* Voice-source picker. Same look as the language picker; rules duplicated
+   rather than shared, because they beat dark mode on ID specificity. */
+#voice-pick{position:fixed;z-index:9000;display:flex;flex-direction:column;gap:2px;padding:5px;
+border-radius:10px;background:#FFFDF7;border:1px solid rgba(11,37,69,.18);box-shadow:0 8px 24px rgba(11,37,69,.18)}
+#voice-pick .lang-pick-opt{appearance:none;cursor:pointer;text-align:left;white-space:nowrap;
+padding:7px 13px;border-radius:7px;border:1px solid transparent;background:transparent;
+color:#0B2545;font-size:13px;font-family:inherit}
+#voice-pick .lang-pick-opt:hover{background:rgba(11,37,69,.07)}
+#voice-pick .lang-pick-opt.on{background:#0B2545;border-color:#0B2545;color:#F5E6C8;font-weight:600}
+body.dark #voice-pick{background:#0E2B50;border-color:rgba(245,230,200,.22);box-shadow:0 8px 24px rgba(0,0,0,.45)}
+body.dark #voice-pick .lang-pick-opt{color:#F5E6C8}
+body.dark #voice-pick .lang-pick-opt:hover{background:rgba(245,230,200,.12)}
+body.dark #voice-pick .lang-pick-opt.on.on.on.on.on{background:#D4AF37!important;border-color:#D4AF37!important;color:#0B2545!important}
+.msg-act-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:10px;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;transition:all .15s;border:1px solid var(--border);background:transparent;color:var(--tsoft)}
 .user-actions{justify-content:flex-end}
 .user-actions .msg-act-btn{color:var(--tmid)}
 .msg-act-btn:hover{background:var(--goldpale);color:var(--navy);border-color:rgba(212,175,55,.4)}
@@ -479,7 +550,7 @@ body.dark #img-panel .img-sw-hex{color:#F5E6C8!important}
 .inp-box{background:var(--white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 2px 16px rgba(27,42,74,0.08);transition:border-color .2s,box-shadow .2s;overflow:hidden}
 .inp-box:focus-within{border-color:rgba(212,175,55,.6);box-shadow:0 0 0 3px rgba(212,175,55,.1),0 2px 16px rgba(27,42,74,0.08)}
 .inp-row{display:flex;align-items:flex-end;gap:8px;padding:10px 10px 10px 16px}
-#ti{flex:1;border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;resize:none;min-height:80px;max-height:200px;line-height:1.6;padding:4px 0}
+#ti{flex:1;border:none;background:transparent;font-family:'BellaIndic','DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;resize:none;min-height:80px;max-height:200px;line-height:1.6;padding:4px 0}
 #ti::placeholder{color:var(--tsoft);font-size:14px}
 .inp-actions{display:flex;align-items:flex-end;gap:6px;flex-shrink:0;padding-bottom:4px}
 .ibtn{width:36px;height:36px;border-radius:10px;border:1px solid #0B2545;background:#0B2545;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0;color:var(--gold)}
@@ -522,7 +593,7 @@ body.dark #img-panel .img-sw-hex{color:#F5E6C8!important}
 }
 .sb-shutter{max-height:0;overflow:hidden;transition:max-height .35s cubic-bezier(0.4,0,0.2,1);background:#FAF8F4;border-top:1px solid var(--border)}
 .sb-shutter.open{max-height:400px}
-.sb-shutter-btn{width:100%;padding:10px 16px;background:linear-gradient(to bottom,var(--cream),var(--white));border:none;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;color:var(--navy);letter-spacing:.3px;transition:all .15s;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 -1px 0 rgba(0,0,0,.06);text-shadow:0 1px 0 rgba(255,255,255,.9)}
+.sb-shutter-btn{width:100%;padding:10px 16px;background:linear-gradient(to bottom,var(--cream),var(--white));border:none;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;font-size:11px;font-weight:600;color:var(--navy);letter-spacing:.3px;transition:all .15s;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 -1px 0 rgba(0,0,0,.06);text-shadow:0 1px 0 rgba(255,255,255,.9)}
 .sb-shutter-btn:hover{background:var(--goldpale)}
 .sb-shutter-btn svg{transition:transform .3s}
 .sb-shutter-btn.open svg{transform:rotate(180deg)}
@@ -535,13 +606,13 @@ body.dark #img-panel .img-sw-hex{color:#F5E6C8!important}
 .user-menu-panel{position:fixed;top:0;right:-320px;width:300px;height:100%;background:var(--white);box-shadow:-4px 0 24px rgba(27,42,74,.15);z-index:101;transition:right .3s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;overflow:hidden}
 .user-menu-panel.on{right:0}
 .user-menu-header{padding:20px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--navy)}
-.user-menu-title{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--gold)}
+.user-menu-title{font-family:'BellaIndic','DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--gold)}
 .user-menu-close{background:none;border:none;cursor:pointer;color:rgba(255,255,255,.6);font-size:18px;line-height:1;padding:2px}
 .user-menu-body{flex:1;overflow-y:auto;padding:8px 0}
 .menu-section{border-bottom:1px solid rgba(11,37,69,0.1)}
 .menu-section-header{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;transition:background .15s;user-select:none;background:#0B2545}
 .menu-section-header:hover{background:#142F5A}
-.menu-section-title{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;color:#D4AF37;text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:8px}
+.menu-section-title{font-family:'BellaIndic','DM Sans',sans-serif;font-size:11px;font-weight:700;color:#D4AF37;text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:8px}
 .menu-section-arrow{font-size:10px;color:rgba(212,175,55,0.6);transition:transform .2s;display:inline-block}
 .menu-section-arrow.open{transform:rotate(180deg)}
 .menu-items{background:#FFFFFF}
@@ -552,11 +623,11 @@ body.dark #img-panel .img-sw-hex{color:#F5E6C8!important}
 .menu-item.danger:hover{background:#fff0f0}
 .menu-items{display:none;padding:4px 0 8px}
 .menu-items.open{display:block}
-.menu-item{padding:9px 24px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);cursor:pointer;transition:background .15s}
+.menu-item{padding:9px 24px;font-family:'BellaIndic','DM Sans',sans-serif;font-size:13px;color:var(--text);cursor:pointer;transition:background .15s}
 .menu-item:hover{background:var(--goldpale);color:var(--navy)}
 .menu-item.danger{color:#c0392b}
 .menu-item.danger:hover{background:#fdf2f2}
-.sug-chip{display:inline-flex;align-items:center;padding:6px 14px;background:#0B2545;border:1px solid #0B2545;border-radius:16px;font-size:11px;color:var(--gold);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;font-weight:500}
+.sug-chip{display:inline-flex;align-items:center;padding:6px 14px;background:#0B2545;border:1px solid #0B2545;border-radius:16px;font-size:11px;color:var(--gold);cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;transition:all .15s;font-weight:500}
 .sug-chip:hover{background:var(--goldpale);border-color:rgba(212,175,55,.5);color:var(--navy)}
 
 /* CENTERED TOGGLE FIX */
@@ -683,7 +754,7 @@ body.dark #img-panel .img-sw-hex{color:#F5E6C8!important}
 /* FORCE Welcome + Online font */
 .sb-user-name,
 .sb-user-status span{
-  font-family:'DM Sans',sans-serif !important;
+  font-family:'BellaIndic','DM Sans',sans-serif !important;
   font-weight:500 !important;
   letter-spacing:0 !important;
 }
@@ -693,7 +764,7 @@ body.dark #img-panel .img-sw-hex{color:#F5E6C8!important}
   background: var(--navy)!important;
   color: var(--gold)!important;
 
-  font-family:'DM Sans',sans-serif!important;
+  font-family:'BellaIndic','DM Sans',sans-serif!important;
   font-weight:500!important;
   letter-spacing:1px!important;
   text-transform:uppercase!important;
@@ -1148,9 +1219,9 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         <div class="mem-badge" id="mem-badge" title="Memory status">💾</div>
         <div id="mem-progress-wrap" style="display:none;width:60px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
-            <span style="font-size:8px;color:var(--tsoft)" id="mem-progress-label">0%</span>
+            <span style="color:var(--tsoft)" id="mem-progress-label">0%</span>
           </div>
-          <div style="width:100%;height:4px;background:rgba(11,37,69,0.1);border-radius:2px;overflow:hidden">
+          <div id="mem-progress-track">
             <div id="mem-progress-bar" style="height:100%;border-radius:2px;background:var(--gold);width:0%;transition:width .5s ease"></div>
           </div>
         </div>
@@ -1242,6 +1313,18 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         <div class="tb-primary" id="tb-location">📍 Locating...</div>
       </div>
 
+      <!-- CELL — Weather. Its OWN cell rather than folded into the Location
+           cell: Savio's decision, 2026-10-03, taken after clicking a working
+           prototype and after being shown that it costs ~150px of a ~1,004px
+           phone strip. The Location cell already uses BOTH its lines, and
+           "📍 Sector III, Bidhannagar, India" measures 190px against the
+           118px a 150px cell actually gives — it truncates. Do not fold these
+           two together and do not re-litigate the choice. -->
+      <div class="tb-conv-btn" id="tb-weather-cell" onclick="openWeatherPanel()" title="Local weather — now, 3 days and 5 days">
+        <div class="tb-primary" id="tb-wx-main">🌡 —</div>
+        <div class="tb-secondary" id="tb-wx-sub">Weather</div>
+      </div>
+
       <!-- CELL — Date & Time -->
       <div class="tb-cell">
         <div class="tb-primary" id="tb-date">📅 —</div>
@@ -1295,7 +1378,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
       <!-- Currency Tab -->
       <div id="conv-currency" class="conv-tab-content">
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-          <input id="conv-amt" type="number" value="1" placeholder="Amount" style="width:80px;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none" oninput="doConvert()">
+          <input id="conv-amt" type="number" value="1" placeholder="Amount" style="width:80px;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none" oninput="doConvert()">
           <div style="position:relative;flex:1">
             <input type="text" id="curr-from-search" placeholder="Search currency..." class="conv-search" style="margin:0" oninput="filterCurrencyList('from')" onfocus="showCurrencyList('from')" value="🇮🇳 INR — Indian Rupee">
             <div id="curr-from-list" class="conv-select-list" style="min-width:220px"></div>
@@ -1306,15 +1389,15 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
             <div id="curr-to-list" class="conv-select-list" style="min-width:220px"></div>
           </div>
         </div>
-        <div id="conv-result" style="font-size:22px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif">—</div>
+        <div id="conv-result" style="font-size:22px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif;font-variant-numeric:lining-nums">—</div>
         <div id="conv-rate-info" style="font-size:10px;color:var(--tsoft);margin-top:4px"></div>
       </div>
 
       <!-- Unit Tab -->
       <div id="conv-unit" class="conv-tab-content" style="display:none">
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;margin-bottom:8px">
-          <input id="unit-amt" type="number" value="1" placeholder="Value" style="width:80px;flex-shrink:0;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none" oninput="doUnitConvert()">
-          <select id="unit-cat" onchange="buildUnitSelects();doUnitConvert();" style="flex-shrink:0;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
+          <input id="unit-amt" type="number" value="1" placeholder="Value" style="width:80px;flex-shrink:0;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none" oninput="doUnitConvert()">
+          <select id="unit-cat" onchange="buildUnitSelects();doUnitConvert();" style="flex-shrink:0;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:12px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none">
             <option value="length">📏 Length</option>
             <option value="weight">⚖️ Weight</option>
             <option value="temp">🌡️ Temperature</option>
@@ -1332,12 +1415,12 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
             <div id="unit-to-list" class="conv-select-list"></div>
           </div>
         </div>
-        <div id="unit-result" style="font-size:22px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif">—</div>
+        <div id="unit-result" style="font-size:22px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif;font-variant-numeric:lining-nums">—</div>
       </div>
       <!-- Timezone Tab -->
       <div id="conv-time" class="conv-tab-content" style="display:none">
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;margin-bottom:8px">
-          <input id="tz-time-in" type="time" style="flex-shrink:0;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none" oninput="doTZConvert()">
+          <input id="tz-time-in" type="time" style="flex-shrink:0;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none" oninput="doTZConvert()">
           <div style="position:relative;flex:1">
             <input type="text" id="tz-from-search" placeholder="Search state, country or IST..." class="conv-search" style="margin:0" oninput="filterTZList('from')" onfocus="showTZList('from')">
             <div id="tz-from-list" class="conv-select-list" style="min-width:260px"></div>
@@ -1348,10 +1431,31 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
             <div id="tz-to-list" class="conv-select-list" style="min-width:260px"></div>
           </div>
         </div>
-        <div id="tz-result" style="font-size:20px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif">—</div>
+        <div id="tz-result" style="font-size:20px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif;font-variant-numeric:lining-nums">—</div>
         <div id="tz-diff" style="font-size:11px;color:var(--tsoft);margin-top:4px"></div>
       </div>
         </div>
+
+    <!-- ══ WEATHER OVERLAY ═══════════════════════════════════════════════ -->
+    <!-- Three tabs, and only three, because the free tier gives three.
+         SAVIO'S POLICY, restated 2026-10-04: "we only use free tiers available
+         to test Bella and when investors invest we upgrade Bella wherever
+         required." So this is not a guard against a mistake — it is the plan.
+         When that day comes, 10-day needs OpenWeather's Developer plan
+         (~₹17,833/month) and 30-day the Professional plan (~₹47,130/month),
+         and either is a tab plus a parameter, not a rebuild. -->
+    <div class="tb-overlay" id="wx-overlay" onclick="closeWeatherPanel()"></div>
+    <div class="tb-panel" id="wx-panel" style="display:none">
+      <div class="tb-panel-title" id="wx-title">Weather</div>
+      <button class="tb-close" onclick="closeWeatherPanel()">✕</button>
+      <div id="wx-tabs">
+        <button id="wxtab-now" class="on" onclick="switchWxTab('now')">Now</button>
+        <button id="wxtab-d3" onclick="switchWxTab('d3')">3 Days</button>
+        <button id="wxtab-d5" onclick="switchWxTab('d5')">5 Days</button>
+      </div>
+      <div id="wx-body"></div>
+      <div id="wx-foot"></div>
+    </div>
 
     <!-- ══ IMAGE STUDIO ══════════════════════════════════════════════════ -->
     <div class="tb-overlay" id="img-overlay" onclick="closeImageStudio()"></div>
@@ -1477,16 +1581,16 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
           </div>
         </div>
         <div class="inp-footer">
-          <!-- Speech language. The Web Speech API CANNOT auto-detect a language:
-               recog.lang must name one before listening starts, and it was
-               hardcoded 'en-IN', so speaking Bengali produced garbled Latin and
-               Bella never saw Bengali at all. This is the only reliable fix. -->
-          <div id="mic-lang" role="group" aria-label="Speech language">
-            <button type="button" data-l="en" onclick="setMicLang('en')" title="Speak English">EN</button>
-            <button type="button" data-l="bn" onclick="setMicLang('bn')" title="Speak Bengali (বাংলা)">বা</button>
-            <button type="button" data-l="hi" onclick="setMicLang('hi')" title="Speak Hindi (हिन्दी)">हि</button>
-            <button type="button" data-l="mr" onclick="setMicLang('mr')" title="Speak Marathi (मराठी)">मर</button>
-          </div>
+          <!-- THE EN / বা / হি / মর SPEECH PICKER WAS REMOVED FROM HERE 2026-10-03,
+               Savio's decision, and it is NOT lost -- it belongs on the separate
+               voice page in his redesign, because the Web Speech API cannot
+               auto-detect a language and voice mode must always be told one.
+               It was redundant on this page: setChosenLang() already calls
+               setMicLang(), so the language button sets the microphone too. All
+               its CSS (#mic-lang, four blocks incl. the dark-mode overrides) is
+               DELIBERATELY LEFT IN PLACE -- inert with no element to match, and
+               needed again the day the voice page is built. The recogniser is
+               unaffected: micLang()/micLangTag() read localStorage, not the DOM. -->
           <!-- Light/Dark toggle -->
           <div style="display:flex;align-items:center;gap:3px">
             <span style="font-size:9px;color:#0B2545;font-weight:500">Light</span>
@@ -1510,7 +1614,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
 <!-- SEARCH OVERLAY -->
 <div id="search-overlay" style="display:none;position:fixed;top:60px;left:50%;transform:translateX(-50%);width:500px;max-width:92vw;background:var(--card);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.2);border:1px solid var(--border);z-index:300;padding:16px">
   <input id="search-input" type="text" placeholder="Search conversations..." oninput="doSearch(this.value)"
-    style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box">
+    style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--text);font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;box-sizing:border-box">
   <div id="search-results" style="margin-top:10px;max-height:300px;overflow-y:auto"></div>
 </div>
 
@@ -1573,7 +1677,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
   </div>
   <!-- GIF tab -->
   <div id="gif-content" style="display:none;padding:8px">
-    <input id="gif-search" type="text" placeholder="Search GIFs..." oninput="searchGifs(this.value)" style="width:100%;padding:8px 12px;border-radius:10px;border:1px solid rgba(11,37,69,0.15);font-size:12px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;margin-bottom:8px">
+    <input id="gif-search" type="text" placeholder="Search GIFs..." oninput="searchGifs(this.value)" style="width:100%;padding:8px 12px;border-radius:10px;border:1px solid rgba(11,37,69,0.15);font-size:12px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;box-sizing:border-box;margin-bottom:8px">
     <div id="gif-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:220px;overflow-y:auto">
       <div style="text-align:center;color:#5A6B8A;font-size:12px;padding:20px;grid-column:span 2">Search for a GIF above</div>
     </div>
@@ -1592,7 +1696,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
       <button onclick="closeFeedback()" style="background:rgba(245,230,200,0.1);border:1px solid rgba(245,230,200,0.2);border-radius:50%;width:32px;height:32px;color:#F5E6C8;cursor:pointer;font-size:16px">✕</button>
     </div>
     <!-- Body -->
-    <div style="padding:24px 28px">
+    <div style="padding:24px 28px" id="feedback-body">
       <!-- Category -->
       <div style="margin-bottom:20px">
         <div style="font-size:11px;font-weight:600;color:#0B2545;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">What kind of feedback is this?</div>
@@ -1627,7 +1731,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
       <div style="margin-bottom:20px">
         <div style="font-size:11px;font-weight:600;color:#0B2545;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Tell us more</div>
         <div style="position:relative;border:1.5px solid rgba(11,37,69,0.15);border-radius:12px;overflow:hidden;transition:border-color .2s" id="feedback-box-wrap">
-          <textarea id="feedback-text" rows="4" placeholder="Share your thoughts... feel free to use emojis too! 😊" style="width:100%;padding:12px 14px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;color:#0B2545;background:#F8F5EF;resize:none;outline:none;box-sizing:border-box" onfocus="document.getElementById('feedback-box-wrap').style.borderColor='#D4AF37'" onblur="document.getElementById('feedback-box-wrap').style.borderColor='rgba(11,37,69,0.15)'"></textarea>
+          <textarea id="feedback-text" rows="4" placeholder="Share your thoughts... feel free to use emojis too! 😊" style="width:100%;padding:12px 14px;border:none;font-family:'BellaIndic','DM Sans',sans-serif;font-size:13px;color:#0B2545;background:#F8F5EF;resize:none;outline:none;box-sizing:border-box" onfocus="document.getElementById('feedback-box-wrap').style.borderColor='#D4AF37'" onblur="document.getElementById('feedback-box-wrap').style.borderColor='rgba(11,37,69,0.15)'"></textarea>
           <div style="padding:6px 10px;background:#F8F5EF;border-top:1px solid rgba(11,37,69,0.08);display:flex;gap:4px">
             <button onclick="addFeedbackEmoji('😊')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px">😊</button>
             <button onclick="addFeedbackEmoji('👍')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px">👍</button>
@@ -1641,8 +1745,26 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         </div>
       </div>
       <!-- Submit -->
-      <button onclick="submitFeedback()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#0B2545;color:#F5E6C8;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.3px;transition:background .2s" onmouseover="this.style.background='#142F5A'" onmouseout="this.style.background='#0B2545'">Send Feedback</button>
-      <div style="font-size:10px;color:#5A6B8A;text-align:center;margin-top:12px">Your feedback is reviewed before being shared. You'll hear from Bella when it's implemented. 🔒</div>
+      <button onclick="submitFeedback()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#0B2545;color:#F5E6C8;font-size:14px;font-weight:600;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;letter-spacing:.3px;transition:background .2s" onmouseover="this.style.background='#142F5A'" onmouseout="this.style.background='#0B2545'">Send Feedback</button>
+      <!-- Was: "You'll hear from Bella when it's implemented." Nothing in the
+           code could keep that promise -- no endpoint reads the Feedback tab and
+           nothing ever moves a row off `pending`. Replaced with what is actually
+           true today. When the acknowledgement email ships, this line gets the
+           email back. -->
+      <div style="font-size:10px;color:#5A6B8A;text-align:center;margin-top:12px" id="feedback-foot">Reviewed before it is shared. You will get a reference number you can quote. 🔒</div>
+    </div>
+
+    <!-- CONFIRMATION — shown IN PLACE of the form, before the modal closes.
+         Savio, 2026-10-03: the modal used to just vanish, leaving a long
+         thank-you in the chat behind it, so there was no moment that said
+         "this was received". -->
+    <div style="padding:30px 28px 26px;text-align:center;display:none" id="feedback-done">
+      <div style="font-size:36px;line-height:1;margin-bottom:12px">✅</div>
+      <div id="fbdone-title" style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:#0B2545">Feedback submitted</div>
+      <div id="fbdone-reflabel" style="font-size:10px;font-weight:700;color:#5A6B8A;letter-spacing:1.4px;text-transform:uppercase;margin-top:20px">Your reference</div>
+      <div id="fbdone-ref" style="font-family:'BellaIndic','DM Sans',sans-serif;font-size:21px;font-weight:700;color:#0B2545;letter-spacing:.5px;margin-top:5px;user-select:all;font-variant-numeric:lining-nums tabular-nums">&mdash;</div>
+      <div id="fbdone-wait" style="font-size:12px;color:#4A5A7A;line-height:1.7;margin-top:14px;max-width:34ch;margin-left:auto;margin-right:auto"></div>
+      <button id="fbdone-btn" onclick="closeFeedback()">Done</button>
     </div>
   </div>
 </div>
@@ -1676,6 +1798,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         <div class="menu-item" onclick="closeUserMenu()">Change Preferred Name</div>
         <div class="menu-item" onclick="closeUserMenu()">Notification Settings</div>
         <div class="menu-item" onclick="closeUserMenu()">Language Preference</div>
+        <div class="menu-item" onclick="openVoicePick(event)">Bella's Voice</div>
       </div>
     </div>
     <!-- Data & Privacy -->
@@ -1737,8 +1860,8 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         <div style="padding:14px 20px;background:#fff">
           <div style="font-size:13px;color:#0B2545;margin-bottom:12px">Are you sure you want to sign out?</div>
           <div style="display:flex;gap:8px">
-            <button onclick="signOut();closeUserMenu()" style="flex:1;padding:9px;border-radius:10px;border:none;background:#0B2545;color:#F5E6C8;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Yes, Sign Out</button>
-            <button onclick="toggleMenuSection('sec-signout')" style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(11,37,69,0.15);background:transparent;color:#0B2545;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Cancel</button>
+            <button onclick="signOut();closeUserMenu()" style="flex:1;padding:9px;border-radius:10px;border:none;background:#0B2545;color:#F5E6C8;font-size:12px;font-weight:600;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif">Yes, Sign Out</button>
+            <button onclick="toggleMenuSection('sec-signout')" style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(11,37,69,0.15);background:transparent;color:#0B2545;font-size:12px;font-weight:600;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif">Cancel</button>
           </div>
         </div>
       </div>
@@ -1958,6 +2081,7 @@ PREFERRED ADDRESS NAME: Always address this user as "${addressedName}" — never
 FAMILY FOLLOW-UP (ask after a positive response — use EXACT names, NEVER say \u201cyour family\u201d generically, and ask it ALONE, never bundled with another question): "${fq}"${userCtx}
 
 LANGUAGE — READ THIS FIRST AND TREAT IT AS ABSOLUTE:
+IF A LINE BEGINNING "REPLY LANGUAGE FOR THIS MESSAGE:" APPEARS AT THE END OF THIS PROMPT, THAT LINE OUTRANKS EVERY LANGUAGE RULE BELOW, INCLUDING THIS SECTION. It is the user's own deliberate choice, made by pressing the language button, and it decides your language no matter what script their message is written in. A user who chooses Bengali and then types "hello" in English gets BENGALI. Obey that line first and read the rest of this section only to learn HOW to write well in the language it names. The rules below about reading the user's script apply ONLY when no such line is present.
 YOU WRITE IN EXACTLY FOUR LANGUAGES AND NO OTHERS: English, Bengali, Hindi, Marathi.
 ENGLISH IS THE DEFAULT AND THE FALLBACK. If the message in front of you is not written in Bengali, Hindi or Marathi, you answer in ENGLISH — no exceptions, no matter what language it IS written in. Malayalam, Tamil, Telugu, Kannada, Gujarati, Punjabi, Spanish, French, German, Japanese, Arabic: all of these get an ENGLISH reply. You do not speak them. Do not mirror them. Answer the person's question warmly, in English.
 The ONLY three things that make you leave English: the message is in Bengali, or in Hindi, or in Marathi.
@@ -2299,22 +2423,30 @@ function _renderMemoryBar(pct, memCount, threadCount){
   bar.style.width=pct+'%';
   label.textContent=pct+'%';
   if(pct>=100){
+    bar.dataset.level='full';   label.dataset.level='full';
     bar.style.background='#cc0000';
     label.style.color='#cc0000';
     _showMemAlert(100,memCount,threadCount);
   } else if(pct>=90){
+    bar.dataset.level='high';   label.dataset.level='high';
     bar.style.background='#E05A00';
-    label.style.color='#E05A00';
+    // Text needs a darker orange than the fill: #E05A00 on white is 3.73:1.
+    label.style.color='#A33E00';
     _showMemAlert(90,memCount,threadCount);
   } else if(pct>=80){
+    bar.dataset.level='warn';   label.dataset.level='warn';
     bar.style.background='#D4AF37';
-    label.style.color='#D4AF37';
+    // Gold text on white measured 2.10:1 -- the same reason the cream email
+    // palette went to bronze. The fill stays gold; the number goes bronze.
+    label.style.color='#6B4E0F';
     _showMemAlert(80,memCount,threadCount);
   } else if(pct>=60){
+    bar.dataset.level='notice'; label.dataset.level='notice';
     bar.style.background='#D4AF37';
     label.style.color='var(--tsoft)';
     _showMemAlert(60,memCount,threadCount);
   } else {
+    bar.dataset.level='ok';     label.dataset.level='ok';
     bar.style.background='#2E8B57';
     label.style.color='var(--tsoft)';
     _lastMemAlert=0;
@@ -2871,7 +3003,7 @@ function showNewUserGate() {
 
       <!-- Step 1: Google Sign In -->
       <div id="gate-step-1" style="padding:24px 28px">
-        <button onclick="signInWithGoogle()" style="width:100%;padding:13px;border-radius:12px;border:1px solid rgba(245,230,200,0.2);background:rgba(245,230,200,0.08);color:#F5E6C8;font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:background .2s" onmouseover="this.style.background='rgba(245,230,200,0.15)'" onmouseout="this.style.background='rgba(245,230,200,0.08)'">
+        <button onclick="signInWithGoogle()" style="width:100%;padding:13px;border-radius:12px;border:1px solid rgba(245,230,200,0.2);background:rgba(245,230,200,0.08);color:#F5E6C8;font-size:14px;font-weight:500;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:background .2s" onmouseover="this.style.background='rgba(245,230,200,0.15)'" onmouseout="this.style.background='rgba(245,230,200,0.08)'">
           <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
           Continue with Google
         </button>
@@ -2969,11 +3101,11 @@ function showNewUserGate() {
           <div style="display:flex;gap:10px">
             <div style="flex:1">
               <div style="font-size:9px;color:rgba(245,230,200,0.5);letter-spacing:.8px;margin-bottom:4px">FIRST NAME *</div>
-              <input id="reg-firstname" type="text" placeholder="First name" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
+              <input id="reg-firstname" type="text" placeholder="First name" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;box-sizing:border-box;outline:none" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
             </div>
             <div style="flex:1">
               <div style="font-size:9px;color:rgba(245,230,200,0.5);letter-spacing:.8px;margin-bottom:4px">LAST NAME *</div>
-              <input id="reg-lastname" type="text" placeholder="Last name" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
+              <input id="reg-lastname" type="text" placeholder="Last name" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;box-sizing:border-box;outline:none" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
             </div>
           </div>
 
@@ -2982,12 +3114,12 @@ function showNewUserGate() {
             <div style="flex:1">
               <div style="font-size:9px;color:rgba(245,230,200,0.5);letter-spacing:.8px;margin-bottom:2px">ADDRESSED AS *</div>
               <div style="font-size:11px;color:rgba(245,230,200,0.4);margin-bottom:6px">What should Bella call you?</div>
-              <input id="reg-prefname" type="text" placeholder="e.g. Savio, Joy, Neil..." style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
+              <input id="reg-prefname" type="text" placeholder="e.g. Savio, Joy, Neil..." style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;box-sizing:border-box;outline:none" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
             </div>
             <div style="flex:1">
               <div style="font-size:9px;color:rgba(245,230,200,0.5);letter-spacing:.8px;margin-bottom:2px">GENDER *</div>
               <div style="font-size:11px;color:rgba(245,230,200,0.4);margin-bottom:6px">&nbsp;</div>
-              <select id="reg-gender" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'DM Sans',sans-serif;outline:none" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
+              <select id="reg-gender" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
                 <option value="" disabled selected>Select</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
@@ -3003,19 +3135,19 @@ function showNewUserGate() {
             <div style="display:flex;gap:6px">
               <!-- Searchable country code dropdown -->
               <div style="position:relative;width:160px;flex-shrink:0" id="reg-cc-wrap">
-                <div id="reg-cc-display" onclick="toggleCCDropdown()" style="padding:11px 10px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;user-select:none" onfocus="this.style.borderColor='#D4AF37'">
+                <div id="reg-cc-display" onclick="toggleCCDropdown()" style="padding:11px 10px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:12px;font-family:'BellaIndic','DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;user-select:none" onfocus="this.style.borderColor='#D4AF37'">
                   <span id="reg-cc-selected">🇮🇳 India +91</span>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(245,230,200,0.5)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
                 <div id="reg-cc-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#0B2545;border:1.5px solid rgba(212,175,55,0.3);border-radius:10px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.4);margin-top:4px;min-width:220px">
                   <div style="padding:8px 8px 4px">
-                    <input id="reg-cc-search" type="text" placeholder="🔍 Search country..." oninput="filterCC(this.value)" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.08);color:#F5E6C8;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box">
+                    <input id="reg-cc-search" type="text" placeholder="🔍 Search country..." oninput="filterCC(this.value)" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.08);color:#F5E6C8;font-size:12px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;box-sizing:border-box">
                   </div>
                   <div id="reg-cc-list" style="max-height:180px;overflow-y:auto;padding:4px 0"></div>
                 </div>
                 <input type="hidden" id="reg-country-code" value="+91" data-digits="10" data-placeholder="XXXXX XXXXX">
               </div>
-              <input id="reg-mobile-number" type="tel" placeholder="XXXXX XXXXX" maxlength="10" inputmode="numeric" style="flex:1;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
+              <input id="reg-mobile-number" type="tel" placeholder="XXXXX XXXXX" maxlength="10" inputmode="numeric" style="flex:1;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;box-sizing:border-box;outline:none" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
             </div>
           </div>
 
@@ -3024,11 +3156,11 @@ function showNewUserGate() {
             <div>
               <div style="font-size:9px;color:rgba(245,230,200,0.5);letter-spacing:.8px;margin-bottom:4px">DATE OF BIRTH *</div>
               <div style="display:flex;gap:4px;align-items:center">
-                <input id="reg-dob-dd" type="text" placeholder="DD" maxlength="2" inputmode="numeric" style="width:42px;padding:10px 4px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;text-align:center;box-sizing:border-box" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'" oninput="if(this.value.length===2){document.getElementById('reg-dob-mm').focus();}">
+                <input id="reg-dob-dd" type="text" placeholder="DD" maxlength="2" inputmode="numeric" style="width:42px;padding:10px 4px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;text-align:center;box-sizing:border-box" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'" oninput="if(this.value.length===2){document.getElementById('reg-dob-mm').focus();}">
                 <span style="color:rgba(245,230,200,0.3);font-size:14px">/</span>
-                <input id="reg-dob-mm" type="text" placeholder="MM" maxlength="2" inputmode="numeric" style="width:42px;padding:10px 4px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;text-align:center;box-sizing:border-box" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'" oninput="if(this.value.length===2){document.getElementById('reg-dob-yyyy').focus();}">
+                <input id="reg-dob-mm" type="text" placeholder="MM" maxlength="2" inputmode="numeric" style="width:42px;padding:10px 4px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;text-align:center;box-sizing:border-box" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'" oninput="if(this.value.length===2){document.getElementById('reg-dob-yyyy').focus();}">
                 <span style="color:rgba(245,230,200,0.3);font-size:14px">/</span>
-                <input id="reg-dob-yyyy" type="text" placeholder="YYYY" maxlength="4" inputmode="numeric" style="width:56px;padding:10px 4px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;text-align:center;box-sizing:border-box" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
+                <input id="reg-dob-yyyy" type="text" placeholder="YYYY" maxlength="4" inputmode="numeric" style="width:56px;padding:10px 4px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;text-align:center;box-sizing:border-box" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
               </div>
             </div>
           </div>
@@ -3037,7 +3169,7 @@ function showNewUserGate() {
 
         <div id="gate-error-2" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-top:10px;text-align:center"></div>
 
-        <button onclick="submitRegistration()" style="width:100%;padding:12px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:10px;letter-spacing:.3px;transition:background .2s" onmouseover="this.style.background='#C4A028'" onmouseout="this.style.background='#D4AF37'">
+        <button onclick="submitRegistration()" style="width:100%;padding:12px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;margin-top:10px;letter-spacing:.3px;transition:background .2s" onmouseover="this.style.background='#C4A028'" onmouseout="this.style.background='#D4AF37'">
           Verify Mobile & Continue ->
         </button>
         <div style="font-size:10px;color:rgba(245,230,200,0.3);text-align:center;margin-top:12px">* All fields are required · 🔒 Private & secure</div>
@@ -3048,16 +3180,16 @@ function showNewUserGate() {
         <div style="font-size:12px;font-weight:600;color:#D4AF37;letter-spacing:.5px;margin-bottom:8px">VERIFY YOUR MOBILE</div>
         <div id="gate-otp-hint" style="font-size:12px;color:rgba(245,230,200,0.6);margin-bottom:16px;line-height:1.5"></div>
         <div style="position:relative;margin-bottom:10px">
-          <input id="gate-otp-input" type="tel" placeholder="Enter OTP" maxlength="6" style="width:100%;padding:14px 44px 14px 14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:22px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:10px;caret-color:#D4AF37" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'"
+          <input id="gate-otp-input" type="tel" placeholder="Enter OTP" maxlength="6" style="width:100%;padding:14px 44px 14px 14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:22px;font-family:'BellaIndic','DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:10px;caret-color:#D4AF37" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'"
           oninput="this.value=this.value.replace(/[^0-9]/g,'')">
           <button onclick="toggleOTPVisibility('gate-otp-input','otp-eye-new')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(245,230,200,0.5);font-size:16px;padding:4px" title="Show/Hide OTP"><span id="otp-eye-new">👁</span></button>
         </div>
         <div id="gate-error-3" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-top:8px;text-align:center"></div>
         <div id="recaptcha-container" style="display:none"></div>
-        <button onclick="verifyOTP()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.3px">
+        <button onclick="verifyOTP()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;letter-spacing:.3px">
           Verify & Enter Bella
         </button>
-        <button onclick="resendOTP()" style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(245,230,200,0.15);background:transparent;color:rgba(245,230,200,0.5);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px">
+        <button onclick="resendOTP()" style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(245,230,200,0.15);background:transparent;color:rgba(245,230,200,0.5);font-size:12px;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;margin-top:8px">
           Resend OTP
         </button>
         <div style="font-size:10px;color:rgba(245,230,200,0.3);text-align:center;margin-top:12px">
@@ -3094,14 +3226,14 @@ function showReturningUserGate(userData) {
         <div style="width:56px;height:56px;border-radius:50%;background:#D4AF37;display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
           <span style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:#0B2545">B</span>
         </div>
-        <div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;color:rgba(245,230,200,0.6);margin-bottom:4px">welcome back</div>
+        <div style="font-family:'BellaIndic','DM Sans',sans-serif;font-size:13px;font-weight:400;color:rgba(245,230,200,0.6);margin-bottom:4px">welcome back</div>
         <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:#F5E6C8;margin-bottom:4px">${userData.firstName || (userData.fullName||'').split(' ')[0] || userData.preferredName}</div>
         <div style="font-size:11px;color:rgba(245,230,200,0.4);margin-bottom:24px">${userData.email}</div>
-        <button id="returning-verify-btn" onclick="signInReturningUser()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px">
+        <button id="returning-verify-btn" onclick="signInReturningUser()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px">
           <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#0B2545" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#0B2545" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#0B2545" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#0B2545" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
           Verify with Google &amp; Mobile OTP
         </button>
-        <button onclick="notYouGate()" style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(245,230,200,0.15);background:transparent;color:rgba(245,230,200,0.4);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px">
+        <button onclick="notYouGate()" style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(245,230,200,0.15);background:transparent;color:rgba(245,230,200,0.4);font-size:12px;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;margin-top:8px">
           Not ${userData.firstName || (userData.fullName||'').split(' ')[0] || 'you'}? Sign in with a different account
         </button>
         <div id="gate-error-returning" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-top:8px;text-align:center"></div>
@@ -3209,12 +3341,12 @@ function showReturningMobileInput(savedUser){
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <div style="background:rgba(245,230,200,0.06);border:1.5px solid rgba(245,230,200,0.15);border-radius:10px;padding:11px 12px;color:#F5E6C8;font-size:13px;white-space:nowrap">+91</div>
         <input id="returning-mobile-input" type="tel" placeholder="Mobile number" inputmode="numeric"
-          style="flex:1;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box"
+          style="flex:1;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;box-sizing:border-box"
           oninput="this.value=this.value.replace(/[^0-9]/g,'')"
           onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
       </div>
       <div id="returning-mobile-error" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-bottom:10px;text-align:center"></div>
-      <button id="returning-mobile-btn" onclick="submitReturningMobile()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">
+      <button id="returning-mobile-btn" onclick="submitReturningMobile()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif">
         Send OTP
       </button>
     </div>`;
@@ -3257,14 +3389,14 @@ function showReturningOTPGate(savedUser) {
       <div id="recaptcha-container-returning" style="display:none"></div>
       <div style="position:relative;margin-bottom:10px">
         <input id="gate-otp-returning" type="tel" placeholder="• • • • • •" maxlength="6"
-          style="width:100%;padding:14px 44px 14px 14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:16px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:8px;caret-color:#D4AF37"
+          style="width:100%;padding:14px 44px 14px 14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:16px;font-family:'BellaIndic','DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:8px;caret-color:#D4AF37"
           onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'"
           oninput="this.value=this.value.replace(/[^0-9]/g,'')"
           >
         <button onclick="toggleOTPVisibility('gate-otp-returning','otp-eye-ret')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(245,230,200,0.5);font-size:16px;padding:4px" title="Show/Hide OTP"><span id="otp-eye-ret">👁</span></button>
       </div>
       <div id="gate-otp-returning-error" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-bottom:10px;text-align:center"></div>
-      <button onclick="verifyReturningOTP('${savedUser.mobile}')" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">
+      <button onclick="verifyReturningOTP('${savedUser.mobile}')" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif">
         Verify &amp; Enter Bella
       </button>
     </div>`;
@@ -3347,7 +3479,7 @@ async function submitRegistration() {
         </div>
         <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:#F5E6C8;margin-bottom:10px">Profile Incomplete</div>
         <div style="font-size:13px;color:rgba(245,230,200,0.7);line-height:1.7;margin-bottom:20px">Without completing your profile you will not be able to access Bella.ai.<br><br><span style="color:#D4AF37;font-size:12px">${firstError}</span></div>
-        <button onclick="document.getElementById('bella-form-alert').remove()" style="width:100%;padding:12px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">Complete My Profile</button>
+        <button onclick="document.getElementById('bella-form-alert').remove()" style="width:100%;padding:12px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif">Complete My Profile</button>
       </div>`;
     document.body.appendChild(alertModal);
     errEl.textContent = '';
@@ -3554,7 +3686,7 @@ function savePhoto() {
   // Show "Image saved" toast
   const toast = document.createElement('div');
   toast.textContent = 'Image saved';
-  toast.style.cssText = "position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#0B2545;color:#D4AF37;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;padding:8px 20px;border-radius:20px;border:1px solid rgba(212,175,55,0.4);z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);opacity:0;transition:opacity .3s";
+  toast.style.cssText = "position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#0B2545;color:#D4AF37;font-size:12px;font-weight:600;font-family:'BellaIndic','DM Sans',sans-serif;padding:8px 20px;border-radius:20px;border:1px solid rgba(212,175,55,0.4);z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);opacity:0;transition:opacity .3s";
   document.body.appendChild(toast);
   requestAnimationFrame(() => { toast.style.opacity = '1'; });
   setTimeout(() => {
@@ -4413,7 +4545,7 @@ function doSearch(q){
     if(el)el.style.background='var(--goldpale)';
   });
   if(!matches.length){res.innerHTML='<div style="font-size:12px;color:var(--tsoft);padding:6px">No results found</div>';return;}
-  res.innerHTML=matches.map(m=>`<div onclick="switchThread('${m.id}');highlightMessages('${q}');toggleSearch()" style="padding:7px 8px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text);font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px" onmouseover="this.style.background='var(--goldpale)'" onmouseout="this.style.background=''"><span style="font-size:10px">${m.inContent?'💬':'🗂️'}</span>${m.name}</div>`).join('');
+  res.innerHTML=matches.map(m=>`<div onclick="switchThread('${m.id}');highlightMessages('${q}');toggleSearch()" style="padding:7px 8px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text);font-family:'BellaIndic','DM Sans',sans-serif;display:flex;align-items:center;gap:6px" onmouseover="this.style.background='var(--goldpale)'" onmouseout="this.style.background=''"><span style="font-size:10px">${m.inContent?'💬':'🗂️'}</span>${m.name}</div>`).join('');
 }
 function highlightMessages(q){
   if(!q)return;
@@ -4921,7 +5053,7 @@ function confirmDeleteAccount(){
       </div>
       <div style="padding:20px 28px">
         <div style="font-size:11px;color:rgba(245,230,200,0.6);letter-spacing:.6px;margin-bottom:8px">REASON FOR LEAVING *</div>
-        <select id="del-reason-select" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:10px" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
+        <select id="del-reason-select" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;margin-bottom:10px" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
           <option value="" disabled selected>Select a reason...</option>
           <option value="Not using it enough">Not using it enough</option>
           <option value="Missing features I need">Missing features I need</option>
@@ -4930,10 +5062,10 @@ function confirmDeleteAccount(){
           <option value="Too complicated to use">Too complicated to use</option>
           <option value="Other">Other</option>
         </select>
-        <textarea id="del-reason-text" placeholder="Tell us more (optional)..." maxlength="500" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none;height:80px;box-sizing:border-box;margin-bottom:6px" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'"></textarea>
+        <textarea id="del-reason-text" placeholder="Tell us more (optional)..." maxlength="500" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;resize:none;height:80px;box-sizing:border-box;margin-bottom:6px" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'"></textarea>
         <div id="del-error" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-bottom:10px"></div>
-        <button onclick="submitDeleteAccount()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#c0392b;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:10px">Confirm — Delete My Account</button>
-        <button onclick="document.getElementById('delete-account-modal').remove()" style="width:100%;padding:11px;border-radius:12px;border:1px solid rgba(245,230,200,0.2);background:transparent;color:rgba(245,230,200,0.6);font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif">Cancel — Keep My Account</button>
+        <button onclick="submitDeleteAccount()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#c0392b;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;margin-bottom:10px">Confirm — Delete My Account</button>
+        <button onclick="document.getElementById('delete-account-modal').remove()" style="width:100%;padding:11px;border-radius:12px;border:1px solid rgba(245,230,200,0.2);background:transparent;color:rgba(245,230,200,0.6);font-size:13px;font-weight:500;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif">Cancel — Keep My Account</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -5192,6 +5324,19 @@ function openFeedback(){
 }
 function closeFeedback(){
   document.getElementById('feedback-overlay').style.display='none';
+  // Reset to the form, or the next person to open it sees the last person's
+  // confirmation and no way back to the questions.
+  const body=document.getElementById('feedback-body'), done=document.getElementById('feedback-done');
+  if(body) body.style.display='';
+  if(done) done.style.display='none';
+  const ta=document.getElementById('feedback-text'); if(ta) ta.value='';
+  _selectedFeedbackCat=null;
+  document.querySelectorAll('.fcat-btn').forEach(b=>{
+    b.style.border='1.5px solid rgba(11,37,69,0.15)';
+    b.style.background='#F8F5EF';
+  });
+  const sb=document.querySelector('#feedback-overlay button[onclick="submitFeedback()"]');
+  if(sb){ sb.textContent='Send Feedback'; sb.disabled=false; }
 }
 function selectFeedbackCat(btn,cat){
   _selectedFeedbackCat=cat;
@@ -5207,6 +5352,36 @@ function addFeedbackEmoji(emoji){
   ta.value+=emoji;
   ta.focus();
 }
+// ══ TICKET NUMBERS ═════════════════════════════════════════════════════════
+// Savio asked whether feedback, support and errors should be three streams.
+// Decision 2026-10-04: ONE series, THREE PREFIXES. One numbering to track, and
+// the prefix still says which kind it is at a glance -- and if he later wants
+// them split for real, the prefix has already done the splitting.
+//
+// NOT "BE-" for error: that is already the USER ID prefix (BE-29271057), and a
+// support conversation is the exact place those two would be confused.
+function _bellaTicket(category){
+  const stream = category === 'bug' ? 'ERR' : 'FBK';   // SUP reserved: no support flow exists yet
+  // Stamped in IST deliberately. The Feedback tab's own date column is written
+  // in IST by the backend, so ticket and row agree even if the user is abroad.
+  const p = new Intl.DateTimeFormat('en-GB', { timeZone:'Asia/Kolkata',
+      year:'2-digit', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', hourCycle:'h23' })
+    .formatToParts(new Date())
+    .reduce((o,x)=>(o[x.type]=x.value,o),{});
+  let t = stream + '-' + p.year + p.month + p.day + '-' + p.hour + p.minute;
+  // Two submissions inside the same minute would otherwise share an id, and
+  // column A is the row's identity. Rare, but cheap to rule out.
+  if(_ticketsIssued.indexOf(t) !== -1){
+    let n = 2; while(_ticketsIssued.indexOf(t + '-' + n) !== -1) n++;
+    t = t + '-' + n;
+  }
+  _ticketsIssued.push(t);
+  return t;
+}
+let _ticketsIssued = [];
+let _lastTicket = '';
+
 async function submitFeedback(){
   const text=document.getElementById('feedback-text').value.trim();
   if(!_selectedFeedbackCat){alert('Please select a feedback category first.');return;}
@@ -5215,7 +5390,8 @@ async function submitFeedback(){
   btn.textContent='Sending...';
   btn.disabled=true;
   try{
-    const feedbackId='fb_'+Date.now();
+    const feedbackId=_bellaTicket(_selectedFeedbackCat);
+    _lastTicket=feedbackId;
     // This used to call /sheets-write, which saved the row and told NOBODY.
     // /user-feedback appends the very same 14-column row AND emails support.
     // Found 2026-10-01: the only endpoint that alerts support had never had a
@@ -5237,16 +5413,28 @@ async function submitFeedback(){
     // A 4xx was silent here too: the thank-you appeared whether or not the
     // feedback was stored. Now a refusal reaches the catch below.
     if(!fr.ok) throw new Error('feedback refused: '+fr.status+' '+await fr.text().catch(()=>''));
-    closeFeedback();
-    // Thank the user in chat
-    const catLabels={bug:'bug report',improve:'improvement suggestion',feature:'new feature idea',praise:'kind words',voice:'voice feedback',mobile:'mobile feedback'};
-    const catLabel=catLabels[_selectedFeedbackCat]||'feedback';
+    const catLabel=uiText('fb_cat_'+_selectedFeedbackCat)||uiText('fb_cat_improve');
     const isPraise=_selectedFeedbackCat==='praise';
-    const thankMsg=isPraise
-      ?`Thank you so much for your kind words, ${currentAddressedName||''}! 🙏 It truly means everything to hear that. If you ever have ideas on how I can serve you better, please don't hesitate to share — your thoughts help me grow. ❤️`
-      :`Thank you for your ${catLabel}, ${currentAddressedName||''}! 🙏 I've received it and it will be reviewed carefully. You'll hear from me as soon as it's been addressed. Your voice matters and helps make Bella better for everyone. ✨`;
+    const _fl=chosenLang()||'en';
+    // Confirm IN THE MODAL first. The modal used to vanish on success, so the
+    // only acknowledgement was a long message in the chat BEHIND it -- which is
+    // why Savio could not tell whether his feedback had gone anywhere.
+    document.getElementById('feedback-body').style.display='none';
+    document.getElementById('fbdone-title').textContent=uiText('fb_sent_title',{},_fl);
+    document.getElementById('fbdone-reflabel').textContent=uiText('fb_sent_ref',{},_fl);
+    document.getElementById('fbdone-ref').textContent=feedbackId;
+    document.getElementById('fbdone-wait').textContent=
+      uiText(isPraise?'fb_sent_wait_praise':'fb_sent_wait',{},_fl);
+    document.getElementById('fbdone-btn').textContent=uiText('fb_sent_done',{},_fl);
+    document.getElementById('feedback-done').style.display='block';
+    // The chat line is now SHORT and carries the reference. His instruction:
+    // shorten it, and move the detail to the email.
+    const thankMsg=uiText(isPraise?'fb_thanks_praise':'fb_thanks_other',
+      {name:currentAddressedName?(', '+currentAddressedName):'',cat:catLabel,ticket:feedbackId},_fl);
     bellaMsg(thankMsg);
-    if(continuousVoice)speakText(thankMsg,'en');
+    // Was speakText(thankMsg,'en') -- hardcoded, so a Hindi user heard an English
+    // voice read out a Hindi sentence. Savio flagged this on 2026-10-03.
+    if(continuousVoice)speakText(thankMsg,_fl);
   }catch(e){
     alert('Something went wrong. Please try again.');
     btn.textContent='Send Feedback';
@@ -5363,13 +5551,17 @@ function checkSummariseBtn(){
 
 async function summariseThread(){
   const hist=threads[currentThreadId]?.hist||[];
-  if(hist.length<4){bellaMsg('This conversation is too short to summarise yet.');return;}
+  if(hist.length<4){bellaMsg(uiText('summary_tooshort'));return;}
   showThinking();
   const contents=[
     {role:'user',parts:[{text:buildSystemPrompt(currentProfileKey,currentAddressedName,userMemory.memories||'')}]},
     {role:'model',parts:[{text:'Understood. I am Bella.'}]},
     ...hist,
-    {role:'user',parts:[{text:'Please summarise our conversation. Include: 1) Key topics discussed, 2) Important decisions or conclusions, 3) Action items with who is responsible, 4) Any follow-ups needed. Format clearly with headings.'}]}
+    // THE BUG Savio found 2026-10-03: this request was built by hand and never
+    // carried _replyLangNote(), the one line the ordinary chat path attaches to
+    // every message. So Summarise asked in English and got English back -- in
+    // Bengali, Hindi and Marathi alike, deterministically, every single time.
+    {role:'user',parts:[{text:'Please summarise our conversation. Include: 1) Key topics discussed, 2) Important decisions or conclusions, 3) Action items with who is responsible, 4) Any follow-ups needed. Format clearly with headings.'+_replyLangNote()}]}
   ];
   try{
     const r=await bfetch(BACKEND+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch:false})});
@@ -5380,8 +5572,8 @@ async function summariseThread(){
         reply=reply.replace(/\[Thinking:[^\]]*\]/gi,'').replace(/\[Searching:[^\]]*\]/gi,'').replace(/\[Source Link Example:[^\]]*\]/gi,'').trim();
       }
     hideThinking();
-    if(reply){bellaMsg('**Thread Summary**\n\n'+reply);speakText('Here is a summary of our conversation so far.',detectLanguage(reply));}
-  }catch(e){hideThinking();bellaMsg('Sorry, I could not summarise this thread right now.');}
+    if(reply){bellaMsg('**'+uiText('summary_heading')+'**\n\n'+reply);speakText(uiText('summary_spoken'),chosenLang()||detectLanguage(reply));}
+  }catch(e){hideThinking();bellaMsg(uiText('summary_failed'));}
 }
 
 function retryMsg(id){
@@ -5521,7 +5713,7 @@ async function send(){
   if(pTexts.length>0)fullMsg+='\n\n'+pTexts.map((t,i)=>`[DOCUMENT ${i+1}: ${pFiles[i]?.name||'file'}]\n${t.substring(0,15000)}`).join('\n\n');
   for(const img of pImages){if(img)imagePartsForAPI.push({inlineData:{mimeType:img.mimeType,data:img.data}});}
   clearFiles();
-  const lang=detectLanguage(fullMsg);
+  const lang=chosenLang()||detectLanguage(fullMsg);
   // A plain "what time is it in X" is answered from the browser's own timezone
   // data — exact, instant, daylight-saving aware, and it costs nothing. Sending
   // it to web search is what produced a list of zones instead of the time.
@@ -5578,11 +5770,17 @@ async function send(){
     // Long answers (8+ sentences) speak only the short summary and point to
     // the screen for the rest. Short answers are spoken in full, as before.
     const sentenceCount=(reply.match(/[^.!?\n]+[.!?]+|[^.!?\n]+$/g)||[reply]).length;
-    if(sentenceCount>SPOKEN_FULL_SENTENCES && voiceSummary){
+    // The model MAY ignore the length rule, so this does not rest on it: anything
+    // not materially shorter than the answer is treated as no summary at all.
+    const usableSummary=(voiceSummary && voiceSummary.length < reply.length*0.5)?voiceSummary:null;
+    // Note the missing `&& voiceSummary`. It used to be here, and when the model
+    // omitted the tag a LONG answer fell through to the else branch and was read
+    // aloud WORD FOR WORD, with no offer shown. That was Savio's actual complaint.
+    if(sentenceCount>SPOKEN_FULL_SENTENCES){
       // Long answer. Speak the short version, then ASK — don't decide for them.
       // Savio's rule: up to 7-8 sentences she just reads it out; beyond that she
       // offers, and proceeds on their answer.
-      try{offerFullReading(bellaMsgId,reply,voiceSummary,lang);}catch(e){}
+      try{offerFullReading(bellaMsgId,reply,usableSummary,lang);}catch(e){}
     } else {
       try{speakText(reply,lang,bellaMsgId);}catch(e){}
     }
@@ -5626,6 +5824,18 @@ async function send(){
 // Bengali, Hindi or Marathi. Costs about 20 tokens a message.
 function _replyLangNote(){
   const NAMES={bn:'Bengali',hi:'Hindi',mr:'Marathi'};
+  // A deliberate press of the language button OUTRANKS script detection. This is
+  // the line that makes romanised typing work: "kaise ho" is Latin script, so
+  // detectLanguage() calls it English, but a user who chose Hindi wants Hindi.
+  try{
+    const CH = chosenLang();
+    if(CH){
+      const L = NAMES[CH];
+      return L
+        ? '\n\nREPLY LANGUAGE FOR THIS MESSAGE: '+L+'. Write your entire reply in '+L+', in its own script. THIS OUTRANKS EVERY OTHER LANGUAGE INSTRUCTION, INCLUDING THE SCRIPT THE USER TYPED IN. The user pressed a button to choose '+L+'; that is a deliberate choice and it stands until they press it again. If they write to you in English, in Latin letters, in romanised '+L+', or in any other language at all, you still reply entirely in '+L+' and in its own script. Worked example: they type \'hello\' or \'kasa kai\' -- you still answer in '+L+'. Never mirror the language of their message.'
+        : '\n\nREPLY LANGUAGE FOR THIS MESSAGE: English. Write your entire reply in English, whatever language the user wrote in. Do not mirror their language.';
+    }
+  }catch(e){}
   try{
     const h=getHist();
     for(let i=h.length-1;i>=0;i--){
@@ -5652,7 +5862,11 @@ async function callBella(useSearch,memCtx,signal){
   // only attached when a keyword matched, so anything phrased outside that list was
   // answered from training data and came back out of date.
   const searchNote='\n\nRESEARCH RULE — applies to every question. You have Google Search available and you must use it whenever the correct answer could have changed since your training data: prices, costs, rates, valuations, who currently holds a role or office, company and product facts, laws and rules, sports results, schedules, opening hours, news, and any question containing "current", "latest", "still", "now" or a year. If you are not certain your information is current, search — do not answer from memory and do not guess. Never state a fact that could be out of date without checking it first. When you have searched, give 3-5 bullet points with verifiable source links, and say when the information is from: cite medical sources for medical questions, official sources for government ones, industry reports for business data. When the question is personal, emotional, creative, or ordinary conversation, do not search — answer warmly as Bella normally would. Spoken summary: 2 sentences max — never speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).';
-  const voiceNote='\n\nAt the very end of your reply, on its own new line, always add a short spoken-friendly version of your answer in this exact format: [VOICE]a natural 2-3 sentence summary, in plain conversational language[/VOICE]. This tag is never shown to the user — it is only used to decide what to speak aloud for long answers.';
+  // Savio, 2026-10-02: the Summarise button must give "a summary pointwise or highlight
+  // her finding in short". It used to ask for 2-3 sentences of prose, so even when it
+  // worked you got a paragraph, never highlights. The word cap is stated because an
+  // uncapped 'short' came back as long as the answer itself.
+  const voiceNote='\n\nAt the very end of your reply, on its own new line, always add a short summary of your answer in this exact format: [VOICE]- first point\\n- second point\\n- third point[/VOICE]. Rules for it: 3 to 5 points, each on its own line beginning with \"- \", each a single short clause, FORTY-FIVE WORDS IN TOTAL AT THE ABSOLUTE MOST. It must be dramatically shorter than your answer — it is the highlights, not a retelling. Write it in the SAME language as your reply. This tag is never shown as part of your answer; it is used for the spoken version and for the Summarise button.';
   const _opening=`Understood. I am Bella, ready to assist ${_activeAddressedName}.`;
   const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_replyLangNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
   const r=await bfetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch}),signal});
@@ -5688,12 +5902,24 @@ const speechQueue={
     this.msgId=null;
     this.muted=false;
     if(curAudio){try{curAudio.pause();curAudio.currentTime=0;}catch(e){}curAudio=null;}
+    // The local-voice fallback is a separate audio path from <audio>, so pausing
+    // curAudio does not touch it. Without this, interrupting Bella leaves the
+    // device voice talking over her next answer.
+    try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){}
     if(this._release){const r=this._release;this._release=null;try{r();}catch(e){}}
     setSpeakingState(false);
     const spk=document.getElementById('spk');if(spk)spk.style.display='none';
   },
   setMuted(m){
     this.muted=!!m;
+    // Mute has to reach the local voice as well, or the button lies when Bella is
+    // speaking through the device rather than through ElevenLabs.
+    try{
+      if(window.speechSynthesis){
+        if(this.muted) window.speechSynthesis.pause();
+        else window.speechSynthesis.resume();
+      }
+    }catch(e){}
     if(!curAudio)return;
     try{
       if(this.muted) curAudio.pause();
@@ -5757,10 +5983,140 @@ const speechQueue={
       if(myToken!==this.stopToken)return;
       if(i+1<chunks.length)nextAudio=this._fetchChunkAudio(chunks[i+1],lang,myToken);
       if(url)await this._playBlobUrl(url,myToken);
+      // No fallback in 'cloud' mode -- he asked to hear ElevenLabs exactly as it is.
+      else if(voiceSrc()!=='cloud') await this._speakLocally(chunks[i],lang,myToken);
     }
     if(myToken===this.stopToken){this.playing=false;this.msgId=null;setSpeakingState(false);}
   },
+  // ── LOCAL VOICE FALLBACK — Savio, 2026-10-03 ──────────────────────────────
+  // Measured that day: /speak failing (empty ElevenLabs credits) logged a console
+  // warning the user never sees and played nothing, so Bella went SILENT with no
+  // explanation and no way to tell that apart from being muted.
+  //
+  // HIS CONDITION, and the whole design: this must not interfere when he tops
+  // ElevenLabs up again. It cannot -- it is only ever reached when
+  // _fetchChunkAudio() returned null. A working /speak never gets here. If he
+  // later chooses to run on the Mac's own voice instead, this same function
+  // becomes the primary path behind a flag; nothing here would be thrown away.
+  //
+  // GUARDED ON AN EXACT LANGUAGE MATCH, deliberately. With no guard, Marathi text
+  // is handed to whatever voice the browser defaults to -- an English voice
+  // sounding out Devanagari, which is worse than silence. Measured on his Mac:
+  // en_IN 4 voices, hi_IN 1, bn_IN 1, mr_IN 0. So Marathi stays quiet here until
+  // a Marathi voice is installed, and that is the correct behaviour, not a bug.
+  // ── WHICH VOICE, Savio's decision 2026-10-03 ──────────────────────────────
+  // NAMED VOICES, each one Savio listened to on 2026-10-03 and approved by ear.
+  //
+  // THE DEFECT THIS FIXES: the chooser took the FIRST voice matching the
+  // language. On his Mac the first en_IN voice is **Aman, who is male** -- so
+  // Bella, who is a woman in every other respect, answered in a man's voice.
+  // The Web Speech API does not expose gender, so there is no way to detect this
+  // automatically; the only honest fix is to name the voices a human has heard.
+  //
+  // Order matters: first match wins. Unknown names are skipped harmlessly, so
+  // this is safe on Android, Windows and any Mac without these voices -- it just
+  // falls through to the language match below.
+  // Marathi is deliberately EMPTY: he rejected the Hindi voice reading Marathi
+  // after listening to it, and has not yet chosen a Marathi voice.
+  
+  // His requirement, in his words: a solution that "works now at ~0 cost so i can
+  // use it for testing", that still works "after a year when i refill ElevenLabs
+  // with my selected voices", and that lets him "stick with the Mac voices" if he
+  // prefers them and save the ElevenLabs cost entirely.
+  //
+  // So this is a CHOICE, not just a failure path:
+  //   auto   - ElevenLabs, falling back to the device if it returns nothing.
+  //   device - never calls /speak at all. Free, instant, works with no credits.
+  //            Choosing this SPENDS NOTHING -- the network call is skipped, not
+  //            made and discarded.
+  //   cloud  - ElevenLabs only, no fallback, so he hears exactly what he is
+  //            paying for when he A/Bs the two.
+  // Default is auto, which is what everyone has today.
+  async _localVoiceFor(lang){
+    try{
+      if(!('speechSynthesis' in window)) return null;
+      const want=(SPEECH_LANGS[lang]||'en-IN').toLowerCase();
+      const base=want.split('-')[0];
+      const prefer=(PREFERRED_VOICE[lang]||[]).map(n=>n.toLowerCase());
+      const pick=()=>{
+        const vs=window.speechSynthesis.getVoices()||[];
+        const norm=v=>(v.lang||'').toLowerCase().replace('_','-');
+        const nm=v=>(v.name||'').toLowerCase();
+        // 1) a voice Savio has actually listened to and approved, by name --
+        //    but ONLY among voices already in the right language.
+        //    Apple reuses voice names across Indian languages: there is a Tara in
+        //    English (India) AND a Tara in Marathi (India), and likewise an Aman.
+        //    Searching all voices by name would hand Marathi text to the English
+        //    Tara, which is the exact failure this whole table exists to prevent.
+        const inLang=vs.filter(v=>norm(v)===want || norm(v).split('-')[0]===base);
+        for(const p of prefer){
+          const hit=inLang.find(v=>nm(v)===p) || inLang.find(v=>nm(v).indexOf(p)===0);
+          if(hit) return hit;
+        }
+        // 2) then any voice in the right language. On a device that has none of
+        //    the named voices this is all we have, and it may well pick a male
+        //    one -- unavoidable, since the Web Speech API does not report gender.
+        const any=vs.find(v=>norm(v)===want) || vs.find(v=>norm(v).split('-')[0]===base);
+        if(any) return any;
+        // 3) LAST RESORT, and only for a language the device has NO voice for at
+        //    all. Savio's decision 2026-10-03, taken by ear: with no Marathi voice
+        //    in existence he would rather hear the English Tara read Marathi than
+        //    hear nothing. He turned down the Hindi voice doing the same job, so
+        //    this is a judgement about a specific voice, not a general rule.
+        //    Restricted to the NAMED voices he has approved, so this can never
+        //    quietly grab an arbitrary wrong voice -- which was the original
+        //    objection to cross-language fallback and still stands.
+        for(const p of prefer){
+          const hit=vs.find(v=>nm(v)===p) || vs.find(v=>nm(v).indexOf(p)===0);
+          if(hit) return hit;
+        }
+        return null;
+      };
+      let v=pick();
+      // Chrome populates getVoices() asynchronously, so a cold first call can
+      // return an empty list. Wait once for voiceschanged rather than wrongly
+      // concluding the language is unsupported.
+      if(!v && !(window.speechSynthesis.getVoices()||[]).length){
+        await new Promise(r=>{
+          let fired=false;
+          const on=()=>{ if(fired)return; fired=true; try{window.speechSynthesis.removeEventListener('voiceschanged',on);}catch(e){} r(); };
+          try{ window.speechSynthesis.addEventListener('voiceschanged',on); }catch(e){}
+          setTimeout(on,600);
+        });
+        v=pick();
+      }
+      return v;
+    }catch(e){ return null; }
+  },
+  async _speakLocally(text,lang,myToken){
+    if(myToken!==this.stopToken) return;
+    const v=await this._localVoiceFor(lang);
+    if(!v || myToken!==this.stopToken) return;
+    return new Promise(resolve=>{
+      let finished=false;
+      const fin=()=>{ if(finished)return; finished=true; if(this._release===fin)this._release=null; resolve(); };
+      try{
+        const u=new SpeechSynthesisUtterance(text);
+        // lang FIRST, and the voice assignment isolated. Setting .voice to
+        // anything that is not a real SpeechSynthesisVoice throws a TypeError,
+        // and when that sat inside the outer try it killed the whole utterance --
+        // Bella fell silent for a reason that had nothing to do with the language
+        // being unsupported. .lang alone is enough for the browser to choose.
+        u.lang=(v.lang||SPEECH_LANGS[lang]||'en-IN'); u.rate=0.98;
+        try{ u.voice=v; }catch(e){}
+        u.onend=fin; u.onerror=fin;
+        // Registered so stop() can release a clip that will never fire onend.
+        this._release=fin;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+        if(this.muted){ try{ window.speechSynthesis.pause(); }catch(e){} }
+      }catch(e){ fin(); }
+    });
+  },
   async _fetchChunkAudio(text,lang,myToken){
+    // Device-only: skip the network entirely. Returning null here routes straight
+    // to the local voice and costs nothing at all.
+    if(voiceSrc()==='device') return null;
     try{
       const r=await bfetch(BACKEND+'/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang})});
       if(myToken!==this.stopToken)return null;
@@ -5869,6 +6225,21 @@ const OFFER_TEXT = {
       prompt:'\u09a4\u09be\u09b9\u09b2\u09c7 {name}\u0995\u09c0 \u09a8\u09bf\u09df\u09c7 \u0995\u09a5\u09be \u09ac\u09b2\u09a4\u09c7 \u099a\u09be\u09a8?'}
 };
 window._offerStore = window._offerStore || {};
+// Labelled so the block reads as a summary rather than Bella repeating herself.
+const SHORT_LABEL={en:'In short',bn:'সংক্ষেপে',hi:'संक्षेप में',mr:'थोडक्यात'};
+// The model is asked for "- " lines; if it sends prose anyway, this still presents
+// highlights rather than a paragraph.
+function _asPoints(txt){
+  const t=String(txt||'').trim();
+  if(!t) return '';
+  if(/(^|\n)\s*[-•*]\s+/.test(t)){
+    return t.split(/\n+/).map(l=>l.replace(/^\s*[-•*]\s*/,'').trim()).filter(Boolean).map(l=>'- '+l).join('\n');
+  }
+  // Deliberately NOT a lookbehind: /(?<=…)/ is a PARSE error on older iOS Safari,
+  // and a bad regex literal takes the whole script down with it — a blank page for
+  // everyone on that device, which is exactly how _clockFormat24 got shipped.
+  return (t.match(/[^.!?।]+[.!?।]*/g)||[t]).map(l=>l.trim()).filter(Boolean).map(l=>'- '+l).join('\n');
+}
 function offerFullReading(msgId, fullText, summary, lang){
   const bub=document.getElementById(msgId);
   if(!bub) return;
@@ -5879,11 +6250,13 @@ function offerFullReading(msgId, fullText, summary, lang){
   box.className='read-offer'; box.id='offer-'+msgId;
   box.innerHTML='<span class="read-offer-q"></span>'+
     '<button class="read-offer-btn" data-act="full"></button>'+
-    '<button class="read-offer-btn" data-act="sum"></button>'+
+    (summary?'<button class="read-offer-btn" data-act="sum"></button>':'')+
     '<button class="read-offer-btn ghost" data-act="other"></button>';
   box.querySelector('.read-offer-q').textContent=t.ask;
   box.querySelector('[data-act="full"]').textContent=t.full;
-  box.querySelector('[data-act="sum"]').textContent=t.sum;
+  // No Summarise button when there is no real summary -- better absent than present
+  // and repeating the whole answer back.
+  if(summary) box.querySelector('[data-act="sum"]').textContent=t.sum;
   box.querySelector('[data-act="other"]').textContent=t.other;
   box.addEventListener('click',function(e){
     const b=e.target.closest('.read-offer-btn'); if(!b) return;
@@ -5891,7 +6264,19 @@ function offerFullReading(msgId, fullText, summary, lang){
     box.remove(); delete window._offerStore[msgId];
     try{ speechQueue.stop(); }catch(err){}
     if(act==='full'){ try{ speakText(st.full, st.lang, msgId); }catch(err){} }
-    else if(act==='sum'){ try{ speakText(st.sum, st.lang, msgId); }catch(err){} }
+    else if(act==='sum'){
+      // It used to ONLY speak, so in Text mode pressing Summarise did nothing you
+      // could see. Savio: the points have to "reappear after the long detailed
+      // answer she gave so the user knows the summary switch works" -- so they are
+      // painted below the answer, which stays exactly where it is, and spoken too.
+      // bellaMsg() paints without touching getHist(): the points restate a message
+      // already in history, and sending both on every later turn would pay twice.
+      try{
+        const head=SHORT_LABEL[st.lang]||SHORT_LABEL.en;
+        bellaMsg('**'+head+'**\n\n'+_asPoints(st.sum));
+      }catch(err){}
+      try{ speakText(st.sum, st.lang, msgId); }catch(err){}
+    }
     else {
       // "Discuss another topic" — Bella hands the floor back, by name.
       // This is the behaviour Savio described for his 4th chip (item 17).
@@ -6316,7 +6701,9 @@ function addSuggestions(suggestions, skipOnIdentity, sourceText){
   wrap.dataset.seq=String(seq);
   // Language follows the text being replied to, not the user's last message —
   // a romanised question would otherwise put English chips under a Marathi answer.
-  const lang=sourceText?detectLanguage(sourceText):'en';
+  // The chosen language outranks sniffing the script of Bella's own reply --
+  // otherwise the chips follow HER into a language the user did not pick.
+  const lang=chosenLang()||(sourceText?detectLanguage(sourceText):'en');
   // Never show English stand-ins under a non-English answer, even briefly.
   _paintChips(wrap,(lang!=='en'&&GENERIC_CHIPS[lang])?GENERIC_CHIPS[lang]:suggestions,lang);
   m.appendChild(wrap);
@@ -6352,7 +6739,7 @@ function _mdInline(s){
 function _mdBuildTable(header,rows){
   const th=header.map(c=>`<th style="padding:5px 10px;border:1px solid var(--border);font-size:12px;text-align:left;font-weight:600;background:var(--goldpale)">${_mdInline(c)}</th>`).join('');
   const tb=rows.map(r=>`<tr>${r.map(c=>`<td style="padding:5px 10px;border:1px solid var(--border);font-size:12px">${_mdInline(c)}</td>`).join('')}</tr>`).join('');
-  return`<div style="overflow-x:auto;margin:8px 0"><table style="border-collapse:collapse;width:100%;font-family:'DM Sans',sans-serif"><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table></div>`;
+  return`<div style="overflow-x:auto;margin:8px 0"><table style="border-collapse:collapse;width:100%;font-family:'BellaIndic','DM Sans',sans-serif"><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table></div>`;
 }
 // Replaces each markdown table with a placeholder; returns the rendered tables.
 function _mdExtractTables(src){
@@ -6391,7 +6778,7 @@ function bellaMsg(text,audioUrl){
   // Restore rendered tables last so their markup is never touched by the inline passes.
   formatted=formatted.replace(/@@BELLATABLE(\d+)@@/g,(m0,i)=>_tbl.tables[+i]||'');
   const msgId='msg-'+(++_msgSeq);
-  w.innerHTML=`<div class="mav b">B</div><div class="msg-wrap"><div class="mbub" id="${msgId}">${formatted}</div><div class="msg-actions">${audioUrl?`<button class="msg-act-btn" onclick="autoPlay('${audioUrl}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>Replay</button>`:''}<button class="msg-act-btn" id="mute-${msgId}" onclick="toggleMsgSpeech('${msgId}')" title="Pause her voice — the words stay on screen"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>Mute</button><button class="msg-act-btn" onclick="copyMsg('${msgId}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button></div></div>`;
+  w.innerHTML=`<div class="mav b">B</div><div class="msg-wrap"><div class="mbub" id="${msgId}">${formatted}</div><div class="msg-actions"><button class="msg-act-btn lang-act-btn" onclick="openLangPick(event)" title="Bella writes and speaks in this language"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 010 20a15 15 0 010-20"/></svg><span class="lang-act-label">${langBtnLabel()}</span></button>${audioUrl?`<button class="msg-act-btn" onclick="autoPlay('${audioUrl}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>Replay</button>`:''}<button class="msg-act-btn" id="mute-${msgId}" onclick="toggleMsgSpeech('${msgId}')" title="Pause her voice — the words stay on screen"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>Mute</button><button class="msg-act-btn" onclick="copyMsg('${msgId}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button></div></div>`;
   m.appendChild(w);m.scrollTop=m.scrollHeight;
   return msgId;
 }
@@ -6546,6 +6933,310 @@ function toggleMic(){
 // everything downstream follows: the transcript arrives in the right script,
 // detectLanguage() sees it, and Bella's LANGUAGE rule replies in kind.
 const SPEECH_LANGS = { en:'en-IN', bn:'bn-IN', hi:'hi-IN', mr:'mr-IN' };
+// ── THE LANGUAGE BUTTON — Savio, 2026-10-02 ──────────────────────────────────
+// "i want Bella to be able to write & speak English, Marathi, Hindi & Bengali
+// whenever the language tab on the LHS next to the mute & copy tabs is pressed."
+//
+// Both halves of that already existed and were driven by detectLanguage(), which
+// reads only the SCRIPT of what was typed -- so romanised "kaise ho" came back as
+// English and Bella answered in English. This button replaces that driver with a
+// deliberate choice, and drives all THREE paths from one value: the written reply
+// (_replyLangNote), the voice (/speak takes `lang`), and the recogniser
+// (setMicLang -> recog.lang, which the Web Speech API cannot auto-detect).
+//
+// Stored under its own key `b_lang`, NOT `b_voice_lang`. They are different
+// promises: the footer picker has always been mic-only, so reusing its key would
+// silently convert somebody's old microphone setting into a rule about what
+// language Bella WRITES in. A deliberate press sets both; the old picker still
+// sets only the mic.
+//
+// No choice made = null = today's auto-detect behaviour, unchanged. Nothing
+// regresses for anyone who never presses it.
+const LANG_NATIVE = { en:'English', bn:'বাংলা', hi:'हिन्दी', mr:'मराठी' };
+function chosenLang(){
+  try{ const v = localStorage.getItem('b_lang'); return SPEECH_LANGS[v] ? v : null; }
+  catch(e){ return null; }
+}
+// Savio, 2026-10-02: "when a language change is pressed Bella needs to reciprocate
+// and let the User know that the language has changed to whatever and all future
+// conversations will be held in that language."
+// Written as LOCAL strings, never a model call: it costs nothing, it is instant, and
+// it can never come back in the wrong language -- which matters, because the model
+// cannot yet be trusted on exactly that point. Each line follows his own register
+// guides: আপনি and the English loanwords for Kolkata, आप for Mumbai Hindi, तुम्ही and
+// colloquial बोलूया for Mumbai Marathi.
+const LANG_SWITCH = {
+  en:"From now on we'll talk in English. Tap the language button any time you'd like to change it.",
+  bn:'এখন থেকে আমরা বাংলায় কথা বলব। ভাষা বদলাতে চাইলে যে কোনো সময় ওই বাটনে ট্যাপ করুন।',
+  hi:'अब से हम हिन्दी में बात करेंगे। भाषा बदलनी हो तो कभी भी उस बटन पर टैप कीजिए।',
+  mr:'आता आपण मराठीत बोलूया. भाषा बदलायची असेल तर कधीही त्या बटणावर टॅप करा.'
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
+// UI PHRASEBOOK. Savio, 2026-10-03, after testing all four languages live.
+//
+// His test showed the language button was not being disobeyed by the model -- it
+// was being DROWNED OUT by our own hardcoded English. The opening greeting, the
+// Summarise wrapper, the recording notices and the feedback thank-you are strings
+// WE write; Gemini never sees them and cannot translate them. Every user-facing
+// sentence the app writes itself belongs in this table and nowhere else.
+//
+// uiText() reads chosenLang() -- the SAME single source every other language-aware
+// part of the page already uses. That is deliberate and was his instruction: when
+// the setting moves from the device to the account, every line below follows with
+// no rework.
+//
+// Register follows his own guides: Kolkata Bengali (আপনি, keep the English
+// loanwords), Mumbai Hindi (आप), colloquial Mumbai Marathi (तुम्ही).
+// ADMIN TEXT IS DELIBERATELY ABSENT -- his decision 2026-10-03: the admin side
+// stays English. This table is what a USER sees.
+// ──────────────────────────────────────────────────────────────────────────────
+const UI_TEXT = {
+  greet_morning:{
+    en:'Good morning, {name}! How are you today?',
+    bn:'সুপ্রভাত, {name}! আজ কেমন আছেন?',
+    hi:'सुप्रभात, {name}! आज आप कैसे हैं?',
+    mr:'सुप्रभात, {name}! आज कसे आहात?'},
+  greet_afternoon:{
+    en:'Good afternoon, {name}! How are you today?',
+    bn:'নমস্কার, {name}! আজ কেমন আছেন?',
+    hi:'नमस्ते, {name}! आज आप कैसे हैं?',
+    mr:'नमस्कार, {name}! आज कसे आहात?'},
+  greet_evening:{
+    en:'Good evening, {name}! How are you today?',
+    bn:'শুভ সন্ধ্যা, {name}! আজ কেমন আছেন?',
+    hi:'शुभ संध्या, {name}! आज आप कैसे हैं?',
+    mr:'शुभ संध्याकाळ, {name}! आज कसे आहात?'},
+  // The follow-up variant keeps {note} verbatim: it comes from her memory of the
+  // last session and may itself be English. Flagged to Savio as a separate item --
+  // translating the frame around an English sentence would be a half-fix pretending
+  // to be a whole one.
+  greet_followup:{
+    en:'Good {tod}, {name}! {note} How are you?',
+    bn:'{name}, {note} কেমন আছেন?',
+    hi:'{name}, {note} आप कैसे हैं?',
+    mr:'{name}, {note} कसे आहात?'},
+  summary_heading:{
+    en:'Thread Summary',
+    bn:'কথোপকথনের সারসংক্ষেপ',
+    hi:'बातचीत का सारांश',
+    mr:'संभाषणाचा सारांश'},
+  summary_spoken:{
+    en:'Here is a summary of our conversation so far.',
+    bn:'এতক্ষণের কথোপকথনের সারসংক্ষেপ এই রইল।',
+    hi:'अब तक की हमारी बातचीत का सारांश यह रहा।',
+    mr:'आतापर्यंतच्या आपल्या संभाषणाचा सारांश हा आहे.'},
+  summary_tooshort:{
+    en:'This conversation is too short to summarise yet.',
+    bn:'সারসংক্ষেপ করার মতো কথা এখনও যথেষ্ট হয়নি।',
+    hi:'सारांश बनाने के लिए बातचीत अभी बहुत छोटी है।',
+    mr:'सारांश करण्याइतकं संभाषण अजून झालेलं नाही.'},
+  summary_failed:{
+    en:'Sorry, I could not summarise this thread right now.',
+    bn:'দুঃখিত, এখন এই কথোপকথনের সারসংক্ষেপ করতে পারলাম না।',
+    hi:'क्षमा कीजिए, अभी इस बातचीत का सारांश नहीं बना सकी।',
+    mr:'क्षमस्व, आत्ता या संभाषणाचा सारांश करता आला नाही.'},
+  rec_voice:{
+    en:'\u{1F534} Voice recording started. Your audio is being captured.',
+    bn:'\u{1F534} ভয়েস রেকর্ডিং শুরু হয়েছে। আপনার অডিও রেকর্ড করা হচ্ছে।',
+    hi:'\u{1F534} वॉइस रिकॉर्डिंग शुरू हो गई है। आपका ऑडियो रिकॉर्ड हो रहा है।',
+    mr:'\u{1F534} व्हॉइस रेकॉर्डिंग सुरू झाली आहे. तुमचा ऑडिओ रेकॉर्ड होत आहे.'},
+  rec_screen:{
+    en:'\u{1F534} Screen recording started. Your screen is being captured.',
+    bn:'\u{1F534} স্ক্রিন রেকর্ডিং শুরু হয়েছে। আপনার স্ক্রিন রেকর্ড করা হচ্ছে।',
+    hi:'\u{1F534} स्क्रीन रिकॉर्डिंग शुरू हो गई है। आपकी स्क्रीन रिकॉर्ड हो रही है।',
+    mr:'\u{1F534} स्क्रीन रेकॉर्डिंग सुरू झाली आहे. तुमची स्क्रीन रेकॉर्ड होत आहे.'},
+  rec_video:{
+    en:'\u{1F534} Video recording started. Your camera and audio are being captured.',
+    bn:'\u{1F534} ভিডিও রেকর্ডিং শুরু হয়েছে। আপনার ক্যামেরা ও অডিও রেকর্ড করা হচ্ছে।',
+    hi:'\u{1F534} वीडियो रिकॉर्डिंग शुरू हो गई है। आपका कैमरा और ऑडियो रिकॉर्ड हो रहा है।',
+    mr:'\u{1F534} व्हिडिओ रेकॉर्डिंग सुरू झाली आहे. तुमचा कॅमेरा आणि ऑडिओ रेकॉर्ड होत आहे.'},
+  rec_saving:{
+    en:'Your recording is being saved\u2026',
+    bn:'আপনার রেকর্ডিং সেভ করা হচ্ছে\u2026',
+    hi:'आपकी रिकॉर्डिंग सेव हो रही है\u2026',
+    mr:'तुमचं रेकॉर्डिंग सेव्ह होत आहे\u2026'},
+  // The category is parenthesised in bn/hi/mr on purpose. All three decline their
+  // nouns, so gluing a postposition onto a variable produces real grammatical
+  // errors. Parentheses sidestep declension entirely and still read naturally.
+  fb_thanks_praise:{
+    en:'Thank you so much for your kind words{name}! \u{1F64F} It truly means everything to hear that. \u2764\uFE0F',
+    bn:'আপনার এই কথাগুলোর জন্য অনেক ধন্যবাদ{name}! \u{1F64F} সত্যিই খুব ভালো লাগল। \u2764\uFE0F',
+    hi:'आपके इन शब्दों के लिए बहुत-बहुत धन्यवाद{name}! \u{1F64F} यह सुनकर सचमुच बहुत अच्छा लगा। \u2764\uFE0F',
+    mr:'तुमच्या या शब्दांसाठी खूप खूप धन्यवाद{name}! \u{1F64F} हे ऐकून खरंच खूप छान वाटलं. \u2764\uFE0F'},
+  fb_thanks_other:{
+    en:'Thank you for your {cat}{name}! \u{1F64F} It is logged as {ticket} \u2014 I will come back to you. \u2728',
+    bn:'ধন্যবাদ{name}! \u{1F64F} আপনার মতামত ({cat}) পেয়েছি \u2014 নম্বর {ticket}। কাজ হয়ে গেলেই জানাব। \u2728',
+    hi:'धन्यवाद{name}! \u{1F64F} आपकी बात ({cat}) मिल गई \u2014 नंबर {ticket}। काम होते ही बताऊँगी। \u2728',
+    mr:'धन्यवाद{name}! \u{1F64F} तुमचा अभिप्राय ({cat}) मिळाला \u2014 क्रमांक {ticket}. काम होताच कळवेन. \u2728'},
+  // The confirmation panel. Short deliberately -- it has one job, which is to
+  // say the thing arrived and give you the number to quote.
+  fb_sent_title:{en:'Feedback submitted',bn:'মতামত জমা হয়েছে',hi:'फ़ीडबैक जमा हो गया',mr:'अभिप्राय पाठवला गेला'},
+  fb_sent_ref:{en:'Your reference',bn:'আপনার রেফারেন্স',hi:'आपका रेफ़रेंस',mr:'तुमचा संदर्भ क्रमांक'},
+  fb_sent_wait:{en:'Keep this number. We aim to come back to you within 48 to 72 hours.',
+    bn:'নম্বরটা রেখে দিন। ৪৮ থেকে ৭২ ঘণ্টার মধ্যে আপনাকে জানানোর চেষ্টা করব।',
+    hi:'यह नंबर रख लीजिए। 48 से 72 घंटे के भीतर आपको बताने की कोशिश करेंगे।',
+    mr:'हा क्रमांक जपून ठेवा. 48 ते 72 तासांत तुम्हाला कळवण्याचा प्रयत्न करू.'},
+  fb_sent_wait_praise:{en:'Nothing to fix here \u2014 just thank you.',
+    bn:'এখানে সারানোর কিছু নেই \u2014 শুধু ধন্যবাদ।',
+    hi:'यहाँ ठीक करने को कुछ नहीं \u2014 बस धन्यवाद।',
+    mr:'इथे दुरुस्त करण्यासारखं काही नाही \u2014 फक्त धन्यवाद.'},
+  fb_sent_done:{en:'Done',bn:'ঠিক আছে',hi:'ठीक है',mr:'ठीक आहे'},
+  fb_cat_bug:{en:'bug report',bn:'বাগ রিপোর্ট',hi:'बग रिपोर्ट',mr:'बग रिपोर्ट'},
+  fb_cat_improve:{en:'improvement suggestion',bn:'উন্নতির পরামর্শ',hi:'सुधार का सुझाव',mr:'सुधारणेची सूचना'},
+  fb_cat_feature:{en:'new feature idea',bn:'নতুন ফিচারের ভাবনা',hi:'नए फ़ीचर का विचार',mr:'नव्या फीचरची कल्पना'},
+  fb_cat_praise:{en:'kind words',bn:'আপনার কথা',hi:'आपके शब्द',mr:'तुमचे शब्द'},
+  fb_cat_voice:{en:'voice feedback',bn:'ভয়েস সম্পর্কে মতামত',hi:'आवाज़ पर प्रतिक्रिया',mr:'आवाजाबद्दल अभिप्राय'},
+  fb_cat_mobile:{en:'mobile feedback',bn:'মোবাইল সম্পর্কে মতামত',hi:'मोबाइल पर प्रतिक्रिया',mr:'मोबाइलबद्दल अभिप्राय'}
+};
+// One lookup for the whole app. `lang` is passed only when a caller already knows
+// the language; everything else follows the user's single stored choice.
+function uiText(key, vars, lang){
+  const L = lang || chosenLang() || 'en';
+  const row = UI_TEXT[key];
+  if(!row) return '';
+  let out = row[L] || row.en || '';
+  if(vars) for(const k in vars) out = out.split('{'+k+'}').join(vars[k]);
+  return out;
+}
+function setChosenLang(code){
+  if(!SPEECH_LANGS[code]) return;
+  // Only speak up on a REAL change. Pressing the language you are already in should
+  // say nothing, or the confirmation becomes noise.
+  const changed = chosenLang() !== code;
+  try{ localStorage.setItem('b_lang', code); }catch(e){}
+  // setMicLang persists b_voice_lang, repaints the footer picker and restarts a
+  // listening recogniser -- a language change that left the mic behind would be
+  // half a feature.
+  try{ setMicLang(code); }catch(e){}
+  closeLangPick();
+  paintLangBtns();
+  // Shown in both Text and Voice -- his instruction: "whether text or voice it
+  // follows protocol set". bellaMsg() paints only; it does not touch getHist(), so
+  // this confirmation is never re-sent to the model on later turns.
+  if(changed){
+    const line = LANG_SWITCH[code] || LANG_SWITCH.en;
+    try{ bellaMsg(line); }catch(e){}
+    try{ speakText(line, code, null); }catch(e){}
+  }
+}
+// The label is the language's OWN name in its OWN script. A user who cannot read
+// English cannot find an English label, which is the whole point of the control.
+function langBtnLabel(){ return LANG_NATIVE[chosenLang() || 'en'] || 'English'; }
+// ── Bella's voice: WHICH VOICE, per language ─────────────────────────────────
+// Approved by Savio by ear, 2026-10-03. See the note in _localVoiceFor().
+const PREFERRED_VOICE = {
+  en:['Tara'],      // not Aman or Rishi -- both male, and Bella is not
+  hi:['Lekha'],
+  bn:['Piya'],
+  mr:['Tara']       // MEASURED 2026-10-03 and the finding matters: macOS 27 OFFERS
+                    // "Marathi (India) -> Tara" in System Settings, but selecting it
+                    // downloads nothing and `say -v '?'` still reports 0 mr_IN voices
+                    // out of 190. Rendering Marathi through it produced audio
+                    // BYTE-FOR-BYTE IDENTICAL to the English Tara (sha 2743027550e6…),
+                    // with Hindi Lekha as a control proving the test distinguishes
+                    // voices. So Apple lists Marathi as a speech LANGUAGE but ships no
+                    // Marathi VOICE. The name is kept here only so that the day Apple
+                    // does ship one it is picked up automatically; until then the
+                    // language filter finds nothing and Marathi stays silent, which is
+                    // what Savio chose after listening to the alternative.
+};
+// ── Bella's voice: which engine speaks ────────────────────────────────────────
+const VOICE_SRC = {
+  auto:  ['Automatic',           'Bella\u2019s own voice, and this device\u2019s voice if hers is unavailable'],
+  device:['This device\u2019s voice', 'Always free. Works with no ElevenLabs credits at all'],
+  cloud: ['Bella\u2019s own voice',   'ElevenLabs only. Silent if there are no credits']
+};
+function voiceSrc(){
+  try{ const v=localStorage.getItem('b_voice_src'); return VOICE_SRC[v] ? v : 'auto'; }
+  catch(e){ return 'auto'; }
+}
+function setVoiceSrc(v){
+  if(!VOICE_SRC[v]) return;
+  try{ localStorage.setItem('b_voice_src', v); }catch(e){}
+  closeVoicePick();
+  try{ speechQueue.stop(); }catch(e){}   // don't leave the old engine mid-sentence
+  try{ closeUserMenu(); }catch(e){}
+}
+function closeVoicePick(){
+  const ex=document.getElementById('voice-pick');
+  if(ex&&ex.parentNode) ex.parentNode.removeChild(ex);
+}
+// A list, not a cycle -- same reasoning as the language picker: a cycle never
+// shows what the options are.
+function openVoicePick(ev){
+  try{ ev.stopPropagation(); }catch(e){}
+  if(document.getElementById('voice-pick')){ closeVoicePick(); return; }
+  const btn=(ev&&(ev.currentTarget||ev.target))||null;
+  const box=document.createElement('div');
+  box.id='voice-pick';
+  const cur=voiceSrc();
+  box.innerHTML=Object.keys(VOICE_SRC).map(function(k){
+    const t=VOICE_SRC[k];
+    return '<button type="button" class="lang-pick-opt'+(k===cur?' on':'')+
+           '" onclick="setVoiceSrc(\''+k+'\')" title="'+t[1]+'">'+t[0]+'</button>';
+  }).join('');
+  document.body.appendChild(box);
+  try{
+    const r=btn.getBoundingClientRect();
+    const bw=box.offsetWidth||200;
+    let left=r.left; if(left+bw>window.innerWidth-8) left=window.innerWidth-bw-8;
+    if(left<8) left=8;
+    let top=r.bottom+6;
+    if(top+box.offsetHeight>window.innerHeight-8) top=r.top-box.offsetHeight-6;
+    box.style.left=left+'px'; box.style.top=Math.max(8,top)+'px';
+  }catch(e){ box.style.left='12px'; box.style.top='60px'; }
+  setTimeout(function(){ document.addEventListener('click', closeVoicePick, { once:true }); },0);
+}
+// Savio's rule, 2026-10-03: "the language change ... should directly relate to the
+// language it will display in text & voice FROM THEREON till the next change is
+// effected. However the past will continue to live in the language the User had
+// started communicating."
+//
+// This used to rewrite the label on EVERY message in the thread, so switching to
+// Hindi retro-labelled a reply that was genuinely written in Bengali and the thread
+// stopped being an honest record. It needs to do nothing at all: bellaMsg() calls
+// langBtnLabel() when it BUILDS each message, and setChosenLang() writes b_lang
+// before painting the confirmation, so every new message is already stamped with
+// the new language while every old one keeps its own. Deleting the loop IS the fix.
+// Kept as a function because setChosenLang() calls it.
+function paintLangBtns(){ /* intentionally empty — see the note above */ }
+function closeLangPick(){
+  const ex = document.getElementById('lang-pick');
+  if(ex && ex.parentNode) ex.parentNode.removeChild(ex);
+}
+// A four-way choice is a list, not a cycle: a cycle costs three taps to reach
+// Marathi and never shows what the options are.
+function openLangPick(ev){
+  try{ ev.stopPropagation(); }catch(e){}
+  if(document.getElementById('lang-pick')){ closeLangPick(); return; }
+  const btn = (ev && (ev.currentTarget || ev.target)) || null;
+  const box = document.createElement('div');
+  box.id = 'lang-pick';
+  const cur = chosenLang() || 'en';
+  box.innerHTML = ['en','bn','hi','mr'].map(function(c){
+    return '<button type="button" class="lang-pick-opt' + (c===cur?' on':'') +
+           '" onclick="setChosenLang(\'' + c + '\')">' + LANG_NATIVE[c] + '</button>';
+  }).join('');
+  document.body.appendChild(box);
+  // Positioned against the button that opened it, then nudged back inside the
+  // viewport -- on a 320px phone an un-nudged popup hangs off the edge.
+  try{
+    const r = btn.getBoundingClientRect();
+    const bw = box.offsetWidth || 150;
+    let left = r.left;
+    if(left + bw > window.innerWidth - 8) left = window.innerWidth - bw - 8;
+    if(left < 8) left = 8;
+    let top = r.bottom + 6;
+    if(top + box.offsetHeight > window.innerHeight - 8) top = r.top - box.offsetHeight - 6;
+    box.style.left = left + 'px';
+    box.style.top  = Math.max(8, top) + 'px';
+  }catch(e){ box.style.left='12px'; box.style.top='60px'; }
+  setTimeout(function(){
+    document.addEventListener('click', closeLangPick, { once:true });
+  }, 0);
+}
+
 // Reflect the saved choice as soon as the footer exists.
 document.addEventListener('DOMContentLoaded', function(){ try{ paintMicLang(); }catch(e){} });
 function micLang(){
@@ -6792,7 +7483,7 @@ function startSelectedRecording(){
       const url=URL.createObjectURL(blob);
       stream.getTracks().forEach(t=>t.stop());
       // Show saving message
-      bellaMsg('Your recording is being saved…');
+      bellaMsg(uiText('rec_saving'));
       // Show clip in chat with download + save buttons
       setTimeout(()=>{
         const msgDiv=document.createElement('div');
@@ -6822,7 +7513,7 @@ function startSelectedRecording(){
       window._recording=false;
     };
     // Disclosure BEFORE recording starts — required
-    const discMsg=type==='voice'?'🔴 Voice recording started. Your audio is being captured.':type==='screen'?'🔴 Screen recording started. Your screen is being captured.':'🔴 Video recording started. Your camera and audio are being captured.';
+    const discMsg=uiText(type==='voice'?'rec_voice':type==='screen'?'rec_screen':'rec_video');
     bellaMsg(discMsg);
     // Button goes red with a white ring. A CLASS, not an inline style: dark
     // mode carries `body.dark button{...!important}`, which an inline style
@@ -6939,12 +7630,12 @@ function showLocationPermissionModal(addressedName){
         <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:#F5E6C8;margin-bottom:8px">Enable Local Features</div>
         <div style="font-size:13px;color:rgba(245,230,200,0.65);line-height:1.7;margin-bottom:24px">
           To show your local weather, time zone, and location-aware features, Bella needs your location. Tap Allow to activate.<br><br>
-          Your location is <strong style="color:#D4AF37">never stored or shared</strong> — it is used only to display local information on your screen.
+          Your coordinates are <strong style="color:#D4AF37">never saved to Bella's servers</strong> — they stay in this browser tab and go when you close it. They are sent out only to look up your area name and your weather, with nothing attached that identifies you.
         </div>
-        <button id="loc-allow-btn" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:10px;transition:background .2s" onmouseover="this.style.background='#C4A028'" onmouseout="this.style.background='#D4AF37'">
+        <button id="loc-allow-btn" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;margin-bottom:10px;transition:background .2s" onmouseover="this.style.background='#C4A028'" onmouseout="this.style.background='#D4AF37'">
           Allow Location Access
         </button>
-        <button id="loc-deny-btn" style="width:100%;padding:11px;border-radius:12px;border:1px solid rgba(245,230,200,0.15);background:transparent;color:rgba(245,230,200,0.6);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif">
+        <button id="loc-deny-btn" style="width:100%;padding:11px;border-radius:12px;border:1px solid rgba(245,230,200,0.15);background:transparent;color:rgba(245,230,200,0.6);font-size:12px;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif">
           Not Now
         </button>
       </div>`;
@@ -7003,10 +7694,10 @@ function showLocationDeniedWarning(addressedName, resolve){
       <div style="font-size:13px;color:rgba(245,230,200,0.65);line-height:1.7;margin-bottom:24px">
         Without location access, your city, local weather, time zone and city features cannot be personalised. All other Bella features work fully.
       </div>
-      <button id="loc-enable-btn" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:10px;transition:background .2s" onmouseover="this.style.background='#C4A028'" onmouseout="this.style.background='#D4AF37'">
+      <button id="loc-enable-btn" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;margin-bottom:10px;transition:background .2s" onmouseover="this.style.background='#C4A028'" onmouseout="this.style.background='#D4AF37'">
         Enable Location
       </button>
-      <button id="loc-continue-btn" style="width:100%;padding:11px;border-radius:12px;border:1px solid rgba(245,230,200,0.15);background:transparent;color:rgba(245,230,200,0.6);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif">
+      <button id="loc-continue-btn" style="width:100%;padding:11px;border-radius:12px;border:1px solid rgba(245,230,200,0.15);background:transparent;color:rgba(245,230,200,0.6);font-size:12px;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif">
         Continue Without Location
       </button>
     </div>`;
@@ -7060,6 +7751,9 @@ function _unblurMain(){
 }
 
 function showLocationDeniedState(){
+  // Weather is location-derived, so it has to say the same thing the location
+  // cell says. Left alone it sat on "🌡 —" forever and read as broken.
+  setWeatherCellState('🌡 —', 'Location off');
   const locEl = document.getElementById('tb-location');
   if(!locEl) return;
   locEl.innerHTML = `
@@ -7134,6 +7828,9 @@ function initLocationWithCoords(lat, lon){
       </div>`;
       // Store for thought of day
       try{ sessionStorage.setItem('b_location_data', JSON.stringify({city, country, area, lat, lon})); }catch(e){}
+      // The weather cell reads its coordinates from that same entry, so it can
+      // only be filled once this has been written.
+      fetchWeather(true);
     })
     .catch(()=>{ locEl.textContent = '📍 Location found'; });
 }
@@ -7141,8 +7838,14 @@ function initLocationWithCoords(lat, lon){
 function deliverGreeting(addressedName){
   const tod=timeOfDay();
   // Clean greeting — no motivation suffix — Thought of the Day handles that in the topbar
-  let msg=`Good ${tod}, ${addressedName}! How are you today?`;
-  if(userMemory.proactiveFollowUp)msg=`Good ${tod}, ${addressedName}! ${userMemory.proactiveFollowUp} How are you?`;
+  // Savio, 2026-10-03: this sentence was hardcoded English and spoken with the
+  // voice forced to English, so it reappeared in every language he tested and was
+  // the single biggest reason a Bengali or Hindi session "moved back to English".
+  // It is OUR sentence -- Gemini never sees it -- so no prompt rule could have
+  // fixed it.
+  const _gl=chosenLang()||'en';
+  let msg=uiText('greet_'+tod,{name:addressedName},_gl);
+  if(userMemory.proactiveFollowUp)msg=uiText('greet_followup',{tod:tod,name:addressedName,note:userMemory.proactiveFollowUp},_gl);
   playNotifSound();
   // Gemini cannot see this. bellaMsg only draws on screen — it never writes to the
   // thread history — so without this line the model opens every session believing
@@ -7150,7 +7853,7 @@ function deliverGreeting(addressedName){
   // throws away whatever the user actually typed first. Recorded here and replayed
   // into the model's opening turn by callBella.
   _sessionGreeting=msg;
-  bellaMsg(msg);speakText(msg,'en');
+  bellaMsg(msg);speakText(msg,_gl);
 }
 
 // Splits the thought into its words and its trailing emoji, and puts each into
@@ -7316,6 +8019,232 @@ function initLocation(){
     () => { showLocationDeniedState(); }
   );
 }
+
+// ══ WEATHER ════════════════════════════════════════════════════════════════
+// Frontend only, ₹0. `/weather` (backend, index.js:4055) already returns the
+// current conditions AND the 5-day / 3-hour forecast in a SINGLE call, so
+// there is no backend change here and no second request to make.
+//
+// It is also the only real test of the OPENWEATHER_API_KEY rotated on
+// 2026-10-03: /health does not check that key, so a good key and a bad one
+// look identical from outside. A live call through this panel is the proof.
+const WX_ICON = {
+  '01d':'☀️','01n':'🌙','02d':'🌤','02n':'☁️','03d':'⛅','03n':'☁️',
+  '04d':'☁️','04n':'☁️','09d':'🌧','09n':'🌧','10d':'🌦','10n':'🌧',
+  '11d':'⛈','11n':'⛈','13d':'🌨','13n':'🌨','50d':'🌫','50n':'🌫'
+};
+const WX_STALE_MS = 15 * 60 * 1000;   // OpenWeather's own data moves no faster
+let _wxData = null, _wxAt = 0, _wxTab = 'now', _wxBusy = false, _wxErr = '';
+
+function _wxIcon(c){ return WX_ICON[c] || '🌡'; }
+function _wxTemp(t){ return (t === null || t === undefined) ? '—' : Math.round(t) + '°'; }
+function _wxCap(s){ return String(s || '').replace(/\b\w/g, m => m.toUpperCase()); }
+
+// Honours the topbar's own 12/24h toggle. 24-hour time everywhere is Savio's
+// issue #10, and _clockFormat24 is the single place that preference lives.
+function _wxClock(d){
+  let h = d.getHours(); const m = String(d.getMinutes()).padStart(2,'0');
+  if(_clockFormat24) return String(h).padStart(2,'0') + ':' + m;
+  const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+  return h + ':' + m + ' ' + ap;
+}
+
+// TRAP. OpenWeather's forecast timestamps are UTC, and the backend passes
+// through only `dt_txt` ("2026-10-04 15:00:00") — no unix seconds, no city
+// offset. A date-time string with no zone is parsed as LOCAL time, so in IST
+// every slot would shift 5h30m and the 18:30–23:59 IST readings would land on
+// the WRONG CALENDAR DAY. Appending 'Z' is what makes the day buckets right.
+function _wxWhen(dtTxt){ return new Date(String(dtTxt).replace(' ','T') + 'Z'); }
+
+function _wxCoords(){
+  try{
+    const d = JSON.parse(sessionStorage.getItem('b_location_data') || '{}');
+    if(typeof d.lat === 'number' && typeof d.lon === 'number') return d;
+  }catch(e){}
+  return null;
+}
+
+function setWeatherCellState(main, sub){
+  const m = document.getElementById('tb-wx-main');
+  const s = document.getElementById('tb-wx-sub');
+  if(m) m.textContent = main;
+  if(s) s.textContent = sub;
+}
+
+function renderWeatherCell(){
+  const c = _wxData && _wxData.current;
+  if(!c) return;
+  setWeatherCellState(_wxIcon(c.icon) + ' ' + _wxTemp(c.temp),
+                      _wxCap(c.description) || c.city || 'Weather');
+}
+
+async function fetchWeather(force){
+  if(_wxBusy) return;
+  if(!force && _wxData && (Date.now() - _wxAt) < WX_STALE_MS) return;
+  const loc = _wxCoords();
+  if(!loc){ setWeatherCellState('🌡 —', 'Location off'); _wxErr = ''; _wxPaintIfOpen(); return; }
+  _wxBusy = true;
+  try{
+    const r = await bfetch(BACKEND + '/weather', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ lat: loc.lat, lon: loc.lon, units: 'metric' })
+    });
+    const d = await r.json();
+    if(!r.ok || d.error) throw new Error(d.error || ('HTTP ' + r.status));
+    _wxData = d; _wxAt = Date.now(); _wxErr = '';
+    renderWeatherCell();
+  }catch(e){
+    // Never leave a blank cell. A silent failure here just reads as Bella
+    // being broken, and the last good reading is better than nothing.
+    _wxErr = e && e.message ? e.message : String(e);
+    if(!_wxData) setWeatherCellState('🌡 —', 'Unavailable');
+  }finally{
+    _wxBusy = false;
+    _wxPaintIfOpen();
+  }
+}
+
+function _wxPaintIfOpen(){
+  const p = document.getElementById('wx-panel');
+  if(p && p.style.display === 'block') renderWxBody();
+}
+
+// Buckets the 3-hourly slots into calendar days in the USER's own timezone —
+// which is the correct one here, because the only coordinates ever sent are
+// theirs. OpenWeather's free 5-day feed starts mid-day, so the first bucket is
+// usually a partial day; it is still today's remaining weather, so it stays.
+function _wxDays(){
+  const order = [], byKey = {};
+  const list = (_wxData && _wxData.forecast) || [];
+  list.forEach(f => {
+    const when = _wxWhen(f.datetime);
+    if(isNaN(when.getTime())) return;
+    const key = when.getFullYear() + '-' + when.getMonth() + '-' + when.getDate();
+    if(!byKey[key]){ byKey[key] = { when: when, slots: [] }; order.push(byKey[key]); }
+    byKey[key].slots.push({ when: when, f: f });
+  });
+  return order.map(d => {
+    const temps = d.slots.map(s => s.f.temp).filter(t => typeof t === 'number');
+    // The icon and the words come from the slot nearest 13:00 local. A day is
+    // described by its daytime, not by whatever 03:00 happened to be doing.
+    let pick = d.slots[0], best = Infinity;
+    d.slots.forEach(s => {
+      const gap = Math.abs(s.when.getHours() - 13);
+      if(gap < best){ best = gap; pick = s; }
+    });
+    return {
+      when: d.when,
+      min: temps.length ? Math.min.apply(null, temps) : null,
+      max: temps.length ? Math.max.apply(null, temps) : null,
+      icon: pick.f.icon,
+      description: pick.f.description
+    };
+  });
+}
+
+const _WX_DAYS3 = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function _wxDayLabel(d){
+  const n = new Date();
+  const diff = Math.round(
+    (new Date(d.getFullYear(), d.getMonth(), d.getDate()) -
+     new Date(n.getFullYear(), n.getMonth(), n.getDate())) / 86400000);
+  if(diff === 0) return 'Today';
+  if(diff === 1) return 'Tomorrow';
+  return _WX_DAYS3[d.getDay()] + ' ' + d.getDate();
+}
+
+function _wxStat(lbl, val){
+  return '<div class="wx-stat"><div class="wx-stat-lbl">' + lbl + '</div>' +
+         '<div class="wx-stat-val">' + _expEsc(val) + '</div></div>';
+}
+
+function renderWxBody(){
+  const el = document.getElementById('wx-body');
+  const foot = document.getElementById('wx-foot');
+  const title = document.getElementById('wx-title');
+  if(!el) return;
+
+  if(!_wxData){
+    const msg = _wxErr
+      ? 'Weather is unavailable right now.<br><span style="font-size:11px">' + _expEsc(_wxErr) + '</span>'
+      : (_wxCoords()
+          ? 'Loading…'
+          : 'Bella needs your location to show the weather. The location cell in the top bar will ask for it.');
+    el.innerHTML = '<div style="font-size:13px;color:var(--tsoft);line-height:1.8">' + msg + '</div>';
+    if(title) title.textContent = 'Weather';
+    if(foot) foot.textContent = '';
+    return;
+  }
+
+  const c = _wxData.current || {};
+  if(title) title.textContent = _wxIcon(c.icon) + '  ' +
+    ([c.city, c.country].filter(Boolean).join(', ') || 'Weather');
+
+  if(_wxTab === 'now'){
+    el.innerHTML =
+      '<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">' +
+        '<div id="wx-now-ico">' + _wxIcon(c.icon) + '</div>' +
+        '<div style="min-width:0">' +
+          '<div id="wx-now-temp">' + _wxTemp(c.temp) + 'C</div>' +
+          '<div id="wx-now-desc">' + _expEsc(_wxCap(c.description)) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="wx-grid">' +
+        _wxStat('Feels like', _wxTemp(c.feelsLike) + 'C') +
+        _wxStat('Humidity',   c.humidity   != null ? c.humidity + '%' : '—') +
+        _wxStat('Wind',       c.windSpeed  != null ? Math.round(c.windSpeed * 3.6) + ' km/h' : '—') +
+        _wxStat('Visibility', c.visibility != null ? (c.visibility / 1000).toFixed(1) + ' km' : '—') +
+        _wxStat('Sunrise',    c.sunrise ? _wxClock(new Date(c.sunrise * 1000)) : '—') +
+        _wxStat('Sunset',     c.sunset  ? _wxClock(new Date(c.sunset  * 1000)) : '—') +
+      '</div>';
+  } else {
+    const days = _wxDays().slice(0, _wxTab === 'd3' ? 3 : 5);
+    el.innerHTML = days.length
+      ? days.map(d =>
+          '<div class="wx-day">' +
+            '<div class="wx-day-name">' + _expEsc(_wxDayLabel(d.when)) + '</div>' +
+            '<div class="wx-day-ico">' + _wxIcon(d.icon) + '</div>' +
+            '<div class="wx-day-desc">' + _expEsc(_wxCap(d.description)) + '</div>' +
+            '<div class="wx-day-temp">' + _wxTemp(d.max) + ' / ' + _wxTemp(d.min) + '</div>' +
+          '</div>').join('')
+      : '<div style="font-size:13px;color:var(--tsoft)">No forecast available.</div>';
+  }
+
+  if(foot){
+    const age = Math.round((Date.now() - _wxAt) / 60000);
+    foot.textContent = 'OpenWeather · updated ' + (age < 1 ? 'just now' : age + ' min ago') +
+      (_wxTab === 'now' ? '' : ' · daily high / low taken from the 3-hourly readings');
+  }
+}
+
+function switchWxTab(tab){
+  _wxTab = tab;
+  ['now','d3','d5'].forEach(t => {
+    const b = document.getElementById('wxtab-' + t);
+    if(b) b.classList.toggle('on', t === tab);
+  });
+  renderWxBody();
+}
+
+function openWeatherPanel(){
+  document.getElementById('wx-overlay').classList.add('on');
+  document.getElementById('wx-panel').style.display = 'block';
+  renderWxBody();
+  fetchWeather(false);
+}
+function closeWeatherPanel(){
+  document.getElementById('wx-overlay').classList.remove('on');
+  document.getElementById('wx-panel').style.display = 'none';
+}
+
+// Deliberately NO setInterval. A background timer is exactly the thing that
+// drains a phone to refresh a number nobody is looking at — see the standing
+// "Bella must be light on devices" rule. The cell refreshes when the tab comes
+// back into view with stale data, and when the panel is opened.
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && _wxData &&
+     (Date.now() - _wxAt) >= WX_STALE_MS) fetchWeather(false);
+});
 
 function updateTopbarUser(name, userId){
   const welcomeEl = document.getElementById('topbar-welcome');
@@ -7908,7 +8837,7 @@ function renderCCList(filtered) {
   const list = document.getElementById('reg-cc-list');
   if (!list) return;
   list.innerHTML = filtered.map((c,i) =>
-    `<div onclick="selectCC(${CC_LIST.indexOf(c)})" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12px;color:#F5E6C8;font-family:'DM Sans',sans-serif;transition:background .1s" onmouseover="this.style.background='rgba(212,175,55,0.1)'" onmouseout="this.style.background='transparent'">
+    `<div onclick="selectCC(${CC_LIST.indexOf(c)})" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12px;color:#F5E6C8;font-family:'BellaIndic','DM Sans',sans-serif;transition:background .1s" onmouseover="this.style.background='rgba(212,175,55,0.1)'" onmouseout="this.style.background='transparent'">
       <span style="font-size:16px">${c.flag}</span>
       <span style="flex:1">${c.name}</span>
       <span style="color:#D4AF37;font-weight:600">${c.code}</span>
@@ -8091,7 +9020,14 @@ window.addEventListener('pagehide', function() { /* intentionally nothing */ });
 body.dark #tb-menu-btn{background:#0B2545!important;color:#D4AF37!important;
   border-color:rgba(212,175,55,.3)!important}
 
-@media(max-width:1024px){
+/* Breakpoint raised from 1024px to 1400px on 2026-10-04, on measurement.
+   The seven fixed cells plus the weather cell need ~1,160px before the one
+   flexible cell (Food For Thought) gets anything at all, so between 1024px
+   and 1400px that cell was being crushed to 41px and its title clipped. At
+   1024px the old rule it was measured at 195px; at 1280px, 41px. Scrolling is
+   this bar's own documented answer to not fitting — it just needed to start
+   earlier. Above 1400px there is nothing to scroll and these rules are inert. */
+@media(max-width:1400px){
   /* Scroll the dashboard rather than clip it. Nothing is hidden — every cell
      stays reachable, because these are real features, not decoration. */
   .chat-topbar{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
@@ -8146,7 +9082,7 @@ body.dark #tb-menu-btn{background:#0B2545!important;color:#D4AF37!important;
 #mic-lang{display:inline-flex;align-items:center;gap:2px;flex-shrink:0;
   border:1px solid var(--border);border-radius:999px;padding:2px;background:var(--white)}
 #mic-lang button{min-width:30px;height:22px;padding:0 7px;border:0;border-radius:999px;
-  background:transparent;color:#0B2545;font-family:'DM Sans',sans-serif;font-size:10px;
+  background:transparent;color:#0B2545;font-family:'BellaIndic','DM Sans',sans-serif;font-size:10px;
   font-weight:600;cursor:pointer;line-height:1;transition:background .15s,color .15s}
 #mic-lang button.on{background:#0B2545;color:#D4AF37}
 body.dark #mic-lang{background:#162030!important;border-color:rgba(212,175,55,.3)!important}
@@ -8154,6 +9090,107 @@ body.dark #mic-lang button{background:transparent!important;color:#F5E6C8!import
 body.dark #mic-lang button.on{background:#D4AF37!important;color:#0B2545!important}
 @media(pointer:coarse){ #mic-lang button{height:44px;min-width:44px} }
 @media(max-width:680px){ #mic-lang{order:1} }
+
+/* ══ WEATHER — the top-bar cell and its panel ═══════════════════════════════
+   Every selector that has to win in dark mode carries an #id, and no dark
+   value here is a brand token. Three documented traps make that mandatory:
+
+     1. `body.dark, body.dark *:not(.msg.user .mbub):not(...)
+         { color:#F5E6C8 !important }` in v82 scores (0,7,1) and sets ONLY
+        colour, so any class-based rule that paints a light background keeps
+        the background and LOSES the text colour — cream on cream.
+     2. `body.dark button{background:#D4AF37!important;color:#0B2545!important}`
+        beats class selectors outright. It is why the CONVERTER's own three
+        tabs are indistinguishable from each other in dark mode today.
+     3. body.dark INVERTS the brand tokens (--navy becomes gold, --gold
+        becomes navy), so var(--navy) here would paint gold-on-gold.
+
+   Dark colours follow Savio's Option G (v86) rather than inventing new ones:
+   navy ground, cream for anything you read, raised controls #12233B, and
+   GOLD RESERVED FOR NEW CONVERSATION AND SEND ONLY. The selected tab is
+   therefore cream-on-navy, exactly like #mic-lang button.on — not gold. */
+#tb-weather-cell{cursor:pointer}
+
+#wx-tabs{display:flex;gap:8px;margin-bottom:16px}
+#wx-tabs button{padding:7px 14px;border-radius:10px;border:1.5px solid var(--border);
+  background:#FAF8F4;color:#4A5A7A;font-size:11px;font-weight:600;cursor:pointer;
+  font-family:'BellaIndic','DM Sans',sans-serif;transition:background .15s,color .15s}
+#wx-tabs button.on{background:#0B2545;color:#D4AF37;border-color:#0B2545}
+#wx-tabs button:hover:not(.on){background:#F5E6C8}
+html body.dark #wx-tabs button{background:#12233B!important;color:#F5E6C8!important;
+  border:1.5px solid rgba(245,230,200,.26)!important}
+html body.dark #wx-tabs button.on{background:#F5E6C8!important;color:#0B2545!important;
+  border-color:#F5E6C8!important}
+@media(pointer:coarse){ #wx-tabs button{min-height:44px} }
+
+/* The feedback modal is a fixed light surface, so its Done button is keyed off
+   an id: `body.dark button{background:#E8D9B8!important}` would otherwise
+   repaint it cream-on-a-white-card. Same documented trap as #wx-tabs. */
+#fbdone-btn{width:100%;margin-top:22px;padding:13px;border-radius:12px;border:none;
+  background:#0B2545;color:#F5E6C8;font-size:14px;font-weight:600;cursor:pointer;
+  font-family:'BellaIndic','DM Sans',sans-serif;letter-spacing:.3px}
+#fbdone-btn:hover{background:#142F5A}
+html body.dark #fbdone-btn{background:#0B2545!important;color:#F5E6C8!important}
+@media(pointer:coarse){ #fbdone-btn{min-height:44px} }
+
+/* FIX, found while building the weather panel and measured in real Chrome:
+   the CONVERTER's three tabs are all #E8D9B8 with navy text in dark mode —
+   byte-identical, selected and unselected — so there is no way to see which
+   tab you are on. `.conv-tab-btn.active-tab` sets its colours WITHOUT
+   !important, and `body.dark button{background:#E8D9B8!important}` beats it.
+   Same treatment as #mic-lang and #wx-tabs above: raised navy for the tabs
+   you are not on, cream for the one you are. Gold stays reserved for New
+   Conversation and Send (Option G, v86). */
+html body.dark #conv-panel .conv-tab-btn{
+  background:#12233B!important;color:#F5E6C8!important;
+  border:1.5px solid rgba(245,230,200,.26)!important}
+html body.dark #conv-panel .conv-tab-btn.active-tab{
+  background:#F5E6C8!important;color:#0B2545!important;border-color:#F5E6C8!important}
+
+#wx-now-ico{font-size:46px;line-height:1;flex-shrink:0}
+/* lining-nums is not cosmetic. Cormorant Garamond ships OLDSTYLE figures by
+   default, so at 44px "31°C" renders as "ʒı°C" and "09" as "o9" — measured
+   side by side in real Chrome. One declaration keeps Bella's display face and
+   makes the number read as a number. The same fix is applied to the three
+   converter readouts below, which have had this since they were built. */
+#wx-now-temp{font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:600;
+  line-height:1.05;color:#0B2545;font-variant-numeric:lining-nums}
+#wx-now-desc{font-size:13px;font-weight:600;color:#4A5A7A;margin-top:2px}
+#wx-panel .wx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px}
+#wx-panel .wx-stat{background:#FAF8F4;border:1px solid var(--border);border-radius:12px;
+  padding:9px 11px;min-width:0}
+#wx-panel .wx-stat-lbl{font-size:10px;color:#5A6B8A;letter-spacing:.3px;text-transform:uppercase}
+#wx-panel .wx-stat-val{font-size:14px;font-weight:600;color:#0B2545;margin-top:2px;white-space:nowrap}
+
+#wx-panel .wx-day{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;
+  background:#FAF8F4;border:1px solid var(--border);margin-bottom:8px}
+#wx-panel .wx-day-name{font-size:12px;font-weight:600;color:#0B2545;width:82px;flex-shrink:0}
+#wx-panel .wx-day-ico{font-size:20px;flex-shrink:0;width:26px;text-align:center}
+#wx-panel .wx-day-desc{font-size:11px;color:#5A6B8A;flex:1;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+#wx-panel .wx-day-temp{font-size:13px;font-weight:600;color:#0B2545;flex-shrink:0;white-space:nowrap}
+#wx-foot{font-size:10px;color:#5A6B8A;margin-top:12px;line-height:1.6}
+
+html body.dark #wx-panel .wx-stat,
+html body.dark #wx-panel .wx-day{background:#12233B!important;
+  border-color:rgba(245,230,200,.26)!important}
+
+/* 320px is the floor this has to clear — iPhone SE and the older Androids in
+   the family. At that width the panel is 94vw, so a forecast row has about
+   268px to lay out four columns in. */
+@media(max-width:400px){
+  #wx-now-ico{font-size:38px}
+  #wx-now-temp{font-size:36px}
+  #wx-tabs{gap:6px}
+  #wx-tabs button{padding:7px 10px;font-size:10px}
+  #wx-panel .wx-grid{grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:6px}
+  #wx-panel .wx-day{gap:8px;padding:9px 10px}
+  #wx-panel .wx-day-name{width:64px;font-size:11px}
+  #wx-panel .wx-day-ico{font-size:18px;width:22px}
+  #wx-panel .wx-day-desc{font-size:10px}
+  #wx-panel .wx-day-temp{font-size:12px}
+}
+
 
 /* Muted state for the per-message speaker button. Keyed through .msg-actions
    and with hardcoded hex in dark, because body.dark carries a blanket
