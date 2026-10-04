@@ -241,7 +241,10 @@ body.dark #rec-lbl{color:#0B2545}
    call. The title is a fixed string, so the face lands in the same place every
    day instead of shifting as the thought gets longer or shorter — and it hands
    the thought line back its full width, which was truncating before. */
-.tb-thought-title{font-size:13px;font-weight:600;color:var(--text);font-family:'BellaIndic','DM Sans',sans-serif;margin-bottom:3px;display:flex;align-items:center;justify-content:center;gap:5px}
+/* nowrap because this is a fixed LABEL, not content. Without it, a squeezed
+   cell wrapped it to three lines inside a 68px bar and clipped it to
+   "Bella's Food For hought". Measured in real Chrome. */
+.tb-thought-title{font-size:13px;font-weight:600;color:var(--text);font-family:'BellaIndic','DM Sans',sans-serif;margin-bottom:3px;display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}
 .tb-thought-text{font-size:11px;font-weight:400;color:var(--text);line-height:1.5;font-family:'BellaIndic','DM Sans',sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Food For Thought emoji — genuinely animated, and never clipped.
    It used to live INSIDE .tb-thought-text, which is overflow:hidden with an
@@ -1306,6 +1309,18 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         <div class="tb-primary" id="tb-location">📍 Locating...</div>
       </div>
 
+      <!-- CELL — Weather. Its OWN cell rather than folded into the Location
+           cell: Savio's decision, 2026-10-03, taken after clicking a working
+           prototype and after being shown that it costs ~150px of a ~1,004px
+           phone strip. The Location cell already uses BOTH its lines, and
+           "📍 Sector III, Bidhannagar, India" measures 190px against the
+           118px a 150px cell actually gives — it truncates. Do not fold these
+           two together and do not re-litigate the choice. -->
+      <div class="tb-conv-btn" id="tb-weather-cell" onclick="openWeatherPanel()" title="Local weather — now, 3 days and 5 days">
+        <div class="tb-primary" id="tb-wx-main">🌡 —</div>
+        <div class="tb-secondary" id="tb-wx-sub">Weather</div>
+      </div>
+
       <!-- CELL — Date & Time -->
       <div class="tb-cell">
         <div class="tb-primary" id="tb-date">📅 —</div>
@@ -1370,7 +1385,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
             <div id="curr-to-list" class="conv-select-list" style="min-width:220px"></div>
           </div>
         </div>
-        <div id="conv-result" style="font-size:22px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif">—</div>
+        <div id="conv-result" style="font-size:22px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif;font-variant-numeric:lining-nums">—</div>
         <div id="conv-rate-info" style="font-size:10px;color:var(--tsoft);margin-top:4px"></div>
       </div>
 
@@ -1396,7 +1411,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
             <div id="unit-to-list" class="conv-select-list"></div>
           </div>
         </div>
-        <div id="unit-result" style="font-size:22px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif">—</div>
+        <div id="unit-result" style="font-size:22px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif;font-variant-numeric:lining-nums">—</div>
       </div>
       <!-- Timezone Tab -->
       <div id="conv-time" class="conv-tab-content" style="display:none">
@@ -1412,10 +1427,31 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
             <div id="tz-to-list" class="conv-select-list" style="min-width:260px"></div>
           </div>
         </div>
-        <div id="tz-result" style="font-size:20px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif">—</div>
+        <div id="tz-result" style="font-size:20px;font-weight:600;color:var(--navy);font-family:'Cormorant Garamond',serif;font-variant-numeric:lining-nums">—</div>
         <div id="tz-diff" style="font-size:11px;color:var(--tsoft);margin-top:4px"></div>
       </div>
         </div>
+
+    <!-- ══ WEATHER OVERLAY ═══════════════════════════════════════════════ -->
+    <!-- Three tabs, and only three, because the free tier gives three.
+         SAVIO'S POLICY, restated 2026-10-04: "we only use free tiers available
+         to test Bella and when investors invest we upgrade Bella wherever
+         required." So this is not a guard against a mistake — it is the plan.
+         When that day comes, 10-day needs OpenWeather's Developer plan
+         (~₹17,833/month) and 30-day the Professional plan (~₹47,130/month),
+         and either is a tab plus a parameter, not a rebuild. -->
+    <div class="tb-overlay" id="wx-overlay" onclick="closeWeatherPanel()"></div>
+    <div class="tb-panel" id="wx-panel" style="display:none">
+      <div class="tb-panel-title" id="wx-title">Weather</div>
+      <button class="tb-close" onclick="closeWeatherPanel()">✕</button>
+      <div id="wx-tabs">
+        <button id="wxtab-now" class="on" onclick="switchWxTab('now')">Now</button>
+        <button id="wxtab-d3" onclick="switchWxTab('d3')">3 Days</button>
+        <button id="wxtab-d5" onclick="switchWxTab('d5')">5 Days</button>
+      </div>
+      <div id="wx-body"></div>
+      <div id="wx-foot"></div>
+    </div>
 
     <!-- ══ IMAGE STUDIO ══════════════════════════════════════════════════ -->
     <div class="tb-overlay" id="img-overlay" onclick="closeImageStudio()"></div>
@@ -1656,7 +1692,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
       <button onclick="closeFeedback()" style="background:rgba(245,230,200,0.1);border:1px solid rgba(245,230,200,0.2);border-radius:50%;width:32px;height:32px;color:#F5E6C8;cursor:pointer;font-size:16px">✕</button>
     </div>
     <!-- Body -->
-    <div style="padding:24px 28px">
+    <div style="padding:24px 28px" id="feedback-body">
       <!-- Category -->
       <div style="margin-bottom:20px">
         <div style="font-size:11px;font-weight:600;color:#0B2545;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">What kind of feedback is this?</div>
@@ -1706,7 +1742,25 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
       </div>
       <!-- Submit -->
       <button onclick="submitFeedback()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#0B2545;color:#F5E6C8;font-size:14px;font-weight:600;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;letter-spacing:.3px;transition:background .2s" onmouseover="this.style.background='#142F5A'" onmouseout="this.style.background='#0B2545'">Send Feedback</button>
-      <div style="font-size:10px;color:#5A6B8A;text-align:center;margin-top:12px">Your feedback is reviewed before being shared. You'll hear from Bella when it's implemented. 🔒</div>
+      <!-- Was: "You'll hear from Bella when it's implemented." Nothing in the
+           code could keep that promise -- no endpoint reads the Feedback tab and
+           nothing ever moves a row off `pending`. Replaced with what is actually
+           true today. When the acknowledgement email ships, this line gets the
+           email back. -->
+      <div style="font-size:10px;color:#5A6B8A;text-align:center;margin-top:12px" id="feedback-foot">Reviewed before it is shared. You will get a reference number you can quote. 🔒</div>
+    </div>
+
+    <!-- CONFIRMATION — shown IN PLACE of the form, before the modal closes.
+         Savio, 2026-10-03: the modal used to just vanish, leaving a long
+         thank-you in the chat behind it, so there was no moment that said
+         "this was received". -->
+    <div style="padding:30px 28px 26px;text-align:center;display:none" id="feedback-done">
+      <div style="font-size:36px;line-height:1;margin-bottom:12px">✅</div>
+      <div id="fbdone-title" style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:#0B2545">Feedback submitted</div>
+      <div id="fbdone-reflabel" style="font-size:10px;font-weight:700;color:#5A6B8A;letter-spacing:1.4px;text-transform:uppercase;margin-top:20px">Your reference</div>
+      <div id="fbdone-ref" style="font-family:'BellaIndic','DM Sans',sans-serif;font-size:21px;font-weight:700;color:#0B2545;letter-spacing:.5px;margin-top:5px;user-select:all;font-variant-numeric:lining-nums tabular-nums">&mdash;</div>
+      <div id="fbdone-wait" style="font-size:12px;color:#4A5A7A;line-height:1.7;margin-top:14px;max-width:34ch;margin-left:auto;margin-right:auto"></div>
+      <button id="fbdone-btn" onclick="closeFeedback()">Done</button>
     </div>
   </div>
 </div>
@@ -5266,6 +5320,19 @@ function openFeedback(){
 }
 function closeFeedback(){
   document.getElementById('feedback-overlay').style.display='none';
+  // Reset to the form, or the next person to open it sees the last person's
+  // confirmation and no way back to the questions.
+  const body=document.getElementById('feedback-body'), done=document.getElementById('feedback-done');
+  if(body) body.style.display='';
+  if(done) done.style.display='none';
+  const ta=document.getElementById('feedback-text'); if(ta) ta.value='';
+  _selectedFeedbackCat=null;
+  document.querySelectorAll('.fcat-btn').forEach(b=>{
+    b.style.border='1.5px solid rgba(11,37,69,0.15)';
+    b.style.background='#F8F5EF';
+  });
+  const sb=document.querySelector('#feedback-overlay button[onclick="submitFeedback()"]');
+  if(sb){ sb.textContent='Send Feedback'; sb.disabled=false; }
 }
 function selectFeedbackCat(btn,cat){
   _selectedFeedbackCat=cat;
@@ -5281,6 +5348,36 @@ function addFeedbackEmoji(emoji){
   ta.value+=emoji;
   ta.focus();
 }
+// ══ TICKET NUMBERS ═════════════════════════════════════════════════════════
+// Savio asked whether feedback, support and errors should be three streams.
+// Decision 2026-10-04: ONE series, THREE PREFIXES. One numbering to track, and
+// the prefix still says which kind it is at a glance -- and if he later wants
+// them split for real, the prefix has already done the splitting.
+//
+// NOT "BE-" for error: that is already the USER ID prefix (BE-29271057), and a
+// support conversation is the exact place those two would be confused.
+function _bellaTicket(category){
+  const stream = category === 'bug' ? 'ERR' : 'FBK';   // SUP reserved: no support flow exists yet
+  // Stamped in IST deliberately. The Feedback tab's own date column is written
+  // in IST by the backend, so ticket and row agree even if the user is abroad.
+  const p = new Intl.DateTimeFormat('en-GB', { timeZone:'Asia/Kolkata',
+      year:'2-digit', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', hourCycle:'h23' })
+    .formatToParts(new Date())
+    .reduce((o,x)=>(o[x.type]=x.value,o),{});
+  let t = stream + '-' + p.year + p.month + p.day + '-' + p.hour + p.minute;
+  // Two submissions inside the same minute would otherwise share an id, and
+  // column A is the row's identity. Rare, but cheap to rule out.
+  if(_ticketsIssued.indexOf(t) !== -1){
+    let n = 2; while(_ticketsIssued.indexOf(t + '-' + n) !== -1) n++;
+    t = t + '-' + n;
+  }
+  _ticketsIssued.push(t);
+  return t;
+}
+let _ticketsIssued = [];
+let _lastTicket = '';
+
 async function submitFeedback(){
   const text=document.getElementById('feedback-text').value.trim();
   if(!_selectedFeedbackCat){alert('Please select a feedback category first.');return;}
@@ -5289,7 +5386,8 @@ async function submitFeedback(){
   btn.textContent='Sending...';
   btn.disabled=true;
   try{
-    const feedbackId='fb_'+Date.now();
+    const feedbackId=_bellaTicket(_selectedFeedbackCat);
+    _lastTicket=feedbackId;
     // This used to call /sheets-write, which saved the row and told NOBODY.
     // /user-feedback appends the very same 14-column row AND emails support.
     // Found 2026-10-01: the only endpoint that alerts support had never had a
@@ -5311,15 +5409,28 @@ async function submitFeedback(){
     // A 4xx was silent here too: the thank-you appeared whether or not the
     // feedback was stored. Now a refusal reaches the catch below.
     if(!fr.ok) throw new Error('feedback refused: '+fr.status+' '+await fr.text().catch(()=>''));
-    closeFeedback();
-    // Thank the user in chat
     const catLabel=uiText('fb_cat_'+_selectedFeedbackCat)||uiText('fb_cat_improve');
     const isPraise=_selectedFeedbackCat==='praise';
-    const thankMsg=uiText(isPraise?'fb_thanks_praise':'fb_thanks_other',{name:currentAddressedName||'',cat:catLabel});
+    const _fl=chosenLang()||'en';
+    // Confirm IN THE MODAL first. The modal used to vanish on success, so the
+    // only acknowledgement was a long message in the chat BEHIND it -- which is
+    // why Savio could not tell whether his feedback had gone anywhere.
+    document.getElementById('feedback-body').style.display='none';
+    document.getElementById('fbdone-title').textContent=uiText('fb_sent_title',{},_fl);
+    document.getElementById('fbdone-reflabel').textContent=uiText('fb_sent_ref',{},_fl);
+    document.getElementById('fbdone-ref').textContent=feedbackId;
+    document.getElementById('fbdone-wait').textContent=
+      uiText(isPraise?'fb_sent_wait_praise':'fb_sent_wait',{},_fl);
+    document.getElementById('fbdone-btn').textContent=uiText('fb_sent_done',{},_fl);
+    document.getElementById('feedback-done').style.display='block';
+    // The chat line is now SHORT and carries the reference. His instruction:
+    // shorten it, and move the detail to the email.
+    const thankMsg=uiText(isPraise?'fb_thanks_praise':'fb_thanks_other',
+      {name:currentAddressedName?(', '+currentAddressedName):'',cat:catLabel,ticket:feedbackId},_fl);
     bellaMsg(thankMsg);
     // Was speakText(thankMsg,'en') -- hardcoded, so a Hindi user heard an English
     // voice read out a Hindi sentence. Savio flagged this on 2026-10-03.
-    if(continuousVoice)speakText(thankMsg,chosenLang()||'en');
+    if(continuousVoice)speakText(thankMsg,_fl);
   }catch(e){
     alert('Something went wrong. Please try again.');
     btn.textContent='Send Feedback';
@@ -6945,15 +7056,28 @@ const UI_TEXT = {
   // nouns, so gluing a postposition onto a variable produces real grammatical
   // errors. Parentheses sidestep declension entirely and still read naturally.
   fb_thanks_praise:{
-    en:'Thank you so much for your kind words, {name}! \u{1F64F} It truly means everything to hear that. If you ever have ideas on how I can serve you better, please don\u2019t hesitate to share \u2014 your thoughts help me grow. \u2764\uFE0F',
-    bn:'আপনার এই কথাগুলোর জন্য অনেক ধন্যবাদ, {name}! \u{1F64F} সত্যিই খুব ভালো লাগল। আরও ভালোভাবে কীভাবে কাজে লাগতে পারি, কোনো ভাবনা থাকলে নিশ্চয়ই বলবেন \u2014 আপনার মতামতেই আমি বড় হই। \u2764\uFE0F',
-    hi:'आपके इन शब्दों के लिए बहुत-बहुत धन्यवाद, {name}! \u{1F64F} यह सुनकर सचमुच बहुत अच्छा लगा। मैं आपके और काम कैसे आ सकती हूँ, इस पर कोई विचार हो तो ज़रूर बताइएगा \u2014 आपकी बातों से ही मैं बेहतर होती हूँ। \u2764\uFE0F',
-    mr:'तुमच्या या शब्दांसाठी खूप खूप धन्यवाद, {name}! \u{1F64F} हे ऐकून खरंच खूप छान वाटलं. मी तुमच्या आणखी कशी उपयोगी पडू शकते, याबद्दल काही सुचलं तर नक्की सांगा \u2014 तुमच्या सूचनांमुळेच मी अधिक चांगली होते. \u2764\uFE0F'},
+    en:'Thank you so much for your kind words{name}! \u{1F64F} It truly means everything to hear that. \u2764\uFE0F',
+    bn:'আপনার এই কথাগুলোর জন্য অনেক ধন্যবাদ{name}! \u{1F64F} সত্যিই খুব ভালো লাগল। \u2764\uFE0F',
+    hi:'आपके इन शब्दों के लिए बहुत-बहुत धन्यवाद{name}! \u{1F64F} यह सुनकर सचमुच बहुत अच्छा लगा। \u2764\uFE0F',
+    mr:'तुमच्या या शब्दांसाठी खूप खूप धन्यवाद{name}! \u{1F64F} हे ऐकून खरंच खूप छान वाटलं. \u2764\uFE0F'},
   fb_thanks_other:{
-    en:'Thank you for your {cat}, {name}! \u{1F64F} I\u2019ve received it and it will be reviewed carefully. You\u2019ll hear from me as soon as it\u2019s been addressed. Your voice matters and helps make Bella better for everyone. \u2728',
-    bn:'ধন্যবাদ, {name}! \u{1F64F} আপনার মতামত ({cat}) আমি পেয়েছি, ভালো করে দেখা হবে। কাজ হয়ে গেলেই আপনাকে জানাব। আপনার মতামতেই বেলা সবার জন্য আরও ভালো হয়। \u2728',
-    hi:'धन्यवाद, {name}! \u{1F64F} आपकी बात ({cat}) मुझे मिल गई है और उसे ध्यान से देखा जाएगा। काम हो जाते ही मैं आपको बताऊँगी। आपकी राय से ही बेला सबके लिए बेहतर बनती है। \u2728',
-    mr:'धन्यवाद, {name}! \u{1F64F} तुमचा अभिप्राय ({cat}) मला मिळाला आहे, तो काळजीपूर्वक पाहिला जाईल. काम होताच मी तुम्हाला कळवेन. तुमच्या अभिप्रायामुळेच बेला सर्वांसाठी अधिक चांगली होते. \u2728'},
+    en:'Thank you for your {cat}{name}! \u{1F64F} It is logged as {ticket} \u2014 I will come back to you. \u2728',
+    bn:'ধন্যবাদ{name}! \u{1F64F} আপনার মতামত ({cat}) পেয়েছি \u2014 নম্বর {ticket}। কাজ হয়ে গেলেই জানাব। \u2728',
+    hi:'धन्यवाद{name}! \u{1F64F} आपकी बात ({cat}) मिल गई \u2014 नंबर {ticket}। काम होते ही बताऊँगी। \u2728',
+    mr:'धन्यवाद{name}! \u{1F64F} तुमचा अभिप्राय ({cat}) मिळाला \u2014 क्रमांक {ticket}. काम होताच कळवेन. \u2728'},
+  // The confirmation panel. Short deliberately -- it has one job, which is to
+  // say the thing arrived and give you the number to quote.
+  fb_sent_title:{en:'Feedback submitted',bn:'মতামত জমা হয়েছে',hi:'फ़ीडबैक जमा हो गया',mr:'अभिप्राय पाठवला गेला'},
+  fb_sent_ref:{en:'Your reference',bn:'আপনার রেফারেন্স',hi:'आपका रेफ़रेंस',mr:'तुमचा संदर्भ क्रमांक'},
+  fb_sent_wait:{en:'Keep this number. We aim to come back to you within 48 to 72 hours.',
+    bn:'নম্বরটা রেখে দিন। ৪৮ থেকে ৭২ ঘণ্টার মধ্যে আপনাকে জানানোর চেষ্টা করব।',
+    hi:'यह नंबर रख लीजिए। 48 से 72 घंटे के भीतर आपको बताने की कोशिश करेंगे।',
+    mr:'हा क्रमांक जपून ठेवा. 48 ते 72 तासांत तुम्हाला कळवण्याचा प्रयत्न करू.'},
+  fb_sent_wait_praise:{en:'Nothing to fix here \u2014 just thank you.',
+    bn:'এখানে সারানোর কিছু নেই \u2014 শুধু ধন্যবাদ।',
+    hi:'यहाँ ठीक करने को कुछ नहीं \u2014 बस धन्यवाद।',
+    mr:'इथे दुरुस्त करण्यासारखं काही नाही \u2014 फक्त धन्यवाद.'},
+  fb_sent_done:{en:'Done',bn:'ঠিক আছে',hi:'ठीक है',mr:'ठीक आहे'},
   fb_cat_bug:{en:'bug report',bn:'বাগ রিপোর্ট',hi:'बग रिपोर्ट',mr:'बग रिपोर्ट'},
   fb_cat_improve:{en:'improvement suggestion',bn:'উন্নতির পরামর্শ',hi:'सुधार का सुझाव',mr:'सुधारणेची सूचना'},
   fb_cat_feature:{en:'new feature idea',bn:'নতুন ফিচারের ভাবনা',hi:'नए फ़ीचर का विचार',mr:'नव्या फीचरची कल्पना'},
@@ -7502,7 +7626,7 @@ function showLocationPermissionModal(addressedName){
         <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:#F5E6C8;margin-bottom:8px">Enable Local Features</div>
         <div style="font-size:13px;color:rgba(245,230,200,0.65);line-height:1.7;margin-bottom:24px">
           To show your local weather, time zone, and location-aware features, Bella needs your location. Tap Allow to activate.<br><br>
-          Your location is <strong style="color:#D4AF37">never stored or shared</strong> — it is used only to display local information on your screen.
+          Your coordinates are <strong style="color:#D4AF37">never saved to Bella's servers</strong> — they stay in this browser tab and go when you close it. They are sent out only to look up your area name and your weather, with nothing attached that identifies you.
         </div>
         <button id="loc-allow-btn" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;margin-bottom:10px;transition:background .2s" onmouseover="this.style.background='#C4A028'" onmouseout="this.style.background='#D4AF37'">
           Allow Location Access
@@ -7623,6 +7747,9 @@ function _unblurMain(){
 }
 
 function showLocationDeniedState(){
+  // Weather is location-derived, so it has to say the same thing the location
+  // cell says. Left alone it sat on "🌡 —" forever and read as broken.
+  setWeatherCellState('🌡 —', 'Location off');
   const locEl = document.getElementById('tb-location');
   if(!locEl) return;
   locEl.innerHTML = `
@@ -7697,6 +7824,9 @@ function initLocationWithCoords(lat, lon){
       </div>`;
       // Store for thought of day
       try{ sessionStorage.setItem('b_location_data', JSON.stringify({city, country, area, lat, lon})); }catch(e){}
+      // The weather cell reads its coordinates from that same entry, so it can
+      // only be filled once this has been written.
+      fetchWeather(true);
     })
     .catch(()=>{ locEl.textContent = '📍 Location found'; });
 }
@@ -7885,6 +8015,232 @@ function initLocation(){
     () => { showLocationDeniedState(); }
   );
 }
+
+// ══ WEATHER ════════════════════════════════════════════════════════════════
+// Frontend only, ₹0. `/weather` (backend, index.js:4055) already returns the
+// current conditions AND the 5-day / 3-hour forecast in a SINGLE call, so
+// there is no backend change here and no second request to make.
+//
+// It is also the only real test of the OPENWEATHER_API_KEY rotated on
+// 2026-10-03: /health does not check that key, so a good key and a bad one
+// look identical from outside. A live call through this panel is the proof.
+const WX_ICON = {
+  '01d':'☀️','01n':'🌙','02d':'🌤','02n':'☁️','03d':'⛅','03n':'☁️',
+  '04d':'☁️','04n':'☁️','09d':'🌧','09n':'🌧','10d':'🌦','10n':'🌧',
+  '11d':'⛈','11n':'⛈','13d':'🌨','13n':'🌨','50d':'🌫','50n':'🌫'
+};
+const WX_STALE_MS = 15 * 60 * 1000;   // OpenWeather's own data moves no faster
+let _wxData = null, _wxAt = 0, _wxTab = 'now', _wxBusy = false, _wxErr = '';
+
+function _wxIcon(c){ return WX_ICON[c] || '🌡'; }
+function _wxTemp(t){ return (t === null || t === undefined) ? '—' : Math.round(t) + '°'; }
+function _wxCap(s){ return String(s || '').replace(/\b\w/g, m => m.toUpperCase()); }
+
+// Honours the topbar's own 12/24h toggle. 24-hour time everywhere is Savio's
+// issue #10, and _clockFormat24 is the single place that preference lives.
+function _wxClock(d){
+  let h = d.getHours(); const m = String(d.getMinutes()).padStart(2,'0');
+  if(_clockFormat24) return String(h).padStart(2,'0') + ':' + m;
+  const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+  return h + ':' + m + ' ' + ap;
+}
+
+// TRAP. OpenWeather's forecast timestamps are UTC, and the backend passes
+// through only `dt_txt` ("2026-10-04 15:00:00") — no unix seconds, no city
+// offset. A date-time string with no zone is parsed as LOCAL time, so in IST
+// every slot would shift 5h30m and the 18:30–23:59 IST readings would land on
+// the WRONG CALENDAR DAY. Appending 'Z' is what makes the day buckets right.
+function _wxWhen(dtTxt){ return new Date(String(dtTxt).replace(' ','T') + 'Z'); }
+
+function _wxCoords(){
+  try{
+    const d = JSON.parse(sessionStorage.getItem('b_location_data') || '{}');
+    if(typeof d.lat === 'number' && typeof d.lon === 'number') return d;
+  }catch(e){}
+  return null;
+}
+
+function setWeatherCellState(main, sub){
+  const m = document.getElementById('tb-wx-main');
+  const s = document.getElementById('tb-wx-sub');
+  if(m) m.textContent = main;
+  if(s) s.textContent = sub;
+}
+
+function renderWeatherCell(){
+  const c = _wxData && _wxData.current;
+  if(!c) return;
+  setWeatherCellState(_wxIcon(c.icon) + ' ' + _wxTemp(c.temp),
+                      _wxCap(c.description) || c.city || 'Weather');
+}
+
+async function fetchWeather(force){
+  if(_wxBusy) return;
+  if(!force && _wxData && (Date.now() - _wxAt) < WX_STALE_MS) return;
+  const loc = _wxCoords();
+  if(!loc){ setWeatherCellState('🌡 —', 'Location off'); _wxErr = ''; _wxPaintIfOpen(); return; }
+  _wxBusy = true;
+  try{
+    const r = await bfetch(BACKEND + '/weather', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ lat: loc.lat, lon: loc.lon, units: 'metric' })
+    });
+    const d = await r.json();
+    if(!r.ok || d.error) throw new Error(d.error || ('HTTP ' + r.status));
+    _wxData = d; _wxAt = Date.now(); _wxErr = '';
+    renderWeatherCell();
+  }catch(e){
+    // Never leave a blank cell. A silent failure here just reads as Bella
+    // being broken, and the last good reading is better than nothing.
+    _wxErr = e && e.message ? e.message : String(e);
+    if(!_wxData) setWeatherCellState('🌡 —', 'Unavailable');
+  }finally{
+    _wxBusy = false;
+    _wxPaintIfOpen();
+  }
+}
+
+function _wxPaintIfOpen(){
+  const p = document.getElementById('wx-panel');
+  if(p && p.style.display === 'block') renderWxBody();
+}
+
+// Buckets the 3-hourly slots into calendar days in the USER's own timezone —
+// which is the correct one here, because the only coordinates ever sent are
+// theirs. OpenWeather's free 5-day feed starts mid-day, so the first bucket is
+// usually a partial day; it is still today's remaining weather, so it stays.
+function _wxDays(){
+  const order = [], byKey = {};
+  const list = (_wxData && _wxData.forecast) || [];
+  list.forEach(f => {
+    const when = _wxWhen(f.datetime);
+    if(isNaN(when.getTime())) return;
+    const key = when.getFullYear() + '-' + when.getMonth() + '-' + when.getDate();
+    if(!byKey[key]){ byKey[key] = { when: when, slots: [] }; order.push(byKey[key]); }
+    byKey[key].slots.push({ when: when, f: f });
+  });
+  return order.map(d => {
+    const temps = d.slots.map(s => s.f.temp).filter(t => typeof t === 'number');
+    // The icon and the words come from the slot nearest 13:00 local. A day is
+    // described by its daytime, not by whatever 03:00 happened to be doing.
+    let pick = d.slots[0], best = Infinity;
+    d.slots.forEach(s => {
+      const gap = Math.abs(s.when.getHours() - 13);
+      if(gap < best){ best = gap; pick = s; }
+    });
+    return {
+      when: d.when,
+      min: temps.length ? Math.min.apply(null, temps) : null,
+      max: temps.length ? Math.max.apply(null, temps) : null,
+      icon: pick.f.icon,
+      description: pick.f.description
+    };
+  });
+}
+
+const _WX_DAYS3 = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function _wxDayLabel(d){
+  const n = new Date();
+  const diff = Math.round(
+    (new Date(d.getFullYear(), d.getMonth(), d.getDate()) -
+     new Date(n.getFullYear(), n.getMonth(), n.getDate())) / 86400000);
+  if(diff === 0) return 'Today';
+  if(diff === 1) return 'Tomorrow';
+  return _WX_DAYS3[d.getDay()] + ' ' + d.getDate();
+}
+
+function _wxStat(lbl, val){
+  return '<div class="wx-stat"><div class="wx-stat-lbl">' + lbl + '</div>' +
+         '<div class="wx-stat-val">' + _expEsc(val) + '</div></div>';
+}
+
+function renderWxBody(){
+  const el = document.getElementById('wx-body');
+  const foot = document.getElementById('wx-foot');
+  const title = document.getElementById('wx-title');
+  if(!el) return;
+
+  if(!_wxData){
+    const msg = _wxErr
+      ? 'Weather is unavailable right now.<br><span style="font-size:11px">' + _expEsc(_wxErr) + '</span>'
+      : (_wxCoords()
+          ? 'Loading…'
+          : 'Bella needs your location to show the weather. The location cell in the top bar will ask for it.');
+    el.innerHTML = '<div style="font-size:13px;color:var(--tsoft);line-height:1.8">' + msg + '</div>';
+    if(title) title.textContent = 'Weather';
+    if(foot) foot.textContent = '';
+    return;
+  }
+
+  const c = _wxData.current || {};
+  if(title) title.textContent = _wxIcon(c.icon) + '  ' +
+    ([c.city, c.country].filter(Boolean).join(', ') || 'Weather');
+
+  if(_wxTab === 'now'){
+    el.innerHTML =
+      '<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">' +
+        '<div id="wx-now-ico">' + _wxIcon(c.icon) + '</div>' +
+        '<div style="min-width:0">' +
+          '<div id="wx-now-temp">' + _wxTemp(c.temp) + 'C</div>' +
+          '<div id="wx-now-desc">' + _expEsc(_wxCap(c.description)) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="wx-grid">' +
+        _wxStat('Feels like', _wxTemp(c.feelsLike) + 'C') +
+        _wxStat('Humidity',   c.humidity   != null ? c.humidity + '%' : '—') +
+        _wxStat('Wind',       c.windSpeed  != null ? Math.round(c.windSpeed * 3.6) + ' km/h' : '—') +
+        _wxStat('Visibility', c.visibility != null ? (c.visibility / 1000).toFixed(1) + ' km' : '—') +
+        _wxStat('Sunrise',    c.sunrise ? _wxClock(new Date(c.sunrise * 1000)) : '—') +
+        _wxStat('Sunset',     c.sunset  ? _wxClock(new Date(c.sunset  * 1000)) : '—') +
+      '</div>';
+  } else {
+    const days = _wxDays().slice(0, _wxTab === 'd3' ? 3 : 5);
+    el.innerHTML = days.length
+      ? days.map(d =>
+          '<div class="wx-day">' +
+            '<div class="wx-day-name">' + _expEsc(_wxDayLabel(d.when)) + '</div>' +
+            '<div class="wx-day-ico">' + _wxIcon(d.icon) + '</div>' +
+            '<div class="wx-day-desc">' + _expEsc(_wxCap(d.description)) + '</div>' +
+            '<div class="wx-day-temp">' + _wxTemp(d.max) + ' / ' + _wxTemp(d.min) + '</div>' +
+          '</div>').join('')
+      : '<div style="font-size:13px;color:var(--tsoft)">No forecast available.</div>';
+  }
+
+  if(foot){
+    const age = Math.round((Date.now() - _wxAt) / 60000);
+    foot.textContent = 'OpenWeather · updated ' + (age < 1 ? 'just now' : age + ' min ago') +
+      (_wxTab === 'now' ? '' : ' · daily high / low taken from the 3-hourly readings');
+  }
+}
+
+function switchWxTab(tab){
+  _wxTab = tab;
+  ['now','d3','d5'].forEach(t => {
+    const b = document.getElementById('wxtab-' + t);
+    if(b) b.classList.toggle('on', t === tab);
+  });
+  renderWxBody();
+}
+
+function openWeatherPanel(){
+  document.getElementById('wx-overlay').classList.add('on');
+  document.getElementById('wx-panel').style.display = 'block';
+  renderWxBody();
+  fetchWeather(false);
+}
+function closeWeatherPanel(){
+  document.getElementById('wx-overlay').classList.remove('on');
+  document.getElementById('wx-panel').style.display = 'none';
+}
+
+// Deliberately NO setInterval. A background timer is exactly the thing that
+// drains a phone to refresh a number nobody is looking at — see the standing
+// "Bella must be light on devices" rule. The cell refreshes when the tab comes
+// back into view with stale data, and when the panel is opened.
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && _wxData &&
+     (Date.now() - _wxAt) >= WX_STALE_MS) fetchWeather(false);
+});
 
 function updateTopbarUser(name, userId){
   const welcomeEl = document.getElementById('topbar-welcome');
@@ -8660,7 +9016,14 @@ window.addEventListener('pagehide', function() { /* intentionally nothing */ });
 body.dark #tb-menu-btn{background:#0B2545!important;color:#D4AF37!important;
   border-color:rgba(212,175,55,.3)!important}
 
-@media(max-width:1024px){
+/* Breakpoint raised from 1024px to 1400px on 2026-10-04, on measurement.
+   The seven fixed cells plus the weather cell need ~1,160px before the one
+   flexible cell (Food For Thought) gets anything at all, so between 1024px
+   and 1400px that cell was being crushed to 41px and its title clipped. At
+   1024px the old rule it was measured at 195px; at 1280px, 41px. Scrolling is
+   this bar's own documented answer to not fitting — it just needed to start
+   earlier. Above 1400px there is nothing to scroll and these rules are inert. */
+@media(max-width:1400px){
   /* Scroll the dashboard rather than clip it. Nothing is hidden — every cell
      stays reachable, because these are real features, not decoration. */
   .chat-topbar{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
@@ -8723,6 +9086,107 @@ body.dark #mic-lang button{background:transparent!important;color:#F5E6C8!import
 body.dark #mic-lang button.on{background:#D4AF37!important;color:#0B2545!important}
 @media(pointer:coarse){ #mic-lang button{height:44px;min-width:44px} }
 @media(max-width:680px){ #mic-lang{order:1} }
+
+/* ══ WEATHER — the top-bar cell and its panel ═══════════════════════════════
+   Every selector that has to win in dark mode carries an #id, and no dark
+   value here is a brand token. Three documented traps make that mandatory:
+
+     1. `body.dark, body.dark *:not(.msg.user .mbub):not(...)
+         { color:#F5E6C8 !important }` in v82 scores (0,7,1) and sets ONLY
+        colour, so any class-based rule that paints a light background keeps
+        the background and LOSES the text colour — cream on cream.
+     2. `body.dark button{background:#D4AF37!important;color:#0B2545!important}`
+        beats class selectors outright. It is why the CONVERTER's own three
+        tabs are indistinguishable from each other in dark mode today.
+     3. body.dark INVERTS the brand tokens (--navy becomes gold, --gold
+        becomes navy), so var(--navy) here would paint gold-on-gold.
+
+   Dark colours follow Savio's Option G (v86) rather than inventing new ones:
+   navy ground, cream for anything you read, raised controls #12233B, and
+   GOLD RESERVED FOR NEW CONVERSATION AND SEND ONLY. The selected tab is
+   therefore cream-on-navy, exactly like #mic-lang button.on — not gold. */
+#tb-weather-cell{cursor:pointer}
+
+#wx-tabs{display:flex;gap:8px;margin-bottom:16px}
+#wx-tabs button{padding:7px 14px;border-radius:10px;border:1.5px solid var(--border);
+  background:#FAF8F4;color:#4A5A7A;font-size:11px;font-weight:600;cursor:pointer;
+  font-family:'BellaIndic','DM Sans',sans-serif;transition:background .15s,color .15s}
+#wx-tabs button.on{background:#0B2545;color:#D4AF37;border-color:#0B2545}
+#wx-tabs button:hover:not(.on){background:#F5E6C8}
+html body.dark #wx-tabs button{background:#12233B!important;color:#F5E6C8!important;
+  border:1.5px solid rgba(245,230,200,.26)!important}
+html body.dark #wx-tabs button.on{background:#F5E6C8!important;color:#0B2545!important;
+  border-color:#F5E6C8!important}
+@media(pointer:coarse){ #wx-tabs button{min-height:44px} }
+
+/* The feedback modal is a fixed light surface, so its Done button is keyed off
+   an id: `body.dark button{background:#E8D9B8!important}` would otherwise
+   repaint it cream-on-a-white-card. Same documented trap as #wx-tabs. */
+#fbdone-btn{width:100%;margin-top:22px;padding:13px;border-radius:12px;border:none;
+  background:#0B2545;color:#F5E6C8;font-size:14px;font-weight:600;cursor:pointer;
+  font-family:'BellaIndic','DM Sans',sans-serif;letter-spacing:.3px}
+#fbdone-btn:hover{background:#142F5A}
+html body.dark #fbdone-btn{background:#0B2545!important;color:#F5E6C8!important}
+@media(pointer:coarse){ #fbdone-btn{min-height:44px} }
+
+/* FIX, found while building the weather panel and measured in real Chrome:
+   the CONVERTER's three tabs are all #E8D9B8 with navy text in dark mode —
+   byte-identical, selected and unselected — so there is no way to see which
+   tab you are on. `.conv-tab-btn.active-tab` sets its colours WITHOUT
+   !important, and `body.dark button{background:#E8D9B8!important}` beats it.
+   Same treatment as #mic-lang and #wx-tabs above: raised navy for the tabs
+   you are not on, cream for the one you are. Gold stays reserved for New
+   Conversation and Send (Option G, v86). */
+html body.dark #conv-panel .conv-tab-btn{
+  background:#12233B!important;color:#F5E6C8!important;
+  border:1.5px solid rgba(245,230,200,.26)!important}
+html body.dark #conv-panel .conv-tab-btn.active-tab{
+  background:#F5E6C8!important;color:#0B2545!important;border-color:#F5E6C8!important}
+
+#wx-now-ico{font-size:46px;line-height:1;flex-shrink:0}
+/* lining-nums is not cosmetic. Cormorant Garamond ships OLDSTYLE figures by
+   default, so at 44px "31°C" renders as "ʒı°C" and "09" as "o9" — measured
+   side by side in real Chrome. One declaration keeps Bella's display face and
+   makes the number read as a number. The same fix is applied to the three
+   converter readouts below, which have had this since they were built. */
+#wx-now-temp{font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:600;
+  line-height:1.05;color:#0B2545;font-variant-numeric:lining-nums}
+#wx-now-desc{font-size:13px;font-weight:600;color:#4A5A7A;margin-top:2px}
+#wx-panel .wx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px}
+#wx-panel .wx-stat{background:#FAF8F4;border:1px solid var(--border);border-radius:12px;
+  padding:9px 11px;min-width:0}
+#wx-panel .wx-stat-lbl{font-size:10px;color:#5A6B8A;letter-spacing:.3px;text-transform:uppercase}
+#wx-panel .wx-stat-val{font-size:14px;font-weight:600;color:#0B2545;margin-top:2px;white-space:nowrap}
+
+#wx-panel .wx-day{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;
+  background:#FAF8F4;border:1px solid var(--border);margin-bottom:8px}
+#wx-panel .wx-day-name{font-size:12px;font-weight:600;color:#0B2545;width:82px;flex-shrink:0}
+#wx-panel .wx-day-ico{font-size:20px;flex-shrink:0;width:26px;text-align:center}
+#wx-panel .wx-day-desc{font-size:11px;color:#5A6B8A;flex:1;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+#wx-panel .wx-day-temp{font-size:13px;font-weight:600;color:#0B2545;flex-shrink:0;white-space:nowrap}
+#wx-foot{font-size:10px;color:#5A6B8A;margin-top:12px;line-height:1.6}
+
+html body.dark #wx-panel .wx-stat,
+html body.dark #wx-panel .wx-day{background:#12233B!important;
+  border-color:rgba(245,230,200,.26)!important}
+
+/* 320px is the floor this has to clear — iPhone SE and the older Androids in
+   the family. At that width the panel is 94vw, so a forecast row has about
+   268px to lay out four columns in. */
+@media(max-width:400px){
+  #wx-now-ico{font-size:38px}
+  #wx-now-temp{font-size:36px}
+  #wx-tabs{gap:6px}
+  #wx-tabs button{padding:7px 10px;font-size:10px}
+  #wx-panel .wx-grid{grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:6px}
+  #wx-panel .wx-day{gap:8px;padding:9px 10px}
+  #wx-panel .wx-day-name{width:64px;font-size:11px}
+  #wx-panel .wx-day-ico{font-size:18px;width:22px}
+  #wx-panel .wx-day-desc{font-size:10px}
+  #wx-panel .wx-day-temp{font-size:12px}
+}
+
 
 /* Muted state for the per-message speaker button. Keyed through .msg-actions
    and with hardcoded hex in dark, because body.dark carries a blanket
