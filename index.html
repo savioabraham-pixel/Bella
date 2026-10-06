@@ -1246,40 +1246,15 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
       <svg id="shutter-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
     <div class="sb-shutter" id="sb-shutter">
-
-      <!-- ZONE 1 — ACTIVATED -->
-      <div style="font-size:8px;font-weight:700;letter-spacing:1px;color:#8A6D0F;padding:6px 4px 4px">✦ Activated</div>
-      <div class="feat-grid">
-        <div class="feat-item" onclick="openVoiceRecording()" style="cursor:pointer;opacity:1"><span class="feat-icon">🎙️</span><span class="feat-label">Voice Recording</span><span class="feat-soon" style="background:#27744A;color:#fff">ON</span></div>
-        <div class="feat-item" onclick="openVideoRecording()" style="cursor:pointer;opacity:1"><span class="feat-icon">📹</span><span class="feat-label">Video Recording</span><span class="feat-soon" style="background:#27744A;color:#fff">ON</span></div>
-        <div class="feat-item" onclick="openWebSearch()" style="cursor:pointer;opacity:1"><span class="feat-icon">🔍</span><span class="feat-label">Web Search</span><span class="feat-soon" style="background:#27744A;color:#fff">ON</span></div>
-        <div class="feat-item" onclick="openConverterPanel()" style="cursor:pointer;opacity:1"><span class="feat-icon">⇄</span><span class="feat-label">Converter</span><span class="feat-soon" style="background:#27744A;color:#fff">ON</span></div>
-        <div class="feat-item" onclick="openImageStudio()" style="cursor:pointer;opacity:1"><span class="feat-icon">🎨</span><span class="feat-label">Image Studio</span><span class="feat-soon" style="background:#27744A;color:#fff">ON</span></div>
-      </div>
-
-      <!-- ZONE 2 — BELLA 2.0 -->
-      <div style="font-size:8px;font-weight:700;letter-spacing:1px;color:#8A6D0F;padding:8px 4px 4px;border-top:1px solid rgba(212,175,55,0.15);margin-top:4px">Bella 2.0 · Coming Soon</div>
-      <div class="feat-grid">
-        <div class="feat-item"><span class="feat-icon">📧</span><span class="feat-label">Gmail</span><span class="feat-soon">2.0</span></div>
-        <div class="feat-item"><span class="feat-icon">📁</span><span class="feat-label">Google Drive</span><span class="feat-soon">2.0</span></div>
-        <div class="feat-item"><span class="feat-icon">📅</span><span class="feat-label">Calendar</span><span class="feat-soon">2.0</span></div>
-        <div class="feat-item"><span class="feat-icon">🗺️</span><span class="feat-label">Maps & Nav</span><span class="feat-soon">2.0</span></div>
-        <div class="feat-item"><span class="feat-icon">🤝</span><span class="feat-label">Google Meet</span><span class="feat-soon">2.0</span></div>
-        <div class="feat-item"><span class="feat-icon">📊</span><span class="feat-label">Charts & Graphs</span><span class="feat-soon">2.0</span></div>
-        <div class="feat-item"><span class="feat-icon">📄</span><span class="feat-label">File Downloads</span><span class="feat-soon">2.0</span></div>
-        <div class="feat-item"><span class="feat-icon">📝</span><span class="feat-label">Doc Edit & Convert</span><span class="feat-soon">2.0</span></div>
-        <div class="feat-item"><span class="feat-icon">🖼️</span><span class="feat-label">Image Transform</span><span class="feat-soon">2.0</span></div>
-        <div class="feat-item"><span class="feat-icon">🔔</span><span class="feat-label">Proactive AI</span><span class="feat-soon">2.0</span></div>
-        <div class="feat-item"><span class="feat-icon">🎤</span><span class="feat-label">Voice ID</span><span class="feat-soon">2.0</span></div>
-        <div class="feat-item"><span class="feat-icon">🏠</span><span class="feat-label">Smart Home</span><span class="feat-soon">2.0</span></div>
-      </div>
-
-      <!-- ZONE 3 — BELLA 3.0 -->
-      <div style="font-size:8px;font-weight:700;letter-spacing:1px;color:#8A6D0F;padding:8px 4px 4px;border-top:1px solid rgba(212,175,55,0.15);margin-top:4px">Bella 3.0 · Coming Soon</div>
-      <div class="feat-grid">
-        <div class="feat-item"><span class="feat-icon">✨</span><span class="feat-label">Holographic Bella</span><span class="feat-soon">3.0</span></div>
-      </div>
-
+      <!-- THE WORKSHOP IS NOW DATA-DRIVEN. Do not hand-edit tiles here.
+           The single source of truth is the WORKSHOP array in the
+           <script id="v87-workshop-data"> block — one line per ability.
+           Savio's ask, 2026-10-06: "keep updating the list for Phase 1,
+           Phase 2 & Phase 3". Hand-written HTML is how the old drawer drifted
+           out of step with the backend: it advertised 5 abilities while 85
+           were member-usable, and promised Smart Home, which has no code at
+           all. A list you edit in one place cannot drift that far. -->
+      <div id="ws-zones"></div>
     </div>
   </div>
 
@@ -5656,6 +5631,7 @@ function toggleShutter(){
   const shutter=document.getElementById('sb-shutter');
   const btn=document.getElementById('sb-shutter-btn');
   const isOpen=shutter.classList.contains('open');
+  if(!isOpen && typeof renderWorkshop==='function') renderWorkshop();
   shutter.classList.toggle('open',!isOpen);
   btn.classList.toggle('open',!isOpen);
   document.getElementById('shutter-label').textContent=isOpen?'My Workshop':'Hide';
@@ -10209,6 +10185,826 @@ html body.dark .inp-actions .sbtn{ color:#0B2545 !important; }
 html body.dark #sidebar .sb-new-chat svg,
 html body.dark .inp-actions .sbtn svg{ stroke:#0B2545 !important; }
 </style>
+
+<style id="v88-invoice">
+/* ══════════════════════════════════════════════════════════════════════════
+   INVOICES & QUOTATIONS.   Added 2026-10-06 — Savio's decision that this ships
+   before the redesign, because Sarbani's bakery has no invoicing today.
+
+   Backend was already live and unused for weeks: /generate-invoice (:6595),
+   /generate-quotation (:6650), /generate-qr (:5610). None is admin-gated, so
+   any signed-in member can use all three. No deploy, no command from Savio.
+
+   DARK MODE: every colour here is a hardcoded hex under an ID selector, never
+   a brand token and never an inline style — `body.dark button{...!important}`
+   beats inline styles, and the brand tokens invert. Same rule that fixed the
+   Drive button and #tb-menu-btn.
+   ══════════════════════════════════════════════════════════════════════════ */
+#inv-overlay{position:fixed;inset:0;background:rgba(11,37,69,.72);backdrop-filter:blur(10px);
+  z-index:530;display:flex;align-items:center;justify-content:center;padding:14px}
+#inv-card{background:#FFFFFF;border-radius:20px;width:100%;max-width:560px;max-height:92vh;
+  display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.3)}
+#inv-head{background:#0B2545;padding:16px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+#inv-title{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:600;color:#F5E6C8;flex:1}
+#inv-close{background:none;border:none;color:rgba(245,230,200,.65);font-size:20px;cursor:pointer;
+  padding:2px 6px;line-height:1}
+#inv-body{padding:14px 18px 18px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#inv-overlay .inv-seg{display:flex;gap:6px;margin-bottom:14px}
+#inv-overlay .inv-seg button{flex:1;padding:9px;border-radius:10px;border:1.5px solid rgba(11,37,69,.16);
+  background:#FAF8F4;color:#39485C;font-size:13px;font-weight:600;cursor:pointer;
+  font-family:'BellaIndic','DM Sans',sans-serif}
+#inv-overlay .inv-seg button.on{background:#0B2545;color:#F5E6C8;border-color:#0B2545}
+#inv-overlay .inv-lbl{font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;
+  color:#5A6B8A;margin:14px 0 6px}
+#inv-overlay input,#inv-overlay textarea{width:100%;padding:10px 12px;border-radius:10px;
+  border:1.5px solid rgba(11,37,69,.15);background:#FAF8F4;color:#0B2545;font-size:14px;
+  font-family:'BellaIndic','DM Sans',sans-serif;outline:none;box-sizing:border-box}
+#inv-overlay input:focus,#inv-overlay textarea:focus{border-color:#D4AF37}
+#inv-overlay .inv-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#inv-overlay .inv-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+#inv-more-btn{width:100%;margin-top:10px;padding:9px;border-radius:10px;border:1px dashed rgba(11,37,69,.25);background:transparent;color:#39485C;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif}
+html body.dark #inv-more-btn{color:#F5E6C8 !important;border-color:rgba(245,230,200,.3) !important}
+#inv-overlay .inv-row{border:1px solid rgba(11,37,69,.12);border-radius:12px;padding:10px;
+  margin-bottom:8px;background:#FFFDF8}
+#inv-overlay .inv-row .inv-sub3{display:grid;grid-template-columns:1fr .8fr .9fr auto;gap:6px;
+  align-items:center;margin-top:8px}
+#inv-overlay select{width:100%;padding:10px 12px;border-radius:10px;
+  border:1.5px solid rgba(11,37,69,.15);background:#FAF8F4;color:#0B2545;font-size:14px;
+  font-family:'BellaIndic','DM Sans',sans-serif;outline:none;box-sizing:border-box;
+  -webkit-appearance:none;appearance:none}
+#inv-overlay select:focus{border-color:#D4AF37}
+#inv-overlay .inv-hint{font-size:11px;line-height:1.45;color:#5A6B8A;margin-top:6px;opacity:.9}
+#inv-overlay .inv-del{background:none;border:none;color:#9E2A3C;font-size:17px;cursor:pointer;
+  padding:4px 8px;line-height:1}
+#inv-add{width:100%;padding:10px;border-radius:10px;border:1.5px dashed rgba(11,37,69,.25);
+  background:transparent;color:#39485C;font-size:13px;font-weight:600;cursor:pointer;
+  font-family:'BellaIndic','DM Sans',sans-serif}
+#inv-tot{margin-top:14px;padding:12px 14px;border-radius:12px;background:#F3EFE3}
+#inv-tot div{display:flex;justify-content:space-between;font-size:13.5px;color:#39485C;padding:2px 0}
+#inv-tot div.grand{font-size:17px;font-weight:700;color:#0B2545;border-top:1px solid rgba(11,37,69,.15);
+  margin-top:6px;padding-top:8px}
+#inv-msg{font-size:12px;line-height:1.5;min-height:16px;margin-top:10px;color:#39485C}
+#inv-msg.err{color:#9E2A3C}
+#inv-msg.ok{color:#1F6F5C}
+#inv-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+#inv-xlsx{background:#1F6F5C;color:#FFFFFF}
+#inv-docx{background:#14477A;color:#F5E6C8}
+#inv-acts button{padding:12px;border-radius:12px;border:none;font-size:14px;font-weight:600;
+  cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif}
+#inv-pdf{background:#0B2545;color:#F5E6C8}
+#inv-upi{background:#D4AF37;color:#0B2545}
+#inv-acts button:disabled{opacity:.5;cursor:default}
+#inv-qr{text-align:center;margin-top:12px}
+#inv-qr img{width:190px;height:190px;border-radius:12px;background:#fff;padding:8px;
+  border:1px solid rgba(11,37,69,.12)}
+@media(max-width:380px){
+  #inv-overlay .inv-grid2{grid-template-columns:1fr}
+  /* The four actions stay 2x2 even at 320px — one column would push the
+     primary action below the fold on an iPhone SE. */
+  #inv-overlay .inv-row .inv-sub3{grid-template-columns:1fr 1fr auto}
+}
+/* Dark — ID-scoped hexes only. */
+html body.dark #inv-card{background:#0E2642 !important}
+html body.dark #inv-overlay input,html body.dark #inv-overlay textarea{
+  background:#12233B !important;color:#F5E6C8 !important;border-color:rgba(245,230,200,.22) !important}
+html body.dark #inv-overlay .inv-lbl{color:#9AA7B8 !important}
+html body.dark #inv-overlay .inv-row{background:#12233B !important;border-color:rgba(245,230,200,.18) !important}
+html body.dark #inv-overlay .inv-seg button{background:#12233B !important;color:#F5E6C8 !important;
+  border-color:rgba(245,230,200,.22) !important}
+html body.dark #inv-overlay .inv-seg button.on{background:#D4AF37 !important;color:#0B2545 !important;
+  border-color:#D4AF37 !important}
+html body.dark #inv-tot{background:#13304F !important}
+html body.dark #inv-tot div{color:#CFC3A6 !important}
+html body.dark #inv-tot div.grand{color:#F5E6C8 !important;border-top-color:rgba(245,230,200,.2) !important}
+html body.dark #inv-msg{color:#CFC3A6 !important}
+html body.dark #inv-add{color:#F5E6C8 !important;border-color:rgba(245,230,200,.3) !important}
+html body.dark #inv-pdf{background:#F5E6C8 !important;color:#0B2545 !important}
+html body.dark #inv-upi{background:#D4AF37 !important;color:#0B2545 !important}
+html body.dark #inv-overlay select{background:#12233B !important;color:#F5E6C8 !important;
+  border-color:rgba(245,230,200,.22) !important}
+html body.dark #inv-overlay .inv-hint{color:#9AA7B8 !important}
+html body.dark #inv-xlsx{background:#6FD3B5 !important;color:#0B2545 !important}
+html body.dark #inv-docx{background:#8FB8E8 !important;color:#0B2545 !important}
+</style>
+
+<style id="v87-workshop">
+/* ══════════════════════════════════════════════════════════════════════════
+   THE WORKSHOP, REBUILT AS A PHASE ROADMAP.   Added 2026-10-06.
+   Savio: "since you know my vision and things that need to be added to my
+   workshop lets build and keep updating the list for Phase 1, Phase 2 & 3."
+
+   THE BUG THIS FIXES FIRST, and it would have swallowed the whole rebuild:
+   `.sb-shutter.open` was `max-height:400px` with `overflow:hidden` on the
+   parent. The old drawer held 18 tiles and just fitted. The new list holds 44,
+   so everything past 400px would have been INVISIBLE AND UNREACHABLE — not
+   clipped-with-a-scrollbar, gone. The drawer now scrolls and is capped against
+   the VIEWPORT, so it can never be taller than the phone it is on.
+
+   Tiles keep the `.feat-item` class deliberately: the dark-surface system
+   already paints that class (#12233B raised fill, cream text, cream hairline)
+   in three separate places. A new class would have arrived cream-on-cream in
+   dark mode — the exact trap documented for the Drive button and #tb-menu-btn.
+   Live tiles get `.feat-on` as a CLASS, never an inline style, because
+   `body.dark button{...!important}` beats an inline style but not a later rule.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.sb-shutter.open{ max-height:min(58vh,520px); overflow-y:auto; overflow-x:hidden;
+                  -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+
+/* A live ability: full opacity and a real pointer. Everything else stays at
+   the inherited .45 / cursor:default, so "you cannot press this" is visible
+   before you try — no dead taps, which is the rule he set when the menu items
+   that did nothing were removed. */
+.feat-item.feat-on{ opacity:1; cursor:pointer; }
+.feat-item.feat-on:active{ transform:scale(.96); }
+
+/* Zone header — tap to open. Carries a count so a growing list stays honest. */
+.ws-zone{ border-top:1px solid rgba(212,175,55,.15); margin-top:4px; }
+.ws-zone:first-child{ border-top:none; margin-top:0; }
+.ws-zhead{ display:flex; align-items:center; gap:6px; width:100%; background:none;
+           border:none; padding:8px 4px 5px; cursor:pointer; text-align:left;
+           font-family:'BellaIndic','DM Sans',sans-serif; }
+.ws-zcaret{ font-size:8px; color:#8A6D0F; transition:transform .2s; flex-shrink:0; }
+.ws-zone.open .ws-zcaret{ transform:rotate(90deg); }
+.ws-ztitle{ font-size:8px; font-weight:700; letter-spacing:1px; color:#8A6D0F; flex:1; }
+.ws-zcount{ font-size:8px; font-weight:700; color:#8A6D0F; opacity:.65; flex-shrink:0; }
+.ws-zbody{ display:none; }
+.ws-zone.open .ws-zbody{ display:block; }
+.ws-znote{ font-size:8px; line-height:1.35; color:var(--tmid); padding:0 4px 5px;
+           opacity:.75; }
+
+/* The badge. ON is green and means "press it". Everything else is navy/gold and
+   means "not yet" — except FIX, which is red and means "this is broken", a
+   thing the old drawer called "Coming Soon". Bella does not say untrue things. */
+.feat-soon.ws-on{ background:#27744A !important; color:#fff !important; }
+.feat-soon.ws-fix{ background:#9B2C2C !important; color:#fff !important; }
+
+html body.dark .ws-ztitle,
+html body.dark .ws-zcount,
+html body.dark .ws-zcaret{ color:#D4AF37 !important; }
+html body.dark .ws-znote{ color:#F5E6C8 !important; opacity:.7; }
+html body.dark .ws-zone{ border-top-color:rgba(245,230,200,.14) !important; }
+</style>
+
+<script id="v88-invoice-js">
+/* ══════════════════════════════════════════════════════════════════════════
+   INVOICES & QUOTATIONS — built to Savio's own sheet.   2026-10-06.
+   Source of truth: ~/Downloads/Invoice Summary-22-23.xlsx (sanjio -> MIIRAKI).
+   His brief: "it should be perfect with proper calculations and downloadable
+   with edit functionality."
+
+   HIS GST LAYOUT IS THREE STACKED ROWS, NOT THREE COLUMNS. Verbatim:
+       N27 Taxable Value   P27 =SUM(P20:P26)
+       N28 CGST @   O28 0.09   P28 0
+       N29 SGST @   O29 0.09   P29 0
+       N30 IGST @   O30 0.18   P30 =P27*O30
+       N31 Round Off (+/-)
+       N32 Grand Total     P32 =SUM(P27:P31)
+   The nominal rates ALWAYS show; only the applicable pair carries an amount.
+
+   "AUTOMATED RATE OR AMOUNT": the rate lives in its OWN CELL and the amount is
+   a FORMULA multiplying it — `P30 =P27*O30`, `P20 =L20*J20`. So the download
+   must contain formulas, not numbers.
+
+   ONE IMPROVEMENT ON HIS SHEET, deliberate: his file hardcodes 0 in the two
+   inapplicable rows, so re-billing a Maharashtra client means editing by hand.
+   Here the supply TYPE is itself a formula — =IF(EXACT(seller,buyer),...) —
+   and all three GST rows key off it. Change either state cell in Excel and the
+   whole invoice re-rates. That is what "edit functionality" has to mean.
+
+   Needs backend release 13 (`_xlFormulas` in /create-document). Until that is
+   deployed the formulas would arrive as TEXT, so THIS PUSH GOES AFTER IT.
+   Word cannot be live — .docx tables do not recalculate — so Word is the
+   editable-text copy and Excel is the live one. Said on screen, not hidden.
+   ══════════════════════════════════════════════════════════════════════════ */
+const INV = { kind:'invoice', items:[{description:'',hsn:'',quantity:1,unitPrice:0}] };
+
+const GST_STATES = [
+ ['19','West Bengal'],['07','Delhi'],['27','Maharashtra'],['29','Karnataka'],['33','Tamil Nadu'],
+ ['36','Telangana'],['37','Andhra Pradesh'],['24','Gujarat'],['09','Uttar Pradesh'],['08','Rajasthan'],
+ ['06','Haryana'],['03','Punjab'],['10','Bihar'],['20','Jharkhand'],['21','Odisha'],['22','Chhattisgarh'],
+ ['23','Madhya Pradesh'],['32','Kerala'],['30','Goa'],['18','Assam'],['05','Uttarakhand'],
+ ['02','Himachal Pradesh'],['01','Jammu & Kashmir'],['38','Ladakh'],['04','Chandigarh'],
+ ['11','Sikkim'],['12','Arunachal Pradesh'],['13','Nagaland'],['14','Manipur'],['15','Mizoram'],
+ ['16','Tripura'],['17','Meghalaya'],['26','Dadra & Nagar Haveli and Daman & Diu'],
+ ['31','Lakshadweep'],['34','Puducherry'],['35','Andaman & Nicobar Islands'],['97','Other Territory']
+];
+function _invStateName(c){ const r=GST_STATES.find(x=>x[0]===c); return r?r[1]:''; }
+function _invStateOpts(sel){ return GST_STATES.map(x=>
+  '<option value="'+x[0]+'"'+(x[0]===sel?' selected':'')+'>'+x[1]+'</option>').join(''); }
+
+function _invSeller(){ try{ return JSON.parse(localStorage.getItem('b_seller')||'{}'); }catch(e){ return {}; } }
+function _invSaveSeller(){
+  const g=id=>(document.getElementById(id)||{}).value||'';
+  try{ localStorage.setItem('b_seller', JSON.stringify({
+    name:g('inv-s-name'), address:g('inv-s-addr'), email:g('inv-s-email'), phone:g('inv-s-phone'),
+    upi:g('inv-s-upi'), gstin:g('inv-s-gstin'), state:g('inv-s-state'), pan:g('inv-s-pan'),
+    msme:g('inv-s-msme'), prefix:g('inv-s-prefix'), bankName:g('inv-k-bank'),
+    bankAcName:g('inv-k-acname'), bankAcNo:g('inv-k-acno'), bankIfsc:g('inv-k-ifsc'),
+    terms:g('inv-terms') })); }catch(e){}
+}
+function _invLatin(t){ return !/[^ -ÿ\r\n\t]/.test(String(t==null?'':t)); }
+function _invEsc(v){ return String(v==null?'':v)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _r2(n){ return Math.round((Number(n)||0)*100)/100; }
+function _money(n,cur){ return (cur||'INR')+' '+_r2(n).toLocaleString('en-IN',
+  {minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+/* Indian financial year, April to March. 6 Oct 2026 -> "26-27". */
+function _invFY(d){
+  d=d||new Date();
+  const y=d.getFullYear(), start = d.getMonth()>=3 ? y : y-1;
+  return String(start%100).padStart(2,'0')+'-'+String((start+1)%100).padStart(2,'0');
+}
+/* His series: SJO/22-23/MII/1 — prefix / FY / client code / serial. */
+function _invRef(){
+  const g=id=>((document.getElementById(id)||{}).value||'').trim();
+  const pre=g('inv-s-prefix')||'INV', fy=_invFY(), code=g('inv-client-code'), n=g('inv-serial')||'1';
+  return [pre,fy,code,n].filter(Boolean).join('/');
+}
+
+/* Amount in words, Indian system. His sheet uses a VBA Spellnumber macro;
+   a macro cannot ship in an .xlsx, so this is computed and written as text. */
+function _invWords(n){
+  n=Math.round(Number(n)||0);
+  if(n===0) return 'Zero Only';
+  const ones=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven',
+    'Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  const two=v=>v<20?ones[v]:(tens[Math.floor(v/10)]+(v%10?' '+ones[v%10]:''));
+  const three=v=>(v>=100?ones[Math.floor(v/100)]+' Hundred'+(v%100?' ':''):'')+(v%100?two(v%100):'');
+  let out='';
+  const cr=Math.floor(n/10000000); n%=10000000;
+  const lk=Math.floor(n/100000);   n%=100000;
+  const th=Math.floor(n/1000);     n%=1000;
+  if(cr) out+=three(cr)+' Crore ';
+  if(lk) out+=three(lk)+' Lakh ';
+  if(th) out+=three(th)+' Thousand ';
+  if(n)  out+=three(n);
+  return out.replace(/\s+/g,' ').trim()+' Only';
+}
+
+function _invTotals(){
+  const sub = INV.items.reduce((a,r)=>a + (Number(r.quantity)||0)*(Number(r.unitPrice)||0), 0);
+  const rv = Number((document.getElementById('inv-tax')||{}).value);
+  const rate = Number.isFinite(rv) ? rv : 0;
+  const sState=(document.getElementById('inv-s-state')||{}).value||'';
+  const bState=(document.getElementById('inv-b-state')||{}).value||'';
+  const inter = !!(sState && bState && sState!==bState);
+  const round = Number((document.getElementById('inv-round')||{}).value)||0;
+  const half=_r2(sub*(rate/2)/100);
+  const t={ sub:_r2(sub), rate, inter, round:_r2(round),
+            cgst: inter?0:half, sgst: inter?0:half, igst: inter?_r2(sub*rate/100):0,
+            sState, bState };
+  t.tax=_r2(t.cgst+t.sgst+t.igst);
+  t.total=_r2(t.sub+t.tax+t.round);
+  return t;
+}
+function _invRenderTotals(){
+  const t=_invTotals(), cur=((document.getElementById('inv-cur')||{}).value||'INR').toUpperCase();
+  const el=document.getElementById('inv-tot'); if(!el) return;
+  const half=t.rate/2;
+  el.innerHTML =
+     '<div style="font-size:11.5px;opacity:.8"><span>'
+   + (t.sState&&t.bState ? (t.inter
+        ? 'Inter-state &rarr; IGST applies'
+        : 'Within '+_invEsc(_invStateName(t.sState))+' &rarr; CGST + SGST')
+      : 'Choose both states') + '</span><span></span></div>'
+   + '<div><span>Taxable Value</span><span>'+_money(t.sub,cur)+'</span></div>'
+   + '<div><span>CGST @ '+half+'%</span><span>'+_money(t.cgst,cur)+'</span></div>'
+   + '<div><span>SGST @ '+half+'%</span><span>'+_money(t.sgst,cur)+'</span></div>'
+   + '<div><span>IGST @ '+t.rate+'%</span><span>'+_money(t.igst,cur)+'</span></div>'
+   + '<div><span>Round Off (+/-)</span><span>'+_money(t.round,cur)+'</span></div>'
+   + '<div class="grand"><span>Grand Total</span><span>'+_money(t.total,cur)+'</span></div>'
+   + '<div style="font-size:11px;opacity:.85;display:block;padding-top:6px">'
+   +   '<i>'+_invEsc(_invWords(t.total))+'</i></div>';
+}
+function _invRenderItems(){
+  const host=document.getElementById('inv-items'); if(!host) return;
+  host.innerHTML = INV.items.map((r,i)=>
+    '<div class="inv-row">'
+    + '<input placeholder="Description" value="'+_invEsc(r.description)+'" '
+    +   'oninput="INV.items['+i+'].description=this.value">'
+    + '<div class="inv-sub3">'
+    +   '<input placeholder="HSN/SAC" value="'+_invEsc(r.hsn||'')+'" oninput="INV.items['+i+'].hsn=this.value">'
+    +   '<input type="number" min="0" step="any" placeholder="Qty" value="'+_invEsc(r.quantity)+'" '
+    +     'oninput="INV.items['+i+'].quantity=this.value;_invRenderTotals()">'
+    +   '<input type="number" min="0" step="any" placeholder="Rate" value="'+_invEsc(r.unitPrice)+'" '
+    +     'oninput="INV.items['+i+'].unitPrice=this.value;_invRenderTotals()">'
+    +   (INV.items.length>1
+        ? '<button class="inv-del" onclick="INV.items.splice('+i+',1);_invRenderItems();_invRenderTotals()" aria-label="Remove line">&times;</button>'
+        : '<span style="width:26px"></span>')
+    + '</div></div>').join('');
+  _invRenderTotals();
+}
+function _invSetKind(k){
+  INV.kind=k;
+  document.getElementById('inv-b-invoice').classList.toggle('on',k==='invoice');
+  document.getElementById('inv-b-quote').classList.toggle('on',k==='quotation');
+  document.getElementById('inv-title').textContent = k==='invoice' ? 'Tax Invoice' : 'Quotation';
+  document.getElementById('inv-tax').value = k==='invoice' ? 18 : 0;
+  document.getElementById('inv-to-lbl').textContent = k==='invoice' ? 'Bill to' : 'Quotation for';
+  _invRenderTotals();
+}
+function _invMsg(t,cls){ const m=document.getElementById('inv-msg'); if(!m) return;
+  m.className=cls||''; m.innerHTML=t||''; }
+function _invGstinSync(w){
+  const m=String(document.getElementById('inv-'+w+'-gstin').value||'').trim().toUpperCase().match(/^(\d{2})/);
+  if(m && _invStateName(m[1])) document.getElementById('inv-'+w+'-state').value=m[1];
+  _invRenderTotals();
+}
+function invToggleMore(){
+  const b=document.getElementById('inv-more');
+  const open=b.style.display!=='none';
+  b.style.display=open?'none':'block';
+  document.getElementById('inv-more-btn').textContent=open?'+ More details (PAN, MSME, bank, terms)':'– Hide extra details';
+}
+function closeInvoicePanel(){ const o=document.getElementById('inv-overlay'); if(o) o.remove(); }
+
+function openInvoicePanel(){
+  closeInvoicePanel();
+  const v=_invSeller();
+  const o=document.createElement('div');
+  o.id='inv-overlay';
+  o.addEventListener('click',e=>{ if(e.target===o) closeInvoicePanel(); });
+  const due=new Date(Date.now()+7*864e5).toISOString().slice(0,10);
+  o.innerHTML =
+   '<div id="inv-card" role="dialog" aria-label="Invoice">'
+  +  '<div id="inv-head"><div id="inv-title">Tax Invoice</div>'
+  +    '<button id="inv-close" onclick="closeInvoicePanel()" aria-label="Close">&times;</button></div>'
+  +  '<div id="inv-body">'
+  +    '<div class="inv-seg">'
+  +      '<button id="inv-b-invoice" class="on" onclick="_invSetKind(\'invoice\')">Invoice</button>'
+  +      '<button id="inv-b-quote" onclick="_invSetKind(\'quotation\')">Quotation</button>'
+  +    '</div>'
+  +    '<div class="inv-lbl">Your details &middot; remembered on this device</div>'
+  +    '<input id="inv-s-name" placeholder="Your business name" value="'+_invEsc(v.name)+'">'
+  +    '<div style="height:8px"></div>'
+  +    '<input id="inv-s-addr" placeholder="Registered office address" value="'+_invEsc(v.address)+'">'
+  +    '<div style="height:8px"></div>'
+  +    '<div class="inv-grid2">'
+  +      '<input id="inv-s-email" placeholder="Email" value="'+_invEsc(v.email)+'">'
+  +      '<input id="inv-s-phone" placeholder="Phone" value="'+_invEsc(v.phone)+'">'
+  +    '</div><div style="height:8px"></div>'
+  +    '<div class="inv-grid2">'
+  +      '<input id="inv-s-gstin" placeholder="Your GSTIN" maxlength="15" value="'+_invEsc(v.gstin)+'" '
+  +        'oninput="this.value=this.value.toUpperCase();_invGstinSync(\'s\')">'
+  +      '<select id="inv-s-state" onchange="_invRenderTotals()">'+_invStateOpts(v.state||'19')+'</select>'
+  +    '</div><div style="height:8px"></div>'
+  +    '<input id="inv-s-upi" placeholder="UPI ID (for the payment QR)" value="'+_invEsc(v.upi)+'">'
+  +    '<button id="inv-more-btn" onclick="invToggleMore()">+ More details (PAN, MSME, bank, terms)</button>'
+  +    '<div id="inv-more" style="display:none">'
+  +      '<div class="inv-grid2" style="margin-top:8px">'
+  +        '<input id="inv-s-pan" placeholder="Your PAN" value="'+_invEsc(v.pan)+'">'
+  +        '<input id="inv-s-msme" placeholder="MSME / UDYAM" value="'+_invEsc(v.msme)+'">'
+  +      '</div><div style="height:8px"></div>'
+  +      '<div class="inv-grid2">'
+  +        '<input id="inv-k-bank" placeholder="Bank & branch" value="'+_invEsc(v.bankName)+'">'
+  +        '<input id="inv-k-acname" placeholder="Account name" value="'+_invEsc(v.bankAcName)+'">'
+  +      '</div><div style="height:8px"></div>'
+  +      '<div class="inv-grid2">'
+  +        '<input id="inv-k-acno" placeholder="Account number" value="'+_invEsc(v.bankAcNo)+'">'
+  +        '<input id="inv-k-ifsc" placeholder="IFSC" value="'+_invEsc(v.bankIfsc)+'">'
+  +      '</div><div style="height:8px"></div>'
+  +      '<textarea id="inv-terms" rows="2" placeholder="Terms — payment, jurisdiction, interest">'
+  +        _invEsc(v.terms||'Payment Terms: 100% within 7 days of receipt of original invoice. All disputes subject to Kolkata jurisdiction.')
+  +      '</textarea>'
+  +    '</div>'
+  +    '<div class="inv-lbl">Bill number</div>'
+  +    '<div class="inv-grid3">'
+  +      '<input id="inv-s-prefix" placeholder="Prefix" value="'+_invEsc(v.prefix||'INV')+'" oninput="_invRefPreview()">'
+  +      '<input id="inv-client-code" placeholder="Client code" oninput="_invRefPreview()">'
+  +      '<input id="inv-serial" placeholder="No." value="1" oninput="_invRefPreview()">'
+  +    '</div>'
+  +    '<div class="inv-hint" id="inv-ref-preview"></div>'
+  +    '<div class="inv-lbl" id="inv-to-lbl">Bill to</div>'
+  +    '<input id="inv-b-name" placeholder="Client name">'
+  +    '<div style="height:8px"></div>'
+  +    '<input id="inv-b-addr" placeholder="Client address">'
+  +    '<div style="height:8px"></div>'
+  +    '<div class="inv-grid2">'
+  +      '<input id="inv-b-gstin" placeholder="Client GSTIN" maxlength="15" '
+  +        'oninput="this.value=this.value.toUpperCase();_invGstinSync(\'b\')">'
+  +      '<select id="inv-b-state" onchange="_invRenderTotals()">'+_invStateOpts('19')+'</select>'
+  +    '</div><div style="height:8px"></div>'
+  +    '<div class="inv-grid2">'
+  +      '<input id="inv-b-pan" placeholder="Client PAN">'
+  +      '<input id="inv-due" type="date" value="'+due+'">'
+  +    '</div>'
+  +    '<div class="inv-hint">Same state gives CGST + SGST; a different state gives IGST. In the Excel file this is a formula, so changing a state there re-rates the invoice.</div>'
+  +    '<div class="inv-lbl">What this is for</div>'
+  +    '<input id="inv-narration" placeholder="e.g. Consultancy Charges for October 2026">'
+  +    '<div class="inv-lbl">Items</div>'
+  +    '<div id="inv-items"></div>'
+  +    '<button id="inv-add" onclick="INV.items.push({description:\'\',hsn:\'\',quantity:1,unitPrice:0});_invRenderItems()">+ Add a line</button>'
+  +    '<div class="inv-lbl">GST rate, round off and currency</div>'
+  +    '<div class="inv-grid3">'
+  +      '<select id="inv-tax" onchange="_invRenderTotals()">'
+  +        ['0','5','12','18','28'].map(r=>'<option value="'+r+'"'+(r==='18'?' selected':'')+'>'+r+'% GST</option>').join('')
+  +      '</select>'
+  +      '<input id="inv-round" type="number" step="any" value="0" placeholder="Round off" oninput="_invRenderTotals()">'
+  +      '<input id="inv-cur" value="INR" maxlength="3" oninput="_invRenderTotals()" placeholder="Cur">'
+  +    '</div>'
+  +    '<div class="inv-lbl">Notes</div>'
+  +    '<textarea id="inv-notes" rows="2" placeholder="Thank you for your business."></textarea>'
+  +    '<div id="inv-tot"></div>'
+  +    '<div id="inv-msg"></div>'
+  +    '<div id="inv-acts">'
+  +      '<button id="inv-xlsx" onclick="invDownload(\'xlsx\')">Excel &middot; live</button>'
+  +      '<button id="inv-docx" onclick="invDownload(\'docx\')">Word &middot; editable</button>'
+  +      '<button id="inv-pdf" onclick="invDownload(\'pdf\')">PDF</button>'
+  +      '<button id="inv-upi" onclick="invShowUpiQr()">Payment QR</button>'
+  +    '</div>'
+  +    '<div id="inv-qr"></div>'
+  +  '</div></div>';
+  document.body.appendChild(o);
+  _invRenderItems(); _invRefPreview();
+}
+function _invRefPreview(){
+  const e=document.getElementById('inv-ref-preview');
+  if(e) e.textContent='Bill No. will read: '+_invRef();
+}
+
+function _invCollect(){
+  const g=id=>((document.getElementById(id)||{}).value||'').trim();
+  _invSaveSeller();
+  const items=INV.items
+    .map(r=>({description:String(r.description||'').trim(), hsn:String(r.hsn||'').trim(),
+              quantity:Number(r.quantity), unitPrice:Number(r.unitPrice)}))
+    .filter(r=>r.description || r.quantity || r.unitPrice);
+  if(!items.length) return {error:'Add at least one line item.'};
+  for(let i=0;i<items.length;i++){
+    if(!items[i].description) return {error:'Line '+(i+1)+' needs a description.'};
+    if(!Number.isFinite(items[i].quantity)||items[i].quantity<0) return {error:'Line '+(i+1)+' needs a quantity.'};
+    if(!Number.isFinite(items[i].unitPrice)||items[i].unitPrice<0) return {error:'Line '+(i+1)+' needs a rate.'};
+  }
+  if(!g('inv-s-name')) return {error:'Add your business name.'};
+  if(!g('inv-b-name')) return {error:'Add the client name.'};
+  return {
+    seller:{name:g('inv-s-name'),address:g('inv-s-addr'),email:g('inv-s-email'),phone:g('inv-s-phone'),
+            gstin:g('inv-s-gstin'),pan:g('inv-s-pan'),msme:g('inv-s-msme'),
+            state:_invStateName(g('inv-s-state'))},
+    buyer:{name:g('inv-b-name'),address:g('inv-b-addr'),gstin:g('inv-b-gstin'),pan:g('inv-b-pan'),
+           state:_invStateName(g('inv-b-state'))},
+    bank:{name:g('inv-k-bank'),acName:g('inv-k-acname'),acNo:g('inv-k-acno'),ifsc:g('inv-k-ifsc')},
+    items, t:_invTotals(), currency:(g('inv-cur')||'INR').toUpperCase(),
+    notes:g('inv-notes'), terms:g('inv-terms'), narration:g('inv-narration'),
+    due:g('inv-due'), ref:_invRef()
+  };
+}
+
+/* ── THE LIVE SHEET ────────────────────────────────────────────────────────
+   Columns A..F.  A:SL/label  B:Description  C:HSN  D:Qty  E:Rate  F:Amount.
+   Every money cell is a FORMULA, exactly as his sheet does it. Row numbers are
+   computed as the array is built, so adding a line cannot break a reference.  */
+function _invAoa(d){
+  const t=d.t, cur=d.currency, R=[];
+  const push=r=>{ R.push(r); return R.length; };          // returns 1-based row
+  push([d.seller.name||'','','','','','']);
+  push([]);
+  push(['Registered Office : '+(d.seller.address||''),'','','','','']);
+  push(['GSTIN : '+(d.seller.gstin||'')+'   |   MSME : '+(d.seller.msme||'')+'   |   PAN : '+(d.seller.pan||''),'','','','','']);
+  push(['E-mail : '+(d.seller.email||'')+'   |   Phone No : '+(d.seller.phone||''),'','','','','']);
+  push(['(Client Copy/Duplicate/Triplicate/Office copy)','','','','','']);
+  push([INV.kind==='invoice'?'TAX INVOICE':'QUOTATION','','','','','']);
+  push(['Client Details','','','','Bill Details','']);
+  push(['Client Name :',d.buyer.name,'','','Bill No. :',d.ref]);
+  push(['Address :',d.buyer.address,'','','Bill Date :',new Date().toLocaleDateString('en-IN')]);
+  push(['PAN No. :',d.buyer.pan,'','','Payment Due Date :',d.due||'']);
+  push(['GSTIN :',d.buyer.gstin,'','','','']);
+  const rSupplyBuyer = push(['State :',d.buyer.state,'','','','']);
+  const rSupplySeller= push(['Your State :',d.seller.state,'','','','']);
+  /* THE LIVE SWITCH. Change either state cell in Excel and every GST row
+     below re-rates, because all three key off this one formula. */
+  const rType = push(['Supply Type :','=IF(EXACT(B'+rSupplyBuyer+',B'+rSupplySeller+'),"Intra","Inter")',
+                      '','','','']);
+  push(['Description :',d.narration||'','','','','']);
+  push([]);
+  if(d.narration) push(['Being amount charged towards '+d.narration+'.','','','','','']);
+  push([]);
+  const rHead = push(['SL. No.','Description','HSN/SAC','Qty','Rate ('+cur+')','Amount ('+cur+')']);
+  const rFirst = rHead+1;
+  d.items.forEach((r,i)=>{
+    const rn = rFirst+i;
+    push([i+1, r.description, r.hsn, r.quantity, r.unitPrice, '=D'+rn+'*E'+rn]);   // his P20=L20*J20
+  });
+  const rLast = rFirst + d.items.length - 1;
+  push([]);
+  const rTaxable = push(['Total','','','=SUM(D'+rFirst+':D'+rLast+')','Taxable Value',
+                         '=SUM(F'+rFirst+':F'+rLast+')']);
+  const rC = push(['','','','','CGST @',0]);       // rate + amount filled below
+  const rS = push(['','','','','SGST @',0]);
+  const rI = push(['','','','','IGST @',0]);
+  const rR = push(['','','','','Round Off (+/-)', t.round]);
+  const rG = push(['','','','','Grand Total','=SUM(F'+rTaxable+':F'+rR+')']);
+  /* Rate in its OWN cell (col D, mirroring his col O), amount a formula in F. */
+  R[rC-1][3]=t.rate/200; R[rC-1][5]='=IF($B$'+rType+'="Intra",$F$'+rTaxable+'*D'+rC+',0)';
+  R[rS-1][3]=t.rate/200; R[rS-1][5]='=IF($B$'+rType+'="Intra",$F$'+rTaxable+'*D'+rS+',0)';
+  R[rI-1][3]=t.rate/100; R[rI-1][5]='=IF($B$'+rType+'="Inter",$F$'+rTaxable+'*D'+rI+',0)';
+  push([]);
+  push(['Amount In Words :','=F'+rG,'','','','']);
+  push(['E & O.E.','','','','','']);
+  push([]);
+  /* HSN summary — live, via SUMIF, so it follows the lines above. */
+  const uniq=[...new Set(d.items.map(r=>r.hsn).filter(Boolean))];
+  if(uniq.length){
+    push(['HSN/SAC','Taxable Value','Central Tax','State Tax','IGST/UGST','Total Tax']);
+    uniq.forEach(h=>{
+      const rn=R.length+1;
+      const tx='SUMIF($C$'+rFirst+':$C$'+rLast+',A'+rn+',$F$'+rFirst+':$F$'+rLast+')';
+      push([h,'='+tx,
+        '=IF($B$'+rType+'="Intra",B'+rn+'*$D$'+rC+',0)',
+        '=IF($B$'+rType+'="Intra",B'+rn+'*$D$'+rS+',0)',
+        '=IF($B$'+rType+'="Inter",B'+rn+'*$D$'+rI+',0)',
+        '=C'+rn+'+D'+rn+'+E'+rn]);
+    });
+  }
+  if(d.bank.name||d.bank.acNo){
+    push([]); push(['BANK ACCOUNT DETAILS','','','','','']);
+    push(['Bank Name & Branch',d.bank.name,'','','','']);
+    push(['Account Name',d.bank.acName,'','','','']);
+    push(['Account Number',d.bank.acNo,'','','','']);
+    push(['IFSC Code',d.bank.ifsc,'','','','']);
+  }
+  if(d.terms){ push([]); push(['Terms :',d.terms,'','','','']); }
+  if(d.notes){ push([]); push(['Notes :',d.notes,'','','','']); }
+  push([]); push(['For',d.seller.name,'','','For',d.buyer.name]);
+  return R;
+}
+
+function _invDocLines(d){
+  const t=d.t, cur=d.currency, half=t.rate/2, L=[];
+  L.push({heading:(INV.kind==='invoice'?'TAX INVOICE':'QUOTATION')});
+  L.push({text:d.seller.name,bold:true});
+  if(d.seller.address) L.push({text:'Registered Office: '+d.seller.address});
+  L.push({text:'GSTIN: '+(d.seller.gstin||'—')+'   |   MSME: '+(d.seller.msme||'—')+'   |   PAN: '+(d.seller.pan||'—')});
+  L.push({text:'E-mail: '+(d.seller.email||'—')+'   |   Phone: '+(d.seller.phone||'—')});
+  L.push({text:'(Client Copy/Duplicate/Triplicate/Office copy)'});
+  L.push({text:''});
+  L.push({text:'Bill No.: '+d.ref+'    Bill Date: '+new Date().toLocaleDateString('en-IN')
+          +(d.due?('    Due: '+d.due):'')});
+  L.push({text:''});
+  L.push({heading:'Client Details'});
+  L.push({text:d.buyer.name,bold:true});
+  if(d.buyer.address) L.push({text:d.buyer.address});
+  L.push({text:'PAN: '+(d.buyer.pan||'—')+'    GSTIN: '+(d.buyer.gstin||'—')});
+  L.push({text:'State (place of supply): '+d.buyer.state});
+  if(d.narration){ L.push({text:''}); L.push({text:'Being amount charged towards '+d.narration+'.'}); }
+  L.push({text:''});
+  L.push({heading:'Items'});
+  d.items.forEach((r,i)=>L.push({text:(i+1)+'. '+r.description+(r.hsn?'  (HSN/SAC '+r.hsn+')':'')
+    +'  —  '+r.quantity+' x '+_money(r.unitPrice,cur)+' = '+_money(_r2(r.quantity*r.unitPrice),cur)}));
+  L.push({text:''});
+  L.push({heading:t.inter?'Tax — inter-state supply (IGST)':'Tax — supply within '+d.seller.state+' (CGST + SGST)'});
+  L.push({text:'Taxable Value: '+_money(t.sub,cur)});
+  L.push({text:'CGST @ '+half+'%: '+_money(t.cgst,cur)});
+  L.push({text:'SGST @ '+half+'%: '+_money(t.sgst,cur)});
+  L.push({text:'IGST @ '+t.rate+'%: '+_money(t.igst,cur)});
+  L.push({text:'Round Off (+/-): '+_money(t.round,cur)});
+  L.push({text:'GRAND TOTAL: '+_money(t.total,cur),bold:true});
+  L.push({text:'Amount In Words: '+_invWords(t.total),bold:true});
+  L.push({text:'E & O.E.'});
+  if(d.bank.name||d.bank.acNo){
+    L.push({text:''}); L.push({heading:'Bank Account Details'});
+    L.push({text:'Bank: '+(d.bank.name||'—')+'    Account Name: '+(d.bank.acName||'—')});
+    L.push({text:'Account Number: '+(d.bank.acNo||'—')+'    IFSC: '+(d.bank.ifsc||'—')});
+  }
+  if(d.terms){ L.push({text:''}); L.push({text:d.terms}); }
+  if(d.notes){ L.push({text:''}); L.push({text:d.notes}); }
+  return L;
+}
+
+function _invFileName(d,ext){
+  return (INV.kind==='invoice'?'Invoice-':'Quotation-')
+    + (d.ref.replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'')||'bill') + '.' + ext;
+}
+function _invSave(blob,name){
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+
+async function invDownload(fmt){
+  const d=_invCollect();
+  if(d.error){ _invMsg(d.error,'err'); return; }
+  const btnId = fmt==='pdf'?'inv-pdf':(fmt==='xlsx'?'inv-xlsx':'inv-docx');
+  if(fmt==='pdf'){
+    const checks=[['your business name',d.seller.name],['your address',d.seller.address],
+      ['the client name',d.buyer.name],['the client address',d.buyer.address],['the notes',d.notes]]
+      .concat(d.items.map((r,i)=>['line '+(i+1)+"'s description",r.description]));
+    const bad=checks.filter(c=>c[1]&&!_invLatin(c[1])).map(c=>c[0]);
+    if(bad.length){
+      _invMsg('A PDF can only carry English letters, so '+bad.join(', ')+
+        ' would come out blank for your client. Use Excel or Word — those keep Bengali and Hindi perfectly.','err');
+      return;
+    }
+  }
+  const btn=document.getElementById(btnId); if(btn) btn.disabled=true;
+  _invMsg('Preparing your '+(fmt==='pdf'?'PDF':(fmt==='xlsx'?'Excel file':'Word file'))+'…','');
+  try{
+    let r;
+    if(fmt==='pdf'){
+      const body = INV.kind==='invoice'
+        ? {seller:d.seller,buyer:d.buyer,items:d.items,taxRate:d.t.rate,currency:d.currency,
+           notes:d.notes,invoiceNumber:d.ref,format:'pdf'}
+        : {company:d.seller,clientName:d.buyer.name,items:d.items,taxRate:d.t.rate,
+           currency:d.currency,notes:d.notes,format:'pdf'};
+      r=await bfetch(BACKEND+'/'+(INV.kind==='invoice'?'generate-invoice':'generate-quotation'),
+        {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    }else{
+      r=await bfetch(BACKEND+'/create-document',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({format:fmt,
+          title:(INV.kind==='invoice'?'Tax Invoice':'Quotation')+' '+d.ref,
+          content: fmt==='xlsx' ? _invAoa(d) : _invDocLines(d)})});
+    }
+    if(!r.ok){
+      let msg='That did not work.';
+      try{ const e=await r.json(); msg=e.error||msg; if(e.details&&e.details.length) msg+=' ('+e.details.join('; ')+')'; }catch(_){}
+      _invMsg(msg,'err'); return;
+    }
+    _invSave(await r.blob(), _invFileName(d,fmt));
+    _invMsg('Saved to your Downloads folder.' + (
+      fmt==='xlsx' ? ' <b>It is live</b> — change a rate, a quantity or either state cell and the whole invoice recalculates.'
+    : fmt==='docx' ? ' Word text is editable, but it cannot recalculate — use the Excel file for that.'
+    : ' <b>Note:</b> the PDF shows one combined tax line. Excel and Word carry the full CGST / SGST / IGST breakdown.'),'ok');
+  }catch(e){
+    _invMsg('Could not reach Bella just now. Your details are kept — try again in a moment.','err');
+  }finally{ const b=document.getElementById(btnId); if(b) b.disabled=false; }
+}
+
+async function invShowUpiQr(){
+  const d=_invCollect();
+  if(d.error){ _invMsg(d.error,'err'); return; }
+  const upi=((document.getElementById('inv-s-upi')||{}).value||'').trim();
+  if(!upi){ _invMsg('Add your UPI ID above and the QR will carry the exact amount.','err'); return; }
+  if(d.currency!=='INR'){ _invMsg('A UPI QR can only be paid in rupees. Set the currency to INR.','err'); return; }
+  if(d.t.total<=0){ _invMsg('The total is zero, so there is nothing to pay yet.','err'); return; }
+  const pn=d.seller.name.replace(/[^A-Za-z0-9 ]/g,'').trim().slice(0,30)||'Payee';
+  const link='upi://pay?pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent(pn)
+            +'&am='+d.t.total.toFixed(2)+'&cu=INR&tn='+encodeURIComponent(d.ref.slice(0,20));
+  const btn=document.getElementById('inv-upi'); if(btn) btn.disabled=true;
+  _invMsg('Making the payment code…','');
+  try{
+    const r=await bfetch(BACKEND+'/generate-qr',
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:link,size:420})});
+    const j=await r.json();
+    if(!r.ok||!j.qrBase64){ _invMsg((j&&j.error)||'Could not make the code.','err'); return; }
+    document.getElementById('inv-qr').innerHTML =
+      '<img alt="UPI payment code" src="data:image/png;base64,'+j.qrBase64+'">'
+      +'<div style="font-size:11.5px;color:#5A6B8A;margin-top:6px">Scan to pay '
+      +_money(d.t.total,d.currency)+' to '+_invEsc(upi)+'</div>';
+    _invMsg('','');
+  }catch(e){ _invMsg('Could not reach Bella just now.','err'); }
+  finally{ const b=document.getElementById('inv-upi'); if(b) b.disabled=false; }
+}
+</script>
+
+<script id="v87-workshop-data">
+/* ══════════════════════════════════════════════════════════════════════════
+   THE WORKSHOP LIST — THE SINGLE SOURCE OF TRUTH.   2026-10-06.
+
+   TO UPDATE THE LIST, EDIT ONLY THIS ARRAY. Nothing else needs touching.
+   When an ability gains a screen: move its entry up to zone 'live' and give it
+   a `fn`. That is the whole change — one line.
+
+   Shape:  [icon, label, zone, fn|null, note|'']
+   Zones:  'live'  Phase 1, works today, pressable
+           'built' Phase 1, backend is live and member-usable, screen not built
+           'p2'    Phase 2, needs per-user Google consent or the agentic loop
+           'p3'    Phase 3, needs hardware in the room
+
+   EVERY 'built' ENTRY WAS VERIFIED against the live backend on 2026-10-06 by
+   extracting the 128 app.get/post routes and checking each against
+   ADMIN_ONLY_PATHS. 'built' means a signed-in member can call it TODAY.
+   'p2' is not laziness — those endpoints exist but are locked to the admin
+   account, and opening them needs each user to authorise their OWN Google
+   account. That is a project, not a button, which is why they sit in Phase 2.
+   ══════════════════════════════════════════════════════════════════════════ */
+const WORKSHOP = [
+  // ── PHASE 1 · LIVE ──────────────────────────────────────────────────────
+  ['\u{1F399}️','Voice Recording','live','openVoiceRecording',''],
+  ['\u{1F4F9}','Video Recording','live','openVideoRecording',''],
+  ['\u{1F50D}','Web Search','live','openWebSearch',''],
+  ['⇄','Converter','live','openConverterPanel',''],
+  ['\u{1F3A8}','Image Studio','live','openImageStudio',''],
+  ['\u{1F324}️','Weather','live','openWeatherPanel',''],
+  ['\u{1F464}','My Profile','live','openMyProfile',''],
+  ['\u{1F4AC}','Feedback','live','openFeedback',''],
+
+  // ── PHASE 1 · BUILT, SCREEN COMING ──────────────────────────────────────
+  ['\u{1F9FE}','Invoices & Quotes','live','openInvoicePanel',''],
+  ['\u{1F4C4}','Documents & Slides','built',null,''],
+  ['\u{1F4DD}','Doc Edit & Convert','built',null,''],
+  ['\u{1F4D6}','Read Any File','built',null,''],
+  ['\u{1F310}','Translate','built',null,''],
+  ['\u{1F3A7}','Transcribe','built',null,''],
+  ['\u{1F5BC}️','Image Transform','built',null,''],
+  ['\u{1F4D1}','PDF Tools','built',null,''],
+  ['\u{1F4C8}','Data Analysis','built',null,''],
+  ['\u{1F4B0}','Money & Expenses','built',null,''],
+  ['✍️','Writing Help','built',null,''],
+  ['\u{1F393}','Study & Interview','built',null,''],
+  ['\u{1F9F3}','Travel','built',null,''],
+  ['✅','Reminders & Tasks','built',null,''],
+  ['\u{1F4CB}','Meeting Notes','built',null,''],
+  ['\u{1F49B}','Life Record','built',null,''],
+  ['\u{1F3A4}','Voice ID','built',null,''],
+  ['\u{1F4CA}','Charts & Graphs','built',null,'labels need a font fix'],
+  ['\u{1F5FA}️','Maps & Places','fix',null,'the places service it used was shut down'],
+
+  // ── PHASE 2 ─────────────────────────────────────────────────────────────
+  ['\u{1F4E7}','Gmail','p2',null,''],
+  ['\u{1F4C1}','Google Drive','p2',null,''],
+  ['\u{1F4C5}','Calendar','p2',null,''],
+  ['\u{1F91D}','Google Meet','p2',null,''],
+  ['\u{1F465}','Contacts','p2',null,''],
+  ['\u{1F514}','Proactive Bella','p2',null,'she speaks first'],
+  ['☀️','Morning Briefing','p2',null,''],
+  ['\u{1F4F2}','Notifications','p2',null,'reaches you with Bella closed'],
+  ['\u{1F3AC}','B-Meet','p2',null,'records a call, returns Word minutes'],
+  ['⬇️','Download My Data','p2',null,''],
+  ['\u{1F6E1}️','Audit & Usage','p2',null,'admin only'],
+
+  // ── PHASE 3 ─────────────────────────────────────────────────────────────
+  ['\u{1F5A5}️','Bella Presence','p3',null,'Tier 1 · ₹26,500'],
+  ['\u{1F916}','Companion','p3',null,'Tier 2 · ₹55,000'],
+  ['✨','Holographic Bella','p3',null,'Tier 3 · ₹2.5–4.4 lakh'],
+  ['\u{1F9BE}','Embodied','p3',null,'Tier 4'],
+  ['\u{1F5E3}️','"Hey Bella"','p3',null,'on-device only — never in the browser'],
+  ['\u{1F3E0}','Smart Home','p3',null,'nothing built yet'],
+];
+
+/* Zone headings. The note under each one explains WHY a zone is a zone — he
+   cannot read the code, so the page has to say it. */
+const WS_ZONES = [
+  ['live', '✦ Phase 1 · Working now', 'ON',
+   'Press any of these. The language button sits under each of Bella’s replies, and your conversations keep a 30-day Trash.'],
+  ['built','Phase 1 · Built, screen coming', 'SOON',
+   'Bella can already do these — they are live on the server and waiting on a screen. Invoices is being built first.'],
+  ['fix',  '⚠ Needs repair', 'FIX',
+   'This one is broken, not coming. It was listed as “Coming Soon”, which was not true.'],
+  ['p2',   'Phase 2 · Next', '2.0',
+   'Gmail, Drive, Calendar, Meet and Contacts each need YOUR OWN Google sign-in. That is deliberate — Bella asks you, reads only what you allow, and can never reach anyone else’s account. The rest needs Bella to act while the app is shut.'],
+  ['p3',   'Phase 3 · Bella in the room', '3.0',
+   'Your four tiers. No glasses, no headset. Prices move — these were last checked on 17 Sep 2026.'],
+];
+
+function wsRenderZone(key){
+  const body = document.getElementById('ws-body-' + key);
+  if(!body || body.dataset.filled === '1') return;       // render once, stay light
+  const items = WORKSHOP.filter(f => f[2] === key);
+  const badge = (WS_ZONES.find(z => z[0] === key) || [])[2] || '';
+  const cls   = key === 'live' ? ' ws-on' : (key === 'fix' ? ' ws-fix' : '');
+  let html = '<div class="feat-grid">';
+  for(const [icon,label,, fn, note] of items){
+    const on   = fn ? ' feat-on' : '';
+    const tap  = fn ? ' onclick="' + fn + '()"' : '';
+    const ttl  = note ? ' title="' + label + ' — ' + note + '"' : ' title="' + label + '"';
+    html += '<div class="feat-item' + on + '"' + tap + ttl + '>'
+          +   '<span class="feat-icon">' + icon + '</span>'
+          +   '<span class="feat-label">' + label + '</span>'
+          +   '<span class="feat-soon' + cls + '">' + badge + '</span>'
+          + '</div>';
+  }
+  body.innerHTML = html + '</div>';
+  body.dataset.filled = '1';
+}
+
+function wsToggleZone(key){
+  const z = document.getElementById('ws-zone-' + key);
+  if(!z) return;
+  const opening = !z.classList.contains('open');
+  if(opening) wsRenderZone(key);          // build the tiles only when first opened
+  z.classList.toggle('open', opening);
+}
+
+/* Builds the headers only. Tiles arrive per zone on first open, so opening the
+   Workshop costs 5 buttons of DOM, not 44 tiles — [[bella-must-be-light-on-devices]]. */
+function renderWorkshop(){
+  const host = document.getElementById('ws-zones');
+  if(!host || host.dataset.built === '1') return;
+  let html = '';
+  for(const [key,title,,note] of WS_ZONES){
+    const n = WORKSHOP.filter(f => f[2] === key).length;
+    if(!n) continue;
+    html += '<div class="ws-zone" id="ws-zone-' + key + '">'
+          +   '<button class="ws-zhead" onclick="wsToggleZone(\'' + key + '\')" '
+          +           'aria-label="' + title.replace(/"/g,'') + '">'
+          +     '<span class="ws-zcaret">▸</span>'
+          +     '<span class="ws-ztitle">' + title + '</span>'
+          +     '<span class="ws-zcount">' + n + '</span>'
+          +   '</button>'
+          +   '<div class="ws-zbody" id="ws-body-' + key + '">'
+          +     '<div class="ws-znote">' + note + '</div>'
+          +   '</div>'
+          + '</div>';
+  }
+  host.innerHTML = html;
+  host.dataset.built = '1';
+  wsToggleZone('live');                   // the things you can actually press, open first
+}
+</script>
 
 
 <script>
