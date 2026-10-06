@@ -6205,7 +6205,12 @@ async function send(){
   // isTimeSensitive survives only to decide whether to show the "looking that up" line,
   // which is a UX cue and must not fire on every message.
   const likelyLookup=isTimeSensitive(fullMsg);
-  if(likelyLookup){const ack=`One moment while I look that up...`;bellaMsg(ack);speakText(ack,lang);}
+  // The ack is driven by a ~30-word keyword list, while the DECISION to search
+  // belongs to Gemini — so "I am looking that up" can be said about a message
+  // the model then answers from memory. Search IS attached to every request
+  // (callBella(true) -> google_search), so this is not a lie, but it claims
+  // more certainty than we have. Wording made true either way.
+  if(likelyLookup){const ack=`One moment...`;bellaMsg(ack);speakText(ack,lang);}
   const userParts=[{text:`[User: ${currentAddressedName}]\n${fullMsg}`},...imagePartsForAPI];
   const hist=getHist();hist.push({role:'user',parts:userParts});setHist(hist);
   let reply=null;
@@ -6227,11 +6232,27 @@ async function send(){
     // Pull out the spoken-summary tag Gemini always appends (see voiceNote
     // above) — this is never shown on screen, only used to decide what to speak.
     let voiceSummary=null;
+    // Savio caught this live on 2026-10-06: a hospital answer rendered with a
+    // visible "[VOICE]- SVS Marwari Hospital is on..." block, so the reply read
+    // as if it had been pasted twice with a stray tag in the middle.
+    // CAUSE: both tags were required. The model had opened [VOICE] and never
+    // closed it, so nothing matched and the whole summary was shown as text.
+    // A model will not always obey a format instruction, and a strip that only
+    // works when it does is not a strip. Unclosed now runs to end-of-reply.
     const vMatch=reply.match(/\[VOICE\]([\s\S]*?)\[\/VOICE\]/i);
     if(vMatch){
       voiceSummary=vMatch[1].trim();
       reply=reply.replace(/\n*\[VOICE\][\s\S]*?\[\/VOICE\]\n*/i,'').trim();
+    }else{
+      const vOpen=reply.match(/\n*\[VOICE\]([\s\S]*)$/i);
+      if(vOpen){
+        voiceSummary=vOpen[1].replace(/\[\/?VOICE\]/ig,'').trim();
+        reply=reply.slice(0,vOpen.index).trim();
+      }
     }
+    // Belt and braces: a stray tag must never reach the screen, whatever shape
+    // the model produced.
+    reply=reply.replace(/\[\/?VOICE\]/ig,'').trim();
     const h=getHist();h.push({role:'model',parts:[{text:reply}]});setHist(h);
     const bellaMsgId=bellaMsg(reply);
     // Long answers (8+ sentences) speak only the short summary and point to
@@ -6289,6 +6310,43 @@ async function send(){
 // typed: anything that is not Bengali or Devanagari resolves to English, which
 // is exactly Savio's rule — English everywhere unless the message itself is in
 // Bengali, Hindi or Marathi. Costs about 20 tokens a message.
+
+/* WHERE THE USER ACTUALLY IS.   Added 2026-10-06, from Savio's own test.
+   He granted location at sign-in, asked for nearby hospitals, and was given
+   SVS Marwari Hospital on Amherst Street — while standing at Acropolis Mall.
+   TWO CAUSES, and neither was the search tool:
+     1. The page HAD his location all along. `initLocationWithCoords()` writes
+        sessionStorage['b_location_data'] = {city,country,area,lat,lon}, and
+        exactly TWO things read it: the weather cell and Thought of the Day.
+        It never reached the model, so granting permission did nothing for
+        conversation. The top bar knew where he was; Bella did not.
+     2. "Amherst Street" was never a guess. It is written into his own profile
+        in buildSystemPrompt(): "Wife Sanjukta is CEO of SVS Marwari Hospital,
+        Amherst Street, Kolkata." She answered from the family profile.
+   So this note does two jobs: it supplies the real location, and it tells her
+   in terms that a profile is history, not a current position. */
+function _whereTheyAreNote(){
+  let d=null;
+  try{ d=JSON.parse(sessionStorage.getItem('b_location_data')||'null'); }catch(e){}
+  if(!d || (!d.area && !d.city)){
+    return '\n\nWHERE THEY ARE: unknown — this device has not shared a location. '
+      + 'If the question depends on where they are ("near me", "nearby", "around here", '
+      + 'directions, local services), ASK WHERE THEY ARE before answering. '
+      + 'Never assume a location, and never take one from their background notes: a place '
+      + 'mentioned there is where someone works or lives, not where this person is standing now.';
+  }
+  const here=[d.area,d.city,d.country].filter(Boolean).join(', ');
+  const co=(typeof d.lat==='number'&&typeof d.lon==='number')
+    ? ' Their coordinates are '+d.lat.toFixed(4)+', '+d.lon.toFixed(4)+'.' : '';
+  return '\n\nWHERE THEY ARE RIGHT NOW: '+here+'.'+co
+    + ' Use THIS for anything local — "near me", "nearby", "around here", distances, directions, '
+    + 'opening hours, local services. '
+    + 'A place named in their background notes is where someone works or lives; it is NOT where '
+    + 'this person is standing, so never answer a "near me" question from it. '
+    + 'If they tell you they are somewhere else, believe them over this line. '
+    + 'Do not state a distance unless you actually looked it up — say "a few minutes away" or '
+    + 'name the area instead of inventing a figure.';
+}
 function _replyLangNote(){
   const NAMES={bn:'Bengali',hi:'Hindi',mr:'Marathi'};
   // A deliberate press of the language button OUTRANKS script detection. This is
@@ -6328,14 +6386,14 @@ async function callBella(useSearch,memCtx,signal){
   // always present and tells Gemini WHEN to reach for it. Previously the tool was
   // only attached when a keyword matched, so anything phrased outside that list was
   // answered from training data and came back out of date.
-  const searchNote='\n\nRESEARCH RULE — applies to every question. You have Google Search available and you must use it whenever the correct answer could have changed since your training data: prices, costs, rates, valuations, who currently holds a role or office, company and product facts, laws and rules, sports results, schedules, opening hours, news, and any question containing "current", "latest", "still", "now" or a year. If you are not certain your information is current, search — do not answer from memory and do not guess. Never state a fact that could be out of date without checking it first. When you have searched, give 3-5 bullet points with verifiable source links, and say when the information is from: cite medical sources for medical questions, official sources for government ones, industry reports for business data. When the question is personal, emotional, creative, or ordinary conversation, do not search — answer warmly as Bella normally would. Spoken summary: 2 sentences max — never speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).';
+  const searchNote='\n\nRESEARCH RULE — applies to every question. You have Google Search available and you must use it whenever the correct answer could have changed since your training data: prices, costs, rates, valuations, who currently holds a role or office, company and product facts, laws and rules, sports results, schedules, opening hours, news, and any question containing "current", "latest", "still", "now" or a year. If you are not certain your information is current, search — do not answer from memory and do not guess. Never state a fact that could be out of date without checking it first. When you have searched, give 3-5 bullet points with verifiable source links, and say when the information is from: cite medical sources for medical questions, official sources for government ones, industry reports for business data. When the question is personal, emotional, creative, or ordinary conversation, do not search — answer warmly as Bella normally would. Spoken summary: 2 sentences max — never speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).\n\nNEVER PROMISE AN ACTION YOU ARE NOT ABOUT TO PERFORM IN THIS SAME REPLY. You answer one message at a time and you cannot go away and come back. So never end with "let me find…", "let me check…", "I will look that up", "give me a moment", "I am searching now" or anything that leaves the person waiting for a second message. There is no second message. Either do it now and give the answer in this reply, or say plainly that you cannot and what you need from them. Savio saw this fail on 2026-10-06: asked for hospitals near Acropolis Mall, Bella replied "Let me find some hospitals near Acropolis Mall for you." and stopped, and he had to type "OK" to get an answer. That reads as a broken promise, which is worse than saying no.';
   // Savio, 2026-10-02: the Summarise button must give "a summary pointwise or highlight
   // her finding in short". It used to ask for 2-3 sentences of prose, so even when it
   // worked you got a paragraph, never highlights. The word cap is stated because an
   // uncapped 'short' came back as long as the answer itself.
   const voiceNote='\n\nAt the very end of your reply, on its own new line, always add a short summary of your answer in this exact format: [VOICE]- first point\\n- second point\\n- third point[/VOICE]. Rules for it: 3 to 5 points, each on its own line beginning with \"- \", each a single short clause, FORTY-FIVE WORDS IN TOTAL AT THE ABSOLUTE MOST. It must be dramatically shorter than your answer — it is the highlights, not a retelling. Write it in the SAME language as your reply. This tag is never shown as part of your answer; it is used for the spoken version and for the Summarise button.';
   const _opening=`Understood. I am Bella, ready to assist ${_activeAddressedName}.`;
-  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_replyLangNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
+  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_whereTheyAreNote()+_replyLangNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
   const r=await bfetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch}),signal});
   if(!r.ok)throw new Error('Backend error: '+r.status);
   const d=await r.json();
