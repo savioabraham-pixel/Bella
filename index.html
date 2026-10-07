@@ -2550,6 +2550,25 @@ async function loadUserMemory(profileKey,addressedName){
           lastSeen:d.user.lastSeen||'',
           proactiveFollowUp:d.user.proactiveFollowUp||''
         };
+        // ── THE RECORD IS THE SOURCE OF TRUTH FOR THE USER ID ──
+        // Every display of the id read b_userid out of browser storage, and that
+        // key was only ever written at registration. So an id corrected in the
+        // sheet — by the renumbering screen, or by anything else — NEVER reached
+        // the person's screen, and the device went on showing the old one
+        // indefinitely. Found 2026-10-07 when Savio asked whether applying the
+        // renumbering plan would change what he sees. It would not have.
+        // `/memory-read` returns the row as of v6.8, so the device can follow it.
+        if(d.user.userId && d.user.userId !== localStorage.getItem('b_userid')){
+          localStorage.setItem('b_userid', d.user.userId);
+          try{
+            const _su = JSON.parse(localStorage.getItem('b_registered_user') || '{}') || {};
+            _su.userId = d.user.userId;
+            localStorage.setItem('b_registered_user', JSON.stringify(_su));
+          }catch(e){}
+          // The top bar was painted before this call returned, so repaint it
+          // rather than leave the old id on screen until the next reload.
+          try{ updateTopbarUser(userMemory.addressedName || addressedName, d.user.userId); }catch(e){}
+        }
       }
       // Save/update user record in backend
       await bfetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey,addressedName,type:'user',email:cfg.userEmail||''})});
@@ -3051,6 +3070,15 @@ async function showRegistrationGateInner() {
   showNewUserGate();
 }
 
+// The OTP step used to assert "Test users: enter 123456". That number was NOT
+// read from Firebase — it was hardcoded in the markup below, so for any test
+// number configured with a different code the page confidently told the user the
+// wrong one. Savio hit exactly that on 2026-10-07: he entered the code the page
+// gave him and was told "Invalid OTP". Never name a code we cannot look up.
+//
+// Note on placement: the gate's HTML is built as a template string inside this
+// function, so an HTML comment written in there is shipped to the browser.
+// Explanations belong out here, in JS, where they cost the user nothing.
 function showNewUserGate() {
   const existing = document.getElementById('bella-gate');
   if (existing) existing.remove();
@@ -3262,7 +3290,7 @@ function showNewUserGate() {
           Resend OTP
         </button>
         <div style="font-size:10px;color:rgba(245,230,200,0.3);text-align:center;margin-top:12px">
-          Test users: enter <strong style="color:#D4AF37">123456</strong> if you are registered as a test number
+          Registered as a test number? Enter the code set for it in Firebase — no SMS is sent to test numbers.
         </div>
       </div>
     </div>`;
@@ -4398,9 +4426,14 @@ async function verifyReturningOTP(mobile) {
     }
     completeLogin(savedUser);
   } catch (e) {
-    if (errEl) errEl.textContent = 'Invalid OTP. Please try again.';
+    // Same correction as the registration path: name the real reason. "No OTP
+    // session" is thrown above when the code was never actually requested, and
+    // that is a different problem from a wrong code.
+    if (errEl) errEl.textContent = (e && e.message === 'No OTP session')
+      ? 'That code was never requested — press Resend to get a new one.'
+      : _otpVerifyErrText(e);
     if (btn) { btn.textContent = 'Verify & Enter Bella'; btn.disabled = false; }
-    console.error('Returning OTP verify error:', e);
+    console.error('Returning OTP verify error:', (e && e.code) || '', e);
   }
 }
 
@@ -4422,15 +4455,53 @@ async function verifyOTP() {
   const btn = document.querySelector('#gate-step-3 button');
   btn.textContent = 'Verifying...';
   btn.disabled = true;
-  try {
-    await _confirmationResult.confirm(otp);
-    // OTP verified — complete registration
-    await completeRegistration();
-  } catch (e) {
-    errEl.textContent = 'Invalid OTP. Please try again.';
+  // ── TWO FAILURES, TWO MESSAGES ──
+  // completeRegistration() used to sit inside the SAME try as confirm(), so a
+  // backend write that failed AFTER a perfectly good code still displayed
+  // "Invalid OTP. Please try again." — sending the user back to retype a code
+  // that was never the problem. The two are separated here, and the real
+  // Firebase error code is shown rather than one catch-all sentence. Same fault,
+  // and same fix, as the sending path earlier on 2026-10-07.
+  if (!_confirmationResult) {
+    errEl.textContent = 'That code was never requested — press Resend to get a new one.';
     btn.textContent = 'Verify & Enter Bella';
     btn.disabled = false;
+    return;
   }
+  try {
+    await _confirmationResult.confirm(otp);
+  } catch (e) {
+    errEl.textContent = _otpVerifyErrText(e);
+    btn.textContent = 'Verify & Enter Bella';
+    btn.disabled = false;
+    console.error('OTP verify error:', (e && e.code) || '', e);
+    return;
+  }
+  // Past this line the number IS verified. Anything that fails now is a
+  // registration problem and must never be reported as a bad code.
+  try {
+    await completeRegistration();
+  } catch (e) {
+    errEl.textContent = 'Your number is verified, but setting up your account failed: ' +
+                        ((e && e.message) || 'unknown error') + '. Nothing is lost — press Verify to try again.';
+    btn.textContent = 'Verify & Enter Bella';
+    btn.disabled = false;
+    console.error('Registration error after a VALID OTP:', e);
+  }
+}
+
+// The codes Firebase actually returns when a code is refused, each said plainly.
+function _otpVerifyErrText(e){
+  const c = (e && e.code) || '';
+  if (c === 'auth/invalid-verification-code') return 'That code is not right. Check it and try again.';
+  if (c === 'auth/code-expired' || c === 'auth/session-expired')
+    return 'That code has expired. Press Resend to get a new one.';
+  if (c === 'auth/invalid-verification-id') return 'This sign-in attempt timed out. Press Resend to start again.';
+  if (c === 'auth/too-many-requests') return 'Too many attempts. Please wait a few minutes before trying again.';
+  if (c === 'auth/credential-already-in-use')
+    return 'This mobile number is already attached to another Bella account.';
+  if (c === 'auth/network-request-failed') return 'No connection. Check your internet and try again.';
+  return 'Could not verify that code' + (c ? ' (' + c + ')' : '') + '. Press Resend and try again.';
 }
 
 async function completeRegistration() {
