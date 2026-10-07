@@ -7301,7 +7301,7 @@ function bellaMsg(text,audioUrl){
   // Restore rendered tables last so their markup is never touched by the inline passes.
   formatted=formatted.replace(/@@BELLATABLE(\d+)@@/g,(m0,i)=>_tbl.tables[+i]||'');
   const msgId='msg-'+(++_msgSeq);
-  w.innerHTML=`<div class="mav b">B</div><div class="msg-wrap"><div class="mbub" id="${msgId}">${formatted}</div><div class="msg-actions"><button class="msg-act-btn lang-act-btn" onclick="openLangPick(event)" title="Bella writes and speaks in this language"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 010 20a15 15 0 010-20"/></svg><span class="lang-act-label">${langBtnLabel()}</span></button>${audioUrl?`<button class="msg-act-btn" onclick="autoPlay('${audioUrl}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>Replay</button>`:''}<button class="msg-act-btn" id="mute-${msgId}" onclick="toggleMsgSpeech('${msgId}')" title="Pause her voice — the words stay on screen"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>Mute</button><button class="msg-act-btn" onclick="copyMsg('${msgId}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button></div></div>`;
+  w.innerHTML=`<div class="mav b">B</div><div class="msg-wrap"><div class="mbub" id="${msgId}">${formatted}</div><div class="msg-actions"><button class="msg-act-btn lang-act-btn" onclick="openLangPick(event)" title="Bella writes and speaks in this language"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 010 20a15 15 0 010-20"/></svg><span class="lang-act-label">${langBtnLabel()}</span></button><button class="msg-act-btn tl-msg-btn" onclick="tlTranslateMsg('${msgId}')" title="Translate what Bella said"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h7M7 5c0 4-2 7-5 8"/><path d="M5 10c0 3 3 5 6 5"/><path d="M13 20l4-10 4 10M14.5 17h5"/></svg>Translate</button>${audioUrl?`<button class="msg-act-btn" onclick="autoPlay('${audioUrl}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>Replay</button>`:''}<button class="msg-act-btn" id="mute-${msgId}" onclick="toggleMsgSpeech('${msgId}')" title="Pause her voice — the words stay on screen"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>Mute</button><button class="msg-act-btn" onclick="copyMsg('${msgId}')"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button></div></div>`;
   m.appendChild(w);m.scrollTop=m.scrollHeight;
   return msgId;
 }
@@ -11326,6 +11326,1172 @@ async function invShowUpiQr(){
 }
 </script>
 
+<style id="v88-tools">
+/* ══════════════════════════════════════════════════════════════════════════
+   THE TOOL PANEL AND THE TRANSLATOR.   Added 2026-10-07.
+
+   Savio: "we need a translation feature text & voice for Bella" and "i want the
+   entire Translator model built at one time bits and pieces i forget".
+
+   WHY ONE PANEL AND NOT TWELVE SCREENS. Twelve Workshop tiles are the same shape
+   underneath -- give Bella something, get something back. One engine driven by
+   the TOOLS array renders all of them, which keeps the property he built into
+   the Workshop on 2026-10-06: giving a tile an `fn` is the whole promotion. A
+   new tool is one row in an array, not a new screen.
+
+   DARK MODE: every colour here is a hardcoded hex under an ID selector, never a
+   brand token and never an inline style -- `body.dark button{...!important}`
+   beats inline styles and the brand tokens invert under body.dark. Same rule
+   that fixed the Drive button, #tb-menu-btn and the invoice panel.
+
+   DEVANAGARI: every control carries 'BellaIndic' first. Without it, Hindi and
+   Marathi render as Latin junk at font-weight 500 -- and a translator is the one
+   screen guaranteed to be full of Indic text.
+   ══════════════════════════════════════════════════════════════════════════ */
+#tl-overlay{position:fixed;inset:0;background:rgba(11,37,69,.72);backdrop-filter:blur(10px);
+  z-index:540;display:flex;align-items:center;justify-content:center;padding:14px}
+#tl-card{background:#FFFFFF;border-radius:20px;width:100%;max-width:580px;max-height:92vh;
+  display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.3)}
+#tl-head{background:#0B2545;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+#tl-back{background:none;border:none;color:rgba(245,230,200,.75);font-size:19px;cursor:pointer;
+  padding:2px 4px;line-height:1;display:none}
+#tl-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:#F5E6C8;flex:1;
+  line-height:1.2}
+#tl-close{background:none;border:none;color:rgba(245,230,200,.65);font-size:20px;cursor:pointer;
+  padding:2px 6px;line-height:1}
+#tl-body{padding:14px 16px 18px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+/* The tool list, when a tile holds more than one tool. */
+#tl-overlay .tl-pick{display:block;width:100%;text-align:left;padding:12px 13px;margin-bottom:7px;
+  border-radius:12px;border:1.5px solid rgba(11,37,69,.14);background:#FAF8F4;cursor:pointer;
+  font-family:'BellaIndic','DM Sans',sans-serif}
+#tl-overlay .tl-pick:hover{border-color:#D4AF37}
+#tl-overlay .tl-pick-n{font-size:14px;font-weight:600;color:#0B2545;display:block}
+#tl-overlay .tl-pick-d{font-size:11.5px;color:#5A6B8A;display:block;margin-top:2px;line-height:1.4}
+
+/* Fields. Nothing shares a row -- measured at 320px, two controls on one line
+   truncate their own labels, which is the fault that was fixed in the Converter. */
+#tl-overlay .tl-lbl{font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;
+  color:#5A6B8A;margin:12px 0 5px}
+#tl-overlay input,#tl-overlay textarea,#tl-overlay select{width:100%;padding:10px 12px;
+  border-radius:10px;border:1.5px solid rgba(11,37,69,.15);background:#FAF8F4;color:#0B2545;
+  font-size:14px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;box-sizing:border-box;
+  -webkit-appearance:none;appearance:none}
+#tl-overlay textarea{min-height:92px;resize:vertical;line-height:1.5}
+#tl-overlay input:focus,#tl-overlay textarea:focus,#tl-overlay select:focus{border-color:#D4AF37}
+#tl-overlay .tl-hint{font-size:11px;line-height:1.45;color:#5A6B8A;margin-top:5px}
+#tl-overlay .tl-file{font-size:12.5px;color:#39485C;margin-top:5px}
+
+/* The run button, and the 44px minimum every tappable thing needs on a phone. */
+#tl-overlay .tl-go{width:100%;margin-top:16px;min-height:46px;padding:12px;border-radius:12px;
+  border:none;background:#0B2545;color:#F5E6C8;font-size:14.5px;font-weight:600;cursor:pointer;
+  font-family:'BellaIndic','DM Sans',sans-serif}
+#tl-overlay .tl-go[disabled]{opacity:.55;cursor:default}
+#tl-overlay .tl-act{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+#tl-overlay .tl-act button{flex:1 1 auto;min-width:92px;min-height:40px;padding:9px 10px;
+  border-radius:10px;border:1.5px solid rgba(11,37,69,.18);background:#FAF8F4;color:#0B2545;
+  font-size:12.5px;font-weight:600;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif}
+#tl-overlay .tl-act button:hover{border-color:#D4AF37}
+
+/* The answer. Given its own surface so it reads as Bella's reply, not as more form. */
+#tl-out{margin-top:14px;padding:13px;border-radius:12px;background:#FFFDF8;
+  border:1px solid rgba(11,37,69,.12);font-size:14px;line-height:1.6;color:#0B2545;
+  white-space:pre-wrap;word-break:break-word;font-family:'BellaIndic','DM Sans',sans-serif}
+#tl-out:empty{display:none}
+#tl-out h4{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:600;color:#0B2545;
+  margin:12px 0 4px;letter-spacing:.2px}
+#tl-out h4:first-child{margin-top:0}
+#tl-out ul{margin:4px 0 4px 17px;padding:0}
+#tl-out li{margin:2px 0}
+#tl-out img{max-width:100%;border-radius:10px;display:block}
+#tl-out .tl-kv{font-size:12.5px;color:#39485C}
+#tl-msg{margin-top:10px;font-size:12.5px;line-height:1.5;min-height:1px}
+#tl-msg.err{color:#9E2A3C;font-weight:600}
+#tl-msg.ok{color:#1D6B4F;font-weight:600}
+#tl-msg.warn{color:#8A5A00;font-weight:600}
+
+/* The mic on a textarea. Translation starts with speech more often than typing. */
+#tl-overlay .tl-mic-wrap{position:relative}
+#tl-overlay .tl-mic{position:absolute;right:7px;bottom:7px;min-width:38px;min-height:38px;
+  border-radius:9px;border:1.5px solid rgba(11,37,69,.18);background:#FFFFFF;color:#0B2545;
+  font-size:15px;cursor:pointer;line-height:1}
+#tl-overlay .tl-mic.on{background:#9E2A3C;border-color:#9E2A3C;color:#FFFFFF}
+
+/* ── INTERPRETER ──────────────────────────────────────────────────────────
+   Two people, one phone, two languages. Deliberately NOT a form: it is a big
+   tap target and two transcript columns, because it gets used while holding the
+   phone out to somebody else. */
+#ip-overlay{position:fixed;inset:0;background:rgba(11,37,69,.9);backdrop-filter:blur(12px);
+  z-index:560;display:flex;flex-direction:column;padding:14px;gap:10px}
+#ip-top{display:flex;align-items:center;gap:10px;flex-shrink:0}
+#ip-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:#F5E6C8;flex:1}
+#ip-close{background:none;border:none;color:rgba(245,230,200,.7);font-size:22px;cursor:pointer;
+  min-width:44px;min-height:44px}
+#ip-dirs{display:flex;align-items:center;gap:8px;flex-shrink:0}
+#ip-overlay select{flex:1;padding:11px;border-radius:11px;border:1.5px solid rgba(245,230,200,.28);
+  background:rgba(255,255,255,.07);color:#F5E6C8;font-size:14px;
+  font-family:'BellaIndic','DM Sans',sans-serif;outline:none;-webkit-appearance:none;appearance:none}
+#ip-overlay select option{color:#0B2545;background:#FFFFFF}
+#ip-swap{min-width:46px;min-height:46px;border-radius:12px;border:1.5px solid rgba(245,230,200,.28);
+  background:rgba(255,255,255,.07);color:#F5E6C8;font-size:17px;cursor:pointer}
+#ip-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:9px;padding:2px}
+#ip-log:empty::after{content:'Pick the two languages, then hold the button and speak.';
+  color:rgba(245,230,200,.5);font-size:13px;line-height:1.6;display:block;text-align:center;
+  padding:28px 14px}
+#ip-overlay .ip-turn{border-radius:14px;padding:11px 13px;max-width:92%;
+  font-family:'BellaIndic','DM Sans',sans-serif}
+#ip-overlay .ip-a{align-self:flex-start;background:rgba(255,255,255,.1);border:1px solid rgba(245,230,200,.2)}
+#ip-overlay .ip-b{align-self:flex-end;background:#F5E6C8;border:1px solid #F5E6C8}
+#ip-overlay .ip-said{font-size:12px;line-height:1.45;opacity:.72;margin-bottom:4px}
+#ip-overlay .ip-got{font-size:16px;line-height:1.5;font-weight:600}
+#ip-overlay .ip-a .ip-said,#ip-overlay .ip-a .ip-got{color:#F5E6C8}
+#ip-overlay .ip-b .ip-said,#ip-overlay .ip-b .ip-got{color:#0B2545}
+#ip-hold{flex-shrink:0;width:100%;min-height:76px;border-radius:18px;border:none;background:#F5E6C8;
+  color:#0B2545;font-size:16px;font-weight:700;cursor:pointer;
+  font-family:'BellaIndic','DM Sans',sans-serif;letter-spacing:.3px}
+#ip-hold.live{background:#9E2A3C;color:#FFFFFF}
+#ip-hold[disabled]{opacity:.5}
+#ip-note{flex-shrink:0;font-size:11.5px;line-height:1.5;color:rgba(245,230,200,.72);text-align:center}
+
+/* 400px, not 360px: the Workshop's own near-miss on 2026-10-06 was a breakpoint
+   set too low. Measured at 320 / 360 / 390 -- the panel must never scroll
+   sideways, so the head shrinks rather than the body overflowing. */
+@media(max-width:400px){
+  #tl-card{max-height:95vh;border-radius:16px}
+  #tl-head{padding:12px 13px}
+  #tl-title{font-size:18px}
+  #tl-body{padding:12px 13px 16px}
+  #tl-overlay .tl-act button{flex:1 1 100%}
+  #ip-overlay{padding:10px}
+  #ip-title{font-size:18px}
+}
+
+/* DARK MODE. ID-scoped hardcoded hex with !important, because the blanket
+   `body.dark input/button` rules in this page beat a plain class selector. */
+html body.dark #tl-card{background:#132B4D !important}
+html body.dark #tl-body{background:#132B4D !important}
+html body.dark #tl-overlay .tl-lbl{color:rgba(245,230,200,.66) !important}
+html body.dark #tl-overlay input,
+html body.dark #tl-overlay textarea,
+html body.dark #tl-overlay select{background:rgba(255,255,255,.07) !important;
+  color:#F5E6C8 !important;border-color:rgba(245,230,200,.26) !important}
+html body.dark #tl-overlay select option{color:#0B2545 !important;background:#FFFFFF !important}
+html body.dark #tl-overlay .tl-pick{background:rgba(255,255,255,.06) !important;
+  border-color:rgba(245,230,200,.22) !important}
+html body.dark #tl-overlay .tl-pick-n{color:#F5E6C8 !important}
+html body.dark #tl-overlay .tl-pick-d{color:rgba(245,230,200,.66) !important}
+html body.dark #tl-overlay .tl-go{background:#D4AF37 !important;color:#0B2545 !important}
+html body.dark #tl-overlay .tl-act button{background:rgba(255,255,255,.07) !important;
+  color:#F5E6C8 !important;border-color:rgba(245,230,200,.26) !important}
+html body.dark #tl-overlay .tl-mic{background:rgba(255,255,255,.1) !important;
+  color:#F5E6C8 !important;border-color:rgba(245,230,200,.26) !important}
+html body.dark #tl-overlay .tl-mic.on{background:#9E2A3C !important;color:#FFFFFF !important}
+html body.dark #tl-out{background:rgba(255,255,255,.05) !important;color:#F5E6C8 !important;
+  border-color:rgba(245,230,200,.18) !important}
+html body.dark #tl-out h4{color:#F5E6C8 !important}
+html body.dark #tl-out .tl-kv{color:rgba(245,230,200,.75) !important}
+html body.dark #tl-overlay .tl-hint,
+html body.dark #tl-overlay .tl-file{color:rgba(245,230,200,.66) !important}
+html body.dark #tl-msg.err{color:#F2A0AC !important}
+html body.dark #tl-msg.ok{color:#8FD9B6 !important}
+html body.dark #tl-msg.warn{color:#F0C978 !important}
+</style>
+
+<style id="v88-tools-2">
+/* The interpreter's two speak buttons — one per language, so neither person has
+   to operate a toggle mid-conversation. Each is well over the 44px minimum
+   because they get tapped while the phone is held out to somebody else. */
+#ip-hold{display:flex;gap:10px;flex-shrink:0}
+#ip-overlay .ip-say{flex:1;min-height:82px;border-radius:18px;border:none;background:#F5E6C8;
+  color:#0B2545;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px}
+#ip-overlay .ip-say-l{font-size:17px;font-weight:700;line-height:1.2;text-align:center}
+#ip-overlay .ip-say-s{font-size:11px;font-weight:600;opacity:.6;letter-spacing:.3px}
+#ip-overlay .ip-say.live{background:#9E2A3C;color:#FFFFFF}
+#ip-overlay .ip-say.live .ip-say-s{opacity:.85}
+#ip-overlay .ip-say[disabled]{opacity:.42}
+/* The Translate chip on a Bella message. Sits straight after the Language chip
+   — Savio's call, 2026-10-07: the two belong together, both being about what
+   language you are reading.
+   IT MUST NEVER BE MOVED TO LAST. copyMsg() locates its own button with
+   .msg-act-btn:last-child, so anything appended after Copy silently stops Copy
+   from confirming. Anywhere before Copy is safe. */
+.msg-actions .msg-act-btn.tl-msg-btn{letter-spacing:.2px}
+@media(max-width:400px){
+  #ip-overlay .ip-say{min-height:72px}
+  #ip-overlay .ip-say-l{font-size:15px}
+}
+</style>
+
+<script id="v88-tools-engine">
+/* ══════════════════════════════════════════════════════════════════════════
+   THE TOOL ENGINE + THE TRANSLATOR.   Savio, 2026-10-07.
+
+   Every endpoint below was read out of the DEPLOYED backend source on
+   2026-10-07 (release14 = v6.5 = the live revision, hash-matched) and every
+   field name here is the exact name that handler destructures from req.body.
+   None of it is from memory. Two were corrected during that read:
+     - /convert-document takes a Google DRIVE fileId and exports from the
+       service account's own Drive, so it can never see a user's upload. The
+       real converter is /restructure-doc, which takes base64. Wiring the
+       obvious-looking one would have shipped a dead button.
+     - /translate was capped at maxOutputTokens 1024 and returned HTTP 200 with
+       a severed translation. Release 15 raises it to 8192 and adds `truncated`.
+       THIS FILE STILL CHUNKS, so it is correct against the OLD backend too --
+       nothing here waits on that deploy.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+function _tlEsc(v){ return String(v==null?'':v)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ── LANGUAGES ────────────────────────────────────────────────────────────
+   Bella's four house languages first, because that is what the family speaks,
+   then the rest alphabetically. The BCP-47 tag is what the DEVICE voice needs;
+   the English name is what GEMINI needs (it translates by name, not by code).
+   Gemini is not limited to this list -- it is a menu, not a ceiling. */
+const TL_LANGS = [
+  ['English','English','en-IN'],
+  ['Bengali','বাংলা','bn-IN'],
+  ['Hindi','हिन्दी','hi-IN'],
+  ['Marathi','मराठी','mr-IN'],
+  ['Arabic','العربية','ar-SA'],
+  ['Chinese (Mandarin)','中文','zh-CN'],
+  ['Dutch','Nederlands','nl-NL'],
+  ['French','Français','fr-FR'],
+  ['German','Deutsch','de-DE'],
+  ['Gujarati','ગુજરાતી','gu-IN'],
+  ['Indonesian','Bahasa Indonesia','id-ID'],
+  ['Italian','Italiano','it-IT'],
+  ['Japanese','日本語','ja-JP'],
+  ['Kannada','ಕನ್ನಡ','kn-IN'],
+  ['Korean','한국어','ko-KR'],
+  ['Malayalam','മലയാളം','ml-IN'],
+  ['Nepali','नेपाली','ne-NP'],
+  ['Odia','ଓଡ଼ିଆ','or-IN'],
+  ['Portuguese','Português','pt-PT'],
+  ['Punjabi','ਪੰਜਾਬੀ','pa-IN'],
+  ['Russian','Русский','ru-RU'],
+  ['Sinhala','සිංහල','si-LK'],
+  ['Spanish','Español','es-ES'],
+  ['Tamil','தமிழ்','ta-IN'],
+  ['Telugu','తెలుగు','te-IN'],
+  ['Thai','ไทย','th-TH'],
+  ['Turkish','Türkçe','tr-TR'],
+  ['Urdu','اردو','ur-PK'],
+  ['Vietnamese','Tiếng Việt','vi-VN']
+];
+function _tlTag(name){ const r=TL_LANGS.find(l=>l[0]===name); return r?r[2]:'en-IN'; }
+function _tlOpts(sel){ return TL_LANGS.map(l =>
+  '<option value="'+_tlEsc(l[0])+'"'+(l[0]===sel?' selected':'')+'>'+
+  _tlEsc(l[1]===l[0]?l[0]:l[0]+' — '+l[1])+'</option>').join(''); }
+
+/* ── SPEAKING ANY LANGUAGE ────────────────────────────────────────────────
+   speechQueue.enqueue() deliberately clamps to en/hi/bn/mr and silently rewrites
+   anything else to 'en' -- correct for Bella's own replies, WRONG here, because
+   it would read Spanish aloud with an English voice. So the translator speaks
+   through its own path, which takes a full BCP-47 tag.
+
+   ElevenLabs only holds Savio's four approved voice IDs and its credits are
+   empty, so /speak is tried only for those four and only when the user has not
+   chosen device-only. Everything else goes straight to the device voice.
+
+   AND IT TELLS THE TRUTH WHEN IT CANNOT SPEAK. Indic voice coverage varies by
+   handset; a Speak button that silently does nothing is the fault pattern this
+   page has been bitten by before. */
+let _tlVoicesReady=null;
+function _tlVoices(){
+  if(!('speechSynthesis' in window)) return Promise.resolve([]);
+  if(_tlVoicesReady) return _tlVoicesReady;
+  _tlVoicesReady = new Promise(resolve=>{
+    const got=()=>window.speechSynthesis.getVoices()||[];
+    if(got().length) return resolve(got());
+    let done=false;
+    const fin=()=>{ if(done)return; done=true; resolve(got()); };
+    try{ window.speechSynthesis.addEventListener('voiceschanged',fin,{once:true}); }catch(e){}
+    setTimeout(fin,1200);   // some builds never fire the event at all
+  });
+  return _tlVoicesReady;
+}
+async function _tlVoiceFor(tag){
+  const vs=await _tlVoices();
+  if(!vs.length) return null;
+  const want=String(tag||'en-IN').toLowerCase().replace('_','-');
+  const base=want.split('-')[0];
+  const norm=v=>(v.lang||'').toLowerCase().replace('_','-');
+  return vs.find(v=>norm(v)===want)                       // exact: bn-IN
+      || vs.find(v=>norm(v).split('-')[0]===base)         // same language, any region
+      || null;
+}
+async function _tlCanSpeak(tag){ return !!(await _tlVoiceFor(tag)); }
+
+async function _tlSpeak(text,tag){
+  if(!text||!String(text).trim()) return {ok:false,why:'nothing to say'};
+  if(!audioUnlocked) return {ok:false,why:'tap the screen once first, then try again'};
+  const four={'en-IN':'en','bn-IN':'bn','hi-IN':'hi','mr-IN':'mr'};
+  const house=four[tag];
+  // ElevenLabs path -- only for the four voices that exist, never on device-only.
+  if(house && (typeof voiceSrc!=='function' || voiceSrc()!=='device')){
+    try{
+      const r=await bfetch(BACKEND+'/speak',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({text:String(text).slice(0,4000),lang:house})});
+      if(r.ok){
+        const b=await r.blob();
+        if(b && b.size>0){
+          const a=new Audio(URL.createObjectURL(b));
+          try{ await a.play(); return {ok:true,via:'Bella’s own voice'}; }catch(e){}
+        }
+      }
+    }catch(e){}
+  }
+  const v=await _tlVoiceFor(tag);
+  if(!v) return {ok:false,why:'this device has no '+(TL_LANGS.find(l=>l[2]===tag)||[tag])[0]+' voice installed'};
+  try{
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(String(text));
+    u.lang=v.lang||tag; u.rate=0.98;
+    try{ u.voice=v; }catch(e){}   // assigning a non-voice throws and kills the utterance
+    window.speechSynthesis.speak(u);
+    return {ok:true,via:v.name||'the device voice'};
+  }catch(e){ return {ok:false,why:'the device refused to speak it'}; }
+}
+
+/* ── TRANSLATION CORE ─────────────────────────────────────────────────────
+   Chunked on PARAGRAPH boundaries, never mid-sentence, because the model is
+   asked for "only the translated text" and a severed clause produces a severed
+   translation. 6000 characters a call sits well inside the 8192-output-token
+   ceiling even for scripts that cost more tokens per character than Latin.
+
+   `truncated` is honoured when the backend sends it (release 15) and its
+   absence is treated as fine (older backend) -- so this works either way. */
+function _tlChunks(text,cap){
+  cap=cap||6000;
+  const src=String(text==null?'':text);
+  if(src.length<=cap) return [src];
+  const out=[]; let buf='';
+  for(const para of src.split(/\n\s*\n/)){
+    const p=para+'\n\n';
+    if(p.length>cap){                                  // one huge paragraph: split by sentence
+      if(buf){ out.push(buf); buf=''; }
+      let rest=para;
+      while(rest.length>cap){
+        let cut=rest.lastIndexOf('. ',cap);
+        if(cut<cap*0.5) cut=rest.lastIndexOf(' ',cap);
+        if(cut<=0) cut=cap;
+        out.push(rest.slice(0,cut+1).trim());
+        rest=rest.slice(cut+1);
+      }
+      if(rest.trim()) buf=rest+'\n\n';
+      continue;
+    }
+    if((buf+p).length>cap){ out.push(buf); buf=p; } else buf+=p;
+  }
+  if(buf.trim()) out.push(buf);
+  return out.map(s=>s.replace(/\s+$/,'')).filter(s=>s.length);
+}
+async function tlTranslate(text,targetName,sourceName,onProgress){
+  const parts=_tlChunks(text);
+  const done=[];
+  let warn='';
+  for(let i=0;i<parts.length;i++){
+    if(onProgress && parts.length>1) onProgress(i+1,parts.length);
+    const body={text:parts[i],targetLanguage:targetName};
+    if(sourceName && sourceName!=='Detect automatically') body.sourceLanguage=sourceName;
+    const r=await bfetch(BACKEND+'/translate',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){
+      let m='HTTP '+r.status;
+      try{ const e=await r.json(); m=e.error||e.message||m; }catch(_){}
+      throw new Error(m);
+    }
+    const d=await r.json();
+    if(d.truncated) warn='Part of this was too long for one pass and may be cut short.';
+    done.push(String(d.translated||'').trim());
+  }
+  return {text:done.join('\n\n'), parts:parts.length, warn:warn};
+}
+
+/* ── THE PANEL ────────────────────────────────────────────────────────────
+   Built by JS on open, exactly like the invoice panel: nothing renders until a
+   tile is tapped, so the Workshop stays light on a phone. */
+let TL={group:null,tool:null,files:{},result:null};
+
+function openTools(group){
+  const list=TOOLS.filter(t=>t.group===group);
+  if(!list.length) return;
+  closeTools();
+  TL={group:group,tool:null,files:{},result:null};
+  const o=document.createElement('div');
+  o.id='tl-overlay';
+  o.addEventListener('click',e=>{ if(e.target===o) closeTools(); });
+  o.innerHTML='<div id="tl-card" role="dialog" aria-label="Bella tools">'
+    +'<div id="tl-head">'
+    +  '<button id="tl-back" onclick="tlBack()" aria-label="Back">&#8249;</button>'
+    +  '<div id="tl-title"></div>'
+    +  '<button id="tl-close" onclick="closeTools()" aria-label="Close">&times;</button>'
+    +'</div><div id="tl-body"></div></div>';
+  document.body.appendChild(o);
+  if(list.length===1) tlOpenTool(list[0].id); else tlShowList();
+}
+function closeTools(){ const o=document.getElementById('tl-overlay'); if(o) o.remove();
+  try{ window.speechSynthesis.cancel(); }catch(e){}
+  if(_tlMicRec){ try{_tlMicRec.stop();}catch(e){} _tlMicRec=null; } }
+function tlBack(){ if(TOOLS.filter(t=>t.group===TL.group).length>1) tlShowList(); else closeTools(); }
+
+function tlShowList(){
+  const list=TOOLS.filter(t=>t.group===TL.group);
+  TL.tool=null; TL.files={}; TL.result=null;
+  document.getElementById('tl-title').textContent=TL_GROUPS[TL.group]||'Tools';
+  document.getElementById('tl-back').style.display='none';
+  document.getElementById('tl-body').innerHTML=list.map(t=>
+    '<button class="tl-pick" onclick="tlOpenTool(\''+t.id+'\')">'
+    +'<span class="tl-pick-n">'+_tlEsc(t.label)+'</span>'
+    +'<span class="tl-pick-d">'+_tlEsc(t.note||'')+'</span></button>').join('');
+}
+
+function tlOpenTool(id){
+  const t=TOOLS.find(x=>x.id===id); if(!t) return;
+  TL.tool=t; TL.files={}; TL.result=null;
+  const many=TOOLS.filter(x=>x.group===t.group).length>1;
+  document.getElementById('tl-title').textContent=t.label;
+  document.getElementById('tl-back').style.display=many?'block':'none';
+  let h='';
+  if(t.note) h+='<div class="tl-hint" style="margin-bottom:4px">'+_tlEsc(t.note)+'</div>';
+  for(const f of t.fields) h+=tlField(f);
+  h+='<button class="tl-go" id="tl-go" onclick="tlRun()">'+_tlEsc(t.go||'Ask Bella')+'</button>'
+   + '<div id="tl-msg"></div><div id="tl-out"></div><div class="tl-act" id="tl-actions"></div>';
+  document.getElementById('tl-body').innerHTML=h;
+  if(t.onOpen) try{ t.onOpen(); }catch(e){}
+}
+
+/* Field spec: [kind, backendKey, Label, extra]
+   kind: text | area | mic (area with a microphone) | num | sel | lang | file | files
+   The key IS the backend's own field name, so the request body is just the
+   collected values -- no mapping table to drift out of date. */
+function tlField(f){
+  const [kind,key,label,extra]=f;
+  const id='tlf-'+key;
+  const lbl='<div class="tl-lbl">'+_tlEsc(label)+'</div>';
+  if(kind==='text'||kind==='num')
+    return lbl+'<input id="'+id+'" type="'+(kind==='num'?'number':'text')+'"'
+      +(kind==='num'?' inputmode="decimal"':'')
+      +' placeholder="'+_tlEsc(extra||'')+'">';
+  if(kind==='area')
+    return lbl+'<textarea id="'+id+'" placeholder="'+_tlEsc(extra||'')+'"></textarea>';
+  if(kind==='mic')
+    return lbl+'<div class="tl-mic-wrap"><textarea id="'+id+'" placeholder="'+_tlEsc(extra||'')+'"></textarea>'
+      +'<button class="tl-mic" id="tl-mic-'+key+'" onclick="tlMic(\''+key+'\')" '
+      +'title="Speak instead of typing" aria-label="Speak instead of typing">&#127908;</button></div>';
+  if(kind==='sel')
+    return lbl+'<select id="'+id+'">'+(extra||[]).map(o=>
+      '<option value="'+_tlEsc(o)+'">'+_tlEsc(o)+'</option>').join('')+'</select>';
+  if(kind==='lang')
+    return lbl+'<select id="'+id+'">'+_tlOpts(extra||'English')+'</select>';
+  if(kind==='file'||kind==='files')
+    return lbl+'<input id="'+id+'" type="file"'+(kind==='files'?' multiple':'')
+      +' accept="'+_tlEsc(extra||'')+'" onchange="tlFile(\''+key+'\',this,'+(kind==='files')+')">'
+      +'<div class="tl-file" id="tl-fn-'+key+'"></div>';
+  return '';
+}
+
+function _tlB64(file){ return new Promise((res,rej)=>{ const r=new FileReader();
+  r.onload=e=>res({name:file.name,mime:file.type||'application/octet-stream',
+                   b64:String(e.target.result).split(',')[1]||''});
+  r.onerror=rej; r.readAsDataURL(file); }); }
+
+async function tlFile(key,input,multi){
+  const files=Array.from(input.files||[]);
+  const note=document.getElementById('tl-fn-'+key);
+  if(!files.length){ delete TL.files[key]; if(note) note.textContent=''; return; }
+  /* 18MB of base64 is the practical ceiling: Cloud Run caps a request at 32MB
+     and Gemini's inline_data path caps the whole request near 20MB. Caught here
+     with a readable sentence instead of a 413 nobody can interpret. */
+  const CAP=18*1024*1024;
+  if(note) note.textContent='Reading…';
+  try{
+    const out=[];
+    let total=0;
+    for(const f of files){ const r=await _tlB64(f); total+=r.b64.length; out.push(r); }
+    if(total>CAP){
+      delete TL.files[key]; input.value='';
+      if(note) note.textContent='';
+      _tlMsg('That is too large to send in one go — about '+Math.round(total/1048576)
+        +'MB, and the limit is 18MB. Try a shorter file.','err');
+      return;
+    }
+    TL.files[key]=multi?out:out[0];
+    if(note) note.textContent=multi
+      ? (out.length+' file'+(out.length>1?'s':'')+' ready')
+      : (out[0].name+' ready');
+  }catch(e){ if(note) note.textContent=''; _tlMsg('That file could not be read.','err'); }
+}
+
+let _tlMicRec=null;
+function tlMic(key){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const btn=document.getElementById('tl-mic-'+key);
+  if(!SR){ _tlMsg('Speaking needs Chrome on Android or desktop, or Safari on iPhone. You can still type.','err'); return; }
+  if(_tlMicRec){ try{_tlMicRec.stop();}catch(e){} _tlMicRec=null; if(btn)btn.classList.remove('on'); return; }
+  const ta=document.getElementById('tlf-'+key); if(!ta) return;
+  /* The recogniser cannot detect a language -- it has to be TOLD one, which is
+     the whole reason Bella has a language button. For the translator the right
+     answer is the SOURCE language if the tool has one, else whatever Bella is
+     currently set to. */
+  const srcSel=document.getElementById('tlf-sourceLanguage');
+  const tag=srcSel && srcSel.value && srcSel.value!=='Detect automatically'
+    ? _tlTag(srcSel.value)
+    : (typeof micLangTag==='function'?micLangTag():'en-IN');
+  const rec=new SR();
+  rec.lang=tag; rec.interimResults=false; rec.continuous=false;
+  rec.onresult=e=>{ const said=Array.from(e.results).map(r=>r[0].transcript).join(' ').trim();
+    if(said) ta.value=(ta.value?ta.value.replace(/\s+$/,'')+' ':'')+said; };
+  rec.onerror=e=>{ _tlMsg(e&&e.error==='not-allowed'
+    ? 'The microphone is blocked for this site. Allow it in the browser, then try again.'
+    : 'I could not catch that. Try again, or type it.','err'); };
+  rec.onend=()=>{ _tlMicRec=null; if(btn)btn.classList.remove('on'); };
+  try{ rec.start(); _tlMicRec=rec; if(btn)btn.classList.add('on');
+       _tlMsg('Listening in '+(TL_LANGS.find(l=>l[2]===tag)||['that language'])[0]+'…',''); }
+  catch(e){ _tlMsg('The microphone would not start.','err'); }
+}
+
+function _tlMsg(t,cls){ const m=document.getElementById('tl-msg'); if(!m) return;
+  m.className=cls||''; m.innerHTML=t||''; }
+function _tlVal(key){ const el=document.getElementById('tlf-'+key);
+  return el?String(el.value||'').trim():''; }
+</script>
+
+<script id="v88-tools-run">
+/* ══ THE RUNNER AND THE RESULT ═══════════════════════════════════════════ */
+
+function _tlDownload(blob,name){
+  const u=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),4000);
+}
+function _tlB64ToBlob(b64,mime){
+  const bin=atob(String(b64||'')); const n=bin.length; const u8=new Uint8Array(n);
+  for(let i=0;i<n;i++) u8[i]=bin.charCodeAt(i);
+  return new Blob([u8],{type:mime||'application/octet-stream'});
+}
+function _tlStamp(){ return new Date().toISOString().slice(0,10); }
+
+/* Humanises a backend key for a heading: followUps -> "Follow ups". */
+function _tlHuman(k){
+  return String(k).replace(/([a-z0-9])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' ')
+    .replace(/^./,c=>c.toUpperCase());
+}
+/* Renders ANY shape the model returned. Most of these endpoints spread a
+   model-parsed object into the response, so the keys are not fixed and cannot
+   be hardcoded -- this walks whatever arrived. */
+const TL_SKIP=['ok','truncated','finishReason','original','text','textLength'];
+function _tlRender(v,depth){
+  depth=depth||0;
+  if(v==null) return '';
+  if(typeof v==='string') return _tlEsc(v);
+  if(typeof v==='number'||typeof v==='boolean') return _tlEsc(String(v));
+  if(Array.isArray(v)){
+    if(!v.length) return '<div class="tl-kv">none</div>';
+    if(v.every(x=>typeof x==='string'||typeof x==='number'))
+      return '<ul>'+v.map(x=>'<li>'+_tlEsc(String(x))+'</li>').join('')+'</ul>';
+    return v.map(x=>'<div style="margin:6px 0">'+_tlRender(x,depth+1)+'</div>').join('');
+  }
+  if(typeof v==='object'){
+    return Object.keys(v).filter(k=>depth>0||TL_SKIP.indexOf(k)===-1).map(k=>{
+      const body=_tlRender(v[k],depth+1);
+      if(!body) return '';
+      const isBlock=typeof v[k]==='object';
+      return depth===0||isBlock
+        ? '<h4>'+_tlEsc(_tlHuman(k))+'</h4>'+body
+        : '<div class="tl-kv"><b>'+_tlEsc(_tlHuman(k))+':</b> '+body+'</div>';
+    }).join('');
+  }
+  return '';
+}
+/* Flattens a result to plain text, for Copy and for the Word download. */
+function _tlFlat(v,out,depth){
+  out=out||[]; depth=depth||0;
+  if(v==null) return out;
+  if(typeof v!=='object'){ out.push({text:String(v)}); return out; }
+  if(Array.isArray(v)){ v.forEach(x=>_tlFlat(x,out,depth)); return out; }
+  Object.keys(v).filter(k=>depth>0||TL_SKIP.indexOf(k)===-1).forEach(k=>{
+    if(v[k]==null||v[k]==='') return;
+    if(typeof v[k]==='object'){ out.push({heading:_tlHuman(k)}); _tlFlat(v[k],out,depth+1); }
+    else out.push({text:(depth===0?'':_tlHuman(k)+': ')+String(v[k])});
+  });
+  return out;
+}
+
+async function tlRun(){
+  const t=TL.tool; if(!t) return;
+  const go=document.getElementById('tl-go');
+  const out=document.getElementById('tl-out');
+  const acts=document.getElementById('tl-actions');
+  /* If the panel is gone -- closed mid-request, or a stale onclick -- every line
+     below would throw on null. Caught during the headless QC run on 2026-10-07. */
+  if(!go||!out||!acts) return;
+  out.innerHTML=''; acts.innerHTML=''; TL.result=null;
+
+  /* Required fields, named in the sentence rather than a bare "required". */
+  for(const f of (t.need||[])){
+    const isFile=TL.files.hasOwnProperty(f);
+    if(!isFile && !_tlVal(f)){
+      const label=(t.fields.find(x=>x[1]===f)||[,,f])[2];
+      /* Labels are a mix of questions ("What should I translate?") and nouns
+         ("The document"), so they cannot be folded into one sentence frame --
+         lowercasing a question read as "I need what should i translate? before
+         I can do this." Naming the field and stopping works for every label. */
+      _tlMsg(_tlEsc(label)+' &mdash; I need that first.','err'); return;
+    }
+  }
+  const body={};
+  for(const f of t.fields){
+    const [kind,key]=f;
+    if(kind==='file'||kind==='files'){
+      const got=TL.files[key];
+      if(!got) continue;
+      if(kind==='files'){ body[key]=got.map(g=>g.b64); }
+      else{
+        body[key]=got.b64;
+        const mk=(t.mime||{})[key];
+        if(mk) body[mk]=got.mime;
+      }
+      continue;
+    }
+    const v=_tlVal(key);
+    if(v!=='') body[key]=(kind==='num')?Number(v):v;
+  }
+  if(t.fixed) Object.assign(body,t.fixed);
+  if(typeof profileKey!=='undefined' && t.wantsProfile) body.profileKey=profileKey;
+
+  go.disabled=true;
+  _tlMsg(t.working||'Working on it…','');
+  try{
+    /* The translator has its own path because it CHUNKS. Everything else is one
+       call. Both land in the same result renderer. */
+    if(t.id==='translate'){
+      const target=_tlVal('targetLanguage')||'English';
+      const src=_tlVal('sourceLanguage')||'';
+      const r=await tlTranslate(_tlVal('text'),target,src,(i,n)=>
+        _tlMsg('Translating — part '+i+' of '+n+'…',''));
+      TL.result={kind:'text',text:r.text,tag:_tlTag(target),lang:target,
+                 title:'Translation into '+target};
+      out.innerHTML=_tlEsc(r.text);
+      _tlMsg(r.warn||('Translated into '+target+(r.parts>1?' in '+r.parts+' parts':'')+'.'),
+             r.warn?'warn':'ok');
+      tlActions();
+      return;
+    }
+
+    const r=await bfetch(BACKEND+t.ep,{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){
+      let m='That did not work.';
+      try{ const e=await r.json(); m=e.error||e.message||m; }catch(_){}
+      if(r.status===403) m='That one is owner-only, and this account is not the owner.';
+      _tlMsg(m,'err'); return;
+    }
+
+    if(t.out==='blob'){
+      const b=await r.blob();
+      _tlDownload(b,(t.fileBase||'bella')+'-'+_tlStamp()+'.'+(_tlVal('format')||t.ext||'docx'));
+      _tlMsg('Saved to your Downloads folder.','ok'); return;
+    }
+    const d=await r.json();
+    if(t.out==='img'){
+      const b64=d[t.pick];
+      if(!b64){ _tlMsg('Bella did not return a picture this time.','err'); return; }
+      out.innerHTML='<img alt="chart" src="data:'+(d.mimeType||'image/png')+';base64,'+b64+'">';
+      TL.result={kind:'img',b64:b64,mime:d.mimeType||'image/png'};
+      _tlMsg('Done.','ok'); tlActions(); return;
+    }
+    if(t.out==='b64'){
+      const b64=d[t.pick];
+      if(!b64){ _tlMsg('Bella did not return a file this time.','err'); return; }
+      _tlDownload(_tlB64ToBlob(b64,d.mimeType||'application/pdf'),
+        d.filename||((t.fileBase||'bella')+'-'+_tlStamp()+'.pdf'));
+      _tlMsg('Saved to your Downloads folder.','ok'); return;
+    }
+    if(t.out==='text'){
+      const s=String(d[t.pick]||'').trim();
+      if(!s){ _tlMsg('Bella had nothing to say to that. Try giving her a little more.','err'); return; }
+      out.innerHTML=_tlEsc(s);
+      TL.result={kind:'text',text:s,tag:'en-IN',title:t.label};
+      _tlMsg('Done.','ok'); tlActions(); return;
+    }
+    const html=_tlRender(d,0);
+    if(!html){ _tlMsg('Bella returned nothing readable for that.','err'); return; }
+    out.innerHTML=html;
+    TL.result={kind:'json',data:d,title:t.label};
+    _tlMsg(d.disclaimer?'':'Done.',d.disclaimer?'':'ok');
+    tlActions();
+  }catch(e){
+    _tlMsg('Could not reach Bella just now. What you typed is still here — try again in a moment.','err');
+  }finally{ go.disabled=false; }
+}
+
+/* Copy / Speak / Word. Speak only appears when the DEVICE can actually say it,
+   checked before the button is drawn -- a Speak button that does nothing is
+   worse than no button. */
+async function tlActions(){
+  const r=TL.result, host=document.getElementById('tl-actions');
+  if(!r||!host) return;
+  let h='<button onclick="tlCopy()">Copy</button>';
+  if(r.kind==='text'||r.kind==='json') h+='<button onclick="tlWord()">Save as Word</button>';
+  if(r.kind==='img') h+='<button onclick="tlPng()">Save the picture</button>';
+  host.innerHTML=h;
+  if(r.kind==='text' && await _tlCanSpeak(r.tag)){
+    host.insertAdjacentHTML('afterbegin','<button onclick="tlSay()">&#128266; Read it aloud</button>');
+  }else if(r.kind==='text' && r.lang){
+    host.insertAdjacentHTML('beforeend',
+      '<div class="tl-hint" style="flex:1 1 100%">This device has no '+_tlEsc(r.lang)
+      +' voice, so I can show it but not say it. The words are correct.</div>');
+  }
+}
+function tlCopy(){
+  const r=TL.result; if(!r) return;
+  const s=r.kind==='text'?r.text:(r.kind==='json'
+    ?_tlFlat(r.data).map(x=>x.heading?('\n'+x.heading):x.text).join('\n'):'');
+  if(!s) return;
+  navigator.clipboard.writeText(s).then(()=>_tlMsg('Copied.','ok'),
+    ()=>_tlMsg('Your browser would not let me copy that.','err'));
+}
+async function tlSay(){
+  const r=TL.result; if(!r||r.kind!=='text') return;
+  _tlMsg('Reading it out…','');
+  const got=await _tlSpeak(r.text,r.tag);
+  _tlMsg(got.ok?'Reading it out…':('I could not say that aloud — '+got.why+'.'),
+         got.ok?'ok':'warn');
+}
+function tlPng(){
+  const r=TL.result; if(!r||r.kind!=='img') return;
+  _tlDownload(_tlB64ToBlob(r.b64,r.mime),'bella-chart-'+_tlStamp()+'.png');
+  _tlMsg('Saved to your Downloads folder.','ok');
+}
+/* Word, never PDF, for anything that might not be in Latin script.
+   /create-document's PDF path uses jsPDF's built-in helvetica, which is
+   WinAnsi-encoded -- Bengali and Devanagari come out as blanks. The docx path
+   stores the characters and lets Word pick the font, so it is correct for every
+   language here. */
+async function tlWord(){
+  const r=TL.result; if(!r) return;
+  const title=r.title||'Bella';
+  const content=r.kind==='text'
+    ? String(r.text).split(/\n/).filter(s=>s.trim().length).map(s=>({text:s}))
+    : _tlFlat(r.data);
+  if(!content.length){ _tlMsg('There is nothing to save yet.','err'); return; }
+  _tlMsg('Building your Word file…','');
+  try{
+    const resp=await bfetch(BACKEND+'/create-document',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({format:'docx',title:title,content:content})});
+    if(!resp.ok){ _tlMsg('The Word file could not be built.','err'); return; }
+    _tlDownload(await resp.blob(),
+      title.replace(/[^\p{L}\p{N} _-]/gu,'').trim().replace(/\s+/g,'-')+'-'+_tlStamp()+'.docx');
+    _tlMsg('Saved to your Downloads folder.','ok');
+  }catch(e){ _tlMsg('The Word file could not be built.','err'); }
+}
+
+/* ══ THE TOOLS ═══════════════════════════════════════════════════════════
+   One row per tool. `group` matches a Workshop tile. Field keys ARE the
+   backend's own field names. To add a tool: add a row. To promote a Workshop
+   tile: give it fn openTools('<group>').                                    */
+const TL_GROUPS={
+  translate:'Translate', writing:'Writing Help', study:'Study & Interview',
+  read:'Read Any File', docedit:'Doc Edit & Convert', docs:'Documents & Slides',
+  pdf:'PDF Tools', data:'Data Analysis', charts:'Charts & Graphs',
+  money:'Money & Expenses', travel:'Travel', meeting:'Meeting Notes'
+};
+const DOC_ACCEPT='.pdf,.doc,.docx,.xls,.xlsx,.csv,.pptx,.txt,.md,.jpg,.jpeg,.png,.webp';
+const TONES=['Warm','Neutral','Formal','Friendly','Persuasive','Playful'];
+
+const TOOLS=[
+  /* ── TRANSLATE ─────────────────────────────────────────────────────── */
+  {id:'translate',group:'translate',label:'Translate',ep:'/translate',
+   note:'Type it, paste it, or speak it. Any length — I split long text myself.',
+   go:'Translate',working:'Translating…',need:['text'],
+   fields:[['mic','text','What should I translate?','Type, paste, or tap the microphone…'],
+           ['lang','sourceLanguage','From','English'],
+           ['lang','targetLanguage','Into','Bengali']],
+   onOpen:function(){ const s=document.getElementById('tlf-sourceLanguage');
+     if(s){ s.insertAdjacentHTML('afterbegin',
+       '<option value="Detect automatically" selected>Detect automatically</option>'); } }},
+
+  /* ── WRITING HELP ──────────────────────────────────────────────────── */
+  {id:'improve',group:'writing',label:'Improve what I wrote',ep:'/improve-writing',
+   note:'Tidy, shorten, lengthen or proofread a piece of writing.',
+   need:['text'],out:'text',pick:'improved',
+   fields:[['mic','text','Your writing','Paste or speak what you have written…'],
+           ['sel','action',['improve','proofread','shorten','expand','formal','casual']],
+           ['sel','tone',TONES]]},
+  {id:'creative',group:'writing',label:'Write something creative',ep:'/creative-write',
+   note:'A story, a poem, a speech, a song — in any language.',need:['topic'],
+   fields:[['sel','type',['story','poem','song','speech','essay','blog post','letter']],
+           ['text','topic','What about?','a grandmother’s kitchen'],
+           ['sel','tone',TONES],['sel','length',['short','medium','long']],
+           ['lang','language','In which language','English']]},
+  {id:'cover',group:'writing',label:'Cover letter',ep:'/cover-letter',
+   note:'For a specific job, using the advert’s own words.',need:['jobTitle','company'],
+   fields:[['text','jobTitle','The job','Operations Manager'],
+           ['text','company','The company',''],
+           ['area','jobDescription','The advert, pasted',''],
+           ['text','candidateName','Your name',''],
+           ['area','experience','Your experience, briefly',''],
+           ['sel','tone',TONES]]},
+  {id:'resume',group:'writing',label:'Résumé',ep:'/generate-resume',
+   note:'Shaped towards one particular role.',need:['targetRole'],wantsProfile:true,
+   fields:[['text','targetRole','The role you want',''],
+           ['area','experience','Where you have worked',''],
+           ['area','education','Education',''],
+           ['area','skills','Skills',''],
+           ['area','summary','Anything else about you','']]},
+  {id:'bio',group:'writing',label:'Professional bio',ep:'/professional-bio',
+   note:'For LinkedIn, a website or an introduction.',need:['name','role'],
+   fields:[['text','name','Your name',''],['text','role','Your role',''],
+           ['text','company','Company',''],['area','experience','Experience',''],
+           ['area','achievements','Achievements',''],
+           ['sel','platform',['LinkedIn','Website','Twitter','Conference programme','Book jacket']],
+           ['sel','tone',TONES]]},
+  {id:'social',group:'writing',label:'Social media post',ep:'/social-media-post',
+   note:'Written for the platform it is going on.',need:['topic'],
+   fields:[['text','topic','What about?',''],
+           ['sel','platform',['LinkedIn','Instagram','Facebook','Twitter','WhatsApp']],
+           ['sel','tone',TONES],['text','targetAudience','Who is it for?','']]},
+  {id:'plag',group:'writing',label:'Check for copied text',ep:'/plagiarism-check',
+   note:'An opinion, not a certificate — it says so itself.',need:['text'],
+   fields:[['area','text','The text to check',''],
+           ['sel','checkType',['general','academic','professional']]]},
+  {id:'fact',group:'writing',label:'Check a claim',ep:'/fact-check',
+   note:'Searches the web before answering.',need:['claim'],
+   fields:[['area','claim','The claim','Chennai is the capital of Kerala'],
+           ['area','context','Anything that matters','']]},
+
+  /* ── STUDY & INTERVIEW ─────────────────────────────────────────────── */
+  {id:'study',group:'study',label:'Study guide',ep:'/study-guide',
+   note:'From a topic, or from notes you attach.',need:['topic'],
+   mime:{documentBase64:'mimeType'},
+   fields:[['text','topic','The topic','Photosynthesis'],
+           ['sel','level',['school','college','postgraduate','professional']],
+           ['text','examType','Exam, if any','CBSE Class 10'],
+           ['file','documentBase64','Your notes, if you have any',DOC_ACCEPT]]},
+  {id:'cards',group:'study',label:'Flashcards',ep:'/flashcards',
+   note:'Question-and-answer pairs you can revise from.',need:['topic'],
+   mime:{documentBase64:'mimeType'},
+   fields:[['text','topic','The topic',''],['num','count','How many','20'],
+           ['sel','difficulty',['easy','medium','hard']],
+           ['file','documentBase64','From a document instead',DOC_ACCEPT]]},
+  {id:'interview',group:'study',label:'Interview preparation',ep:'/interview-prep',
+   note:'Likely questions, and answers worth rehearsing.',need:['role'],
+   fields:[['text','role','The role',''],['text','company','The company',''],
+           ['text','experience','Your experience','6 years'],
+           ['sel','interviewType',['general','technical','behavioural','panel','final round']],
+           ['text','focusAreas','Anything to focus on','']]},
+
+  /* ── READ ANY FILE ─────────────────────────────────────────────────── */
+  {id:'summarise',group:'read',label:'Summarise a document',ep:'/summarise-document',
+   note:'Attach it and I will read the whole thing.',need:['base64Data'],
+   out:'text',pick:'summary',mime:{base64Data:'mimeType'},
+   fields:[['file','base64Data','The document',DOC_ACCEPT],
+           ['area','instruction','Anything particular to look for?','']]},
+  {id:'docqa',group:'read',label:'Ask a document a question',ep:'/doc-qa',
+   note:'I answer from the document, not from guesswork.',need:['documentBase64','question'],
+   mime:{documentBase64:'mimeType'},
+   fields:[['file','documentBase64','The document',DOC_ACCEPT],
+           ['mic','question','Your question','What is the notice period?']]},
+  {id:'extract',group:'read',label:'Pull the data out',ep:'/extract-data',
+   note:'Tables, figures, names and dates, as structured data.',need:['documentBase64'],
+   mime:{documentBase64:'mimeType'},
+   fields:[['file','documentBase64','The document',DOC_ACCEPT],
+           ['sel','extractType',['tables','figures','dates','names','contacts','all']]]},
+  {id:'insights',group:'read',label:'What does this tell me?',ep:'/extract-insights',
+   note:'The points worth noticing, rather than a summary.',need:['documentBase64'],
+   mime:{documentBase64:'mimeType'},
+   fields:[['file','documentBase64','The document',DOC_ACCEPT],
+           ['sel','insightType',['general','financial','risks','opportunities','action items']]]},
+  {id:'report',group:'read',label:'Turn it into a report',ep:'/generate-report',
+   note:'A written report built from what you attach.',need:['documentBase64'],
+   mime:{documentBase64:'mimeType'},
+   fields:[['file','documentBase64','The source material',DOC_ACCEPT],
+           ['sel','reportType',['summary','analysis','executive','technical','financial']],
+           ['text','title','Title',''],['text','audience','Who will read it','']]},
+  {id:'compare',group:'read',label:'Compare two documents',ep:'/compare-docs',
+   note:'What changed, and what it means.',need:['doc1Base64','doc2Base64'],
+   mime:{doc1Base64:'mimeType1',doc2Base64:'mimeType2'},
+   fields:[['file','doc1Base64','The first one',DOC_ACCEPT],
+           ['file','doc2Base64','The second one',DOC_ACCEPT],
+           ['text','compareAspect','What to compare','the payment terms']]},
+  {id:'ocr',group:'read',label:'Read text in a picture',ep:'/ocr',
+   note:'A photographed page, a receipt, a handwritten note.',need:['imageBase64'],
+   mime:{imageBase64:'mimeType'},
+   fields:[['file','imageBase64','The picture','.jpg,.jpeg,.png,.webp'],
+           ['text','language','Language, if you know it','']]},
+
+  /* ── DOC EDIT & CONVERT ────────────────────────────────────────────── */
+  {id:'restructure',group:'docedit',label:'Rewrite or convert a document',ep:'/restructure-doc',
+   note:'Reshape it, or turn it into another format.',need:['documentBase64'],
+   mime:{documentBase64:'mimeType'},
+   fields:[['file','documentBase64','The document',DOC_ACCEPT],
+           ['sel','targetFormat',['docx','xlsx','pptx','txt','markdown']],
+           ['area','instructions','How should it change?','Make it a one-page summary']]},
+  {id:'template',group:'docedit',label:'Fill in a template',ep:'/fill-template',
+   note:'Your template, your details, filled in.',need:['templateBase64'],
+   mime:{templateBase64:'mimeType'},
+   fields:[['file','templateBase64','The template',DOC_ACCEPT],
+           ['area','data','The details to put in','Name: ...\nDate: ...'],
+           ['sel','outputFormat',['docx','pdf']]]},
+
+  /* ── DOCUMENTS & SLIDES ────────────────────────────────────────────── */
+  {id:'makedoc',group:'docs',label:'Make a document',ep:'/create-document',
+   note:'Word or Excel. Word handles every language; the PDF option is Latin script only.',
+   need:['title','content'],out:'blob',fileBase:'document',
+   fields:[['sel','format',['docx','xlsx','pdf']],
+           ['text','title','Title',''],
+           ['area','content','The contents, a line at a time','']]},
+  {id:'makedeck',group:'docs',label:'Make a slide deck',ep:'/create-presentation',
+   note:'One line per slide, and I will build the file.',
+   need:['title','slides'],out:'blob',ext:'pptx',fileBase:'slides',
+   fields:[['text','title','Title',''],
+           ['area','slides','One slide a line','Where we are\nWhat changed\nWhat is next']]},
+
+  /* ── PDF TOOLS ─────────────────────────────────────────────────────── */
+  {id:'mergepdf',group:'pdf',label:'Join PDFs together',ep:'/merge-pdf',
+   note:'Pick several — they join in the order you choose them.',
+   need:['pdfsBase64'],out:'b64',pick:'mergedPdfBase64',fileBase:'joined',
+   fields:[['files','pdfsBase64','The PDFs','.pdf'],
+           ['text','filename','Name the result','joined.pdf']]},
+  {id:'splitpdf',group:'pdf',label:'Split a PDF',ep:'/split-pdf',
+   note:'Page ranges, like 1-3,7,9-12.',need:['pdfBase64'],
+   fields:[['file','pdfBase64','The PDF','.pdf'],
+           ['text','ranges','Which pages','1-3,7']]},
+  {id:'markpdf',group:'pdf',label:'Watermark a PDF',ep:'/watermark-pdf',
+   note:'Across every page.',need:['pdfBase64','watermarkText'],
+   out:'b64',pick:'watermarkedPdfBase64',fileBase:'watermarked',
+   fields:[['file','pdfBase64','The PDF','.pdf'],
+           ['text','watermarkText','The words','DRAFT'],
+           ['num','opacity','How faint, 0 to 1','0.2'],
+           ['num','fontSize','Size','48']]},
+
+  /* ── DATA ──────────────────────────────────────────────────────────── */
+  {id:'analyse',group:'data',label:'Analyse some numbers',ep:'/analyse-data',
+   note:'Paste rows, or a CSV’s contents.',need:['data'],
+   fields:[['area','data','The data','Month,Sales\nApr,120\nMay,145'],
+           ['sel','dataType',['general','sales','financial','survey','health','traffic']],
+           ['mic','question','What do you want to know?','']]},
+  {id:'forecast',group:'data',label:'Forecast ahead',ep:'/forecast',
+   note:'From numbers you already have.',need:['data'],
+   fields:[['area','data','The history','Apr,120\nMay,145\nJun,160'],
+           ['text','metric','What is being measured','monthly sales'],
+           ['num','forecastPeriods','How many periods ahead','3']]},
+
+  /* ── CHARTS ────────────────────────────────────────────────────────── */
+  {id:'chart',group:'charts',label:'Draw a chart',ep:'/data-to-chart',
+   note:'Paste the numbers and I will draw it as a picture.',
+   need:['data'],out:'img',pick:'chartImageBase64',fixed:{format:'png'},
+   fields:[['area','data','The data','Apr,120\nMay,145\nJun,160'],
+           ['sel','chartType',['bar','line','pie','doughnut','area','scatter']],
+           ['text','title','Title',''],
+           ['text','xAxis','Bottom axis',''],['text','yAxis','Side axis','']]},
+
+  /* ── MONEY ─────────────────────────────────────────────────────────── */
+  {id:'fincalc',group:'money',label:'Work out a figure',ep:'/financial-calc',
+   note:'EMI, interest, returns, tax — say which and give the numbers.',
+   need:['calcType'],
+   fields:[['sel','calcType',['emi','simple interest','compound interest','sip','lumpsum',
+                              'loan eligibility','income tax','gst']],
+           ['area','params','The numbers','principal: 2500000\nrate: 8.5\nyears: 20']]},
+  {id:'fx',group:'money',label:'Convert currency',ep:'/currency-convert',
+   note:'Live rate, through Bella rather than the browser.',need:['amount','from','to'],
+   fields:[['num','amount','How much','100'],
+           ['text','from','From','USD'],['text','to','Into','INR']]},
+  {id:'stock',group:'money',label:'Share price',ep:'/stock-price',
+   note:'Several at once — separate them with commas.',need:['symbols'],
+   fields:[['text','symbols','The shares','TCS, INFY'],
+           ['sel','exchange',['NSE','BSE','NASDAQ','NYSE']]]},
+
+  /* ── TRAVEL ────────────────────────────────────────────────────────── */
+  {id:'trip',group:'travel',label:'Plan a trip',ep:'/travel-research',
+   note:'Hotels, places and food at the destination, plus the route.',
+   need:['destination'],
+   fields:[['text','destination','Where to','Kochi'],
+           ['text','origin','From','Mumbai'],
+           ['text','startDate','Going out','2026-12-20'],
+           ['text','endDate','Coming back','2026-12-26'],
+           ['num','travelers','How many of you','2'],
+           ['text','budget','Budget','₹60,000'],
+           ['area','preferences','Anything that matters','quiet, near the water']]},
+  {id:'visa',group:'travel',label:'Visa rules',ep:'/visa-info',
+   note:'Checked against current sources, not from memory.',
+   need:['passportCountry','toCountry'],
+   fields:[['text','passportCountry','Your passport','India'],
+           ['text','toCountry','Going to','Japan'],
+           ['sel','travelPurpose',['tourism','business','study','work','transit','family visit']]]},
+  {id:'flight',group:'travel',label:'Flight status',ep:'/flight-status',
+   note:'Live, from a web search.',need:['flightNumber'],
+   fields:[['text','flightNumber','Flight number','AI 675'],
+           ['text','date','Which day','today']]},
+
+  /* ── MEETING NOTES ─────────────────────────────────────────────────── */
+  {id:'minutes',group:'meeting',label:'Turn a transcript into minutes',ep:'/meeting-notes',
+   note:'Decisions, actions and who owns them.',need:['transcript'],
+   fields:[['mic','transcript','The transcript, or speak the gist','Paste the transcript…'],
+           ['text','meetingTitle','What was it about',''],
+           ['text','attendees','Who was there',''],
+           ['text','duration','How long','45 minutes']]}
+];
+</script>
+
+<script id="v88-interpreter">
+/* ══════════════════════════════════════════════════════════════════════════
+   INTERPRETER — two people, two languages, one phone.
+
+   TWO BUTTONS, NOT A DIRECTION TOGGLE. Each person taps the button with their
+   own language on it. A toggle would mean the phone's owner has to flip it
+   between every turn while holding the phone out to somebody else, and getting
+   it wrong sends the words through the wrong language pair silently. With a
+   button each, there is nothing to get wrong and nothing to detect -- which
+   matters, because the Web Speech API cannot detect a language at all. It has
+   to be told one, and here it always is.
+   ══════════════════════════════════════════════════════════════════════════ */
+let IP={a:'English',b:'Bengali',busy:false,rec:null};
+
+function openInterpreter(){
+  closeInterpreter();
+  try{ IP.a=localStorage.getItem('b_ip_a')||'English';
+       IP.b=localStorage.getItem('b_ip_b')||'Bengali'; }catch(e){}
+  const o=document.createElement('div');
+  o.id='ip-overlay';
+  o.innerHTML=
+    '<div id="ip-top"><div id="ip-title">Interpreter</div>'
+   +  '<button id="ip-close" onclick="closeInterpreter()" aria-label="Close">&times;</button></div>'
+   +'<div id="ip-dirs">'
+   +  '<select id="ip-sa" onchange="ipSet()">'+_tlOpts(IP.a)+'</select>'
+   +  '<button id="ip-swap" onclick="ipSwap()" title="Swap the two languages" aria-label="Swap the two languages">&#8646;</button>'
+   +  '<select id="ip-sb" onchange="ipSet()">'+_tlOpts(IP.b)+'</select>'
+   +'</div>'
+   +'<div id="ip-log"></div>'
+   +'<div id="ip-hold"></div>'
+   +'<div id="ip-note"></div>';
+  document.body.appendChild(o);
+  ipPaintButtons();
+  ipCheckVoices();
+}
+function closeInterpreter(){
+  const o=document.getElementById('ip-overlay'); if(o) o.remove();
+  if(IP.rec){ try{IP.rec.stop();}catch(e){} IP.rec=null; }
+  IP.busy=false;
+  try{ window.speechSynthesis.cancel(); }catch(e){}
+}
+function ipSet(){
+  IP.a=document.getElementById('ip-sa').value;
+  IP.b=document.getElementById('ip-sb').value;
+  try{ localStorage.setItem('b_ip_a',IP.a); localStorage.setItem('b_ip_b',IP.b); }catch(e){}
+  ipPaintButtons(); ipCheckVoices();
+}
+function ipSwap(){
+  const a=IP.a; IP.a=IP.b; IP.b=a;
+  document.getElementById('ip-sa').value=IP.a;
+  document.getElementById('ip-sb').value=IP.b;
+  ipSet();
+}
+function _ipNative(name){ const r=TL_LANGS.find(l=>l[0]===name); return r?r[1]:name; }
+function ipPaintButtons(){
+  const h=document.getElementById('ip-hold'); if(!h) return;
+  h.innerHTML=
+    '<button class="ip-say" id="ip-say-a" onclick="ipListen(\'a\')">'
+   +  '<span class="ip-say-l">'+_tlEsc(_ipNative(IP.a))+'</span>'
+   +  '<span class="ip-say-s">tap and speak</span></button>'
+   +'<button class="ip-say" id="ip-say-b" onclick="ipListen(\'b\')">'
+   +  '<span class="ip-say-l">'+_tlEsc(_ipNative(IP.b))+'</span>'
+   +  '<span class="ip-say-s">tap and speak</span></button>';
+}
+/* Said once, up front, rather than discovered as silence mid-conversation. */
+async function ipCheckVoices(){
+  const n=document.getElementById('ip-note'); if(!n) return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ n.textContent='This browser cannot listen. Interpreter needs Chrome on Android or desktop, or Safari on iPhone.'; return; }
+  const missing=[];
+  for(const nm of [IP.a,IP.b]) if(!(await _tlCanSpeak(_tlTag(nm)))) missing.push(nm);
+  n.textContent = missing.length
+    ? ('I will show every translation on screen. This device has no '+missing.join(' or ')
+       +' voice, so I cannot say '+(missing.length>1?'those':'that')+' part aloud.')
+    : 'Tap your own language, speak, and I will say it in the other one.';
+}
+
+async function ipListen(side){
+  if(IP.busy) return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR) return;
+  const from = side==='a'?IP.a:IP.b;
+  const to   = side==='a'?IP.b:IP.a;
+  const btn=document.getElementById('ip-say-'+side);
+  const other=document.getElementById('ip-say-'+(side==='a'?'b':'a'));
+  IP.busy=true; btn.classList.add('live'); if(other) other.disabled=true;
+  const note=document.getElementById('ip-note');
+  note.textContent='Listening in '+from+'…';
+
+  const rec=new SR();
+  rec.lang=_tlTag(from); rec.interimResults=false; rec.continuous=false;
+  let heard='';
+  rec.onresult=e=>{ heard=Array.from(e.results).map(r=>r[0].transcript).join(' ').trim(); };
+  rec.onerror=e=>{ note.textContent = (e&&e.error==='not-allowed')
+    ? 'The microphone is blocked for this site. Allow it in the browser, then try again.'
+    : 'I did not catch that. Try once more.'; };
+  rec.onend=async ()=>{
+    IP.rec=null; btn.classList.remove('live'); if(other) other.disabled=false;
+    if(!heard){ IP.busy=false; if(note.textContent.indexOf('Listening')===0)
+      note.textContent='I did not catch that. Try once more.'; return; }
+    const turn=ipNewTurn(side,heard,'…');
+    try{
+      note.textContent='Translating…';
+      const r=await tlTranslate(heard,to,from);
+      ipFillTurn(turn,heard,r.text);
+      const spoke=await _tlSpeak(r.text,_tlTag(to));
+      note.textContent = spoke.ok ? 'Said it in '+to+'.'
+        : 'Shown above — I could not say it aloud, '+spoke.why+'.';
+    }catch(err){
+      ipFillTurn(turn,heard,'That did not translate. Try again.');
+      note.textContent='Bella could not be reached just then.';
+    }finally{ IP.busy=false; }
+  };
+  try{ rec.start(); IP.rec=rec; }
+  catch(e){ IP.busy=false; btn.classList.remove('live'); if(other) other.disabled=false;
+            note.textContent='The microphone would not start.'; }
+}
+/* One bubble per turn. The caller holds the element and fills it in when the
+   translation lands, so a turn can never be appended twice. */
+function ipNewTurn(side,said,got){
+  const log=document.getElementById('ip-log');
+  const el=document.createElement('div');
+  el.className='ip-turn '+(side==='a'?'ip-a':'ip-b');
+  ipFillTurn(el,said,got);
+  if(log){ log.appendChild(el); log.scrollTop=log.scrollHeight; }
+  return el;
+}
+function ipFillTurn(el,said,got){
+  if(!el) return;
+  el.innerHTML='<div class="ip-said">'+_tlEsc(said)+'</div>'
+              +'<div class="ip-got">'+_tlEsc(got)+'</div>';
+  const log=document.getElementById('ip-log');
+  if(log) log.scrollTop=log.scrollHeight;
+}
+
+/* ══ TRANSLATE ANY MESSAGE BELLA HAS WRITTEN ══════════════════════════════
+   Opens the Translate tool with the message already in the box, rather than
+   inventing a second translation path. One feature, one code path, and the
+   user still chooses the language. */
+function tlTranslateMsg(id){
+  const el=document.getElementById(id);
+  if(!el){ return; }
+  const text=(el.innerText||el.textContent||'').trim();
+  if(!text) return;
+  openTools('translate');
+  const ta=document.getElementById('tlf-text');
+  if(ta){ ta.value=text; }
+  const src=document.getElementById('tlf-sourceLanguage');
+  if(src) src.value='Detect automatically';
+  _tlMsg('Pick a language and I will translate what Bella said.','');
+}
+</script>
+
 <script id="v87-workshop-data">
 /* ══════════════════════════════════════════════════════════════════════════
    THE WORKSHOP LIST — THE SINGLE SOURCE OF TRUTH.   2026-10-06.
@@ -11357,26 +12523,27 @@ const WORKSHOP = [
   ['\u{1F3A8}','Image Studio','now','openImageStudio',''],
   ['\u{1F9FE}','Invoices & Quotes','now','openInvoicePanel',''],
   ['\u{1F5FA}️','Maps & Places','now','openPlacesPanel',''],
-  ['\u{1F4C4}','Documents & Slides','now',null,''],
-  ['\u{1F4DD}','Doc Edit & Convert','now',null,''],
-  ['\u{1F4D6}','Read Any File','now',null,''],
-  ['\u{1F310}','Translate','now',null,''],
+  ['\u{1F4C4}','Documents & Slides','now',"openTools('docs')",''],
+  ['\u{1F4DD}','Doc Edit & Convert','now',"openTools('docedit')",''],
+  ['\u{1F4D6}','Read Any File','now',"openTools('read')",''],
+  ['\u{1F310}','Translate','now',"openTools('translate')",''],
+  ['\u{1F5E8}️','Interpreter','now','openInterpreter','two languages, out loud'],
   ['\u{1F3A7}','Transcribe','now',null,''],
   ['\u{1F5BC}️','Image Transform','now',null,''],
-  ['\u{1F4D1}','PDF Tools','now',null,''],
-  ['\u{1F4C8}','Data Analysis','now',null,''],
-  ['\u{1F4B0}','Money & Expenses','now',null,''],
-  ['✍️','Writing Help','now',null,''],
-  ['\u{1F393}','Study & Interview','now',null,''],
-  ['\u{1F9F3}','Travel','now',null,''],
+  ['\u{1F4D1}','PDF Tools','now',"openTools('pdf')",''],
+  ['\u{1F4C8}','Data Analysis','now',"openTools('data')",''],
+  ['\u{1F4B0}','Money & Expenses','now',"openTools('money')",''],
+  ['✍️','Writing Help','now',"openTools('writing')",''],
+  ['\u{1F393}','Study & Interview','now',"openTools('study')",''],
+  ['\u{1F9F3}','Travel','now',"openTools('travel')",''],
   ['✅','Reminders & Tasks','now',null,''],
-  ['\u{1F4CB}','Meeting Notes','now',null,''],
+  ['\u{1F4CB}','Meeting Notes','now',"openTools('meeting')",''],
   ['\u{1F49B}','Life Record','now',null,''],
   ['\u{1F3A4}','Voice ID','now',null,''],
   // The note here said "labels need a font fix". The Dockerfile has installed
   // fonts-dejavu-core all along, so that was fixed in production before it was
   // ever written down -- [[bella-dockerfile-is-the-build]]. Stale label removed.
-  ['\u{1F4CA}','Charts & Graphs','now',null,''],
+  ['\u{1F4CA}','Charts & Graphs','now',"openTools('charts')",''],
   ['\u{1F4E7}','Gmail','now',null,'needs your own Google sign-in'],
   ['\u{1F4C1}','Google Drive','now',null,'needs your own Google sign-in'],
   ['\u{1F4C5}','Calendar','now',null,'needs your own Google sign-in'],
