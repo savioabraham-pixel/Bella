@@ -1504,6 +1504,23 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
       <div id="wx-foot"></div>
     </div>
 
+    <!-- ══ MAPS & PLACES ══════════════════════════════ -->
+    <div class="tb-overlay" id="pl-overlay" onclick="closePlacesPanel()"></div>
+    <div class="tb-panel" id="pl-panel" style="display:none">
+      <div class="tb-panel-title">Maps &amp; Places</div>
+      <button class="tb-close" onclick="closePlacesPanel()" aria-label="Close">✕</button>
+      <div id="pl-where"></div>
+      <div id="pl-search">
+        <input id="pl-q" type="text" autocomplete="off"
+               placeholder="A place, or what you need — pharmacy, ATM, a shop name"
+               onkeydown="if(event.key==='Enter')plSearch()">
+        <button id="pl-go" onclick="plSearch()">Search</button>
+      </div>
+      <div id="pl-chips"></div>
+      <div id="pl-body"></div>
+      <div id="pl-foot"></div>
+    </div>
+
     <!-- ══ IMAGE STUDIO ══════════════════════════════════════════════════ -->
     <div class="tb-overlay" id="img-overlay" onclick="closeImageStudio()"></div>
     <div class="tb-panel" id="img-panel" style="display:none">
@@ -1675,14 +1692,14 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         <input type="radio" name="rec-type" value="voice" id="rec-opt-voice" style="accent-color:var(--gold);width:16px;height:16px">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--text)">Voice</div>
-          <div style="font-size:10px;color:var(--tsoft)">Records audio from your microphone</div>
+          <div style="font-size:10px;color:var(--tsoft)">Records your microphone \u2014 you, and voices in the room around you</div>
         </div>
       </label>
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:10px;border:1px solid var(--border);transition:background .15s" id="rec-opt-screen-lbl">
         <input type="radio" name="rec-type" value="screen" id="rec-opt-screen" style="accent-color:var(--gold);width:16px;height:16px">
         <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text)">Screen</div>
-          <div style="font-size:10px;color:var(--tsoft)">Records your screen with system audio</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Screen &amp; Call</div>
+          <div style="font-size:10px;color:var(--tsoft)">Records a video call from both ends \u2014 their voice and yours. Choose <strong>Entire Screen</strong> and tick the box that shares the sound.</div>
         </div>
       </label>
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:10px;border:1px solid var(--border);transition:background .15s" id="rec-opt-video-lbl">
@@ -1831,7 +1848,6 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
       <div class="menu-items" id="sec-about">
         <div class="menu-item" onclick="showAboutBella();closeUserMenu()">About Bella</div>
         <div class="menu-item" onclick="showWhatsNew();closeUserMenu()">What's New</div>
-        <div class="menu-item" onclick="showPhase2Preview();closeUserMenu()">Coming in Phase 2</div>
       </div>
     </div>
     <!-- Profile & Account -->
@@ -5462,19 +5478,6 @@ function showWhatsNew(){
 // editing -- which makes the whole list read as guesswork. Anything that
 // ships must come OUT of this list in the same change that puts it into
 // "What's New".
-function showPhase2Preview(){
-  bellaMsg("**Coming in Phase 2**\n\n" +
-    "- **Gmail and Calendar** — reading them, and writing to them\n" +
-    "- **Sending** emails and WhatsApp messages on your behalf, always asking you first\n" +
-    "- **Proactive morning briefings** — I come to you, rather than waiting to be asked\n" +
-    "- **Reminders that reach you** when Bella is not even open\n" +
-    "- **Travel planning** — routes, hotels, places to eat, in one go\n" +
-    "- **Expense tracking**\n" +
-    "- **Google Meet** — joining a call and writing the minutes for you\n" +
-    "- **BKC Chat**, for family and friends\n\n" +
-    "**Already here, and no longer waiting:** documents as PDF, Word, Excel and PowerPoint; " +
-    "editing images on your device; the converter; and weather.");
-}
 function showMyMemory(){
   if(userMemory&&userMemory.memories){
     bellaMsg("**What I Remember About You**\n\n"+userMemory.memories);
@@ -5645,7 +5648,7 @@ function openVoiceRecording(){
   // Close shutter and activate voice recording
   toggleShutter();
   // Trigger mic button — same as pressing the mic button in the input bar
-  const micBtn = document.getElementById('mic-btn');
+  const micBtn = document.getElementById('mbtn');
   if(micBtn) micBtn.click();
   else bellaMsg('To use Voice Recording, tap the 🎙️ mic button in the message bar below.');
 }
@@ -5655,11 +5658,6 @@ function openVideoRecording(){
   const recBtn = document.getElementById('rec-btn');
   if(recBtn) recBtn.click();
   else bellaMsg('To use Video Recording, tap the ⏺ REC button in the message bar below.');
-}
-
-function openWebSearch(){
-  toggleShutter();
-  bellaMsg('Web Search is active! Just ask me anything that needs live data — like news, weather, prices, or current events — and I will search the web for you. 🔍');
 }
 
 // Auto-close shutter when new thread added
@@ -7580,6 +7578,26 @@ const UI_TEXT = {
     bn:'\u{1F534} ভিডিও রেকর্ডিং শুরু হয়েছে। আপনার ক্যামেরা ও অডিও রেকর্ড করা হচ্ছে।',
     hi:'\u{1F534} वीडियो रिकॉर्डिंग शुरू हो गई है। आपका कैमरा और ऑडियो रिकॉर्ड हो रहा है।',
     mr:'\u{1F534} व्हिडिओ रेकॉर्डिंग सुरू झाली आहे. तुमचा कॅमेरा आणि ऑडिओ रेकॉर्ड होत आहे.'},
+  rec_both:{
+    en:'\u{1F7E2} Both sides are being recorded — their voice through the screen, yours through the microphone.',
+    bn:'\u{1F7E2} দুই দিকই রেকর্ড হচ্ছে — তাঁদের গলা স্ক্রিনের মাধ্যমে, আপনারটা মাইক্রোফোনে।',
+    hi:'\u{1F7E2} दोनों तरफ़ की आवाज़ रिकॉर्ड हो रही है — उनकी स्क्रीन से, आपकी माइक्रोफ़ोन से।',
+    mr:'\u{1F7E2} दोन्ही बाजू रेकॉर्ड होत आहेत — त्यांचा आवाज स्क्रीनवरून, तुमचा मायक्रोफोनवरून.'},
+  rec_faronly:{
+    en:'\u{1F7E1} Their side is being recorded, but NOT yours — the microphone was not allowed.',
+    bn:'\u{1F7E1} তাঁদের দিক রেকর্ড হচ্ছে, কিন্তু আপনারটা নয় — মাইক্রোফোনের অনুমতি পাওয়া যায়নি।',
+    hi:'\u{1F7E1} उनकी आवाज़ रिकॉर्ड हो रही है, आपकी नहीं — माइक्रोफ़ोन की अनुमति नहीं मिली।',
+    mr:'\u{1F7E1} त्यांचा आवाज रेकॉर्ड होत आहे, तुमचा नाही — मायक्रोफोनची परवानगी मिळाली नाही.'},
+  rec_nearonly:{
+    en:'\u{1F7E1} Only YOUR voice is being recorded. To capture theirs, stop, start again, choose Entire Screen, and tick the box that shares the sound.',
+    bn:'\u{1F7E1} শুধু আপনার গলা রেকর্ড হচ্ছে। তাঁদেরটা পেতে থামিয়ে আবার শুরু করুন, Entire Screen বেছে নিন, আর শব্দ শেয়ার করার ঘরটিতে টিক দিন।',
+    hi:'\u{1F7E1} सिर्फ़ आपकी आवाज़ रिकॉर्ड हो रही है। उनकी पाने के लिए रोककर दोबारा शुरू करें, Entire Screen चुनें, और आवाज़ साझा करने वाला बॉक्स टिक करें।',
+    mr:'\u{1F7E1} फक्त तुमचा आवाज रेकॉर्ड होत आहे. त्यांचा हवा असल्यास थांबवून पुन्हा सुरू करा, Entire Screen निवडा आणि आवाज शेअर करण्याचा बॉक्स टिक करा.'},
+  rec_nosound:{
+    en:'\u{1F7E0} The screen is being recorded with NO sound at all. Stop, start again, choose Entire Screen and tick the box that shares the sound.',
+    bn:'\u{1F7E0} স্ক্রিন রেকর্ড হচ্ছে কিন্তু কোনো শব্দ নেই। থামিয়ে আবার শুরু করুন, Entire Screen বেছে নিন এবং শব্দ শেয়ারের ঘরে টিক দিন।',
+    hi:'\u{1F7E0} स्क्रीन बिना किसी आवाज़ के रिकॉर्ड हो रही है। रोककर दोबारा शुरू करें, Entire Screen चुनें और आवाज़ साझा करने वाला बॉक्स टिक करें।',
+    mr:'\u{1F7E0} स्क्रीन रेकॉर्ड होत आहे पण आवाज अजिबात नाही. थांबवून पुन्हा सुरू करा, Entire Screen निवडा आणि आवाज शेअर करण्याचा बॉक्स टिक करा.'},
   rec_saving:{
     en:'Your recording is being saved\u2026',
     bn:'আপনার রেকর্ডিং সেভ করা হচ্ছে\u2026',
@@ -7979,6 +7997,55 @@ function closeRecModal(){
   document.querySelectorAll('[id^="rec-opt-"][id$="-lbl"]').forEach(l=>l.style.background='');
 }
 
+// ── CALL RECORDING, BOTH ENDS ──────────────────────────────────────────────
+// Savio, 2026-10-07: "record any and all video calls from both ends or any
+// other voices in and around the vicinity."
+//
+// A browser cannot reach inside Zoom or Teams and take their audio stream.
+// What it CAN do on this Mac is capture the screen together with the system's
+// own sound — which IS the other person's voice, on its way to the speakers —
+// and mix the microphone into the same track so his side is on the recording
+// too. Before this, Screen recorded them and not him.
+//
+// Researched live 2026-10-07: system audio through getDisplayMedia needs
+// Chrome 141+ on macOS 14.2+, and macOS must have granted Chrome the Screen
+// Recording permission. MEASURED on his machine the same day: Chrome
+// 154.0.8037.98 on macOS 27.0.1. Both clear it.
+//
+// Two audio tracks have to become ONE before MediaRecorder sees them, or it
+// writes the first and silently drops the second. AudioContext ->
+// MediaStreamDestination is the only way a browser can do that.
+async function _recCallStream(){
+  const disp = await navigator.mediaDevices.getDisplayMedia({
+    video: true,
+    // systemAudio is a HINT. Chrome may still hand back no audio track at all
+    // — if he picks a window, or declines the audio tick in the picker — so the
+    // result is CHECKED below and reported, never assumed.
+    audio: { systemAudio:'include', echoCancellation:false, noiseSuppression:false }
+  });
+  let mic = null;
+  try { mic = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ mic = null; }   // their side is still captured; his is not
+
+  const far = disp.getAudioTracks().length > 0;
+  const out = new MediaStream();
+  disp.getVideoTracks().forEach(t => out.addTrack(t));
+
+  if(far || mic){
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const dest = ctx.createMediaStreamDestination();
+    if(far) ctx.createMediaStreamSource(new MediaStream(disp.getAudioTracks())).connect(dest);
+    if(mic) ctx.createMediaStreamSource(mic).connect(dest);
+    dest.stream.getAudioTracks().forEach(t => out.addTrack(t));
+    window._recAudioCtx = ctx;
+  }
+  // The combined stream owns neither source, so stopping it would leave the
+  // screen share and the microphone running. Both are torn down in onstop.
+  window._recSources = [disp, mic];
+  window._recHeard = { far: far, near: !!mic };
+  return out;
+}
+
 function startSelectedRecording(){
   const selected=document.querySelector('input[name="rec-type"]:checked');
   if(!selected){alert('Please select what you would like to record.');return;}
@@ -7987,6 +8054,7 @@ function startSelectedRecording(){
 
   // Request appropriate permission based on type
   let streamPromise;
+  window._recSources=null; window._recAudioCtx=null; window._recHeard=null;
   if(type==='voice'){
     // Always confirm before starting voice recording — even if permission already granted
     if(!confirm('You are about to record your voice. Do you confirm?')){
@@ -7994,23 +8062,35 @@ function startSelectedRecording(){
     }
     streamPromise=navigator.mediaDevices.getUserMedia({audio:true,video:false});
   } else if(type==='screen'){
-    streamPromise=navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
+    streamPromise=_recCallStream();
   } else if(type==='video'){
     streamPromise=navigator.mediaDevices.getUserMedia({audio:true,video:true});
   }
 
   streamPromise.then(stream=>{
     // Permission granted — start recording
-    const mimeType=type==='voice'?'audio/webm':'video/webm';
-    const ext=type==='voice'?'mp3':'mp4';
     window._mediaRecorder=new MediaRecorder(stream);
+    // The file was named .mp3/.mp4 while the DATA was always WebM, so every clip
+    // produced so far carried an extension that did not match its contents.
+    // Ask the recorder what it actually wrote instead of guessing.
+    const mimeType=window._mediaRecorder.mimeType||(type==='voice'?'audio/webm':'video/webm');
+    const ext=mimeType.indexOf('mp4')>-1?(type==='voice'?'m4a':'mp4')
+             :mimeType.indexOf('ogg')>-1?'ogg'
+             :(type==='voice'?'weba':'webm');
     window._recChunks=[];
     window._recType=type;
     window._mediaRecorder.ondataavailable=e=>{if(e.data.size>0)window._recChunks.push(e.data);};
     window._mediaRecorder.onstop=()=>{
       const blob=new Blob(window._recChunks,{type:mimeType});
       const url=URL.createObjectURL(blob);
+      // Stop the combined stream AND both of its sources — the screen share and
+      // the microphone are separate streams that this one only borrows from.
       stream.getTracks().forEach(t=>t.stop());
+      if(window._recSources){
+        window._recSources.forEach(s=>{ if(s) s.getTracks().forEach(t=>t.stop()); });
+        window._recSources=null;
+      }
+      if(window._recAudioCtx){ try{ window._recAudioCtx.close(); }catch(e){} window._recAudioCtx=null; }
       // Show saving message
       bellaMsg(uiText('rec_saving'));
       // Show clip in chat with download + save buttons
@@ -8044,6 +8124,15 @@ function startSelectedRecording(){
     // Disclosure BEFORE recording starts — required
     const discMsg=uiText(type==='voice'?'rec_voice':type==='screen'?'rec_screen':'rec_video');
     bellaMsg(discMsg);
+    // Say plainly WHICH voices are on the recording. A call recorded with the
+    // far side missing, discovered afterwards, is worse than not recording it.
+    if(type==='screen'&&window._recHeard){
+      const h=window._recHeard;
+      bellaMsg(h.far&&h.near ? uiText('rec_both')
+             : h.far         ? uiText('rec_faronly')
+             : h.near        ? uiText('rec_nearonly')
+             :                 uiText('rec_nosound'));
+    }
     // Button goes red with a white ring. A CLASS, not an inline style: dark
     // mode carries `body.dark button{...!important}`, which an inline style
     // cannot beat — that is why the red never appeared in dark mode.
@@ -8055,13 +8144,19 @@ function startSelectedRecording(){
     window._recording=true;
   }).catch(err=>{
     // Hard gate — no permission, no recording
-    const msg=type==='voice'?'Microphone access was denied. Recording cannot start without permission.':type==='screen'?'Screen capture access was denied. Recording cannot start without permission.':'Camera or microphone access was denied. Recording cannot start without permission.';
+    const msg=type==='voice'?'Microphone access was denied. Recording cannot start without permission.':type==='screen'?'Screen capture was not allowed, so nothing is being recorded. On a Mac this also needs macOS: System Settings \u203A Privacy & Security \u203A Screen Recording \u203A Google Chrome.':'Camera or microphone access was denied. Recording cannot start without permission.';
     alert(msg);
   });
 }
 
+// This button has never saved anything. It said "Saving to Google Drive…",
+// which reads as the save HAPPENING, and then nothing did. Saving to a person's
+// own Drive needs that person's own Google sign-in, which is genuinely Phase 2
+// work — so until then it says what is true, and points at the Download button
+// beside it that works today. Savio's rule: Bella does not promise what she
+// cannot do.
 function saveRecordingToDrive(url,filename){
-  bellaMsg('Saving to Google Drive… (Coming in Phase 2)');
+  bellaMsg('Saving straight to your Google Drive needs your own Google sign-in, which is not built yet — so I have not saved anything. Use the download arrow beside the file to keep it on this device now.');
 }
 function toggleTheme(){isDark=!isDark;isDark?applyDark():applyLight();localStorage.setItem('b_dark',isDark?'1':'0');}
 function applyDark(){
@@ -8753,6 +8848,212 @@ function switchWxTab(tab){
     if(b) b.classList.toggle('on', t === tab);
   });
   renderWxBody();
+}
+
+// ══ MAPS & PLACES ══════════════════════════════════════════════════════════
+// Backend: POST /find-places, migrated to Places API (New) in release 14 and
+// live on bella-backend-00062-lbj v6.5. It is NOT in ADMIN_ONLY_PATHS, so any
+// signed-in member may call it. The Workshop carried "⚠ the places service it
+// used was shut down" — that was TRUE on 3 Oct and STALE from 6 Oct: the legacy
+// API died, the server was migrated the same week, and only the label lagged.
+//
+// COST, because this one is not free past a point. Nearby Search and Text
+// Search are Pro-tier SKUs: 5,000 calls free per month, then $32/1,000 —
+// ₹3.09 a call at ₹96.47/USD (live rate, 7 Oct 2026). Family use is nowhere
+// near 5,000, but nothing here fires by itself: no search-as-you-type, no
+// timer, no call on open, and every result set is cached for the session, so
+// pressing the same chip twice costs one call and not two.
+// Directions are a LINK into Google Maps, never a /maps-route call — routing is
+// a second metered SKU for something the phone's own map does better.
+const PL_CATS=[['\u{1F3E5}','Hospital','hospital'],['\u{1F48A}','Pharmacy','pharmacy'],
+  ['\u{1F37D}️','Food','restaurant'],['\u{1F3E7}','ATM','atm'],
+  ['⛽','Petrol','gas_station'],['\u{1F6D2}','Grocery','supermarket']];
+const PL_RADIUS=4000;
+let _plCache={}, _plBusy=false;
+
+function _plCoords(){
+  try{
+    const d=JSON.parse(sessionStorage.getItem('b_location_data')||'null');
+    if(d&&Number.isFinite(d.lat)&&Number.isFinite(d.lon)) return d;
+  }catch(e){}
+  return null;
+}
+
+// Straight-line distance. Labelled as such on screen — Bella was caught stating
+// a road distance she had not looked up (the "4.68 km" to Amherst Street), and
+// a crow-flies number presented as a journey is the same lie in a new place.
+function _plKm(me,p){
+  const R=6371,r=Math.PI/180;
+  const dLat=(p.lat-me.lat)*r, dLon=(p.lng-me.lon)*r;
+  const s=Math.sin(dLat/2)**2+Math.cos(me.lat*r)*Math.cos(p.lat*r)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+
+function openPlacesPanel(){
+  document.getElementById('pl-overlay').classList.add('on');
+  document.getElementById('pl-panel').style.display='block';
+  _plRenderHead();
+  // Deliberately NO search on open. Opening a panel must never spend money.
+  if(!document.getElementById('pl-body').innerHTML) _plNote('Pick one below, or type what you are looking for.');
+}
+function closePlacesPanel(){
+  document.getElementById('pl-overlay').classList.remove('on');
+  document.getElementById('pl-panel').style.display='none';
+}
+
+function _plNote(t,bad){
+  document.getElementById('pl-body').innerHTML=
+    '<div class="pl-note'+(bad?' pl-bad':'')+'">'+_expEsc(t)+'</div>';
+}
+
+function _plRenderHead(){
+  const me=_plCoords();
+  const where=document.getElementById('pl-where');
+  where.innerHTML = me
+    ? '<span class="pl-pin">\u{1F4CD}</span> Searching around <strong>'+
+      _expEsc(me.area||me.city||'your location')+'</strong>'
+    : '<span class="pl-pin">\u{1F4CD}</span> Location is off, so Bella cannot sort by what is near you. '+
+      'Switch it on below, or type a place name with its city.';
+  // Savio, 2026-10-07: "what about location, shouldn't that also be a chip?"
+  // It should — telling him to walk to the top bar when the panel can do it
+  // itself was the panel making its own problem somebody else's. On, it names
+  // where he is and re-reads it on a tap; off, it IS the switch.
+  const locChip = me
+    ? '<button class="pl-chip pl-loc" onclick="plEnableLocation()" '
+      + 'title="Tap to read your location again"><span>\u{1F4CD}</span>'
+      + _expEsc(me.area||me.city||'Located')+'</button>'
+    : '<button class="pl-chip pl-loc pl-locoff" onclick="plEnableLocation()">'
+      + '<span>\u{1F4CD}</span>Turn location on</button>';
+  document.getElementById('pl-chips').innerHTML = locChip + PL_CATS.map(c=>
+    '<button class="pl-chip'+(me?'':' pl-off')+'"'+(me?'':' disabled')+
+    ' onclick="plNearby(\''+c[2]+'\',\''+c[1]+'\')"><span>'+c[0]+'</span>'+c[1]+'</button>').join('');
+}
+
+// The top bar paints ONE red "Location off" for four different failures and
+// logs nothing, which is exactly why he could say he had granted it while the
+// screen said otherwise. Here the reason is read and named.
+// A timeout is passed deliberately: the spec default is Infinity, so without it
+// a device that never answers leaves "Locating…" on screen for ever.
+function plEnableLocation(){
+  const chips=document.getElementById('pl-chips');
+  if(!navigator.geolocation){
+    _plNote('This browser cannot do location at all.',true); return;
+  }
+  if(chips) chips.querySelectorAll('.pl-loc').forEach(b=>{ b.disabled=true; b.textContent='\u{1F4CD} Locating…'; });
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      localStorage.setItem('b_location_perm','granted');
+      // Fills the top bar AND writes b_location_data — but only after the area
+      // name comes back, so the panel waits for it rather than guessing.
+      initLocationWithCoords(pos.coords.latitude, pos.coords.longitude);
+      _plAwaitLocation(0);
+    },
+    err=>{
+      _plRenderHead();
+      const why = err && err.code===1
+        ? 'Location was refused. On a Mac check two places: the padlock or sliders icon at the left of Chrome\u2019s address bar, and System Settings \u203A Privacy & Security \u203A Location Services \u203A Google Chrome.'
+        : err && err.code===3
+        ? 'Your device did not answer in time. Try again — if you are indoors it can take a moment.'
+        : 'Chrome could not work out where you are. That is usually macOS: System Settings \u203A Privacy & Security \u203A Location Services must be on, with Google Chrome ticked. Wi-Fi being off will do it too.';
+      _plNote(why, true);
+    },
+    { timeout:10000, maximumAge:60000 }
+  );
+}
+
+function _plAwaitLocation(n){
+  if(_plCoords()){
+    _plRenderHead();
+    _plNote('Location is on. Pick one above, or type what you are looking for.');
+    return;
+  }
+  if(n>24){   // 6 seconds
+    _plRenderHead();
+    _plNote('Your position came through, but the area name did not. Searching by typing still works.',true);
+    return;
+  }
+  setTimeout(()=>_plAwaitLocation(n+1), 250);
+}
+
+function plNearby(type,label){
+  const me=_plCoords();
+  if(!me) return;
+  // Returns the promise so a caller -- and the test harness -- can await it.
+  return _plRun('near:'+type, {location:me.lat+','+me.lon, type:type, radius:PL_RADIUS},
+         label+' near you', me);
+}
+
+function plSearch(){
+  const el=document.getElementById('pl-q');
+  const q=(el.value||'').trim();
+  if(q.length<2){ _plNote('Type at least two letters.'); return; }
+  const me=_plCoords();
+  // The server does a plain text search when a query is present and does NOT
+  // bias it to the caller's coordinates, so an unqualified "pharmacy" would be
+  // answered from anywhere on earth. Qualifying the words here keeps the answer
+  // local without a backend deploy. The proper fix (locationBias on
+  // places:searchText) is written up for his approval.
+  const near=me?(' near '+[me.area,me.city,me.country].filter(Boolean).join(', ')):'';
+  return _plRun('txt:'+q.toLowerCase()+near, {query:q+near}, q, me);
+}
+
+async function _plRun(sig,body,label,me){
+  if(_plBusy) return;
+  const go=document.getElementById('pl-go');
+  if(_plCache[sig]){ _plRender(_plCache[sig],label,me,true); return; }
+  _plBusy=true; if(go) go.disabled=true;
+  _plNote('Looking…');
+  try{
+    const r=await bfetch(BACKEND+'/find-places',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json().catch(()=>({}));
+    if(r.status===401){ _plNote('Please sign in again — Bella could not confirm who you are.',true); return; }
+    if(!r.ok){ _plNote('Google Places could not answer: '+(d.error||('HTTP '+r.status)),true); return; }
+    const places=d.places||[];
+    _plCache[sig]=places;
+    _plRender(places,label,me,false);
+  }catch(e){
+    _plNote('Could not reach Bella\u2019s server: '+e.message,true);
+  }finally{
+    _plBusy=false; if(go) go.disabled=false;
+  }
+}
+
+function _plRender(places,label,me,cached){
+  const body=document.getElementById('pl-body');
+  if(!places.length){ _plNote('Nothing found for \u201C'+label+'\u201D.'); _plFoot(0,cached); return; }
+  const rows=places.map(p=>{
+    const km=(me&&p.location)?_plKm(me,p.location):null;
+    const dir=p.location
+      ? 'https://www.google.com/maps/dir/?api=1'+(me?'&origin='+me.lat+','+me.lon:'')+
+        '&destination='+p.location.lat+','+p.location.lng+
+        (p.placeId?'&destination_place_id='+encodeURIComponent(p.placeId):'')
+      : 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(p.name+' '+(p.address||''));
+    const open = p.openNow===true?'<span class="pl-open">Open now</span>'
+               : p.openNow===false?'<span class="pl-shut">Closed</span>':'';
+    const rate = (typeof p.rating==='number')
+      ? '<span class="pl-rate">★ '+p.rating.toFixed(1)+
+        (p.totalRatings?' <span class="pl-rc">('+p.totalRatings+')</span>':'')+'</span>' : '';
+    return '<div class="pl-row">'+
+      '<div class="pl-main">'+
+        '<div class="pl-name">'+_expEsc(p.name)+'</div>'+
+        '<div class="pl-addr">'+_expEsc(p.address)+'</div>'+
+        '<div class="pl-meta">'+rate+open+
+          (km!==null?'<span class="pl-km">'+(km<1?Math.round(km*1000)+' m':km.toFixed(1)+' km')+' away, straight line</span>':'')+
+        '</div>'+
+      '</div>'+
+      '<a class="pl-dir" href="'+dir+'" target="_blank" rel="noopener noreferrer">Directions</a>'+
+    '</div>';
+  }).join('');
+  body.innerHTML='<div class="pl-head">'+_expEsc(label)+' — '+places.length+
+    (places.length===1?' result':' results')+'</div>'+rows;
+  _plFoot(places.length,cached);
+}
+
+function _plFoot(n,cached){
+  document.getElementById('pl-foot').innerHTML =
+    'Places and ratings from Google. Distances are straight-line, not road distance — tap Directions for the real route.'+
+    (cached?' <strong>Held from earlier in this session, so this cost nothing.</strong>':'');
 }
 
 function openWeatherPanel(){
@@ -9702,6 +10003,10 @@ body.dark #tb-menu-btn{background:#0B2545!important;color:#D4AF37!important;
   .user-menu-close{min-width:44px;min-height:44px}
   #tb-menu-btn{width:44px!important;height:44px!important;min-width:44px}
   #loc-allow-btn,#loc-deny-btn{min-height:44px}
+  /* Measured at 320px: the Search button came out 39px and the chips shorter
+     still. Every other tappable thing in the page is already listed here, so
+     these simply join it rather than inventing a second rule. */
+  #pl-go,.pl-chip,.pl-dir,.ws-zhead{min-height:44px}
   .sug-chip{padding:10px 14px}
 }
 
@@ -10349,6 +10654,82 @@ html body.dark #inv-xlsx{background:#6FD3B5 !important;color:#0B2545 !important}
 html body.dark #inv-docx{background:#8FB8E8 !important;color:#0B2545 !important}
 </style>
 
+<style id="v88-places">
+/* MAPS & PLACES PANEL.   Added 2026-10-07.
+   Every colour is a hardcoded hex, never var(--gold) or var(--navy): the brand
+   tokens INVERT under body.dark, which is what once painted a navy icon on a
+   navy button. Dark mode is handled by the explicit block at the end, which is
+   written `html body.dark` so it outranks the blanket `body.dark button{...}`
+   !important rules that an inline style cannot beat. */
+#pl-where{font-size:12px;color:#4A5A7A;line-height:1.6;margin-bottom:12px}
+#pl-where strong{color:#0B2545}
+.pl-pin{margin-right:4px}
+#pl-search{display:flex;gap:8px;margin-bottom:10px}
+#pl-q{flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid rgba(11,37,69,.18);
+  background:#FFFFFF;color:#0B2545;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif}
+#pl-q::placeholder{color:#8A96AC}
+#pl-go{flex-shrink:0;padding:10px 16px;border-radius:10px;border:none;background:#0B2545;
+  color:#D4AF37;font-size:13px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif}
+#pl-go:disabled{opacity:.5;cursor:default}
+#pl-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.pl-chip{display:flex;align-items:center;gap:5px;padding:7px 11px;border-radius:999px;
+  border:1px solid rgba(11,37,69,.18);background:#FAF8F4;color:#0B2545;font-size:12px;
+  font-weight:600;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif}
+.pl-chip.pl-off{opacity:.45;cursor:default}
+/* The location chip leads the row and is not a category, so it is marked out
+   rather than left to look like a seventh thing to search for. */
+.pl-chip.pl-loc{background:#0B2545;color:#D4AF37;border-color:#0B2545}
+.pl-chip.pl-locoff{background:#FFFFFF;color:#C0392B;border-color:#C0392B}
+.pl-head{font-size:11px;font-weight:700;color:#5A6B8A;letter-spacing:.3px;
+  text-transform:uppercase;margin-bottom:8px}
+.pl-note{font-size:12px;color:#5A6B8A;padding:14px 2px;line-height:1.6}
+.pl-note.pl-bad{color:#C0392B;font-weight:600}
+.pl-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;
+  background:#FAF8F4;border:1px solid rgba(11,37,69,.12);margin-bottom:8px}
+.pl-main{flex:1;min-width:0}
+.pl-name{font-size:13px;font-weight:700;color:#0B2545}
+.pl-addr{font-size:11px;color:#5A6B8A;margin-top:2px;line-height:1.5}
+.pl-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:5px;font-size:11px}
+.pl-rate{color:#0B2545;font-weight:600}
+.pl-rc{color:#5A6B8A;font-weight:400}
+/* #2E8B57 measured 4.25:1 and failed; #27744A is 5.70:1 on this surface. */
+.pl-open{color:#27744A;font-weight:700}
+.pl-shut{color:#C0392B;font-weight:700}
+.pl-km{color:#5A6B8A}
+.pl-dir{flex-shrink:0;padding:8px 12px;border-radius:10px;background:#0B2545;color:#D4AF37;
+  font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap}
+#pl-foot{font-size:10px;color:#5A6B8A;margin-top:12px;line-height:1.6}
+
+html body.dark #pl-q{background:#12233B!important;color:#F5E6C8!important;
+  border-color:rgba(245,230,200,.28)!important}
+html body.dark #pl-go,
+html body.dark .pl-dir{background:#F5E6C8!important;color:#0B2545!important}
+html body.dark .pl-chip{background:#12233B!important;color:#F5E6C8!important;
+  border-color:rgba(245,230,200,.28)!important}
+html body.dark .pl-chip.pl-loc{background:#F5E6C8!important;color:#0B2545!important;
+  border-color:#F5E6C8!important}
+html body.dark .pl-chip.pl-locoff{background:#12233B!important;color:#F09487!important;
+  border-color:#F09487!important}
+html body.dark .pl-row{background:#12233B!important;border-color:rgba(245,230,200,.26)!important}
+html body.dark .pl-name,html body.dark .pl-rate,html body.dark #pl-where strong{color:#F5E6C8!important}
+html body.dark .pl-addr,html body.dark .pl-rc,html body.dark .pl-km,
+html body.dark #pl-where,html body.dark #pl-foot,html body.dark .pl-head,
+html body.dark .pl-note{color:rgba(245,230,200,.68)!important}
+/* On the dark surface the light-mode greens and reds drop below 4.5:1. */
+html body.dark .pl-open{color:#7FD1A4!important}
+html body.dark .pl-shut{color:#F09487!important}
+html body.dark .pl-note.pl-bad{color:#F09487!important}
+
+/* 320px is the floor — iPhone SE and the older Androids in the family. The
+   panel is 94vw there, so a row has about 268px to lay out in. */
+@media(max-width:400px){
+  .pl-row{gap:8px;padding:9px 10px}
+  .pl-dir{padding:7px 9px;font-size:10px}
+  .pl-chip{padding:6px 9px;font-size:11px}
+  #pl-go{padding:10px 12px}
+}
+</style>
+
 <style id="v87-workshop">
 /* ══════════════════════════════════════════════════════════════════════════
    THE WORKSHOP, REBUILT AS A PHASE ROADMAP.   Added 2026-10-06.
@@ -10380,32 +10761,59 @@ html body.dark #inv-docx{background:#8FB8E8 !important;color:#0B2545 !important}
 .feat-item.feat-on{ opacity:1; cursor:pointer; }
 .feat-item.feat-on:active{ transform:scale(.96); }
 
-/* Zone header — tap to open. Carries a count so a growing list stays honest. */
-.ws-zone{ border-top:1px solid rgba(212,175,55,.15); margin-top:4px; }
-.ws-zone:first-child{ border-top:none; margin-top:0; }
-.ws-zhead{ display:flex; align-items:center; gap:6px; width:100%; background:none;
-           border:none; padding:8px 4px 5px; cursor:pointer; text-align:left;
-           font-family:'BellaIndic','DM Sans',sans-serif; }
-.ws-zcaret{ font-size:8px; color:#8A6D0F; transition:transform .2s; flex-shrink:0; }
+/* Zone header — a panel in the My Workshop style, Savio 2026-10-07. It was 8px
+   #8A6D0F on cream: 4.63:1 in light, and 1.51:1 in DARK, where it was gold on a
+   cream button and effectively invisible. The cream came from the blanket
+   `body.dark button{...!important}` rule beating a header declared
+   `background:none` — [[bella-dark-mode-css-traps]]. Painting the navy here
+   EXPLICITLY is what removes that failure, not a patch on top of it.
+   Inset deliberately: the My Workshop bar sits directly below, and two identical
+   full-width navy bars would read as two equal things. They are not. */
+.ws-zone{ margin-top:2px; }
+.ws-zone:first-child{ margin-top:0; }
+/* Typography lifted from the HIDE bar, not approximated — MEASURED off
+   #shutter-label on 2026-10-07: 11px, 600, letter-spacing 1.2px, uppercase,
+   #D4AF37, centred. Savio asked for the same style, so it is the same numbers.
+   The count is taken OUT of the flex flow and pinned right, or it would shove
+   the label off true centre. */
+.ws-zhead{ display:flex; align-items:center; justify-content:center; gap:8px;
+           position:relative; width:calc(100% - 8px);
+           margin:8px 4px 6px; padding:9px 12px; border:none; border-radius:10px;
+           background:#0B2545; cursor:pointer; text-align:center;
+           font-family:'BellaIndic','DM Sans',sans-serif;
+           box-shadow:0 1px 3px rgba(11,37,69,.18); transition:background .15s; }
+.ws-zhead:hover{ background:#12233B; }
+.ws-zhead:active{ transform:scale(.99); }
+.ws-zcaret{ font-size:9px; color:#D4AF37; transition:transform .2s; flex-shrink:0; }
 .ws-zone.open .ws-zcaret{ transform:rotate(90deg); }
-.ws-ztitle{ font-size:8px; font-weight:700; letter-spacing:1px; color:#8A6D0F; flex:1; }
-.ws-zcount{ font-size:8px; font-weight:700; color:#8A6D0F; opacity:.65; flex-shrink:0; }
+.ws-ztitle{ font-size:11px; font-weight:600; letter-spacing:1.2px;
+            text-transform:uppercase; color:#D4AF37; flex:none; }
+.ws-zcount{ position:absolute; right:12px; top:50%; transform:translateY(-50%);
+            font-size:10px; font-weight:700; color:#D4AF37; opacity:.75; }
 .ws-zbody{ display:none; }
+/* The line between what opens and what does not. A rule instead of a word, and
+   it spans the whole grid rather than sitting in one of the three columns. */
+.ws-rule{ grid-column:1/-1; height:1px; background:rgba(11,37,69,.14); margin:5px 2px; }
+html body.dark .ws-rule{ background:rgba(245,230,200,.20) !important; }
 .ws-zone.open .ws-zbody{ display:block; }
-.ws-znote{ font-size:8px; line-height:1.35; color:var(--tmid); padding:0 4px 5px;
-           opacity:.75; }
+/* The zone notes were removed on 2026-10-07 -- the drawer IS the list, so a
+   paragraph saying so was seven lines of nothing in a 320px rail. Nothing emits
+   .ws-znote any more, so its rules went with it. */
 
-/* The badge. ON is green and means "press it". Everything else is navy/gold and
-   means "not yet" — except FIX, which is red and means "this is broken", a
-   thing the old drawer called "Coming Soon". Bella does not say untrue things. */
+/* The badge. ON is green and means "press it"; everything else says SOON and
+   means "not yet". .ws-fix is kept — it is the red state for anything found
+   genuinely broken, which is what the drawer used to call "Coming Soon". */
 .feat-soon.ws-on{ background:#27744A !important; color:#fff !important; }
 .feat-soon.ws-fix{ background:#9B2C2C !important; color:#fff !important; }
 
+/* The navy has to be restated with !important or the blanket dark button rule
+   repaints it cream — which is exactly how this broke in the first place. */
+html body.dark .ws-zhead{ background:#0B2545 !important;
+  box-shadow:0 0 0 1px rgba(245,230,200,.18) !important; }
+html body.dark .ws-zhead:hover{ background:#12233B !important; }
 html body.dark .ws-ztitle,
 html body.dark .ws-zcount,
 html body.dark .ws-zcaret{ color:#D4AF37 !important; }
-html body.dark .ws-znote{ color:#F5E6C8 !important; opacity:.7; }
-html body.dark .ws-zone{ border-top-color:rgba(245,230,200,.14) !important; }
 </style>
 
 <script id="v88-invoice-js">
@@ -10944,92 +11352,94 @@ async function invShowUpiQr(){
    account. That is a project, not a button, which is why they sit in Phase 2.
    ══════════════════════════════════════════════════════════════════════════ */
 const WORKSHOP = [
-  // ── PHASE 1 · LIVE ──────────────────────────────────────────────────────
-  ['\u{1F399}️','Voice Recording','live','openVoiceRecording',''],
-  ['\u{1F4F9}','Video Recording','live','openVideoRecording',''],
-  ['\u{1F50D}','Web Search','live','openWebSearch',''],
-  ['⇄','Converter','live','openConverterPanel',''],
-  ['\u{1F3A8}','Image Studio','live','openImageStudio',''],
-  ['\u{1F324}️','Weather','live','openWeatherPanel',''],
-  ['\u{1F464}','My Profile','live','openMyProfile',''],
-  ['\u{1F4AC}','Feedback','live','openFeedback',''],
-
-  // ── PHASE 1 · BUILT, SCREEN COMING ──────────────────────────────────────
-  ['\u{1F9FE}','Invoices & Quotes','live','openInvoicePanel',''],
-  ['\u{1F4C4}','Documents & Slides','built',null,''],
-  ['\u{1F4DD}','Doc Edit & Convert','built',null,''],
-  ['\u{1F4D6}','Read Any File','built',null,''],
-  ['\u{1F310}','Translate','built',null,''],
-  ['\u{1F3A7}','Transcribe','built',null,''],
-  ['\u{1F5BC}️','Image Transform','built',null,''],
-  ['\u{1F4D1}','PDF Tools','built',null,''],
-  ['\u{1F4C8}','Data Analysis','built',null,''],
-  ['\u{1F4B0}','Money & Expenses','built',null,''],
-  ['✍️','Writing Help','built',null,''],
-  ['\u{1F393}','Study & Interview','built',null,''],
-  ['\u{1F9F3}','Travel','built',null,''],
-  ['✅','Reminders & Tasks','built',null,''],
-  ['\u{1F4CB}','Meeting Notes','built',null,''],
-  ['\u{1F49B}','Life Record','built',null,''],
-  ['\u{1F3A4}','Voice ID','built',null,''],
-  ['\u{1F4CA}','Charts & Graphs','built',null,'labels need a font fix'],
-  ['\u{1F5FA}️','Maps & Places','fix',null,'the places service it used was shut down'],
-
-  // ── PHASE 2 ─────────────────────────────────────────────────────────────
-  ['\u{1F4E7}','Gmail','p2',null,''],
-  ['\u{1F4C1}','Google Drive','p2',null,''],
-  ['\u{1F4C5}','Calendar','p2',null,''],
-  ['\u{1F91D}','Google Meet','p2',null,''],
-  ['\u{1F465}','Contacts','p2',null,''],
-  ['\u{1F514}','Proactive Bella','p2',null,'she speaks first'],
-  ['☀️','Morning Briefing','p2',null,''],
-  ['\u{1F4F2}','Notifications','p2',null,'reaches you with Bella closed'],
-  ['\u{1F3AC}','B-Meet','p2',null,'records a call, returns Word minutes'],
-  ['⬇️','Download My Data','p2',null,''],
-  ['\u{1F6E1}️','Audit & Usage','p2',null,'admin only'],
+  // ── WHAT BELLA CAN DO ───────────────────────────────────────────────────
+  // `fn` set  -> badge ON, the tile opens something today.
+  // `fn` null -> badge SOON, the SERVER can already do it and the screen is
+  //              still being built. Nothing in this list is a maybe.
+  ['\u{1F399}️','Voice Recording','now','openVoiceRecording',''],
+  ['\u{1F4F9}','Video Recording','now','openVideoRecording',''],
+  ['\u{1F3A8}','Image Studio','now','openImageStudio',''],
+  ['\u{1F9FE}','Invoices & Quotes','now','openInvoicePanel',''],
+  ['\u{1F5FA}️','Maps & Places','now','openPlacesPanel',''],
+  ['\u{1F4C4}','Documents & Slides','now',null,''],
+  ['\u{1F4DD}','Doc Edit & Convert','now',null,''],
+  ['\u{1F4D6}','Read Any File','now',null,''],
+  ['\u{1F310}','Translate','now',null,''],
+  ['\u{1F3A7}','Transcribe','now',null,''],
+  ['\u{1F5BC}️','Image Transform','now',null,''],
+  ['\u{1F4D1}','PDF Tools','now',null,''],
+  ['\u{1F4C8}','Data Analysis','now',null,''],
+  ['\u{1F4B0}','Money & Expenses','now',null,''],
+  ['✍️','Writing Help','now',null,''],
+  ['\u{1F393}','Study & Interview','now',null,''],
+  ['\u{1F9F3}','Travel','now',null,''],
+  ['✅','Reminders & Tasks','now',null,''],
+  ['\u{1F4CB}','Meeting Notes','now',null,''],
+  ['\u{1F49B}','Life Record','now',null,''],
+  ['\u{1F3A4}','Voice ID','now',null,''],
+  // The note here said "labels need a font fix". The Dockerfile has installed
+  // fonts-dejavu-core all along, so that was fixed in production before it was
+  // ever written down -- [[bella-dockerfile-is-the-build]]. Stale label removed.
+  ['\u{1F4CA}','Charts & Graphs','now',null,''],
+  ['\u{1F4E7}','Gmail','now',null,'needs your own Google sign-in'],
+  ['\u{1F4C1}','Google Drive','now',null,'needs your own Google sign-in'],
+  ['\u{1F4C5}','Calendar','now',null,'needs your own Google sign-in'],
+  ['\u{1F91D}','Google Meet','now',null,'needs your own Google sign-in'],
+  ['\u{1F465}','Contacts','now',null,'needs your own Google sign-in'],
+  ['\u{1F514}','Proactive Bella','now',null,'she speaks first'],
+  ['☀️','Morning Briefing','now',null,''],
+  ['\u{1F4F2}','Notifications','now',null,'reaches you with Bella closed'],
+  ['\u{1F3AC}','B-Meet','now',null,'records a call, returns Word minutes'],
+  ['\u{1F6E1}️','Audit & Usage','now',null,'admin only'],
 
   // ── PHASE 3 ─────────────────────────────────────────────────────────────
-  ['\u{1F5A5}️','Bella Presence','p3',null,'Tier 1 · ₹26,500'],
-  ['\u{1F916}','Companion','p3',null,'Tier 2 · ₹55,000'],
-  ['✨','Holographic Bella','p3',null,'Tier 3 · ₹2.5–4.4 lakh'],
-  ['\u{1F9BE}','Embodied','p3',null,'Tier 4'],
-  ['\u{1F5E3}️','"Hey Bella"','p3',null,'on-device only — never in the browser'],
-  ['\u{1F3E0}','Smart Home','p3',null,'nothing built yet'],
+  ['\u{1F5A5}️','Bella Presence','p3',null,''],
+  ['\u{1F916}','Companion','p3',null,''],
+  ['✨','Holographic Bella','p3',null,''],
+  ['\u{1F9BE}','Embodied','p3',null,''],
+  ['\u{1F5E3}️','"Hey Bella"','p3',null,''],
+  ['\u{1F3E0}','Smart Home','p3',null,''],
+  ['\u{1F4AC}','BKC Chat','p3',null,''],
 ];
 
-/* Zone headings. The note under each one explains WHY a zone is a zone — he
-   cannot read the code, so the page has to say it. */
+/* Zone headings. '' as a title means NO heading and no collapse: the drawer IS
+   the list of what Bella does, so a bar saying so was only words — Savio,
+   2026-10-07. Phase 3 keeps a heading because it is a different kind of thing,
+   and it starts SHUT so opening it is the user's own choice. */
 const WS_ZONES = [
-  ['live', '✦ Phase 1 · Working now', 'ON',
-   'Press any of these. The language button sits under each of Bella’s replies, and your conversations keep a 30-day Trash.'],
-  ['built','Phase 1 · Built, screen coming', 'SOON',
-   'Bella can already do these — they are live on the server and waiting on a screen. Invoices is being built first.'],
-  ['fix',  '⚠ Needs repair', 'FIX',
-   'This one is broken, not coming. It was listed as “Coming Soon”, which was not true.'],
-  ['p2',   'Phase 2 · Next', '2.0',
-   'Gmail, Drive, Calendar, Meet and Contacts each need YOUR OWN Google sign-in. That is deliberate — Bella asks you, reads only what you allow, and can never reach anyone else’s account. The rest needs Bella to act while the app is shut.'],
-  ['p3',   'Phase 3 · Bella in the room', '3.0',
-   'Your four tiers. No glasses, no headset. Prices move — these were last checked on 17 Sep 2026.'],
+  ['now', '',        'SOON', ''],
+  ['p3',  'Phase 3', 'SOON', ''],
 ];
 
 function wsRenderZone(key){
   const body = document.getElementById('ws-body-' + key);
   if(!body || body.dataset.filled === '1') return;       // render once, stay light
+  const zone   = WS_ZONES.find(z => z[0] === key) || [];
+  const zbadge = zone[2] || 'SOON';
+  // Split by whether the tile OPENS, not by the order it was typed in. Savio's
+  // point: "when the SOON becomes ON it goes in the top bracket" — giving a
+  // tile a `fn` is now the only thing needed to move it above the rule.
   const items = WORKSHOP.filter(f => f[2] === key);
-  const badge = (WS_ZONES.find(z => z[0] === key) || [])[2] || '';
-  const cls   = key === 'live' ? ' ws-on' : (key === 'fix' ? ' ws-fix' : '');
-  let html = '<div class="feat-grid">';
-  for(const [icon,label,, fn, note] of items){
+  const live  = items.filter(f => f[3]);
+  const soon  = items.filter(f => !f[3]);
+  const tile = function(f){
+    const icon=f[0], label=f[1], fn=f[3], note=f[4];
     const on   = fn ? ' feat-on' : '';
     const tap  = fn ? ' onclick="' + fn + '()"' : '';
+    const badge= fn ? 'ON' : zbadge;
+    const cls  = fn ? ' ws-on' : '';
     const ttl  = note ? ' title="' + label + ' — ' + note + '"' : ' title="' + label + '"';
-    html += '<div class="feat-item' + on + '"' + tap + ttl + '>'
-          +   '<span class="feat-icon">' + icon + '</span>'
-          +   '<span class="feat-label">' + label + '</span>'
-          +   '<span class="feat-soon' + cls + '">' + badge + '</span>'
-          + '</div>';
-  }
-  body.innerHTML = html + '</div>';
+    return '<div class="feat-item' + on + '"' + tap + ttl + '>'
+         +   '<span class="feat-icon">' + icon + '</span>'
+         +   '<span class="feat-label">' + label + '</span>'
+         +   '<span class="feat-soon' + cls + '">' + badge + '</span>'
+         + '</div>';
+  };
+  let html = '<div class="feat-grid">' + live.map(tile).join('');
+  // A rule, not a word. It only exists when there is something on both sides.
+  if(live.length && soon.length) html += '<div class="ws-rule"></div>';
+  html += soon.map(tile).join('') + '</div>';
+  body.innerHTML = html;
   body.dataset.filled = '1';
 }
 
@@ -11042,29 +11452,36 @@ function wsToggleZone(key){
 }
 
 /* Builds the headers only. Tiles arrive per zone on first open, so opening the
-   Workshop costs 5 buttons of DOM, not 44 tiles — [[bella-must-be-light-on-devices]]. */
+   Workshop costs a couple of buttons of DOM, not 39 tiles —
+   [[bella-must-be-light-on-devices]]. A zone with no title has no button to
+   press, so it is built open and filled straight away. */
 function renderWorkshop(){
   const host = document.getElementById('ws-zones');
   if(!host || host.dataset.built === '1') return;
   let html = '';
-  for(const [key,title,,note] of WS_ZONES){
+  for(const z of WS_ZONES){
+    const key = z[0], title = z[1];
     const n = WORKSHOP.filter(f => f[2] === key).length;
     if(!n) continue;
-    html += '<div class="ws-zone" id="ws-zone-' + key + '">'
-          +   '<button class="ws-zhead" onclick="wsToggleZone(\'' + key + '\')" '
-          +           'aria-label="' + title.replace(/"/g,'') + '">'
-          +     '<span class="ws-zcaret">▸</span>'
-          +     '<span class="ws-ztitle">' + title + '</span>'
-          +     '<span class="ws-zcount">' + n + '</span>'
-          +   '</button>'
-          +   '<div class="ws-zbody" id="ws-body-' + key + '">'
-          +     '<div class="ws-znote">' + note + '</div>'
-          +   '</div>'
-          + '</div>';
+    html += title
+      ? '<div class="ws-zone" id="ws-zone-' + key + '">'
+        +   '<button class="ws-zhead" onclick="wsToggleZone(\'' + key + '\')" '
+        +           'aria-label="' + title.replace(/"/g,'') + '">'
+        +     '<span class="ws-zcaret">▸</span>'
+        +     '<span class="ws-ztitle">' + title + '</span>'
+        +     '<span class="ws-zcount">' + n + '</span>'
+        +   '</button>'
+        +   '<div class="ws-zbody" id="ws-body-' + key + '"></div>'
+        + '</div>'
+      : '<div class="ws-zone open" id="ws-zone-' + key + '">'
+        +   '<div class="ws-zbody" id="ws-body-' + key + '"></div>'
+        + '</div>';
   }
   host.innerHTML = html;
   host.dataset.built = '1';
-  wsToggleZone('live');                   // the things you can actually press, open first
+  // Headless zones have no button, so nothing would ever fill them.
+  // Phase 3 is deliberately NOT opened here — he wants that to be a tap.
+  WS_ZONES.filter(z => !z[1]).forEach(z => wsRenderZone(z[0]));
 }
 </script>
 
