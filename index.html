@@ -4196,6 +4196,20 @@ async function _freshVerifier(containerId){
   return v;
 }
 
+// A failed link has ALREADY spent the verifier's token, so the retry inside the
+// same attempt needs its own. Clears the old one first — leaving it rendered
+// leaves a live grecaptcha widget bound to a dead token.
+async function _reVerifier(containerId){
+  if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch(e) {} _recaptchaVerifier = null; }
+  return await _freshVerifier(containerId);
+}
+
+// True when this person's number already belonged to a separate phone-only
+// Firebase user, so we signed them in the old way and their token carries no
+// email. The backend still resolves them from the Users tab; this flag exists so
+// the condition is visible rather than silent.
+let _legacyPhoneUser = false;
+
 async function sendOTP(mobile) {
   const errEl = document.getElementById('gate-error-3');
   if (errEl) errEl.textContent = '';
@@ -4212,10 +4226,36 @@ async function sendOTP(mobile) {
       try {
         _confirmationResult = await user.linkWithPhoneNumber(mobile, _recaptchaVerifier);
       } catch (linkErr) {
-        if (linkErr && linkErr.code === 'auth/provider-already-linked') {
-          if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch(e) {} }
-          _recaptchaVerifier = await _freshVerifier('recaptcha-container');
+        const lc = (linkErr && linkErr.code) || '';
+        if (lc === 'auth/provider-already-linked') {
+          // This number is already on THIS account. Re-prove it instead.
+          _recaptchaVerifier = await _reVerifier('recaptcha-container');
           _confirmationResult = await user.reauthenticateWithPhoneNumber(mobile, _recaptchaVerifier);
+        } else if (lc === 'auth/credential-already-in-use' ||
+                   lc === 'auth/account-exists-with-different-credential') {
+          // ── THE TRAP THAT WOULD HAVE LOCKED EVERYONE OUT ──
+          // Firebase throws credential-already-in-use when the number has ALREADY
+          // been used for phone sign-in and therefore belongs to a separate
+          // phone-only Firebase user. EVERY account that existed before the
+          // linking change is in exactly that state, because the old code called
+          // signInWithPhoneNumber, which creates precisely such a user.
+          // So linking fails for all of them and, without this branch, no OTP is
+          // ever requested and they cannot sign in at all.
+          //
+          // Fall back to the OLD path: sign in as the phone user. That is exactly
+          // what the page did before today, so nobody is worse off than they were
+          // this morning, and the backend still recovers their email from the
+          // Users tab via _emailForPhone.
+          //
+          // The linked-token benefit therefore applies to accounts whose number
+          // has never been used before — which is the NEW-JOINER case, the one
+          // that was broken. Merging the legacy duplicates needs firebase-admin
+          // to delete the orphan phone-only user; that is queued, not guessed at.
+          console.warn('OTP: phone already belongs to a separate Firebase user — ' +
+                       'falling back to phone sign-in. This account needs its duplicate merged.');
+          _legacyPhoneUser = true;
+          _recaptchaVerifier = await _reVerifier('recaptcha-container');
+          _confirmationResult = await fbAuth.signInWithPhoneNumber(mobile, _recaptchaVerifier);
         } else {
           throw linkErr;
         }
@@ -4284,9 +4324,29 @@ async function sendReturningOTP(mobile, savedUser) {
     const user = fbAuth.currentUser;
     if (user) {
       const hasPhone = (user.providerData || []).some(function(p){ return p && p.providerId === 'phone'; });
-      _returningConfirmationResult = hasPhone
-        ? await user.reauthenticateWithPhoneNumber(mobile, _returningRecaptchaVerifier)
-        : await user.linkWithPhoneNumber(mobile, _returningRecaptchaVerifier);
+      if (hasPhone) {
+        _returningConfirmationResult = await user.reauthenticateWithPhoneNumber(mobile, _returningRecaptchaVerifier);
+      } else {
+        try {
+          _returningConfirmationResult = await user.linkWithPhoneNumber(mobile, _returningRecaptchaVerifier);
+        } catch (linkErr) {
+          const lc = (linkErr && linkErr.code) || '';
+          // Same trap as the registration path: every account that pre-dates the
+          // linking change has its number held by a separate phone-only Firebase
+          // user, so the link is refused. Fall back to the old sign-in rather
+          // than lock a returning member out of their own account.
+          if (lc === 'auth/credential-already-in-use' ||
+              lc === 'auth/account-exists-with-different-credential') {
+            console.warn('Returning OTP: number belongs to a separate Firebase user — falling back.');
+            _legacyPhoneUser = true;
+            if (_returningRecaptchaVerifier) { try { _returningRecaptchaVerifier.clear(); } catch(e) {} }
+            _returningRecaptchaVerifier = await _freshVerifier('recaptcha-container-returning');
+            _returningConfirmationResult = await fbAuth.signInWithPhoneNumber(mobile, _returningRecaptchaVerifier);
+          } else {
+            throw linkErr;
+          }
+        }
+      }
     } else {
       _returningConfirmationResult = await fbAuth.signInWithPhoneNumber(mobile, _returningRecaptchaVerifier);
     }
