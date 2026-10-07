@@ -4776,14 +4776,87 @@ function renderAdminUsers(users){
         '<div style="margin-top:3px">' + e + ' · ' + esc(u.userId||'no ID') + ' · ' + esc(u.mobile||'') + '</div>' +
         '<div style="margin-top:3px;color:rgba(245,230,200,0.45)">' + u.memories + ' memories · ' + u.threads + ' conversations · last seen ' + esc((u.lastSeen||'—').slice(0,10)) + '</div>' +
         (u.stateReason ? '<div style="margin-top:3px;color:rgba(245,230,200,0.45)">Reason on file: ' + esc(u.stateReason) + '</div>' : '') +
+        '<div id="plog-' + _i + '" style="margin-top:6px;font-size:12px;color:rgba(245,230,200,0.7)"></div>' +
         '<div style="margin-top:8px">' +
           '<button onclick="adminChangeMobile(' + _i + ')" style="margin:3px 4px 0 0;padding:6px 10px;border-radius:8px;border:1px solid #D4AF37;background:transparent;color:#D4AF37;font-size:12px;cursor:pointer">Change mobile number</button>' +
+          // Checking is harmless, so this button only ever INSPECTS. Deleting
+          // needs a second, explicit press on the result.
+          '<button onclick="adminPhoneLogin(' + _i + ')" style="margin:3px 4px 0 0;padding:6px 10px;border-radius:8px;border:1px solid rgba(245,230,200,0.35);background:transparent;color:rgba(245,230,200,0.8);font-size:12px;cursor:pointer">Check sign-in login</button>' +
           btn('wipe','Wipe completely','#EF5350') +
           btn('clear-data','Clear data, keep account','#FFA726') +
           (me ? '' : btn('lockout','Security lock-out','#29B6F6')) +
           (me ? '' : (u.state==='frozen' ? btn('unfreeze','Unfreeze','#66BB6A') : btn('freeze','Freeze','#AB47BC'))) +
         '</div></div>';
     }).join('');
+}
+
+// ── THE STALE PHONE LOGIN ────────────────────────────────────────────────
+// Every account created before 2026-10-07 has its mobile number held by a
+// SEPARATE phone-only Firebase login, because the old code signed people in
+// with signInWithPhoneNumber. That is why linking the phone to the Google
+// account is refused, and why a fallback sign-in carries no verified email --
+// which is what stopped the welcome email ever reaching a non-admin.
+//
+// Removing that orphan login lets the next registration link cleanly. Two
+// presses: this button only ever INSPECTS, and the backend refuses to delete
+// anything that is not a phone-only login with no email, so a wrong number
+// cannot destroy a real account.
+async function adminPhoneLogin(i){
+  const u = _adminUsers[i];
+  const out = document.getElementById('plog-' + i);
+  if(!u || !out) return;
+  const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const phone = String(u.mobile || '').trim();
+  if(!phone){ out.innerHTML = '<span style="color:#FFA726">No mobile number on this account, so there is nothing to look up.</span>'; return; }
+  out.textContent = 'Checking…';
+  try{
+    const r = await bfetch(BACKEND + '/admin-phone-account', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ phone: phone, action: 'inspect' })
+    });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok){ out.innerHTML = '<span style="color:#EF5350">' + esc(d.error || ('HTTP ' + r.status)) + '</span>'; return; }
+    if(!d.found){
+      out.innerHTML = '<span style="color:#66BB6A">No separate phone login holds ' + esc(phone) +
+        '. A registration on this number will link cleanly — nothing to do.</span>';
+      return;
+    }
+    const head = 'Firebase login <b>' + esc(d.uid) + '</b> holds ' + esc(phone) +
+      ' — sign-in methods: <b>' + esc((d.providers||[]).join(' + ') || 'none') + '</b>, email on it: <b>' + esc(d.email) + '</b>' +
+      (d.lastSignIn ? '<br>last signed in ' + esc(String(d.lastSignIn).slice(0,16)) : '');
+    if(!d.safeToDelete){
+      out.innerHTML = head + '<div style="color:#66BB6A;margin-top:4px">This is a real account and will NOT be deleted. ' + esc(d.why) + '</div>';
+      return;
+    }
+    out.innerHTML = head +
+      '<div style="color:#FFA726;margin-top:4px">Stale phone-only login. Removing it lets the next registration on this number carry the verified Gmail, which is what makes the welcome email send.</div>' +
+      '<button onclick="adminPhoneLoginDelete(' + i + ')" style="margin-top:6px;padding:6px 10px;border-radius:8px;border:1px solid #EF5350;background:transparent;color:#EF5350;font-size:12px;cursor:pointer">Remove this stale login</button>';
+  }catch(e){
+    out.innerHTML = '<span style="color:#EF5350">' + esc(e.message) + '</span>';
+  }
+}
+
+async function adminPhoneLoginDelete(i){
+  const u = _adminUsers[i];
+  const out = document.getElementById('plog-' + i);
+  if(!u || !out) return;
+  const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const phone = String(u.mobile || '').trim();
+  const reason = prompt('Why are you removing this stale sign-in login?\n(It goes in the Audit tab.)', 'stale phone-only login blocking account linking');
+  if(reason === null) return;                    // cancelled
+  if(!String(reason).trim()){ out.innerHTML = '<span style="color:#EF5350">A reason is required — it goes in the audit record.</span>'; return; }
+  out.textContent = 'Removing…';
+  try{
+    const r = await bfetch(BACKEND + '/admin-phone-account', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ phone: phone, action: 'delete', confirm: phone, reason: String(reason).trim() })
+    });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok){ out.innerHTML = '<span style="color:#EF5350">' + esc(d.error || ('HTTP ' + r.status)) + '</span>'; return; }
+    out.innerHTML = '<span style="color:#66BB6A">Removed. ' + esc(d.note || '') + '</span>';
+  }catch(e){
+    out.innerHTML = '<span style="color:#EF5350">' + esc(e.message) + '</span>';
+  }
 }
 
 // ── RENUMBER EVERY USER ID ONTO SAVIO'S SEQUENCE ─────────────────────────
