@@ -267,6 +267,26 @@ body.dark #rec-lbl{color:#0B2545}
 .trash-btn{border:none;background:transparent;cursor:pointer;font-size:11px;padding:2px 4px;border-radius:6px;flex:0 0 auto}
 .trash-btn:hover{background:rgba(212,175,55,.25)}
 .trash-empty{width:100%;margin-top:4px;padding:6px;border-radius:8px;border:1px solid rgba(11,37,69,.2);background:transparent;color:var(--tsoft);font-size:10px;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif}
+/* Deleted: ticking several at once. Savio, 2026-10-08 — clearing PART of the
+   bin meant pressing the cross on every row and confirming each one, and the
+   only bulk action was "Empty", which is all or nothing. */
+.trash-selbar{display:flex;align-items:center;gap:7px;padding:5px 8px 6px;border-bottom:1px solid var(--border)}
+.trash-selbar label{display:flex;align-items:center;gap:6px;cursor:pointer;flex:1 1 auto;
+  font-size:10px;font-weight:600;color:var(--tsoft);letter-spacing:.2px;user-select:none}
+.trash-check{width:13px;height:13px;flex:0 0 auto;cursor:pointer;accent-color:#D4AF37;margin:0}
+.trash-selcount{font-size:9px;font-weight:700;color:var(--navy,#0B2545);
+  background:var(--goldpale,#F6EFE2);border-radius:9px;padding:1px 6px;flex:0 0 auto}
+.trash-actrow{display:flex;gap:5px;margin-top:5px}
+.trash-actrow .trash-empty{margin-top:0}
+#trash-del-sel{border-color:rgba(150,35,35,.5);color:#962323}
+/* The blanket `body.dark button{...!important}` rule outscores any class, so a
+   destructive button can only keep its colour at ID-level specificity WITH
+   !important — the trap documented in CLAUDE.md. */
+body.dark #trash-del-sel{background:rgba(150,35,35,.22)!important;color:#FFC9C9!important;
+  border:1px solid rgba(255,150,150,.45)!important}
+body.dark #trash-del-sel:hover{background:rgba(150,35,35,.38)!important;color:#FFE2E2!important}
+body.dark .trash-selcount{background:rgba(212,175,55,.2);color:#F5E6C8}
+body.dark .trash-selbar{border-color:rgba(245,230,200,.18)}
 body.dark .trash-head:hover,body.dark .trash-item:hover{background:rgba(212,175,55,.12)}
 body.dark .trash-count{background:rgba(212,175,55,.2);color:#F5E6C8}
 body.dark .trash-empty{border-color:rgba(245,230,200,.25);color:rgba(245,230,200,.65)}
@@ -2786,25 +2806,59 @@ function renderTrashList(){
     new Date(deletedThreads[b].deletedAt||0)-new Date(deletedThreads[a].deletedAt||0));
   if(count) count.textContent=ids.length;
   sec.style.display=ids.length?'block':'none';
-  if(!ids.length){ body.innerHTML=''; return; }
+  if(!ids.length){ body.innerHTML=''; trashSel=new Set(); return; }
+  /* A tick that outlived its conversation would leave the footer claiming a
+     count the user cannot see. Prune on every render. */
+  trashSel.forEach(id=>{ if(!deletedThreads[id]) trashSel.delete(id); });
   body.innerHTML='';
+
+  const picked=trashSel.size, allOn=(picked===ids.length);
+  const bar=document.createElement('div'); bar.className='trash-selbar';
+  bar.innerHTML='<label><input type="checkbox" class="trash-check" id="trash-all"'
+    +(allOn?' checked':'')+'>'
+    +'<span>'+(allOn?'Deselect all':'Select all')+'</span></label>'
+    +(picked?'<span class="trash-selcount">'+picked+' selected</span>':'');
+  const all=bar.querySelector('#trash-all');
+  /* Part-selected shows a dash, not a tick -- it must not look like "all". */
+  all.indeterminate=(picked>0&&!allOn);
+  all.onclick=(e)=>{ e.stopPropagation(); trashToggleAll(e.target.checked); };
+  body.appendChild(bar);
+
   ids.forEach(id=>{
     const t=deletedThreads[id]; const left=daysLeftInTrash(id);
     const el=document.createElement('div'); el.className='trash-item';
     const safe=String(t.name||'Conversation').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    el.innerHTML='<div class="trash-info">'+
+    el.innerHTML='<input type="checkbox" class="trash-check" data-act="pick"'
+      +(trashSel.has(id)?' checked':'')+' title="Select this conversation">'+
+      '<div class="trash-info">'+
       '<div class="trash-name">'+safe+'</div>'+
       '<div class="trash-sub">'+(left>0?('Deleted for good in '+left+' day'+(left===1?'':'s')):'Removing today')+'</div>'+
       '</div>'+
       '<button class="trash-btn" title="Restore this conversation" data-act="restore">\u21a9</button>'+
       '<button class="trash-btn" title="Delete permanently" data-act="destroy">\u2715</button>';
+    el.querySelector('[data-act="pick"]').onclick=(e)=>{ e.stopPropagation(); trashToggle(id,e.target.checked); };
     el.querySelector('[data-act="restore"]').onclick=(e)=>restoreThread(id,e);
     el.querySelector('[data-act="destroy"]').onclick=(e)=>destroyThreadForever(id,e);
     body.appendChild(el);
   });
-  const btn=document.createElement('button');
-  btn.className='trash-empty'; btn.textContent='Empty Deleted ('+ids.length+')';
-  btn.onclick=emptyTrash; body.appendChild(btn);
+
+  /* Nothing ticked -> the old all-or-nothing Empty button, unchanged.
+     Something ticked -> act on exactly those, and say how many. */
+  if(picked){
+    const row=document.createElement('div'); row.className='trash-actrow';
+    const del=document.createElement('button');
+    del.className='trash-empty'; del.id='trash-del-sel';
+    del.textContent='Delete '+picked+' permanently';
+    del.onclick=trashDestroySelected;
+    const res=document.createElement('button');
+    res.className='trash-empty'; res.textContent='Restore '+picked;
+    res.onclick=trashRestoreSelected;
+    row.appendChild(del); row.appendChild(res); body.appendChild(row);
+  }else{
+    const btn=document.createElement('button');
+    btn.className='trash-empty'; btn.textContent='Empty Deleted ('+ids.length+')';
+    btn.onclick=emptyTrash; body.appendChild(btn);
+  }
 }
 function newThread(){
   // Auto-close coming soon shutter for more thread space
@@ -2892,6 +2946,38 @@ function emptyTrash(){
   if(!confirm('Permanently delete all '+n+' conversation'+(n===1?'':'s')+' in Deleted?\n\nThis cannot be undone.')) return;
   deletedThreads={}; saveTrash(); renderTrashList();
 }
+/* ── Ticking several at once ───────────────────────────────────────────
+   Savio asked for this on 2026-10-08: "i have to manually select every thread
+   and delete". The bin had exactly two speeds -- one at a time, with a
+   confirm each, or Empty everything. Neither lets him clear SOME of it.
+   The ticks live only for as long as the list is on screen; nothing is
+   written to localStorage, because a half-finished selection is not a
+   preference worth remembering. */
+let trashSel=new Set();
+function trashToggle(id,on){ if(on) trashSel.add(id); else trashSel.delete(id); renderTrashList(); }
+function trashToggleAll(on){
+  trashSel = on ? new Set(Object.keys(deletedThreads)) : new Set();
+  renderTrashList();
+}
+function trashDestroySelected(){
+  const ids=[...trashSel].filter(id=>deletedThreads[id]);
+  const n=ids.length; if(!n) return;
+  /* One confirm for the whole set, naming the count -- confirming ten times
+     is what he was trying to get away from. */
+  if(!confirm('Permanently delete '+n+' conversation'+(n===1?'':'s')+'?\n\nThis cannot be undone.')) return;
+  ids.forEach(id=>{ delete deletedThreads[id]; });
+  trashSel=new Set(); saveTrash(); renderTrashList();
+}
+function trashRestoreSelected(){
+  const ids=[...trashSel].filter(id=>deletedThreads[id]);
+  if(!ids.length) return;
+  ids.forEach(id=>{
+    const t=Object.assign({},deletedThreads[id]); delete t.deletedAt;
+    threads[id]=t; delete deletedThreads[id];
+  });
+  trashSel=new Set(); saveTrash(); saveThreadsLocal(); renderThreadList(); renderTrashList();
+}
+
 function toggleTrashSection(){
   const b=document.getElementById('trash-body'); if(!b) return;
   const open=b.style.display!=='none';
