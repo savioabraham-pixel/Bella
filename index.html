@@ -13246,7 +13246,7 @@ async function tlTranslateResult(){
     TL.result={kind:'text',text:got.text,tag:_tlTag(target),lang:target,
                title:(TL.orig.title||'Bella')+' \u2014 '+target};
     _tlMsg(got.warn||('Translated into '+_tlEsc(target)
-      +(got.parts>1?' in '+got.parts+' parts':'')+'. Copy, Save as Word and Read it aloud now use the translation.'),
+      +(got.parts>1?' in '+got.parts+' parts':'')+'. Copy, Download and Read it aloud now use the translation.'),
       got.warn?'warn':'ok');
     tlActions();
   }catch(e){
@@ -14260,7 +14260,7 @@ async function bmMinutes(){
     TL.result={kind:'json',data:notes,title:'Minutes — '+(title||'the meeting')};
     _tlMsg('Done'+(td.detectedLanguage&&td.detectedLanguage!=='Unknown'
       ? ' — the meeting was in '+_tlEsc(td.detectedLanguage) : '')
-      +'. <b>Save as Word</b> gives you a file you can edit.','ok');
+      +'. Pick a format below and press <b>Download</b> for a file you can edit.','ok');
     await tlActions();
     _bmOfferAudio();
   }catch(e){
