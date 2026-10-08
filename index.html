@@ -12248,7 +12248,8 @@ async function invShowUpiQr(){
   #tl-head{padding:12px 13px}
   #tl-title{font-size:18px}
   #tl-body{padding:12px 13px 16px}
-  #tl-overlay .tl-act button{flex:1 1 100%}
+  #tl-overlay .tl-act button,
+  #tl-overlay .tl-act select{flex:1 1 100%}
   #ip-overlay{padding:10px}
   #ip-title{font-size:18px}
 }
@@ -12554,6 +12555,7 @@ function tlOpenTool(id){
   let h='';
   if(t.note) h+='<div class="tl-hint" style="margin-bottom:4px">'+_tlEsc(t.note)+'</div>';
   for(const f of t.fields) h+=tlField(f);
+  h+=tlAttachField(t);
   h+='<button class="tl-go" id="tl-go" onclick="tlRun()">'+_tlEsc(t.go||'Ask Bella')+'</button>'
    + '<div id="tl-msg"></div><div id="tl-out"></div><div class="tl-act" id="tl-actions"></div>';
   document.getElementById('tl-body').innerHTML=h;
@@ -12616,6 +12618,98 @@ function tlField(f){
       +' accept="'+_tlEsc(extra||'')+'" onchange="tlFile(\''+key+'\',this,'+(kind==='files')+')">'
       +'<div class="tl-file" id="tl-fn-'+key+'"></div>';
   return '';
+}
+
+/* ── ATTACHING A FILE TO ANY TOOL ────────────────────────────────────────
+   Savio, 2026-10-08: "its easier for people to copy paste or upload data
+   sheets in various formats for anayzation rather than copy paste into
+   Bella" -- and he is right. Copy-pasting a spreadsheet into a box is lossy,
+   tedious, and silently truncated.
+
+   21 tools already take a file straight to the endpoint, which is better
+   fidelity and is left alone. The other 27 send TEXT, so the file is read
+   HERE, in the browser, using the four readers the page already loads for the
+   chat paperclip -- mammoth for Word, SheetJS for Excel, pdf.js for PDF,
+   JSZip for PowerPoint. No backend change, nothing new downloaded, and no
+   dead control: a tool only gets the box if it has somewhere to put the text.
+
+   IT TELLS THE TRUTH ABOUT WHAT WILL BE READ. /analyse-data truncates at
+   5,000 characters, /data-to-chart and /forecast at 3,000 -- silently, inside
+   the endpoint. A 400-row sheet would be cut off with no warning at all.
+   `readCap` makes that visible BEFORE the run instead of after. Removing the
+   cap is a backend change and is queued, not pretended away. */
+function _tlAttachKey(t){
+  const f=t.fields||[];
+  if(f.some(function(x){ return x[0]==='file'||x[0]==='files'; })) return null;  // native already
+  if(t.attach) return t.attach;                     // an explicit choice wins
+  /* ONLY a box that can hold a document's contents. The first version took the
+     first text field it could find, which would have put an "attach a file"
+     control under **Flight number**, under a THREE-LETTER CURRENCY CODE, and
+     under "What Bella should call you". A file box on a field that cannot hold
+     a file is not an option offered, it is clutter -- the same fault as the 25
+     empty dropdowns and the placeholders that looked like answers. So the
+     target must be a multi-line box, or the tool must name one itself. */
+  const area=f.find(function(x){ return x[0]==='area'||x[0]==='mic'; });
+  return area?area[1]:null;
+}
+
+function tlAttachField(t){
+  const key=_tlAttachKey(t);
+  if(!key) return '';
+  const cap=t.readCap
+    ? ' Bella reads the first '+t.readCap.toLocaleString('en-IN')+' characters of it.'
+    : '';
+  return '<div class="tl-lbl" style="margin-top:14px">Or attach a file &mdash; optional</div>'
+    +'<input id="tl-att" type="file" accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.pptx,.txt,.md,.json"'
+    +' onchange="tlAttachRead(this,\''+key+'\')">'
+    +'<div class="tl-hint">Word, Excel, PDF, PowerPoint, CSV or text. Bella reads it here on your '
+    +'device and puts the contents in the box above, so you can check or edit it before sending.'
+    +_tlEsc(cap)+'</div>'
+    +'<div class="tl-file" id="tl-att-note"></div>';
+}
+
+async function tlAttachRead(input,key){
+  const file=(input.files||[])[0];
+  const note=document.getElementById('tl-att-note');
+  if(!file){ if(note) note.textContent=''; return; }
+  const box=document.getElementById('tlf-'+key);
+  if(!box){ if(note) note.textContent='There is nowhere to put this one.'; return; }
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  if(note) note.textContent='Reading '+file.name+'\u2026';
+  try{
+    let text='';
+    if(ext==='pdf')                                   text=await extractPDF(file);
+    else if(ext==='docx'||ext==='doc')                text=await extractDOCX(file);
+    else if(ext==='xlsx'||ext==='xls'||ext==='csv')   text=await extractExcel(file);
+    else if(ext==='pptx')                             text=await extractPPTX(file);
+    else                                              text=await file.text();
+    text=String(text||'').trim();
+    if(!text){ if(note) note.textContent='Nothing could be read out of that file.'; return; }
+
+    /* 100k characters is already far more than any of these endpoints will
+       look at; beyond it the browser just gets slow for no benefit. */
+    let trimmed=false;
+    if(text.length>100000){ text=text.slice(0,100000); trimmed=true; }
+
+    box.value=(box.value&&box.value.trim())
+      ? (box.value.replace(/\s+$/,'')+'\n\n'+text)
+      : text;
+
+    const n=text.length;
+    let msg=file.name+' \u2014 '+n.toLocaleString('en-IN')+' characters read in.';
+    if(trimmed) msg+=' The file was longer and was cut at 100,000.';
+    const t=TL.tool;
+    if(t&&t.readCap&&n>t.readCap){
+      msg+=' \u26A0 This tool only reads the first '+t.readCap.toLocaleString('en-IN')
+        +', so roughly '+Math.round((1-t.readCap/n)*100)+'% of it will be ignored. '
+        +'Trim it, or send the part that matters.';
+      if(note){ note.textContent=msg; note.style.color='#8A5A00'; }
+      return;
+    }
+    if(note){ note.textContent=msg; note.style.color=''; }
+  }catch(e){
+    if(note) note.textContent='That file could not be read \u2014 '+(e&&e.message||'unknown error')+'.';
+  }
 }
 
 function _tlB64(file){ return new Promise((res,rej)=>{ const r=new FileReader();
@@ -13097,7 +13191,20 @@ async function tlActions(){
   });
   if(r){
     h+='<button onclick="tlCopy()">Copy</button>';
-    if(r.kind==='text'||r.kind==='json') h+='<button onclick="tlWord()">Save as Word</button>';
+    /* Savio, 2026-10-08: "same facility for all tiles whether the user uses it
+       or no is an option." /create-document has emitted docx, pdf, pptx AND
+       xlsx since long before today -- the page only ever asked for Word, so
+       three working formats had never had a button. Building a file costs no
+       Gemini call at all, so every one of these is ₹0 per use. */
+    if(r.kind==='text'||r.kind==='json'){
+      h+='<select id="tl-fmt" aria-label="Download as">'
+       +   '<option value="docx">Word</option>'
+       +   '<option value="pdf">PDF</option>'
+       +   '<option value="xlsx">Excel</option>'
+       +   '<option value="pptx">PowerPoint</option>'
+       + '</select>'
+       + '<button onclick="tlExport()">Download</button>';
+    }
     if(r.kind==='img') h+='<button onclick="tlPng()">Save the picture</button>';
     /* Savio, 2026-10-08, after transcribing a Bengali video: "the panel should
        also have a language translator option because i do not know Bengali".
@@ -13189,28 +13296,122 @@ function tlPng(){
   _tlDownload(_tlB64ToBlob(r.b64,r.mime),(r.base||'bella-chart')+'-'+_tlStamp()+'.'+ext);
   _tlMsg('Saved to your Downloads folder.','ok');
 }
-/* Word, never PDF, for anything that might not be in Latin script.
-   /create-document's PDF path uses jsPDF's built-in helvetica, which is
-   WinAnsi-encoded -- Bengali and Devanagari come out as blanks. The docx path
-   stores the characters and lets Word pick the font, so it is correct for every
-   language here. */
-async function tlWord(){
+/* ── DOWNLOADING THE ANSWER, IN ANY OF THE FOUR FORMATS ───────────────────
+   /create-document builds docx, pdf, pptx and xlsx. It calls no model, so a
+   download costs nothing per use.
+
+   THE ONE REAL TRAP, AND IT IS NOT HYPOTHETICAL: the PDF path uses jsPDF's
+   built-in helvetica, which is WinAnsi-encoded -- Bengali, Hindi and Marathi
+   come out as BLANK PAGES, not as mistakes anyone would notice until they
+   opened the file. Savio transcribed a Bengali video an hour before this was
+   written. So PDF is CHECKED against the actual characters and refused, with
+   Word offered instead, rather than silently producing an empty document.
+   Word, Excel and PowerPoint store the characters and let the application
+   pick a font, so they are correct in every language. */
+function _tlHasNonLatin(s){
+  return /[^\u0000-\u024F\u2000-\u206F\u20A0-\u20BF]/.test(String(s||''));
+}
+
+/* A spreadsheet wants rows, not prose. Any list of same-shaped records inside
+   the answer becomes a real table with headers; everything else becomes a
+   label/value pair, which is still something you can sort and filter. */
+function _tlToRows(v,rows,depth){
+  rows=rows||[]; depth=depth||0;
+  if(v==null) return rows;
+  if(Array.isArray(v)){
+    const objs=v.filter(function(x){ return x&&typeof x==='object'&&!Array.isArray(x); });
+    if(objs.length===v.length&&v.length){
+      const heads=[];
+      objs.forEach(function(o){ Object.keys(o).forEach(function(k){
+        if(heads.indexOf(k)===-1) heads.push(k); }); });
+      rows.push(heads.map(_tlHuman));
+      objs.forEach(function(o){ rows.push(heads.map(function(h){
+        const c=o[h]; return (c==null)?'':(typeof c==='object'?JSON.stringify(c):String(c)); })); });
+      rows.push([]);
+      return rows;
+    }
+    v.forEach(function(x){ _tlToRows(x,rows,depth+1); });
+    return rows;
+  }
+  if(typeof v==='object'){
+    Object.keys(v).filter(function(k){ return !_tlSkipped(k); }).forEach(function(k){
+      const val=v[k];
+      if(val==null||val==='') return;
+      if(typeof val==='object'){ rows.push([_tlHuman(k)]); _tlToRows(val,rows,depth+1); }
+      else rows.push([_tlHuman(k),String(val)]);
+    });
+    return rows;
+  }
+  rows.push([String(v)]);
+  return rows;
+}
+
+/* Slides: a heading starts one, the lines under it fill it, and a long body is
+   split rather than run off the bottom of the slide where nobody would see it. */
+function _tlToSlides(flat,title){
+  const slides=[]; let cur=null;
+  const push=function(){ if(cur&&(cur.title||cur.body)) slides.push(cur); };
+  flat.forEach(function(x){
+    if(x.heading){ push(); cur={title:x.heading,body:''}; return; }
+    if(!cur) cur={title:title||'',body:''};
+    const line=String(x.text||'').trim();
+    if(!line) return;
+    if((cur.body+line).length>700){ push(); cur={title:(cur.title||'')+' (cont.)',body:line}; }
+    else cur.body+=(cur.body?'\n':'')+line;
+  });
+  push();
+  return slides.length?slides:[{title:title||'Bella',body:''}];
+}
+
+async function tlExport(){
   const r=TL.result; if(!r) return;
+  const sel=document.getElementById('tl-fmt');
+  const fmt=(sel&&sel.value)||'docx';
   const title=r.title||'Bella';
-  const content=r.kind==='text'
-    ? String(r.text).split(/\n/).filter(s=>s.trim().length).map(s=>({text:s}))
+  const flat=r.kind==='text'
+    ? String(r.text).split(/\n/).filter(function(s){ return s.trim().length; })
+        .map(function(s){ return {text:s}; })
     : _tlFlat(r.data);
-  if(!content.length){ _tlMsg('There is nothing to save yet.','err'); return; }
-  _tlMsg('Building your Word file…','');
+  if(!flat.length){ _tlMsg('There is nothing to save yet.','err'); return; }
+
+  let content=flat;
+  if(fmt==='xlsx'){
+    content=(r.kind==='text')
+      ? flat.map(function(x){ return [x.text]; })
+      : _tlToRows(r.data,[],0);
+  } else if(fmt==='pptx'){
+    content=_tlToSlides(flat,title);
+  } else if(fmt==='pdf'){
+    const whole=flat.map(function(x){ return x.heading||x.text||''; }).join(' ');
+    if(_tlHasNonLatin(whole)){
+      _tlMsg('A PDF cannot carry Bengali, Hindi or Marathi \u2014 the letters would come out blank. '
+        +'Choose <b>Word</b> and it will be correct in every language.','err');
+      return;
+    }
+  }
+
+  const names={docx:'Word',pdf:'PDF',xlsx:'Excel',pptx:'PowerPoint'};
+  _tlMsg('Building your '+names[fmt]+' file\u2026','');
   try{
     const resp=await bfetch(BACKEND+'/create-document',{method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({format:'docx',title:title,content:content})});
-    if(!resp.ok){ _tlMsg('The Word file could not be built.','err'); return; }
+      body:JSON.stringify({format:fmt,title:title,content:content})});
+    if(!resp.ok){
+      let m='The '+names[fmt]+' file could not be built.';
+      try{ const e=await resp.json(); m=e.error||m; }catch(_){}
+      _tlMsg(_tlEsc(m),'err'); return;
+    }
     _tlDownload(await resp.blob(),
-      title.replace(/[^\p{L}\p{N} _-]/gu,'').trim().replace(/\s+/g,'-')+'-'+_tlStamp()+'.docx');
+      title.replace(/[^\p{L}\p{N} _-]/gu,'').trim().replace(/\s+/g,'-')+'-'+_tlStamp()+'.'+fmt);
     _tlMsg('Saved to your Downloads folder.','ok');
-  }catch(e){ _tlMsg('The Word file could not be built.','err'); }
+  }catch(e){ _tlMsg('The '+names[fmt]+' file could not be built.','err'); }
+}
+
+/* Kept because other code paths still call it; Word is the safe default. */
+async function tlWord(){
+  const s=document.getElementById('tl-fmt');
+  if(s) s.value='docx';
+  return tlExport();
 }
 
 /* ══ THE TOOLS ═══════════════════════════════════════════════════════════
@@ -13247,7 +13448,7 @@ const TOOLS=[
    fields:[['mic','text','Your writing','Paste or speak what you have written…'],
            ['sel','action','What should I do with it',['improve','proofread','shorten','expand','formal','casual']],
            ['sel','tone','Tone',TONES]]},
-  {id:'creative',group:'writing',label:'Write something creative',ep:'/creative-write',
+  {id:'creative',attach:'topic',group:'writing',label:'Write something creative',ep:'/creative-write',
    note:'A story, a poem, a speech, a song — in any language.',need:['topic'],
    fields:[['sel','type','What kind',['story','poem','song','speech','essay','blog post','letter']],
            ['text','topic','What about?','e.g. a grandmother’s kitchen'],
@@ -13284,7 +13485,7 @@ const TOOLS=[
    note:'An opinion, not a certificate — it says so itself.',need:['text'],
    fields:[['area','text','The text to check',''],
            ['sel','checkType','What kind of check',['general','academic','professional']]]},
-  {id:'fact',group:'writing',label:'Check a claim',ep:'/fact-check',
+  {id:'fact',attach:'claim',group:'writing',label:'Check a claim',ep:'/fact-check',
    note:'Searches the web before answering.',need:['claim'],
    fields:[['area','claim','The claim','Chennai is the capital of Kerala'],
            ['area','context','Anything that matters','']]},
@@ -13398,19 +13599,19 @@ const TOOLS=[
            ['num','fontSize','Size','']]},
 
   /* ── DATA ──────────────────────────────────────────────────────────── */
-  {id:'analyse',group:'data',label:'Analyse some numbers',ep:'/analyse-data',
+  {id:'analyse',readCap:5000,group:'data',label:'Analyse some numbers',ep:'/analyse-data',
    note:'Paste rows, or a CSV’s contents.',need:['data'],
    fields:[['area','data','The data','e.g. Month,Sales\nApr,120\nMay,145'],
            ['sel','dataType','What kind of data',['general','sales','financial','survey','health','traffic']],
            ['mic','question','What do you want to know?','']]},
-  {id:'forecast',prefill:{forecastPeriods:'3'},group:'data',label:'Forecast ahead',ep:'/forecast',
+  {id:'forecast',readCap:3000,prefill:{forecastPeriods:'3'},group:'data',label:'Forecast ahead',ep:'/forecast',
    note:'From numbers you already have.',need:['data'],
    fields:[['area','data','The history','e.g. Apr,120\nMay,145\nJun,160'],
            ['text','metric','What is being measured','e.g. monthly sales'],
            ['num','forecastPeriods','How many periods ahead','']]},
 
   /* ── CHARTS ────────────────────────────────────────────────────────── */
-  {id:'chart',group:'charts',label:'Draw a chart',ep:'/data-to-chart',
+  {id:'chart',readCap:3000,group:'charts',label:'Draw a chart',ep:'/data-to-chart',
    note:'Paste the numbers and I will draw it as a picture.',
    need:['data'],out:'img',pick:'chartImageBase64',fixed:{format:'png'},
    fields:[['area','data','The data','e.g. Apr,120\nMay,145\nJun,160'],
@@ -13429,7 +13630,7 @@ const TOOLS=[
    note:'Live rate, through Bella rather than the browser.',need:['amount','from','to'],
    fields:[['num','amount','How much',''],
            ['text','from','From','e.g. USD'],['text','to','Into','e.g. INR']]},
-  {id:'stock',remember:['symbols'],group:'money',label:'Share price',ep:'/stock-price',
+  {id:'stock',attach:'symbols',remember:['symbols'],group:'money',label:'Share price',ep:'/stock-price',
    note:'Several at once — separate them with commas.',need:['symbols'],
    fields:[['text','symbols','The shares','e.g. TCS, INFY'],
            ['sel','exchange','Which exchange',['NSE','BSE','NASDAQ','NYSE']]]},
