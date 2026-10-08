@@ -11536,8 +11536,8 @@ html body.dark .pl-note.pl-bad{color:#F09487!important}
 /* The line between what opens and what does not. A rule instead of a word, and
    it spans the whole grid rather than sitting in one of the three columns. */
 .ws-rule{ grid-column:1/-1; height:1px; background:rgba(11,37,69,.14); margin:5px 2px; }
-/* Rearrange. The bar sits above the tiles; 30px tall so it is tappable on a
-   phone without stealing room from the grid. */
+/* The one line above the tiles. It teaches the hold gesture until the gesture
+   has been used, then becomes "Your own order." with the way back beside it. */
 .ws-bar{ display:flex; align-items:center; gap:6px; padding:2px 2px 6px; flex-wrap:wrap; }
 .ws-barbtn{ min-height:36px; padding:7px 13px; border-radius:8px; font-size:10.5px;
   font-weight:600; letter-spacing:.3px; cursor:pointer;
@@ -12552,6 +12552,7 @@ function tlOpenTool(id){
   h+='<button class="tl-go" id="tl-go" onclick="tlRun()">'+_tlEsc(t.go||'Ask Bella')+'</button>'
    + '<div id="tl-msg"></div><div id="tl-out"></div><div class="tl-act" id="tl-actions"></div>';
   document.getElementById('tl-body').innerHTML=h;
+  _tlApplyPrefill(t);
   if(t.onOpen) try{ t.onOpen(); }catch(e){}
 }
 
@@ -12591,6 +12592,20 @@ function tlField(f){
   }
   if(kind==='lang')
     return lbl+'<select id="'+id+'">'+_tlOpts(extra||'English')+'</select>';
+  /* A box you can type anything into, with suggestions offered. A <select> was
+     the obvious choice for "which country" and the wrong one: CC_LIST holds 60
+     and there are nearly 200, so a dropdown would have told someone with a
+     Kenyan passport that their country does not exist -- and Visa rules is
+     exactly where an unusual country comes up. */
+  if(kind==='suggest'){
+    const list=(extra==='country' && typeof CC_LIST!=='undefined')
+      ? CC_LIST.map(function(c){ return c.name; })
+      : (Array.isArray(extra)?extra:[]);
+    return lbl+'<input id="'+id+'" type="text" list="dl-'+key+'" autocomplete="off">'
+      +'<datalist id="dl-'+key+'">'
+      + list.map(function(o){ return '<option value="'+_tlEsc(o)+'"></option>'; }).join('')
+      +'</datalist>';
+  }
   if(kind==='file'||kind==='files')
     return lbl+'<input id="'+id+'" type="file"'+(kind==='files'?' multiple':'')
       +' accept="'+_tlEsc(extra||'')+'" onchange="tlFile(\''+key+'\',this,'+(kind==='files')+')">'
@@ -12662,6 +12677,57 @@ function _tlMsg(t,cls){ const m=document.getElementById('tl-msg'); if(!m) return
   m.className=cls||''; m.innerHTML=t||''; }
 function _tlVal(key){ const el=document.getElementById('tlf-'+key);
   return el?String(el.value||'').trim():''; }
+/* ── PREFILLING, AND WHERE A PREFILLED VALUE MAY COME FROM ────────────────
+   Savio, 2026-10-08: 39 fields showed a grey example that READ like an answer
+   -- "India" under "Your passport" -- and 15 of those were required, so
+   pressing the button produced "Your passport — I need that first" while the
+   box appeared to already say India. A placeholder is a hint: it is painted
+   inside an EMPTY box and is never sent.
+
+   His rule, and it is the right one: **"I may have given my US number for
+   registration however i may hold an Indian Passport right?"**
+
+   SO: A PREFILLED VALUE MAY ONLY COME FROM SOMETHING THE PERSON ACTUALLY
+   TOLD BELLA. Never from the phone country code, never from the device's
+   location, never from the city in their profile. Inferring a passport from a
+   dialling code is the same class of mistake as inferring who somebody is
+   from their first name, which is the one blocker stopping Bella going public
+   [[identity-is-inferred-from-name-substring]].
+
+   Three kinds of field, therefore:
+     `prefill`  a genuinely universal default -- 90 degrees, quality 80,
+                "today", "joined.pdf". Nothing personal is ever in here.
+     `remember` personal, so it is prefilled from what THEY last entered and
+                from nowhere else. Always editable, every time.
+     a hint     written "e.g. …" so it cannot be mistaken for an answer.
+   Remembered values are stored per person per device and scoped by tool, so
+   "topic" in Study does not leak into Writing Help.                        */
+function _tlRemKey(){ return 'b_tl_fields_'+(_tlProfileKey()||'_device'); }
+function _tlRemGet(){
+  try{ return JSON.parse(localStorage.getItem(_tlRemKey())||'{}')||{}; }catch(e){ return {}; }
+}
+function _tlRemSave(tool){
+  if(!tool||!tool.remember||!tool.remember.length) return;
+  const all=_tlRemGet();
+  tool.remember.forEach(function(k){
+    const v=_tlVal(k);
+    if(v) all[tool.id+'.'+k]=v;
+  });
+  try{ localStorage.setItem(_tlRemKey(),JSON.stringify(all)); }catch(e){}
+}
+/* Applied on open. What they told us beats a generic default, and neither one
+   ever overwrites something already typed. */
+function _tlApplyPrefill(tool){
+  if(!tool) return;
+  const set=function(k,v){
+    const el=document.getElementById('tlf-'+k);
+    if(el && !el.value && v!=null && v!=='') el.value=String(v);
+  };
+  if(tool.prefill) Object.keys(tool.prefill).forEach(function(k){ set(k,tool.prefill[k]); });
+  const all=_tlRemGet();
+  (tool.remember||[]).forEach(function(k){ set(k,all[tool.id+'.'+k]); });
+}
+
 /* The resolved identity, from the one place it is persisted. resolveProfileKey
    writes it into b_registered_user at login; _myProfileData reads that back. */
 function _tlProfileKey(){
@@ -12927,6 +12993,8 @@ async function tlRun(){
       _tlMsg(m,'err'); return;
     }
 
+    _tlRemSave(t);
+
     if(t.out==='blob'){
       const b=await r.blob();
       _tlDownload(b,(t.fileBase||'bella')+'-'+_tlStamp()+'.'+(_tlVal('format')||t.ext||'docx'));
@@ -13127,12 +13195,12 @@ const TOOLS=[
   {id:'creative',group:'writing',label:'Write something creative',ep:'/creative-write',
    note:'A story, a poem, a speech, a song — in any language.',need:['topic'],
    fields:[['sel','type','What kind',['story','poem','song','speech','essay','blog post','letter']],
-           ['text','topic','What about?','a grandmother’s kitchen'],
+           ['text','topic','What about?','e.g. a grandmother’s kitchen'],
            ['sel','tone','Tone',TONES],['sel','length','How long',['short','medium','long']],
            ['lang','language','In which language','English']]},
   {id:'cover',group:'writing',label:'Cover letter',ep:'/cover-letter',
    note:'For a specific job, using the advert’s own words.',need:['jobTitle','company'],
-   fields:[['text','jobTitle','The job','Operations Manager'],
+   fields:[['text','jobTitle','The job','e.g. Operations Manager'],
            ['text','company','The company',''],
            ['area','jobDescription','The advert, pasted',''],
            ['text','candidateName','Your name',''],
@@ -13167,23 +13235,23 @@ const TOOLS=[
            ['area','context','Anything that matters','']]},
 
   /* ── STUDY & INTERVIEW ─────────────────────────────────────────────── */
-  {id:'study',group:'study',label:'Study guide',ep:'/study-guide',
+  {id:'study',remember:['examType'],group:'study',label:'Study guide',ep:'/study-guide',
    note:'From a topic, or from notes you attach.',need:['topic'],
    mime:{documentBase64:'mimeType'},
-   fields:[['text','topic','The topic','Photosynthesis'],
+   fields:[['text','topic','The topic','e.g. Photosynthesis'],
            ['sel','level','What level',['school','college','postgraduate','professional']],
-           ['text','examType','Exam, if any','CBSE Class 10'],
+           ['text','examType','Exam, if any','e.g. CBSE Class 10'],
            ['file','documentBase64','Your notes, if you have any',DOC_ACCEPT]]},
-  {id:'cards',group:'study',label:'Flashcards',ep:'/flashcards',
+  {id:'cards',prefill:{count:'20'},group:'study',label:'Flashcards',ep:'/flashcards',
    note:'Question-and-answer pairs you can revise from.',need:['topic'],
    mime:{documentBase64:'mimeType'},
-   fields:[['text','topic','The topic',''],['num','count','How many','20'],
+   fields:[['text','topic','The topic',''],['num','count','How many',''],
            ['sel','difficulty','How hard',['easy','medium','hard']],
            ['file','documentBase64','From a document instead',DOC_ACCEPT]]},
-  {id:'interview',group:'study',label:'Interview preparation',ep:'/interview-prep',
+  {id:'interview',remember:['experience'],group:'study',label:'Interview preparation',ep:'/interview-prep',
    note:'Likely questions, and answers worth rehearsing.',need:['role'],
    fields:[['text','role','The role',''],['text','company','The company',''],
-           ['text','experience','Your experience','6 years'],
+           ['text','experience','Your experience','e.g. 6 years'],
            ['sel','interviewType','What kind of interview',['general','technical','behavioural','panel','final round']],
            ['text','focusAreas','Anything to focus on','']]},
 
@@ -13219,7 +13287,7 @@ const TOOLS=[
    mime:{doc1Base64:'mimeType1',doc2Base64:'mimeType2'},
    fields:[['file','doc1Base64','The first one',DOC_ACCEPT],
            ['file','doc2Base64','The second one',DOC_ACCEPT],
-           ['text','compareAspect','What to compare','the payment terms']]},
+           ['text','compareAspect','What to compare','e.g. the payment terms']]},
   {id:'ocr',group:'read',label:'Read text in a picture',ep:'/ocr',
    note:'A photographed page, a receipt, a handwritten note.',need:['imageBase64'],
    mime:{imageBase64:'mimeType'},
@@ -13227,20 +13295,20 @@ const TOOLS=[
            ['text','language','Language, if you know it','']]},
 
   /* ── DOC EDIT & CONVERT ────────────────────────────────────────────── */
-  {id:'restructure',group:'docedit',label:'Rewrite or convert a document',ep:'/restructure-doc',
+  {id:'restructure',prefill:{title:'restructured'},group:'docedit',label:'Rewrite or convert a document',ep:'/restructure-doc',
    note:'Reshape it, or turn it into another format. You get the file back.',
    need:['documentBase64'],out:'doc',mime:{documentBase64:'mimeType'},
    fields:[['file','documentBase64','The document',DOC_ACCEPT],
            ['sel','targetFormat','Turn it into',['docx','pdf','xlsx','pptx','txt','markdown']],
-           ['text','title','Name the result','restructured'],
+           ['text','title','Name the result',''],
            ['area','instructions','How should it change?','Make it a one-page summary']]},
-  {id:'template',group:'docedit',label:'Fill in a template',ep:'/fill-template',
+  {id:'template',prefill:{title:'filled-template'},group:'docedit',label:'Fill in a template',ep:'/fill-template',
    note:'Your template, your details, filled in — and the finished file to keep.',
    need:['templateBase64','data'],out:'doc',mime:{templateBase64:'mimeType'},
    fields:[['file','templateBase64','The template',DOC_ACCEPT],
-           ['area','data','The details to put in','Name: ...\nDate: ...'],
+           ['area','data','The details to put in','e.g. Name: ...\nDate: ...'],
            ['sel','outputFormat','Give it back as',['docx','pdf']],
-           ['text','title','Name the result','filled-template']]},
+           ['text','title','Name the result','']]},
 
   /* ── DOCUMENTS & SLIDES ────────────────────────────────────────────── */
   {id:'makedoc',group:'docs',label:'Make a document',ep:'/create-document',
@@ -13256,41 +13324,41 @@ const TOOLS=[
            ['area','slides','One slide a line','Where we are\nWhat changed\nWhat is next']]},
 
   /* ── PDF TOOLS ─────────────────────────────────────────────────────── */
-  {id:'mergepdf',group:'pdf',label:'Join PDFs together',ep:'/merge-pdf',
+  {id:'mergepdf',prefill:{filename:'joined.pdf'},group:'pdf',label:'Join PDFs together',ep:'/merge-pdf',
    note:'Pick two or more — they join in the order you choose them.',
    need:['pdfsBase64'],out:'b64',pick:'mergedPdfBase64',fileBase:'joined',
    fields:[['files','pdfsBase64','The PDFs','.pdf'],
-           ['text','filename','Name the result','joined.pdf']]},
+           ['text','filename','Name the result','']]},
   {id:'splitpdf',group:'pdf',label:'Split a PDF',ep:'/split-pdf',
    note:'Page ranges, like 1-3,7,9-12. Leave it empty for one file per page.',
    need:['pdfBase64'],out:'parts',
    fields:[['file','pdfBase64','The PDF','.pdf'],
-           ['text','ranges','Which pages','1-3,7']]},
-  {id:'markpdf',group:'pdf',label:'Watermark a PDF',ep:'/watermark-pdf',
+           ['text','ranges','Which pages','e.g. 1-3,7']]},
+  {id:'markpdf',prefill:{opacity:'0.2',fontSize:'48',watermarkText:'DRAFT'},group:'pdf',label:'Watermark a PDF',ep:'/watermark-pdf',
    note:'Across every page.',need:['pdfBase64','watermarkText'],
    out:'b64',pick:'watermarkedPdfBase64',fileBase:'watermarked',
    fields:[['file','pdfBase64','The PDF','.pdf'],
-           ['text','watermarkText','The words','DRAFT'],
-           ['num','opacity','How faint, 0 to 1','0.2'],
-           ['num','fontSize','Size','48']]},
+           ['text','watermarkText','The words',''],
+           ['num','opacity','How faint, 0 to 1',''],
+           ['num','fontSize','Size','']]},
 
   /* ── DATA ──────────────────────────────────────────────────────────── */
   {id:'analyse',group:'data',label:'Analyse some numbers',ep:'/analyse-data',
    note:'Paste rows, or a CSV’s contents.',need:['data'],
-   fields:[['area','data','The data','Month,Sales\nApr,120\nMay,145'],
+   fields:[['area','data','The data','e.g. Month,Sales\nApr,120\nMay,145'],
            ['sel','dataType','What kind of data',['general','sales','financial','survey','health','traffic']],
            ['mic','question','What do you want to know?','']]},
-  {id:'forecast',group:'data',label:'Forecast ahead',ep:'/forecast',
+  {id:'forecast',prefill:{forecastPeriods:'3'},group:'data',label:'Forecast ahead',ep:'/forecast',
    note:'From numbers you already have.',need:['data'],
-   fields:[['area','data','The history','Apr,120\nMay,145\nJun,160'],
-           ['text','metric','What is being measured','monthly sales'],
-           ['num','forecastPeriods','How many periods ahead','3']]},
+   fields:[['area','data','The history','e.g. Apr,120\nMay,145\nJun,160'],
+           ['text','metric','What is being measured','e.g. monthly sales'],
+           ['num','forecastPeriods','How many periods ahead','']]},
 
   /* ── CHARTS ────────────────────────────────────────────────────────── */
   {id:'chart',group:'charts',label:'Draw a chart',ep:'/data-to-chart',
    note:'Paste the numbers and I will draw it as a picture.',
    need:['data'],out:'img',pick:'chartImageBase64',fixed:{format:'png'},
-   fields:[['area','data','The data','Apr,120\nMay,145\nJun,160'],
+   fields:[['area','data','The data','e.g. Apr,120\nMay,145\nJun,160'],
            ['sel','chartType','What kind of chart',['bar','line','pie','doughnut','area','scatter']],
            ['text','title','Title',''],
            ['text','xAxis','Bottom axis',''],['text','yAxis','Side axis','']]},
@@ -13301,37 +13369,41 @@ const TOOLS=[
    need:['calcType'],
    fields:[['sel','calcType','What to work out',['emi','simple interest','compound interest','sip','lumpsum',
                               'loan eligibility','income tax','gst']],
-           ['area','params','The numbers','principal: 2500000\nrate: 8.5\nyears: 20']]},
-  {id:'fx',group:'money',label:'Convert currency',ep:'/currency-convert',
+           ['area','params','The numbers','e.g. principal: 2500000\nrate: 8.5\nyears: 20']]},
+  {id:'fx',prefill:{amount:'100'},remember:['from','to'],group:'money',label:'Convert currency',ep:'/currency-convert',
    note:'Live rate, through Bella rather than the browser.',need:['amount','from','to'],
-   fields:[['num','amount','How much','100'],
-           ['text','from','From','USD'],['text','to','Into','INR']]},
-  {id:'stock',group:'money',label:'Share price',ep:'/stock-price',
+   fields:[['num','amount','How much',''],
+           ['text','from','From','e.g. USD'],['text','to','Into','e.g. INR']]},
+  {id:'stock',remember:['symbols'],group:'money',label:'Share price',ep:'/stock-price',
    note:'Several at once — separate them with commas.',need:['symbols'],
-   fields:[['text','symbols','The shares','TCS, INFY'],
+   fields:[['text','symbols','The shares','e.g. TCS, INFY'],
            ['sel','exchange','Which exchange',['NSE','BSE','NASDAQ','NYSE']]]},
 
   /* ── TRAVEL ────────────────────────────────────────────────────────── */
-  {id:'trip',group:'travel',label:'Plan a trip',ep:'/travel-research',
+  {id:'trip',prefill:{travelers:'2'},remember:['origin'],group:'travel',label:'Plan a trip',ep:'/travel-research',
    note:'Hotels, places and food at the destination, plus the route.',
    need:['destination'],
-   fields:[['text','destination','Where to','Kochi'],
-           ['text','origin','From','Mumbai'],
-           ['text','startDate','Going out','2026-12-20'],
-           ['text','endDate','Coming back','2026-12-26'],
-           ['num','travelers','How many of you','2'],
-           ['text','budget','Budget','₹60,000'],
-           ['area','preferences','Anything that matters','quiet, near the water']]},
+   fields:[['text','destination','Where to','e.g. Kochi'],
+           ['text','origin','From','e.g. Mumbai'],
+           ['text','startDate','Going out','e.g. 2026-12-20'],
+           ['text','endDate','Coming back','e.g. 2026-12-26'],
+           ['num','travelers','How many of you',''],
+           ['text','budget','Budget','e.g. ₹60,000'],
+           ['area','preferences','Anything that matters','e.g. quiet, near the water']]},
   {id:'visa',group:'travel',label:'Visa rules',ep:'/visa-info',
-   note:'Checked against current sources, not from memory.',
+   note:'Checked against current sources, not from memory. Bella remembers which passport you hold — change it here any time.',
    need:['passportCountry','toCountry'],
-   fields:[['text','passportCountry','Your passport','India'],
-           ['text','toCountry','Going to','Japan'],
+   /* NOT taken from the registration dialling code: his own point, and he is
+      right -- a US number and an Indian passport is an ordinary combination.
+      Asked once, remembered after that, editable every time. */
+   remember:['passportCountry','toCountry'],
+   fields:[['suggest','passportCountry','Which passport do you hold','country'],
+           ['suggest','toCountry','Going to','country'],
            ['sel','travelPurpose','Why you are going',['tourism','business','study','work','transit','family visit']]]},
-  {id:'flight',group:'travel',label:'Flight status',ep:'/flight-status',
+  {id:'flight',prefill:{date:'today'},group:'travel',label:'Flight status',ep:'/flight-status',
    note:'Live, from a web search.',need:['flightNumber'],
-   fields:[['text','flightNumber','Flight number','AI 675'],
-           ['text','date','Which day','today']]},
+   fields:[['text','flightNumber','Flight number','e.g. AI 675'],
+           ['text','date','Which day','']]},
 
   /* ── MEETING NOTES ─────────────────────────────────────────────────── */
   {id:'minutes',group:'meeting',label:'Turn a transcript into minutes',ep:'/meeting-notes',
@@ -13339,7 +13411,7 @@ const TOOLS=[
    fields:[['mic','transcript','The transcript, or speak the gist','Paste the transcript…'],
            ['text','meetingTitle','What was it about',''],
            ['text','attendees','Who was there, separated by commas',''],
-           ['text','duration','How long','45 minutes']],
+           ['text','duration','How long','e.g. 45 minutes']],
    /* The backend does attendees.join(', '). A string has no .join, so every run
       with this box filled in threw a TypeError and came back 500 -- which is
       why minutes only ever worked when "Who was there" was left empty. */
@@ -13369,7 +13441,7 @@ const TOOLS=[
      are sharp and Gemini, both already working. Restyling a photo (Ghibli,
      caricature) needs a Gemini image model and a backend release; it is not
      pretended at here. [[bella-design-and-image-capability]] */
-  {id:'imgedit',group:'image',label:'Resize, rotate or retouch',ep:'/edit-image',
+  {id:'imgedit',prefill:{angle:'90',quality:'80'},group:'image',label:'Resize, rotate or retouch',ep:'/edit-image',
    note:'Done on the server with sharp, so a big photo does not have to come back through the browser.',
    need:['imageBase64'],go:'Do it',
    fields:[['file','imageBase64','The picture','image/*'],
@@ -13378,20 +13450,20 @@ const TOOLS=[
              'Invert the colours']],
            ['num','width','New width in pixels','blank keeps it'],
            ['num','height','New height in pixels','blank keeps it'],
-           ['num','angle','Degrees to turn','90'],
-           ['num','quality','How much quality to keep, 1-100','80'],
+           ['num','angle','Degrees to turn',''],
+           ['num','quality','How much quality to keep, 1-100',''],
            ['sel','outputFormat','Save it as',['jpeg','png','webp']]],
    mime:{imageBase64:'mimeType'},
    out:'img',pick:'imageBase64',fileBase:'bella-picture',
    shape:_tlImageOps,
    msg:function(){ return 'Done. Use the button below to keep it.'; }},
 
-  {id:'imgconv',group:'image',label:'Change the file type',ep:'/convert-image',
+  {id:'imgconv',prefill:{quality:'90'},group:'image',label:'Change the file type',ep:'/convert-image',
    note:'JPEG, PNG, WebP, TIFF or GIF.',
    need:['imageBase64','toFormat'],go:'Convert it',
    fields:[['file','imageBase64','The picture','image/*'],
            ['sel','toFormat','Turn it into',['png','jpeg','webp','tiff','gif']],
-           ['num','quality','How much quality to keep, 1-100','90']],
+           ['num','quality','How much quality to keep, 1-100','']],
    mime:{imageBase64:'mimeType'},
    out:'img',pick:'imageBase64',fileBase:'bella-picture',
    msg:function(d){ return 'Converted to '+String(d.format||'').toUpperCase()+'.'; }},
@@ -14060,11 +14132,13 @@ const WS_ZONES = [
       matters [[bella-smart-device-adaptability-first]]. pointerdown/move/up
       covers finger, trackpad and mouse through one path.
 
-   2. **An explicit Rearrange mode, not long-press.** Every tile is already a
-      tap target that opens something. Overloading the same gesture means a
-      slightly long tap opens a panel when he meant to move a tile, or moves a
-      tile when he meant to open it. A mode makes it unambiguous, and it is how
-      a phone home screen behaves, which he already knows.
+   2. **A HOLD, not a mode.** This began as a Rearrange / Done button; he asked
+      whether the word was necessary, and it was not. What a mode was protecting
+      against is real, though: the Workshop SCROLLS -- 33 tiles, ~700px, taller
+      than any phone -- so a press-and-move on a tile is usually a scroll, and
+      free press-drag would have made the list unscrollable. A hold separates
+      the three gestures cleanly instead: tap opens, swipe scrolls, hold lifts.
+      Nothing is prevented and touch-action is untouched until a tile lifts.
 
    3. **The order is saved PER PERSON, on this device** -- key
       b_ws_order_<profileKey>, so two people sharing a browser do not inherit
