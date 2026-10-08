@@ -11545,14 +11545,17 @@ html body.dark .pl-note.pl-bad{color:#F09487!important}
 .ws-barbtn:hover{ border-color:#D4AF37; }
 .ws-barbtn.on{ background:#0B2545; color:#D4AF37; border-color:#0B2545; }
 .ws-barhint{ font-size:9px; color:var(--tmid); line-height:1.3; }
-/* A long press on a phone otherwise pops up the browser's own selection
-   menu, which would fight the gesture on every iPhone in the family. */
+/* A press-and-hold on a phone otherwise pops up the browser's own selection
+   menu, which would fight the drag on every iPhone in the family. */
 .feat-item{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
-/* touch-action is switched off ONLY while a tile is actually lifted, so the
-   Workshop list stays scrollable right up to that moment. */
-.feat-grid.ws-lifting{ touch-action:none; }
-.feat-item.ws-dragging{ opacity:.6; transform:scale(1.08); cursor:grabbing;
-  box-shadow:0 8px 22px rgba(11,37,69,.32); z-index:5; border-style:dashed; }
+/* touch-action is given up ONLY inside Rearrange mode, so the Workshop list
+   scrolls normally the rest of the time. */
+.feat-grid.ws-editing .feat-item{ cursor:grab; touch-action:none; opacity:1; }
+.feat-grid.ws-editing .feat-item.ws-grab{ border-style:dashed; }
+/* No transform here: the drag sets its own, and a CSS one would overwrite the
+   translate that makes the tile follow the pointer. */
+.feat-item.ws-dragging{ opacity:.85; cursor:grabbing; pointer-events:none;
+  box-shadow:0 8px 22px rgba(11,37,69,.32); z-index:20; position:relative; }
 html body.dark .ws-barbtn{ background:rgba(255,255,255,.07) !important;
   color:#F5E6C8 !important; border-color:rgba(245,230,200,.26) !important; }
 html body.dark .ws-barbtn.on{ background:#D4AF37 !important; color:#0B2545 !important;
@@ -12170,6 +12173,8 @@ async function invShowUpiQr(){
   font-size:12px;font-weight:600;cursor:pointer}
 #tl-out .tl-task-b:hover{border-color:#D4AF37}
 #tl-overlay .tl-act{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+#tl-overlay .tl-act select{flex:1 1 auto;min-width:92px;min-height:40px;width:auto;
+  padding:9px 10px;border-radius:10px;font-size:12.5px}
 #tl-overlay .tl-act button{flex:1 1 auto;min-width:92px;min-height:40px;padding:9px 10px;
   border-radius:10px;border:1.5px solid rgba(11,37,69,.18);background:#FAF8F4;color:#0B2545;
   font-size:12.5px;font-weight:600;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif}
@@ -12542,7 +12547,7 @@ function tlShowList(){
 
 function tlOpenTool(id){
   const t=TOOLS.find(x=>x.id===id); if(!t) return;
-  TL.tool=t; TL.files={}; TL.result=null; TL.file=null; TL.parts=null;
+  TL.tool=t; TL.files={}; TL.result=null; TL.file=null; TL.parts=null; TL.orig=null;
   const many=TOOLS.filter(x=>x.group===t.group).length>1;
   document.getElementById('tl-title').textContent=t.label;
   document.getElementById('tl-back').style.display=many?'block':'none';
@@ -12911,6 +12916,7 @@ async function tlRun(){
      below would throw on null. Caught during the headless QC run on 2026-10-07. */
   if(!go||!out||!acts) return;
   out.innerHTML=''; acts.innerHTML=''; TL.result=null; TL.file=null; TL.parts=null;
+  TL.orig=null;                       // a fresh run is not a translation of the last one
   _tlSkipNow=t.skip||[];
   _tlDropEmpty=!!t.skipEmpty;
 
@@ -13093,6 +13099,16 @@ async function tlActions(){
     h+='<button onclick="tlCopy()">Copy</button>';
     if(r.kind==='text'||r.kind==='json') h+='<button onclick="tlWord()">Save as Word</button>';
     if(r.kind==='img') h+='<button onclick="tlPng()">Save the picture</button>';
+    /* Savio, 2026-10-08, after transcribing a Bengali video: "the panel should
+       also have a language translator option because i do not know Bengali".
+       He is right, and it is not only Transcribe -- ANY text answer can come
+       back in a language the reader does not have. The translator core already
+       exists and already chunks long text, which a transcript needs. */
+    if(r.kind==='text'){
+      h+='<select id="tl-trg" aria-label="Translate into">'+_tlOpts('English')+'</select>'
+       + '<button onclick="tlTranslateResult()">Translate</button>';
+      if(TL.orig) h+='<button onclick="tlShowOriginal()">Show the original</button>';
+    }
   }
   host.innerHTML=h;
   if(r&&r.kind==='text' && await _tlCanSpeak(r.tag)){
@@ -13103,6 +13119,45 @@ async function tlActions(){
       +' voice, so I can show it but not say it. The words are correct.</div>');
   }
 }
+/* Translates whatever is on screen, in place. The original is kept so he can
+   go back -- a transcript he cannot read is still the record of what was said,
+   and losing it behind a translation would be worse than not translating. */
+async function tlTranslateResult(){
+  const r=TL.result;
+  if(!r||r.kind!=='text') return;
+  const sel=document.getElementById('tl-trg');
+  const target=(sel&&sel.value)||'English';
+  const out=document.getElementById('tl-out');
+  if(!out) return;
+  if(!TL.orig) TL.orig={text:r.text,tag:r.tag,lang:r.lang,title:r.title};
+  _tlMsg('Translating into '+_tlEsc(target)+'\u2026','');
+  try{
+    const got=await tlTranslate(TL.orig.text,target,'',function(i,n){
+      _tlMsg('Translating into '+_tlEsc(target)+' \u2014 part '+i+' of '+n+'\u2026','');
+    });
+    out.innerHTML=_tlEsc(got.text);
+    TL.result={kind:'text',text:got.text,tag:_tlTag(target),lang:target,
+               title:(TL.orig.title||'Bella')+' \u2014 '+target};
+    _tlMsg(got.warn||('Translated into '+_tlEsc(target)
+      +(got.parts>1?' in '+got.parts+' parts':'')+'. Copy, Save as Word and Read it aloud now use the translation.'),
+      got.warn?'warn':'ok');
+    tlActions();
+  }catch(e){
+    _tlMsg('That could not be translated just now \u2014 '+_tlEsc(String(e.message||e))
+      +'. What was said is still here.','err');
+  }
+}
+
+function tlShowOriginal(){
+  const o=TL.orig; if(!o) return;
+  const out=document.getElementById('tl-out'); if(!out) return;
+  out.innerHTML=_tlEsc(o.text);
+  TL.result={kind:'text',text:o.text,tag:o.tag,lang:o.lang,title:o.title};
+  TL.orig=null;
+  _tlMsg('Back to what was actually said.','ok');
+  tlActions();
+}
+
 function tlCopy(){
   const r=TL.result; if(!r) return;
   const s=r.kind==='text'?r.text:(r.kind==='json'
@@ -14149,9 +14204,27 @@ const WS_ZONES = [
    A label that is not in the saved list keeps its natural position at the end
    of its bracket, so a tile added to WORKSHOP later still appears instead of
    vanishing for anyone who has ever rearranged. */
+/* ── REARRANGING THE TILES ────────────────────────────────────────────────
+   REVERTED TO AN EXPLICIT MODE ON HIS WORD, 2026-10-08:
+   **"cant move the tiles i think its best to revert to the rearrage portion"**
+
+   It shipped first as a Rearrange / Done button. He asked whether the word was
+   necessary; hold-to-lift replaced it, passed 20 headless assertions -- and
+   then FAILED on his actual device, which is the one test that counts. The
+   hold is gone. Inside Rearrange mode a press moves a tile immediately, with
+   no timer to satisfy and nothing to get wrong.
+
+   **THE LESSON: the one thing the headless suite could not prove is the one
+   thing that broke.** Nothing is hit-testable in a headless page, so "a real
+   finger picks up a tile" was stated as an untested limit and then turned out
+   to be exactly where it failed. A gesture needs a device, not a test.
+
+   Pointer Events still, not the HTML5 drag API, which does not fire on touch
+   at all. The mode is also what keeps the list scrollable: the Workshop is 33
+   tiles and taller than any phone, so touch-action is only taken away while
+   rearranging, never during normal use.                                     */
+let WS_EDIT=false;
 let WS_DRAG=null;
-const WS_HOLD_MS=450;      // long enough not to fire on a scroll flick
-const WS_SLOP=10;          // px of movement that still counts as "holding still"
 
 function wsOrderKey(){
   let who='';
@@ -14181,15 +14254,16 @@ function wsApplyOrder(list){
     .map(function(x){ return x.f; });
 }
 
-/* One quiet line, no control. It teaches the gesture until the gesture has
-   been used, and then becomes the only way back to the original order. */
-function wsHint(){
+function wsBar(){
+  const n=wsOrderGet().length;
   return '<div class="ws-bar">'
-    + (wsOrderGet().length
-        ? '<span class="ws-barhint">Your own order.</span>'
-          +'<button class="ws-barbtn" onclick="wsResetOrder()">Reset</button>'
-        : '<span class="ws-barhint">Hold a tile to move it.</span>')
-    + '</div>';
+    +'<button class="ws-barbtn'+(WS_EDIT?' on':'')+'" id="ws-edit-btn" onclick="wsToggleEdit()">'
+    +(WS_EDIT?'Done':'Rearrange')+'</button>'
+    +(WS_EDIT
+      ? '<button class="ws-barbtn" onclick="wsResetOrder()">Reset</button>'
+        +'<span class="ws-barhint">Drag a tile to move it.</span>'
+      : (n?'<span class="ws-barhint">Your own order.</span>':''))
+    +'</div>';
 }
 
 /* Re-renders the tiles in place. wsRenderZone renders once and then refuses,
@@ -14198,7 +14272,7 @@ function wsRerender(){
   const host=document.getElementById('ws-zones');
   if(!host) return;
   const bar=host.querySelector('.ws-bar');
-  if(bar) bar.outerHTML=wsHint();
+  if(bar) bar.outerHTML=wsBar();
   for(const z of WS_ZONES){
     const body=document.getElementById('ws-body-'+z[0]);
     if(!body) continue;
@@ -14207,92 +14281,112 @@ function wsRerender(){
   }
 }
 
+function wsToggleEdit(){
+  WS_EDIT=!WS_EDIT;
+  if(!WS_EDIT) wsDragCancel();       // never leave a tile stranded mid-drag
+  wsRerender();
+}
+
 function wsResetOrder(){
   try{ localStorage.removeItem(wsOrderKey()); }catch(e){}
   wsRerender();
 }
 
-/* ── THE GESTURE ──────────────────────────────────────────────────────────
-   Savio, 2026-10-08: "is the rearrange word necessary. can it just be press
-   drag and drop to re-tile".
-
-   It can, but not by treating any press-and-move as a drag. MEASURED: the
-   Workshop is 33 tiles three across, about 700px of content inside a sidebar
-   shorter than that on every phone -- so it SCROLLS, and on a phone a finger
-   pressing a tile and moving is almost always a scroll. Grabbing the tile
-   there would make the list unscrollable. That is why a phone home screen
-   makes you hold an icon before it lifts, and this does the same:
-
-     a quick tap            -> opens the tile, exactly as before
-     a press and a swipe    -> scrolls the list, because nothing is lifted yet
-     a hold of 450ms        -> the tile LIFTS, and then it follows the pointer
-
-   Nothing is prevented and touch-action is left alone until the tile actually
-   lifts, which is what keeps scrolling intact. With a mouse the hold applies
-   too, so there is one behaviour to learn rather than two.                  */
 function wsBindDrag(host){
   host.querySelectorAll('.feat-item').forEach(function(el){
     el.addEventListener('pointerdown',wsDragStart);
   });
 }
 
+/* ── THE DRAG ITSELF, REWRITTEN 2026-10-08 AFTER IT FAILED ON HIS MAC ─────
+   **"cant move the tiles... whether you press rearaange or just try and shift
+   the tiles"** — with a screenshot that showed the tile LIFTED (scaled, with a
+   shadow) and sitting exactly where it started. That picture named both faults:
+
+   1. **NOTHING MADE THE TILE FOLLOW THE POINTER.** The first version only ever
+      re-ordered tiles in the list; the dragged tile was never moved, so it lit
+      up and then appeared dead. Even when the re-order did fire there was no
+      feedback that anything was happening. A dragged thing must track the
+      cursor — that IS the interaction, not a decoration on it.
+   2. **THE DROP TARGET CAME FROM `document.elementFromPoint`** — asking the
+      browser what sits under the cursor. That is precisely the thing a
+      headless page cannot test (nothing is hit-testable there, the viewport
+      lays out 1px tall), so the one untestable dependency was load-bearing.
+
+   Both are gone. The tile is translated to follow the pointer, and the drop
+   target is pure geometry: of the tiles in the same bracket and zone, whichever
+   centre is nearest. No hit-testing, no overlay can intercept it, and it is
+   fully testable from rectangles alone.
+
+   FLIP compensation: re-ordering changes where the element sits in the layout,
+   which would make it jump out from under the cursor. The jump is measured and
+   folded back into the offset, so the tile stays glued to the pointer.      */
 function wsDragStart(e){
+  if(!WS_EDIT) return;                 // outside the mode a press is just a tap
   if(WS_DRAG) return;
-  if(e.button&&e.button!==0) return;              // right-click is not a drag
+  if(e.button&&e.button!==0) return;
   const el=e.currentTarget;
-  WS_DRAG={el:el,id:e.pointerId,lifted:false,moved:false,
-           x0:e.clientX,y0:e.clientY,timer:null,
+  e.preventDefault();
+  WS_DRAG={el:el,id:e.pointerId,moved:false,
+           x0:e.clientX,y0:e.clientY,ox:0,oy:0,
            bracket:el.dataset.wsBracket,zone:el.dataset.wsZone};
-  WS_DRAG.timer=setTimeout(function(){ wsLift(el); },WS_HOLD_MS);
+  el.classList.add('ws-dragging');
+  try{ el.setPointerCapture(e.pointerId); }catch(_){}
   el.addEventListener('pointermove',wsDragMove);
   el.addEventListener('pointerup',wsDragEnd);
   el.addEventListener('pointercancel',wsDragEnd);
 }
 
-function wsLift(el){
-  const d=WS_DRAG;
-  if(!d||d.el!==el) return;
-  d.lifted=true;
-  d.timer=null;
-  el.classList.add('ws-dragging');
-  // touch-action is switched off ONLY now, so the list stayed scrollable right
-  // up to the moment the tile lifted.
-  const grid=el.parentNode;
-  if(grid&&grid.classList) grid.classList.add('ws-lifting');
-  try{ el.setPointerCapture(d.id); }catch(_){}
+/* Every tile that this one is allowed to trade places with. */
+function _wsPeers(d){
+  const grid=d.el.parentNode;
+  if(!grid||!grid.querySelectorAll) return [];
+  return [].slice.call(grid.querySelectorAll('.feat-item')).filter(function(el){
+    return el!==d.el && el.dataset.wsBracket===d.bracket && el.dataset.wsZone===d.zone;
+  });
 }
 
 function wsDragMove(e){
   const d=WS_DRAG;
   if(!d||e.pointerId!==d.id) return;
-  if(!d.lifted){
-    // Still deciding. Movement beyond the slop means they are scrolling, not
-    // holding, so the hold is abandoned and the browser keeps the gesture.
-    if(Math.abs(e.clientX-d.x0)>WS_SLOP||Math.abs(e.clientY-d.y0)>WS_SLOP) wsDragCancel();
-    return;
-  }
   e.preventDefault();
   d.moved=true;
-  /* elementFromPoint, not the event target: the pointer is CAPTURED by the
-     lifted tile, so e.target is always that tile and would never say what it
-     is now over. */
-  d.el.style.pointerEvents='none';
-  const under=document.elementFromPoint(e.clientX,e.clientY);
-  d.el.style.pointerEvents='';
-  if(!under) return;
-  const over=under.closest?under.closest('.feat-item'):null;
-  if(!over||over===d.el) return;
-  // ON tiles stay above the rule and Phase 3 stays Phase 3 -- his own sort.
-  if(over.dataset.wsBracket!==d.bracket||over.dataset.wsZone!==d.zone) return;
-  const r=over.getBoundingClientRect();
-  const after=(e.clientX>r.left+r.width/2);
-  over.parentNode.insertBefore(d.el,after?over.nextSibling:over);
+
+  // 1. the tile follows the pointer. This is the part that was missing.
+  d.el.style.transform='translate('+((e.clientX-d.x0)+d.ox)+'px,'
+                                  +((e.clientY-d.y0)+d.oy)+'px) scale(1.06)';
+
+  // 2. the nearest neighbouring tile, by centre, with no hit-testing at all.
+  const peers=_wsPeers(d);
+  if(!peers.length) return;
+  let best=null,bestDist=Infinity;
+  for(const el of peers){
+    const r=el.getBoundingClientRect();
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    const dist=Math.pow(e.clientX-cx,2)+Math.pow(e.clientY-cy,2);
+    if(dist<bestDist){ bestDist=dist; best={el:el,r:r,cx:cx,cy:cy}; }
+  }
+  if(!best) return;
+  // Only trade places once the pointer is genuinely inside that tile's row and
+  // past its centre -- otherwise the list churns on every pixel of movement.
+  if(e.clientY<best.r.top-4||e.clientY>best.r.bottom+4) return;
+  const after=(e.clientX>best.cx);
+  const ref=after?best.el.nextSibling:best.el;
+  if(ref===d.el||(after&&best.el.nextSibling===d.el)) return;
+
+  // 3. FLIP: keep the tile under the cursor across the layout change.
+  const before=d.el.getBoundingClientRect();
+  best.el.parentNode.insertBefore(d.el,ref);
+  const now=d.el.getBoundingClientRect();
+  d.ox+=(before.left-now.left);
+  d.oy+=(before.top-now.top);
+  d.el.style.transform='translate('+((e.clientX-d.x0)+d.ox)+'px,'
+                                  +((e.clientY-d.y0)+d.oy)+'px) scale(1.06)';
 }
 
 function wsDragCancel(){
   const d=WS_DRAG;
   if(!d) return;
-  if(d.timer) clearTimeout(d.timer);
   wsDragRelease(d);
   WS_DRAG=null;
 }
@@ -14300,42 +14394,20 @@ function wsDragCancel(){
 function wsDragEnd(e){
   const d=WS_DRAG;
   if(!d||(e&&e.pointerId!==d.id)) return;
-  if(d.timer) clearTimeout(d.timer);
-  const lifted=d.lifted, moved=d.moved, el=d.el;
+  const moved=d.moved;
   wsDragRelease(d);
   WS_DRAG=null;
-  if(!lifted) return;                   // a tap: let the click open the tile
-  // A lift must never also count as a tap, or letting go would open the panel
-  // on top of the tile just moved. The click is swallowed once, in capture.
-  wsSwallowNextClick(el);
   if(moved) wsSaveFromDom();
 }
 
 function wsDragRelease(d){
   d.el.classList.remove('ws-dragging');
+  d.el.style.transform='';             // back into its slot, wherever that now is
   d.el.style.pointerEvents='';
-  const grid=d.el.parentNode;
-  if(grid&&grid.classList) grid.classList.remove('ws-lifting');
   d.el.removeEventListener('pointermove',wsDragMove);
   d.el.removeEventListener('pointerup',wsDragEnd);
   d.el.removeEventListener('pointercancel',wsDragEnd);
   try{ d.el.releasePointerCapture(d.id); }catch(_){}
-}
-
-/* The tile's own handler is an inline onclick, so it has to be stopped in the
-   CAPTURE phase on an ancestor -- by the time it bubbles it has already run. */
-function wsSwallowNextClick(el){
-  const host=document.getElementById('ws-zones');
-  if(!host) return;
-  const eat=function(ev){
-    ev.stopPropagation(); ev.preventDefault();
-    host.removeEventListener('click',eat,true);
-    clearTimeout(tmo);
-  };
-  host.addEventListener('click',eat,true);
-  // If no click follows (touch often sends none), stop listening rather than
-  // leaving a trap that eats the next real tap.
-  const tmo=setTimeout(function(){ host.removeEventListener('click',eat,true); },400);
 }
 
 /* The DOM is the truth. Every zone is walked, so one saved list covers both. */
@@ -14349,11 +14421,7 @@ function wsSaveFromDom(){
       if(l&&labels.indexOf(l)===-1) labels.push(l);
     });
   }
-  if(!labels.length) return;
-  wsOrderSet(labels);
-  // The hint has served its purpose; it becomes the way back instead.
-  const bar=document.querySelector('#ws-zones .ws-bar');
-  if(bar) bar.outerHTML=wsHint();
+  if(labels.length) wsOrderSet(labels);
 }
 
 function wsRenderZone(key){
@@ -14372,13 +14440,13 @@ function wsRenderZone(key){
   const tile = function(f){
     const icon=f[0], label=f[1], fn=f[3], note=f[4];
     const on   = fn ? ' feat-on' : '';
-    // A tap ALWAYS opens the tile. There is no mode to be in -- moving a tile
-    // is a hold, which is a different gesture, so neither one shadows the other.
-    const tap  = fn ? ' onclick="' + (/\)\s*$/.test(fn) ? fn : fn + '()') + '"' : '';
+    // In Rearrange mode a tap must MOVE a tile, never open it.
+    const tap  = (fn && !WS_EDIT) ? ' onclick="' + (/\)\s*$/.test(fn) ? fn : fn + '()') + '"' : '';
     const badge= fn ? 'ON' : zbadge;
     const cls  = fn ? ' ws-on' : '';
-    const ttl  = note ? ' title="' + label + ' — ' + note + '"' : ' title="' + label + '"';
-    return '<div class="feat-item' + on + '"' + tap + ttl
+    const ttl  = WS_EDIT ? ' title="Drag to move ' + label + '"'
+               : note ? ' title="' + label + ' — ' + note + '"' : ' title="' + label + '"';
+    return '<div class="feat-item' + on + (WS_EDIT?' ws-grab':'') + '"' + tap + ttl
          +   ' data-ws-label="' + label.replace(/"/g,'&quot;') + '"'
          +   ' data-ws-zone="' + key + '" data-ws-bracket="' + (fn?'on':'soon') + '">'
          +   '<span class="feat-icon">' + icon + '</span>'
@@ -14386,7 +14454,7 @@ function wsRenderZone(key){
          +   '<span class="feat-soon' + cls + '">' + badge + '</span>'
          + '</div>';
   };
-  let html = '<div class="feat-grid">' + live.map(tile).join('');
+  let html = '<div class="feat-grid'+(WS_EDIT?' ws-editing':'')+'">' + live.map(tile).join('');
   // A rule, not a word. It only exists when there is something on both sides.
   if(live.length && soon.length) html += '<div class="ws-rule"></div>';
   html += soon.map(tile).join('') + '</div>';
@@ -14410,7 +14478,7 @@ function wsToggleZone(key){
 function renderWorkshop(){
   const host = document.getElementById('ws-zones');
   if(!host || host.dataset.built === '1') return;
-  let html = wsHint();
+  let html = wsBar();
   for(const z of WS_ZONES){
     const key = z[0], title = z[1];
     const n = WORKSHOP.filter(f => f[2] === key).length;
