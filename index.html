@@ -1209,7 +1209,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
       <div class="sb-user-info">
         <div class="sb-user-name" id="sb-uname">Welcome</div>
         <div class="sb-user-status"><div class="sb-dot"></div><span>Online</span></div>
-      <div id="not-you-btn" onclick="resetIdentity()" style="display:none;font-size:9px;color:var(--gold);cursor:pointer;text-decoration:underline;margin-top:2px">Not you?</div>
+      <div id="not-you-btn" onclick="notYouFromSidebar()" style="display:none;font-size:9px;color:var(--gold);cursor:pointer;text-decoration:underline;margin-top:2px">Not you?</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
         <div class="mem-badge" id="mem-badge" title="Memory status">💾</div>
@@ -2570,8 +2570,33 @@ async function loadUserMemory(profileKey,addressedName){
           try{ updateTopbarUser(userMemory.addressedName || addressedName, d.user.userId); }catch(e){}
         }
       }
-      // Save/update user record in backend
-      await bfetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey,addressedName,type:'user',email:cfg.userEmail||''})});
+      // ── BACKFILL A MISSING USER ID ──
+      // `allocateUserId` was sent from exactly ONE place: completeRegistration().
+      // A RETURNING login never asked for one, so anybody whose row lost its id
+      // — an erasure, a renumber, or Savio on 2026-10-08 once the corrupted rows
+      // were cleared — saw "—" in the top bar forever with no way to get a
+      // number back. Asking here costs nothing for everyone else: the backend
+      // allocates only when the cell is empty
+      // (`if (fields.allocateUserId && !row[col.userId])`), so for an account
+      // that already has an id this is a no-op.
+      const _needsId = !(d.user && d.user.userId);
+      const _w = await bfetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey,addressedName,type:'user',email:cfg.userEmail||'',allocateUserId:_needsId})});
+      if(_needsId){
+        try{
+          const _wd = await _w.json();
+          if(_wd && _wd.userId){
+            localStorage.setItem('b_userid', _wd.userId);
+            try{
+              const _su = JSON.parse(localStorage.getItem('b_registered_user') || '{}') || {};
+              _su.userId = _wd.userId;
+              localStorage.setItem('b_registered_user', JSON.stringify(_su));
+            }catch(e){}
+            // The top bar was painted before this returned, so repaint it rather
+            // than leave "—" on screen until the next reload.
+            try{ updateTopbarUser(userMemory.addressedName || addressedName, _wd.userId); }catch(e){}
+          }
+        }catch(e){ console.warn('User ID backfill: could not read the response —', e); }
+      }
       setMemBadge('💾 On');
       // Load memory progress
       updateMemoryProgress(profileKey);
@@ -3799,14 +3824,39 @@ function showRecoveryHelp(){
   document.body.appendChild(box);
 }
 
+// The five identifiers that let the returning-user gate greet someone by name.
+// Named once so the two escapes below cannot drift apart.
+const _RETURNING_KEYS = ['b_returning_email', 'b_returning_name', 'b_returning_firstname',
+                         'b_returning_fullname', 'b_returning_mobile'];
+
 function notYouGate() {
   localStorage.removeItem('b_registered_user');
-  localStorage.removeItem('b_returning_email');
-  localStorage.removeItem('b_returning_name');
-  localStorage.removeItem('b_returning_firstname');
-  localStorage.removeItem('b_returning_fullname');
-  localStorage.removeItem('b_returning_mobile');
+  _RETURNING_KEYS.forEach(k => localStorage.removeItem(k));
   showNewUserGate();
+}
+
+// ── THE SIDEBAR "Not you?" NOW DOES WHAT IT SAYS ──
+// Savio, 2026-10-08: pressed it again and again and was never taken to a
+// registration form. It was wired to resetIdentity(), which clears NOTHING in
+// storage — it only forgets, in memory, who Bella is talking to: the sidebar
+// goes to "Welcome" with a "?" avatar and she asks the question again. So every
+// refresh signed him straight back in, and the only real escape — notYouGate()
+// — sits on the RETURNING-USER GATE, a screen you cannot reach once signed in.
+// resetIdentity() predates accounts entirely; the label has promised an identity
+// reset ever since and delivered a conversational one. It cost him an hour.
+//
+// This reuses signOut()'s proven teardown rather than inventing a second one:
+// endSession() signs out of Firebase and clears the session keys, the returning
+// identifiers go with them, and the reload comes back with nothing saved — so
+// showRegistrationGate() falls all the way through to the full new-user form,
+// which is the only path that sends allocateUserId.
+// Threads are deliberately NOT touched: signing out must never destroy them.
+function notYouFromSidebar() {
+  if (!confirm('This signs you out and starts a fresh registration.\n\nYour conversations are kept. Continue?')) return;
+  endSession();
+  _RETURNING_KEYS.forEach(k => localStorage.removeItem(k));
+  sessionStorage.clear();
+  location.reload();
 }
 
 async function submitRegistration() {
