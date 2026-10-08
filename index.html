@@ -12374,7 +12374,7 @@ async function tlTranslate(text,targetName,sourceName,onProgress){
 /* ── THE PANEL ────────────────────────────────────────────────────────────
    Built by JS on open, exactly like the invoice panel: nothing renders until a
    tile is tapped, so the Workshop stays light on a phone. */
-let TL={group:null,tool:null,files:{},result:null};
+let TL={group:null,tool:null,files:{},result:null,file:null,parts:null};
 
 function openTools(group){
   const list=TOOLS.filter(t=>t.group===group);
@@ -12411,7 +12411,7 @@ function tlShowList(){
 
 function tlOpenTool(id){
   const t=TOOLS.find(x=>x.id===id); if(!t) return;
-  TL.tool=t; TL.files={}; TL.result=null;
+  TL.tool=t; TL.files={}; TL.result=null; TL.file=null; TL.parts=null;
   const many=TOOLS.filter(x=>x.group===t.group).length>1;
   document.getElementById('tl-title').textContent=t.label;
   document.getElementById('tl-back').style.display=many?'block':'none';
@@ -12442,9 +12442,22 @@ function tlField(f){
     return lbl+'<div class="tl-mic-wrap"><textarea id="'+id+'" placeholder="'+_tlEsc(extra||'')+'"></textarea>'
       +'<button class="tl-mic" id="tl-mic-'+key+'" onclick="tlMic(\''+key+'\')" '
       +'title="Speak instead of typing" aria-label="Speak instead of typing">&#127908;</button></div>';
-  if(kind==='sel')
-    return lbl+'<select id="'+id+'">'+(extra||[]).map(o=>
-      '<option value="'+_tlEsc(o)+'">'+_tlEsc(o)+'</option>').join('')+'</select>';
+  if(kind==='sel'){
+    /* A dropdown may be written long -- ['sel',key,'Label',[options]] -- or
+       short -- ['sel',key,[options]]. The short form used to put the option
+       list into the LABEL slot and leave the options slot undefined, so all 25
+       dropdowns in the Workshop rendered as their own option list printed over
+       an EMPTY box: nothing could be chosen, and the field was dropped before
+       the request was built. Found 2026-10-08 in Savio's screenshot of
+       "Rewrite or convert a document", which showed
+       "DOCX,XLSX,PPTX,TXT,MARKDOWN" above a blank control.
+       Both shapes are accepted now, so a short row can never go blank again. */
+    const opts = Array.isArray(label) ? label : (extra||[]);
+    const text = Array.isArray(label) ? _tlHuman(key) : label;
+    return '<div class="tl-lbl">'+_tlEsc(text)+'</div><select id="'+id+'">'
+      + opts.map(o=>'<option value="'+_tlEsc(o)+'">'+_tlEsc(o)+'</option>').join('')
+      + '</select>';
+  }
   if(kind==='lang')
     return lbl+'<select id="'+id+'">'+_tlOpts(extra||'English')+'</select>';
   if(kind==='file'||kind==='files')
@@ -12543,7 +12556,10 @@ function _tlHuman(k){
 /* Renders ANY shape the model returned. Most of these endpoints spread a
    model-parsed object into the response, so the keys are not fixed and cannot
    be hardcoded -- this walks whatever arrived. */
-const TL_SKIP=['ok','truncated','finishReason','original','text','textLength'];
+/* Keys that carry machinery rather than an answer. `fileBase64` and friends
+   would otherwise be rendered as a screenful of base64. */
+const TL_SKIP=['ok','truncated','finishReason','original','text','textLength',
+               'fileBase64','mimeType','filename','zipBase64','zipFilename','base64','splits'];
 function _tlRender(v,depth){
   depth=depth||0;
   if(v==null) return '';
@@ -12589,13 +12605,17 @@ async function tlRun(){
   /* If the panel is gone -- closed mid-request, or a stale onclick -- every line
      below would throw on null. Caught during the headless QC run on 2026-10-07. */
   if(!go||!out||!acts) return;
-  out.innerHTML=''; acts.innerHTML=''; TL.result=null;
+  out.innerHTML=''; acts.innerHTML=''; TL.result=null; TL.file=null; TL.parts=null;
 
   /* Required fields, named in the sentence rather than a bare "required". */
   for(const f of (t.need||[])){
     const isFile=TL.files.hasOwnProperty(f);
     if(!isFile && !_tlVal(f)){
-      const label=(t.fields.find(x=>x[1]===f)||[,,f])[2];
+      let label=(t.fields.find(x=>x[1]===f)||[,,f])[2];
+      /* A short-form dropdown puts its option list here. Naming the field is
+         the only readable thing to say -- "emi,simple interest,compound
+         interest,... -- I need that first" is what this used to print. */
+      if(Array.isArray(label)) label=_tlHuman(f);
       /* Labels are a mix of questions ("What should I translate?") and nouns
          ("The document"), so they cannot be folded into one sentence frame --
          lowercasing a question read as "I need what should i translate? before
@@ -12671,6 +12691,33 @@ async function tlRun(){
         d.filename||((t.fileBase||'bella')+'-'+_tlStamp()+'.pdf'));
       _tlMsg('Saved to your Downloads folder.','ok'); return;
     }
+    /* A DOCUMENT, plus the words on screen. /restructure-doc and /fill-template
+       both used to promise a converted file and hand back a data structure;
+       they return the real file now, carried inside the JSON so "what changed"
+       and "what is missing" stay visible beside it. */
+    if(t.out==='doc'){
+      const html=_tlRender(d,0);
+      out.innerHTML=html||'';
+      TL.result={kind:'json',data:d,title:t.label};
+      if(d.fileBase64) TL.file={b64:d.fileBase64,mime:d.mimeType||'application/octet-stream',
+                                name:d.filename||'bella-file',label:'Download the file'};
+      _tlMsg(d.fileWarning||'Done.',d.fileWarning?'warn':'ok');
+      tlActions(); return;
+    }
+
+    /* SEVERAL FILES AT ONCE -- the split PDF. Each part gets its own button,
+       and the whole set gets a zip, rather than base64 printed on screen. */
+    if(t.out==='parts'){
+      const parts=Array.isArray(d.splits)?d.splits:[];
+      if(!parts.length){ _tlMsg('That PDF produced nothing to save.','err'); return; }
+      TL.parts=parts;
+      if(d.zipBase64) TL.file={b64:d.zipBase64,mime:'application/zip',
+                               name:d.zipFilename||'split-pages.zip',label:'Download all as one zip'};
+      out.innerHTML='<div class="tl-kv"><b>'+parts.length+' file'+(parts.length===1?'':'s')
+        +'</b> from a '+d.totalPages+'-page PDF.</div>';
+      _tlMsg('Done.','ok'); tlActions(); return;
+    }
+
     if(t.out==='text'){
       const s=String(d[t.pick]||'').trim();
       if(!s){ _tlMsg('Bella had nothing to say to that. Try giving her a little more.','err'); return; }
@@ -12694,14 +12741,26 @@ async function tlRun(){
    worse than no button. */
 async function tlActions(){
   const r=TL.result, host=document.getElementById('tl-actions');
-  if(!r||!host) return;
-  let h='<button onclick="tlCopy()">Copy</button>';
-  if(r.kind==='text'||r.kind==='json') h+='<button onclick="tlWord()">Save as Word</button>';
-  if(r.kind==='img') h+='<button onclick="tlPng()">Save the picture</button>';
+  const parts=TL.parts||[];
+  if(!host||(!r&&!TL.file&&!parts.length)) return;
+  let h='';
+  /* The file Bella actually built comes first: it is the thing that was asked
+     for, and burying it behind Copy is how "Save as Word" ended up being the
+     only way out of a tool that had already made a Word file. */
+  if(TL.file) h+='<button onclick="tlFileSave()">'+_tlEsc(TL.file.label||'Download the file')+'</button>';
+  parts.forEach(function(p,i){
+    h+='<button onclick="tlPart('+i+')">Part '+p.part+' &mdash; page'
+     +(p.pageCount===1?' ':'s ')+_tlEsc(String(p.pages.join(', ')))+'</button>';
+  });
+  if(r){
+    h+='<button onclick="tlCopy()">Copy</button>';
+    if(r.kind==='text'||r.kind==='json') h+='<button onclick="tlWord()">Save as Word</button>';
+    if(r.kind==='img') h+='<button onclick="tlPng()">Save the picture</button>';
+  }
   host.innerHTML=h;
-  if(r.kind==='text' && await _tlCanSpeak(r.tag)){
+  if(r&&r.kind==='text' && await _tlCanSpeak(r.tag)){
     host.insertAdjacentHTML('afterbegin','<button onclick="tlSay()">&#128266; Read it aloud</button>');
-  }else if(r.kind==='text' && r.lang){
+  }else if(r&&r.kind==='text' && r.lang){
     host.insertAdjacentHTML('beforeend',
       '<div class="tl-hint" style="flex:1 1 100%">This device has no '+_tlEsc(r.lang)
       +' voice, so I can show it but not say it. The words are correct.</div>');
@@ -12721,6 +12780,16 @@ async function tlSay(){
   const got=await _tlSpeak(r.text,r.tag);
   _tlMsg(got.ok?'Reading it out…':('I could not say that aloud — '+got.why+'.'),
          got.ok?'ok':'warn');
+}
+function tlFileSave(){
+  const f=TL.file; if(!f) return;
+  _tlDownload(_tlB64ToBlob(f.b64,f.mime),f.name);
+  _tlMsg('Saved to your Downloads folder.','ok');
+}
+function tlPart(i){
+  const p=(TL.parts||[])[i]; if(!p) return;
+  _tlDownload(_tlB64ToBlob(p.base64,'application/pdf'),p.filename||('part-'+p.part+'.pdf'));
+  _tlMsg('Saved to your Downloads folder.','ok');
 }
 function tlPng(){
   const r=TL.result; if(!r||r.kind!=='img') return;
@@ -12781,13 +12850,13 @@ const TOOLS=[
    note:'Tidy, shorten, lengthen or proofread a piece of writing.',
    need:['text'],out:'text',pick:'improved',
    fields:[['mic','text','Your writing','Paste or speak what you have written…'],
-           ['sel','action',['improve','proofread','shorten','expand','formal','casual']],
-           ['sel','tone',TONES]]},
+           ['sel','action','What should I do with it',['improve','proofread','shorten','expand','formal','casual']],
+           ['sel','tone','Tone',TONES]]},
   {id:'creative',group:'writing',label:'Write something creative',ep:'/creative-write',
    note:'A story, a poem, a speech, a song — in any language.',need:['topic'],
-   fields:[['sel','type',['story','poem','song','speech','essay','blog post','letter']],
+   fields:[['sel','type','What kind',['story','poem','song','speech','essay','blog post','letter']],
            ['text','topic','What about?','a grandmother’s kitchen'],
-           ['sel','tone',TONES],['sel','length',['short','medium','long']],
+           ['sel','tone','Tone',TONES],['sel','length','How long',['short','medium','long']],
            ['lang','language','In which language','English']]},
   {id:'cover',group:'writing',label:'Cover letter',ep:'/cover-letter',
    note:'For a specific job, using the advert’s own words.',need:['jobTitle','company'],
@@ -12796,7 +12865,7 @@ const TOOLS=[
            ['area','jobDescription','The advert, pasted',''],
            ['text','candidateName','Your name',''],
            ['area','experience','Your experience, briefly',''],
-           ['sel','tone',TONES]]},
+           ['sel','tone','Tone',TONES]]},
   {id:'resume',group:'writing',label:'Résumé',ep:'/generate-resume',
    note:'Shaped towards one particular role.',need:['targetRole'],wantsProfile:true,
    fields:[['text','targetRole','The role you want',''],
@@ -12809,17 +12878,17 @@ const TOOLS=[
    fields:[['text','name','Your name',''],['text','role','Your role',''],
            ['text','company','Company',''],['area','experience','Experience',''],
            ['area','achievements','Achievements',''],
-           ['sel','platform',['LinkedIn','Website','Twitter','Conference programme','Book jacket']],
-           ['sel','tone',TONES]]},
+           ['sel','platform','Where it will appear',['LinkedIn','Website','Twitter','Conference programme','Book jacket']],
+           ['sel','tone','Tone',TONES]]},
   {id:'social',group:'writing',label:'Social media post',ep:'/social-media-post',
    note:'Written for the platform it is going on.',need:['topic'],
    fields:[['text','topic','What about?',''],
-           ['sel','platform',['LinkedIn','Instagram','Facebook','Twitter','WhatsApp']],
-           ['sel','tone',TONES],['text','targetAudience','Who is it for?','']]},
+           ['sel','platform','Which platform',['LinkedIn','Instagram','Facebook','Twitter','WhatsApp']],
+           ['sel','tone','Tone',TONES],['text','targetAudience','Who is it for?','']]},
   {id:'plag',group:'writing',label:'Check for copied text',ep:'/plagiarism-check',
    note:'An opinion, not a certificate — it says so itself.',need:['text'],
    fields:[['area','text','The text to check',''],
-           ['sel','checkType',['general','academic','professional']]]},
+           ['sel','checkType','What kind of check',['general','academic','professional']]]},
   {id:'fact',group:'writing',label:'Check a claim',ep:'/fact-check',
    note:'Searches the web before answering.',need:['claim'],
    fields:[['area','claim','The claim','Chennai is the capital of Kerala'],
@@ -12830,20 +12899,20 @@ const TOOLS=[
    note:'From a topic, or from notes you attach.',need:['topic'],
    mime:{documentBase64:'mimeType'},
    fields:[['text','topic','The topic','Photosynthesis'],
-           ['sel','level',['school','college','postgraduate','professional']],
+           ['sel','level','What level',['school','college','postgraduate','professional']],
            ['text','examType','Exam, if any','CBSE Class 10'],
            ['file','documentBase64','Your notes, if you have any',DOC_ACCEPT]]},
   {id:'cards',group:'study',label:'Flashcards',ep:'/flashcards',
    note:'Question-and-answer pairs you can revise from.',need:['topic'],
    mime:{documentBase64:'mimeType'},
    fields:[['text','topic','The topic',''],['num','count','How many','20'],
-           ['sel','difficulty',['easy','medium','hard']],
+           ['sel','difficulty','How hard',['easy','medium','hard']],
            ['file','documentBase64','From a document instead',DOC_ACCEPT]]},
   {id:'interview',group:'study',label:'Interview preparation',ep:'/interview-prep',
    note:'Likely questions, and answers worth rehearsing.',need:['role'],
    fields:[['text','role','The role',''],['text','company','The company',''],
            ['text','experience','Your experience','6 years'],
-           ['sel','interviewType',['general','technical','behavioural','panel','final round']],
+           ['sel','interviewType','What kind of interview',['general','technical','behavioural','panel','final round']],
            ['text','focusAreas','Anything to focus on','']]},
 
   /* ── READ ANY FILE ─────────────────────────────────────────────────── */
@@ -12861,17 +12930,17 @@ const TOOLS=[
    note:'Tables, figures, names and dates, as structured data.',need:['documentBase64'],
    mime:{documentBase64:'mimeType'},
    fields:[['file','documentBase64','The document',DOC_ACCEPT],
-           ['sel','extractType',['tables','figures','dates','names','contacts','all']]]},
+           ['sel','extractType','What to pull out',['tables','figures','dates','names','contacts','all']]]},
   {id:'insights',group:'read',label:'What does this tell me?',ep:'/extract-insights',
    note:'The points worth noticing, rather than a summary.',need:['documentBase64'],
    mime:{documentBase64:'mimeType'},
    fields:[['file','documentBase64','The document',DOC_ACCEPT],
-           ['sel','insightType',['general','financial','risks','opportunities','action items']]]},
+           ['sel','insightType','What to look for',['general','financial','risks','opportunities','action items']]]},
   {id:'report',group:'read',label:'Turn it into a report',ep:'/generate-report',
    note:'A written report built from what you attach.',need:['documentBase64'],
    mime:{documentBase64:'mimeType'},
    fields:[['file','documentBase64','The source material',DOC_ACCEPT],
-           ['sel','reportType',['summary','analysis','executive','technical','financial']],
+           ['sel','reportType','What kind of report',['summary','analysis','executive','technical','financial']],
            ['text','title','Title',''],['text','audience','Who will read it','']]},
   {id:'compare',group:'read',label:'Compare two documents',ep:'/compare-docs',
    note:'What changed, and what it means.',need:['doc1Base64','doc2Base64'],
@@ -12887,23 +12956,25 @@ const TOOLS=[
 
   /* ── DOC EDIT & CONVERT ────────────────────────────────────────────── */
   {id:'restructure',group:'docedit',label:'Rewrite or convert a document',ep:'/restructure-doc',
-   note:'Reshape it, or turn it into another format.',need:['documentBase64'],
-   mime:{documentBase64:'mimeType'},
+   note:'Reshape it, or turn it into another format. You get the file back.',
+   need:['documentBase64'],out:'doc',mime:{documentBase64:'mimeType'},
    fields:[['file','documentBase64','The document',DOC_ACCEPT],
-           ['sel','targetFormat',['docx','xlsx','pptx','txt','markdown']],
+           ['sel','targetFormat','Turn it into',['docx','pdf','xlsx','pptx','txt','markdown']],
+           ['text','title','Name the result','restructured'],
            ['area','instructions','How should it change?','Make it a one-page summary']]},
   {id:'template',group:'docedit',label:'Fill in a template',ep:'/fill-template',
-   note:'Your template, your details, filled in.',need:['templateBase64'],
-   mime:{templateBase64:'mimeType'},
+   note:'Your template, your details, filled in — and the finished file to keep.',
+   need:['templateBase64','data'],out:'doc',mime:{templateBase64:'mimeType'},
    fields:[['file','templateBase64','The template',DOC_ACCEPT],
            ['area','data','The details to put in','Name: ...\nDate: ...'],
-           ['sel','outputFormat',['docx','pdf']]]},
+           ['sel','outputFormat','Give it back as',['docx','pdf']],
+           ['text','title','Name the result','filled-template']]},
 
   /* ── DOCUMENTS & SLIDES ────────────────────────────────────────────── */
   {id:'makedoc',group:'docs',label:'Make a document',ep:'/create-document',
    note:'Word or Excel. Word handles every language; the PDF option is Latin script only.',
    need:['title','content'],out:'blob',fileBase:'document',
-   fields:[['sel','format',['docx','xlsx','pdf']],
+   fields:[['sel','format','What kind of file',['docx','xlsx','pdf']],
            ['text','title','Title',''],
            ['area','content','The contents, a line at a time','']]},
   {id:'makedeck',group:'docs',label:'Make a slide deck',ep:'/create-presentation',
@@ -12914,12 +12985,13 @@ const TOOLS=[
 
   /* ── PDF TOOLS ─────────────────────────────────────────────────────── */
   {id:'mergepdf',group:'pdf',label:'Join PDFs together',ep:'/merge-pdf',
-   note:'Pick several — they join in the order you choose them.',
+   note:'Pick two or more — they join in the order you choose them.',
    need:['pdfsBase64'],out:'b64',pick:'mergedPdfBase64',fileBase:'joined',
    fields:[['files','pdfsBase64','The PDFs','.pdf'],
            ['text','filename','Name the result','joined.pdf']]},
   {id:'splitpdf',group:'pdf',label:'Split a PDF',ep:'/split-pdf',
-   note:'Page ranges, like 1-3,7,9-12.',need:['pdfBase64'],
+   note:'Page ranges, like 1-3,7,9-12. Leave it empty for one file per page.',
+   need:['pdfBase64'],out:'parts',
    fields:[['file','pdfBase64','The PDF','.pdf'],
            ['text','ranges','Which pages','1-3,7']]},
   {id:'markpdf',group:'pdf',label:'Watermark a PDF',ep:'/watermark-pdf',
@@ -12934,7 +13006,7 @@ const TOOLS=[
   {id:'analyse',group:'data',label:'Analyse some numbers',ep:'/analyse-data',
    note:'Paste rows, or a CSV’s contents.',need:['data'],
    fields:[['area','data','The data','Month,Sales\nApr,120\nMay,145'],
-           ['sel','dataType',['general','sales','financial','survey','health','traffic']],
+           ['sel','dataType','What kind of data',['general','sales','financial','survey','health','traffic']],
            ['mic','question','What do you want to know?','']]},
   {id:'forecast',group:'data',label:'Forecast ahead',ep:'/forecast',
    note:'From numbers you already have.',need:['data'],
@@ -12947,7 +13019,7 @@ const TOOLS=[
    note:'Paste the numbers and I will draw it as a picture.',
    need:['data'],out:'img',pick:'chartImageBase64',fixed:{format:'png'},
    fields:[['area','data','The data','Apr,120\nMay,145\nJun,160'],
-           ['sel','chartType',['bar','line','pie','doughnut','area','scatter']],
+           ['sel','chartType','What kind of chart',['bar','line','pie','doughnut','area','scatter']],
            ['text','title','Title',''],
            ['text','xAxis','Bottom axis',''],['text','yAxis','Side axis','']]},
 
@@ -12955,7 +13027,7 @@ const TOOLS=[
   {id:'fincalc',group:'money',label:'Work out a figure',ep:'/financial-calc',
    note:'EMI, interest, returns, tax — say which and give the numbers.',
    need:['calcType'],
-   fields:[['sel','calcType',['emi','simple interest','compound interest','sip','lumpsum',
+   fields:[['sel','calcType','What to work out',['emi','simple interest','compound interest','sip','lumpsum',
                               'loan eligibility','income tax','gst']],
            ['area','params','The numbers','principal: 2500000\nrate: 8.5\nyears: 20']]},
   {id:'fx',group:'money',label:'Convert currency',ep:'/currency-convert',
@@ -12965,7 +13037,7 @@ const TOOLS=[
   {id:'stock',group:'money',label:'Share price',ep:'/stock-price',
    note:'Several at once — separate them with commas.',need:['symbols'],
    fields:[['text','symbols','The shares','TCS, INFY'],
-           ['sel','exchange',['NSE','BSE','NASDAQ','NYSE']]]},
+           ['sel','exchange','Which exchange',['NSE','BSE','NASDAQ','NYSE']]]},
 
   /* ── TRAVEL ────────────────────────────────────────────────────────── */
   {id:'trip',group:'travel',label:'Plan a trip',ep:'/travel-research',
@@ -12983,7 +13055,7 @@ const TOOLS=[
    need:['passportCountry','toCountry'],
    fields:[['text','passportCountry','Your passport','India'],
            ['text','toCountry','Going to','Japan'],
-           ['sel','travelPurpose',['tourism','business','study','work','transit','family visit']]]},
+           ['sel','travelPurpose','Why you are going',['tourism','business','study','work','transit','family visit']]]},
   {id:'flight',group:'travel',label:'Flight status',ep:'/flight-status',
    note:'Live, from a web search.',need:['flightNumber'],
    fields:[['text','flightNumber','Flight number','AI 675'],
