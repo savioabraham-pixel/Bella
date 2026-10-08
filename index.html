@@ -12133,6 +12133,9 @@ async function invShowUpiQr(){
   border:none;background:#0B2545;color:#F5E6C8;font-size:14.5px;font-weight:600;cursor:pointer;
   font-family:'BellaIndic','DM Sans',sans-serif}
 #tl-overlay .tl-go[disabled]{opacity:.55;cursor:default}
+/* B-Meet, recording. Red at 5.9:1 against white text, and repeated under
+   body.dark below so the !important button rule cannot repaint it. */
+#tl-overlay .tl-go.bm-on{background:#9E2A3C;color:#FFFFFF;border-color:#9E2A3C}
 #tl-overlay .tl-act{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
 #tl-overlay .tl-act button{flex:1 1 auto;min-width:92px;min-height:40px;padding:9px 10px;
   border-radius:10px;border:1.5px solid rgba(11,37,69,.18);background:#FAF8F4;color:#0B2545;
@@ -12227,6 +12230,7 @@ html body.dark #tl-overlay .tl-pick{background:rgba(255,255,255,.06) !important;
 html body.dark #tl-overlay .tl-pick-n{color:#F5E6C8 !important}
 html body.dark #tl-overlay .tl-pick-d{color:rgba(245,230,200,.66) !important}
 html body.dark #tl-overlay .tl-go{background:#D4AF37 !important;color:#0B2545 !important}
+html body.dark #tl-overlay .tl-go.bm-on{background:#9E2A3C !important;color:#FFFFFF !important}
 html body.dark #tl-overlay .tl-act button{background:rgba(255,255,255,.07) !important;
   color:#F5E6C8 !important;border-color:rgba(245,230,200,.26) !important}
 html body.dark #tl-overlay .tl-mic{background:rgba(255,255,255,.1) !important;
@@ -12481,7 +12485,10 @@ function openTools(group){
 }
 function closeTools(){ const o=document.getElementById('tl-overlay'); if(o) o.remove();
   try{ window.speechSynthesis.cancel(); }catch(e){}
-  if(_tlMicRec){ try{_tlMicRec.stop();}catch(e){} _tlMicRec=null; } }
+  if(_tlMicRec){ try{_tlMicRec.stop();}catch(e){} _tlMicRec=null; }
+  /* B-Meet shares this overlay, so this is also the X on a live recording --
+     without it the microphone and the screen share keep running invisibly. */
+  if(typeof _bmTeardown==='function') try{ _bmTeardown(); }catch(e){} }
 function tlBack(){ if(TOOLS.filter(t=>t.group===TL.group).length>1) tlShowList(); else closeTools(); }
 
 function tlShowList(){
@@ -12617,6 +12624,16 @@ function _tlMsg(t,cls){ const m=document.getElementById('tl-msg'); if(!m) return
   m.className=cls||''; m.innerHTML=t||''; }
 function _tlVal(key){ const el=document.getElementById('tlf-'+key);
   return el?String(el.value||'').trim():''; }
+/* The resolved identity, from the one place it is persisted. resolveProfileKey
+   writes it into b_registered_user at login; _myProfileData reads that back. */
+function _tlProfileKey(){
+  try{
+    const u=(typeof _myProfileData==='function')?_myProfileData():{};
+    if(u && u.profileKey) return String(u.profileKey);
+    if(typeof resolveProfileKey==='function' && u && u.email) return resolveProfileKey(u)||'';
+  }catch(e){}
+  return '';
+}
 </script>
 
 <script id="v88-tools-run">
@@ -12646,6 +12663,23 @@ function _tlHuman(k){
    would otherwise be rendered as a screenful of base64. */
 const TL_SKIP=['ok','truncated','finishReason','original','text','textLength',
                'fileBase64','mimeType','filename','zipBase64','zipFilename','base64','splits'];
+/* A tool may hide its own machinery keys (token counts, echoed inputs) without
+   adding them to the global list, where they would blank a field some other
+   tool legitimately shows. Set by tlRun for the duration of one render. */
+let _tlSkipNow=[];
+let _tlDropEmpty=false;
+function _tlSkipped(k){ return TL_SKIP.indexOf(k)!==-1 || _tlSkipNow.indexOf(k)!==-1; }
+function _tlEmptyVal(v){
+  return v==null || v==='' || (Array.isArray(v)&&!v.length)
+      || (typeof v==='object'&&!Array.isArray(v)&&!Object.keys(v).length);
+}
+/* Bytes as a person reads them. 2893412 is not a file size anybody can use. */
+function _tlSize(b){
+  b=Number(b)||0;
+  return b>=1048576 ? (Math.round(b/104857.6)/10)+'MB'
+       : b>=1024    ? Math.round(b/1024)+'KB'
+       :              b+' bytes';
+}
 function _tlRender(v,depth){
   depth=depth||0;
   if(v==null) return '';
@@ -12658,7 +12692,8 @@ function _tlRender(v,depth){
     return v.map(x=>'<div style="margin:6px 0">'+_tlRender(x,depth+1)+'</div>').join('');
   }
   if(typeof v==='object'){
-    return Object.keys(v).filter(k=>depth>0||TL_SKIP.indexOf(k)===-1).map(k=>{
+    return Object.keys(v).filter(k=>depth>0||!_tlSkipped(k))
+      .filter(k=>!(depth===0&&_tlDropEmpty&&_tlEmptyVal(v[k]))).map(k=>{
       const body=_tlRender(v[k],depth+1);
       if(!body) return '';
       const isBlock=typeof v[k]==='object';
@@ -12675,12 +12710,54 @@ function _tlFlat(v,out,depth){
   if(v==null) return out;
   if(typeof v!=='object'){ out.push({text:String(v)}); return out; }
   if(Array.isArray(v)){ v.forEach(x=>_tlFlat(x,out,depth)); return out; }
-  Object.keys(v).filter(k=>depth>0||TL_SKIP.indexOf(k)===-1).forEach(k=>{
+  Object.keys(v).filter(k=>depth>0||!_tlSkipped(k)).forEach(k=>{
     if(v[k]==null||v[k]==='') return;
     if(typeof v[k]==='object'){ out.push({heading:_tlHuman(k)}); _tlFlat(v[k],out,depth+1); }
     else out.push({text:(depth===0?'':_tlHuman(k)+': ')+String(v[k])});
   });
   return out;
+}
+
+/* "Who was there" is typed as a sentence and the backend wants an array. */
+function _tlAttendees(body){
+  if(!body.attendees) return;
+  body.attendees=String(body.attendees).split(/[,;\u0964]+|\band\b/)
+    .map(function(s){ return s.trim(); }).filter(Boolean);
+}
+
+/* /edit-image takes operations:[{type,...}]. A form cannot type that, so the
+   one chosen operation is assembled here and the helper fields -- which are NOT
+   the endpoint's own field names -- are taken back out of the body. */
+const TL_IMAGE_OPS={
+  'Resize':'resize','Rotate':'rotate','Make it grey':'grayscale','Soften it':'blur',
+  'Sharpen it':'sharpen','Flip top to bottom':'flip','Mirror left to right':'flop',
+  'Squeeze the file smaller':'compress','Invert the colours':'negate'
+};
+function _tlImageOps(body){
+  const type=TL_IMAGE_OPS[body.op]||'resize';
+  const op={type:type};
+  if(type==='resize'){
+    if(body.width)  op.width=Math.round(body.width);
+    if(body.height) op.height=Math.round(body.height);
+    /* sharp needs at least one dimension or resize() is a no-op that silently
+       returns the original -- say so instead of pretending something happened. */
+    if(!op.width&&!op.height) op.width=1200;
+    op.fit='inside';
+  }
+  if(type==='rotate')   op.angle=body.angle?Number(body.angle):90;
+  if(type==='compress') op.quality=body.quality?Math.max(1,Math.min(100,Math.round(body.quality))):80;
+  body.operations=[op];
+  ['op','width','height','angle','quality'].forEach(function(k){ delete body[k]; });
+}
+
+/* "2026-10-08T05:36:11.000Z" is not something to show a person. */
+function _tlWhen(iso){
+  try{
+    const d=new Date(iso);
+    if(isNaN(d.getTime())) return String(iso);
+    return d.toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',
+      hour:'numeric',minute:'2-digit'});
+  }catch(e){ return String(iso); }
 }
 
 async function tlRun(){
@@ -12692,6 +12769,8 @@ async function tlRun(){
      below would throw on null. Caught during the headless QC run on 2026-10-07. */
   if(!go||!out||!acts) return;
   out.innerHTML=''; acts.innerHTML=''; TL.result=null; TL.file=null; TL.parts=null;
+  _tlSkipNow=t.skip||[];
+  _tlDropEmpty=!!t.skipEmpty;
 
   /* Required fields, named in the sentence rather than a bare "required". */
   for(const f of (t.need||[])){
@@ -12727,7 +12806,22 @@ async function tlRun(){
     if(v!=='') body[key]=(kind==='num')?Number(v):v;
   }
   if(t.fixed) Object.assign(body,t.fixed);
-  if(typeof profileKey!=='undefined' && t.wantsProfile) body.profileKey=profileKey;
+  /* `profileKey` is a const INSIDE completeLogin, not a global, so the old
+     `typeof profileKey!=='undefined'` test was false on every call and
+     wantsProfile had never once attached anything -- /cover-letter has been
+     running with no profile since the day it shipped. The stored user is the
+     only place the resolved key actually lives. Found 2026-10-08 while wiring
+     Life Record, which 400s without it. */
+  if(t.wantsProfile){
+    const pk=_tlProfileKey();
+    if(!pk){ _tlMsg('I do not know who you are on this device yet. Sign in again and this will work.','err');
+             go.disabled=false; return; }
+    body.profileKey=pk;
+  }
+  /* Some endpoints want a shape a form cannot type -- /edit-image wants an
+     operations ARRAY. `shape` is the one place a tool may rewrite its own body,
+     so the fields stay the backend's own names. */
+  if(t.shape) try{ t.shape(body); }catch(e){}
 
   go.disabled=true;
   _tlMsg(t.working||'Working on it…','');
@@ -12766,9 +12860,12 @@ async function tlRun(){
     if(t.out==='img'){
       const b64=d[t.pick];
       if(!b64){ _tlMsg('Bella did not return a picture this time.','err'); return; }
-      out.innerHTML='<img alt="chart" src="data:'+(d.mimeType||'image/png')+';base64,'+b64+'">';
-      TL.result={kind:'img',b64:b64,mime:d.mimeType||'image/png'};
-      _tlMsg('Done.','ok'); tlActions(); return;
+      out.innerHTML='<img alt="'+_tlEsc(t.label||'result')+'" src="data:'
+        +(d.mimeType||'image/png')+';base64,'+b64+'">';
+      TL.result={kind:'img',b64:b64,mime:d.mimeType||'image/png',
+                 base:t.fileBase||'bella-chart',
+                 ext:(d.format||String(d.mimeType||'image/png').split('/')[1]||'png')};
+      _tlMsg(t.msg?t.msg(d):'Done.','ok'); tlActions(); return;
     }
     if(t.out==='b64'){
       const b64=d[t.pick];
@@ -12808,14 +12905,23 @@ async function tlRun(){
       const s=String(d[t.pick]||'').trim();
       if(!s){ _tlMsg('Bella had nothing to say to that. Try giving her a little more.','err'); return; }
       out.innerHTML=_tlEsc(s);
-      TL.result={kind:'text',text:s,tag:'en-IN',title:t.label};
-      _tlMsg('Done.','ok'); tlActions(); return;
+      /* A transcript must be SPOKEN in the language it is in, not en-IN, or the
+         English voice reads Bengali -- the same fault fixed in speechQueue. */
+      TL.result={kind:'text',text:s,tag:(t.tag?t.tag(d):'en-IN'),
+                 lang:(t.lang?t.lang(d):''),title:t.label};
+      _tlMsg(t.msg?t.msg(d):'Done.','ok'); tlActions(); return;
     }
     const html=_tlRender(d,0);
-    if(!html){ _tlMsg('Bella returned nothing readable for that.','err'); return; }
+    if(!html){
+      /* An empty result is not automatically a fault: "you have no life record
+         yet" is a true and useful answer. A tool that writes its own status line
+         is trusted to say so; everything else still reports a failure. */
+      _tlMsg(t.msg?t.msg(d):'Bella returned nothing readable for that.',t.msg?'warn':'err');
+      return;
+    }
     out.innerHTML=html;
     TL.result={kind:'json',data:d,title:t.label};
-    _tlMsg(d.disclaimer?'':'Done.',d.disclaimer?'':'ok');
+    _tlMsg(t.msg?t.msg(d):(d.disclaimer?'':'Done.'),(t.msg||!d.disclaimer)?'ok':'');
     tlActions();
   }catch(e){
     _tlMsg('Could not reach Bella just now. What you typed is still here — try again in a moment.','err');
@@ -12879,7 +12985,8 @@ function tlPart(i){
 }
 function tlPng(){
   const r=TL.result; if(!r||r.kind!=='img') return;
-  _tlDownload(_tlB64ToBlob(r.b64,r.mime),'bella-chart-'+_tlStamp()+'.png');
+  const ext=(r.ext==='jpeg'?'jpg':(r.ext||'png'));
+  _tlDownload(_tlB64ToBlob(r.b64,r.mime),(r.base||'bella-chart')+'-'+_tlStamp()+'.'+ext);
   _tlMsg('Saved to your Downloads folder.','ok');
 }
 /* Word, never PDF, for anything that might not be in Latin script.
@@ -12914,7 +13021,8 @@ const TL_GROUPS={
   translate:'Translate', writing:'Writing Help', study:'Study & Interview',
   read:'Read Any File', docedit:'Doc Edit & Convert', docs:'Documents & Slides',
   pdf:'PDF Tools', data:'Data Analysis', charts:'Charts & Graphs',
-  money:'Money & Expenses', travel:'Travel', meeting:'Meeting Notes'
+  money:'Money & Expenses', travel:'Travel', meeting:'Meeting Notes',
+  transcribe:'Transcribe', image:'Image Transform', life:'Life Record'
 };
 const DOC_ACCEPT='.pdf,.doc,.docx,.xls,.xlsx,.csv,.pptx,.txt,.md,.jpg,.jpeg,.png,.webp';
 const TONES=['Warm','Neutral','Formal','Friendly','Persuasive','Playful'];
@@ -13152,8 +13260,112 @@ const TOOLS=[
    note:'Decisions, actions and who owns them.',need:['transcript'],
    fields:[['mic','transcript','The transcript, or speak the gist','Paste the transcript…'],
            ['text','meetingTitle','What was it about',''],
-           ['text','attendees','Who was there',''],
-           ['text','duration','How long','45 minutes']]}
+           ['text','attendees','Who was there, separated by commas',''],
+           ['text','duration','How long','45 minutes']],
+   /* The backend does attendees.join(', '). A string has no .join, so every run
+      with this box filled in threw a TypeError and came back 500 -- which is
+      why minutes only ever worked when "Who was there" was left empty. */
+   shape:_tlAttendees},
+
+  /* ── TRANSCRIBE ─────────────────────────────────────────────────────── */
+  {id:'transcribe',group:'transcribe',label:'Write down what was said',ep:'/transcribe',
+   note:'Audio or video, any language. Bella writes it down and names the language she heard.',
+   need:['audioBase64'],
+   fields:[['file','audioBase64','The recording','audio/*,video/*']],
+   mime:{audioBase64:'mimeType'},
+   out:'text',pick:'transcription',
+   /* The transcript must be read aloud in ITS OWN language. Handing en-IN to a
+      Bengali transcript is the exact fault that was fixed in speechQueue. */
+   tag:function(d){ return _tlTag(d.detectedLanguage||'English'); },
+   lang:function(d){ return d.detectedLanguage||''; },
+   msg:function(d){
+     const l=d.detectedLanguage;
+     return 'Written down'+(l&&l!=='Unknown'?' \u2014 I heard '+_tlEsc(l):'')+'.';
+   }},
+
+  /* ── IMAGE TRANSFORM ────────────────────────────────────────────────────
+     NOT /transform-image. That one calls Vertex imagegeneration@006 through
+     getGoogleAuth(), which grants sheets/drive/gmail/calendar and NOT
+     cloud-platform -- measured 403 "insufficient authentication scopes" on
+     2026-09-20 and never fixed, so it has never produced a picture. These four
+     are sharp and Gemini, both already working. Restyling a photo (Ghibli,
+     caricature) needs a Gemini image model and a backend release; it is not
+     pretended at here. [[bella-design-and-image-capability]] */
+  {id:'imgedit',group:'image',label:'Resize, rotate or retouch',ep:'/edit-image',
+   note:'Done on the server with sharp, so a big photo does not have to come back through the browser.',
+   need:['imageBase64'],go:'Do it',
+   fields:[['file','imageBase64','The picture','image/*'],
+           ['sel','op','What should I do',['Resize','Rotate','Make it grey','Soften it',
+             'Sharpen it','Flip top to bottom','Mirror left to right','Squeeze the file smaller',
+             'Invert the colours']],
+           ['num','width','New width in pixels','blank keeps it'],
+           ['num','height','New height in pixels','blank keeps it'],
+           ['num','angle','Degrees to turn','90'],
+           ['num','quality','How much quality to keep, 1-100','80'],
+           ['sel','outputFormat','Save it as',['jpeg','png','webp']]],
+   mime:{imageBase64:'mimeType'},
+   out:'img',pick:'imageBase64',fileBase:'bella-picture',
+   shape:_tlImageOps,
+   msg:function(){ return 'Done. Use the button below to keep it.'; }},
+
+  {id:'imgconv',group:'image',label:'Change the file type',ep:'/convert-image',
+   note:'JPEG, PNG, WebP, TIFF or GIF.',
+   need:['imageBase64','toFormat'],go:'Convert it',
+   fields:[['file','imageBase64','The picture','image/*'],
+           ['sel','toFormat','Turn it into',['png','jpeg','webp','tiff','gif']],
+           ['num','quality','How much quality to keep, 1-100','90']],
+   mime:{imageBase64:'mimeType'},
+   out:'img',pick:'imageBase64',fileBase:'bella-picture',
+   msg:function(d){ return 'Converted to '+String(d.format||'').toUpperCase()+'.'; }},
+
+  {id:'imgask',group:'image',label:'Tell me what is in this picture',ep:'/analyse-image',
+   note:'Ask anything about it, or leave the question empty for a full description.',
+   need:['imageBase64'],go:'Have a look',
+   fields:[['file','imageBase64','The picture','image/*'],
+           ['mic','question','What do you want to know','Leave empty for a full description…']],
+   mime:{imageBase64:'mimeType'},
+   out:'text',pick:'analysis'},
+
+  {id:'imginfo',group:'image',label:'The picture\u2019s own details',ep:'/image-info',
+   note:'Size, shape, file type and whether it has a transparent background.',
+   need:['imageBase64'],go:'Check it',
+   fields:[['file','imageBase64','The picture','image/*']],
+   skip:['ok','size','channels','hasAlpha'],
+   msg:function(d){
+     if(!d.width||!d.height) return 'Done.';
+     return d.width+' \u00D7 '+d.height+' pixels \u00B7 '+_tlSize(d.size)
+       +' \u00B7 '+String(d.format||'').toUpperCase()
+       +' \u00B7 '+(d.hasAlpha?'has a transparent background':'no transparent background');
+   }},
+
+  /* ── LIFE RECORD ────────────────────────────────────────────────────────
+     Their OWN threads and their OWN memories, filtered on profileKey inside
+     the endpoint exactly as /threads-read does -- never anybody else's
+     [[no-cross-user-data-ever]]. /life-record calls _ensureTab itself, so the
+     LifeRecord tab creates itself on the first rebuild. */
+  {id:'liferead',group:'life',label:'Read what Bella has written about me',ep:'/life-record',
+   note:'A standing summary of everything Bella has learned from your own conversations.',
+   fixed:{action:'read'},wantsProfile:true,fields:[],go:'Show me',
+   skip:['profileKey','exists','note','updatedAt'],skipEmpty:true,
+   msg:function(d){
+     if(!d.exists) return 'There is nothing written yet. Rebuild it and Bella will write it from your own conversations.';
+     return d.updatedAt ? ('Last written '+_tlWhen(d.updatedAt)+'.') : 'Done.';
+   }},
+
+  {id:'liferebuild',group:'life',label:'Rebuild it from my conversations',ep:'/life-record',
+   note:'Bella re-reads your own threads and rewrites the record. The old one is only replaced if the new one came out whole.',
+   fixed:{action:'rebuild'},wantsProfile:true,go:'Rebuild it',
+   fields:[['text','addressedName','What Bella should call you','']],
+   skip:['profileKey','action','tokens','sourceCharacters','updatedAt'],skipEmpty:true,
+   onOpen:function(){
+     const el=document.getElementById('tlf-addressedName');
+     if(!el||el.value) return;
+     try{ const u=_myProfileData()||{};
+          el.value=u.preferredName||u.firstName||u.fullName||''; }catch(e){}
+   },
+   working:'Reading your conversations and writing it up\u2026',
+   msg:function(d){ return 'Rewritten from '+Math.round((d.sourceCharacters||0)/1000)
+     +'k characters of your own conversations.'; }}
 ];
 </script>
 
@@ -13310,6 +13522,308 @@ function tlTranslateMsg(id){
 }
 </script>
 
+<script id="v89-bmeet">
+/* ══ B-MEET ═══════════════════════════════════════════════════════════════
+   Savio's own ask [[bella-b-meet-vision]]: record a conference call and get
+   back editable Word minutes. Every piece it needs was already live and
+   unwired -- the both-ends recorder (2026-10-07), /transcribe, /meeting-notes
+   and /create-document. This is the screen that joins them up.
+
+   IT RECORDS SOUND ONLY, deliberately. The existing Screen & Call recorder
+   keeps the video, which is right for a recording you watch -- but /transcribe
+   carries the file INLINE to Gemini, so a meeting's worth of screen video would
+   be tens of megabytes of pictures nobody is going to read. Audio alone is
+   about 0.3MB a minute, which is what makes an hour-long call sendable at all.
+   The screen share is still started (Chrome will not offer system audio without
+   it) and its video track is simply never handed to the recorder.
+
+   The panel reuses the tools overlay's own ids, so every style and every
+   dark-mode rule keyed on #tl-overlay applies with no new CSS
+   [[bella-dark-mode-css-traps]].                                            */
+
+let BM={rec:null,chunks:[],blob:null,mime:'',ext:'weba',heard:null,
+        t0:0,timer:null,bytes:0,sources:null,ctx:null,busy:false};
+
+/* 18MB of base64 is the ceiling the tools panel already enforces: Cloud Run
+   caps a request at 32MB and Gemini's inline path sits near 20MB. 18MB of
+   base64 is 13.5MB of audio, which at Opus bitrates is roughly 45 minutes. */
+const BM_B64_CAP=18*1024*1024;
+const BM_WARN_MS=30*60*1000;
+
+function openBMeet(){
+  closeTools();
+  const o=document.createElement('div');
+  o.id='tl-overlay';
+  o.addEventListener('click',function(e){ if(e.target===o) closeTools(); });
+  o.innerHTML='<div id="tl-card" role="dialog" aria-label="B-Meet">'
+    +'<div id="tl-head">'
+    +  '<button id="tl-back" onclick="closeTools()" aria-label="Back" style="display:none">&#8249;</button>'
+    +  '<div id="tl-title">B-Meet</div>'
+    +  '<button id="tl-close" onclick="closeTools()" aria-label="Close">&times;</button>'
+    +'</div><div id="tl-body"></div></div>';
+  document.body.appendChild(o);
+  BM={rec:null,chunks:[],blob:null,mime:'',ext:'weba',heard:null,
+      t0:0,timer:null,bytes:0,sources:null,ctx:null,busy:false};
+  TL={group:null,tool:null,files:{},result:null,file:null,parts:null};
+  _tlSkipNow=[];
+  document.getElementById('tl-body').innerHTML=
+     '<div class="tl-hint" style="margin-bottom:10px">Record the call, and Bella writes the minutes &mdash; '
+    +'what was decided, who is doing what, and by when. You get it as a Word file you can edit. '
+    +'<b>Everyone on the call should know it is being recorded.</b></div>'
+    +'<div class="tl-lbl">What was the meeting</div>'
+    +'<input id="bm-title" type="text" placeholder="Monday catch-up">'
+    +'<div class="tl-lbl">Who was there, separated by commas</div>'
+    +'<input id="bm-who" type="text" placeholder="Jishnu, Paushali">'
+    +'<div class="tl-lbl">Whose voices should it catch</div>'
+    +'<select id="bm-mode">'
+    +  '<option value="call">The whole call &mdash; both sides</option>'
+    +  '<option value="mic">Only this room &mdash; the microphone</option>'
+    +'</select>'
+    +'<div class="tl-hint">For both sides, Chrome asks what to share: choose <b>Entire Screen</b> '
+    +'and tick the box that shares the sound. Nothing is watched or kept &mdash; only the sound is recorded.</div>'
+    +'<button class="tl-go" id="bm-rec" onclick="bmToggle()">Start recording</button>'
+    +'<div id="bm-state" class="tl-hint"></div>'
+    +'<div class="tl-lbl" style="margin-top:16px">Or a recording you already have</div>'
+    +'<input id="bm-file" type="file" accept="audio/*,video/*" onchange="bmPick(this)">'
+    +'<div class="tl-file" id="bm-fn"></div>'
+    +'<button class="tl-go" id="bm-go" onclick="bmMinutes()" disabled>Write the minutes</button>'
+    +'<div id="tl-msg"></div><div id="tl-out"></div><div class="tl-act" id="tl-actions"></div>';
+}
+
+function _bmState(t){ const e=document.getElementById('bm-state'); if(e) e.innerHTML=t||''; }
+function _bmClock(ms){
+  const s=Math.floor(ms/1000);
+  return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+}
+
+/* Sound only. The display stream's VIDEO track is started because Chrome will
+   not offer system audio without it, and then simply left out of the stream the
+   recorder sees -- it is NOT stopped, because ending the video track can end
+   the whole capture session and take the audio with it. */
+async function _bmStream(mode){
+  if(mode==='mic'){
+    const mic=await navigator.mediaDevices.getUserMedia({audio:true});
+    BM.sources=[mic]; BM.heard={far:false,near:true};
+    return mic;
+  }
+  const disp=await navigator.mediaDevices.getDisplayMedia({
+    video:true,
+    audio:{systemAudio:'include',echoCancellation:false,noiseSuppression:false}
+  });
+  let mic=null;
+  try{ mic=await navigator.mediaDevices.getUserMedia({audio:true}); }catch(e){ mic=null; }
+  const far=disp.getAudioTracks().length>0;
+  BM.sources=[disp,mic]; BM.heard={far:far,near:!!mic};
+  if(!far&&!mic){ _bmRelease(); throw new Error('no-audio'); }
+  /* Two audio tracks have to become ONE before MediaRecorder sees them, or it
+     writes the first and silently drops the second. */
+  const ctx=new (window.AudioContext||window.webkitAudioContext)();
+  const dest=ctx.createMediaStreamDestination();
+  if(far) ctx.createMediaStreamSource(new MediaStream(disp.getAudioTracks())).connect(dest);
+  if(mic) ctx.createMediaStreamSource(mic).connect(dest);
+  BM.ctx=ctx;
+  const out=new MediaStream();
+  dest.stream.getAudioTracks().forEach(function(t){ out.addTrack(t); });
+  return out;
+}
+
+function _bmRelease(){
+  if(BM.sources){
+    BM.sources.forEach(function(s){ if(s) s.getTracks().forEach(function(t){ t.stop(); }); });
+    BM.sources=null;
+  }
+  if(BM.ctx){ try{ BM.ctx.close(); }catch(e){} BM.ctx=null; }
+  if(BM.timer){ clearInterval(BM.timer); BM.timer=null; }
+}
+
+/* Closing the panel while it is still recording must not leave the microphone
+   and the screen share running behind a dialog that is no longer there. */
+function _bmTeardown(){
+  if(BM.rec && BM.rec.state!=='inactive'){ try{ BM.rec.stop(); }catch(e){} }
+  BM.rec=null;
+  _bmRelease();
+}
+
+async function bmToggle(){
+  const btn=document.getElementById('bm-rec');
+  if(BM.rec && BM.rec.state!=='inactive'){ BM.rec.stop(); return; }
+  if(BM.busy) return;
+  const mode=(document.getElementById('bm-mode')||{}).value||'call';
+  if(!confirm(mode==='mic'
+      ? 'This will record the microphone in this room. Everyone here should know. Do you confirm?'
+      : 'This will record the call — their voices and yours. Everyone on the call should know. Do you confirm?')) return;
+  btn.disabled=true; _tlMsg('','');
+  let stream;
+  try{ stream=await _bmStream(mode); }
+  catch(e){
+    btn.disabled=false;
+    _tlMsg(String(e&&e.message)==='no-audio'
+      ? 'Nothing was shared that has any sound in it, so there would be nothing to write minutes from. Try again, choose Entire Screen, and tick the box that shares the sound.'
+      : 'Recording was not allowed, so nothing is being recorded. On a Mac this also needs macOS › System Settings › Privacy &amp; Security › Screen Recording › Google Chrome.','err');
+    return;
+  }
+  let rec;
+  try{ rec=new MediaRecorder(stream); }
+  catch(e){ _bmRelease(); btn.disabled=false;
+            _tlMsg('This browser would not start a recorder.','err'); return; }
+  BM.rec=rec; BM.chunks=[]; BM.bytes=0; BM.blob=null;
+  /* Ask the recorder what it actually wrote rather than guessing the extension
+     -- every clip Bella saved before 2026-10-07 was named .mp3 over WebM data. */
+  BM.mime=rec.mimeType||'audio/webm';
+  BM.ext=BM.mime.indexOf('mp4')>-1?'m4a':BM.mime.indexOf('ogg')>-1?'ogg':'weba';
+  rec.ondataavailable=function(e){
+    if(e.data && e.data.size>0){ BM.chunks.push(e.data); BM.bytes+=e.data.size; }
+  };
+  rec.onstop=function(){
+    _bmRelease();
+    BM.blob=new Blob(BM.chunks,{type:BM.mime});
+    const held=BM.heard;
+    btn.textContent='Start recording'; btn.classList.remove('bm-on'); btn.disabled=false;
+    const mins=Math.max(1,Math.round((Date.now()-BM.t0)/60000));
+    _bmState('Recorded '+_bmClock(Date.now()-BM.t0)+' — about '
+      +Math.round(BM.blob.size/104857.6)/10+'MB. '
+      +(held&&held.far&&held.near?'Both sides are on it.'
+       :held&&held.far?'Their side only — the microphone was not allowed.'
+       :'Your side only.'));
+    const go=document.getElementById('bm-go'); if(go) go.disabled=false;
+    _tlMsg('Ready. Press <b>Write the minutes</b> when you are.','ok');
+  };
+  BM.t0=Date.now();
+  rec.start(1000);           // a chunk a second, so the size readout is real
+  btn.textContent='Stop recording'; btn.classList.add('bm-on');
+  btn.disabled=false;
+  const go=document.getElementById('bm-go'); if(go) go.disabled=true;
+  /* Say plainly WHOSE voices are on it, before the call rather than after --
+     the four sentences are already translated into all four languages. */
+  if(BM.heard && typeof uiText==='function'){
+    _tlMsg(_tlEsc(uiText(BM.heard.far&&BM.heard.near?'rec_both'
+                        :BM.heard.far?'rec_faronly':'rec_nearonly')),
+           BM.heard.far&&BM.heard.near?'ok':'warn');
+  }
+  BM.timer=setInterval(function(){
+    const ms=Date.now()-BM.t0;
+    _bmState('\u{1F534} Recording — '+_bmClock(ms)
+      +' ('+(Math.round(BM.bytes/104857.6)/10)+'MB)'
+      +(ms>BM_WARN_MS?' — getting long. Bella can send about 45 minutes in one go.':''));
+  },1000);
+}
+
+function bmPick(input){
+  const f=(input.files||[])[0];
+  const note=document.getElementById('bm-fn');
+  const go=document.getElementById('bm-go');
+  if(!f){ if(note) note.textContent=''; return; }
+  BM.blob=f; BM.mime=f.type||'audio/mpeg';
+  BM.ext=(f.name.split('.').pop()||'weba').toLowerCase();
+  BM.heard=null;
+  if(note) note.textContent=f.name+' — '+(Math.round(f.size/104857.6)/10)+'MB';
+  if(go) go.disabled=false;
+  _bmState('');
+  _tlMsg('Ready. Press <b>Write the minutes</b> when you are.','ok');
+}
+
+function _bmB64(blob){
+  return new Promise(function(res,rej){
+    const r=new FileReader();
+    r.onload=function(e){ res(String(e.target.result).split(',')[1]||''); };
+    r.onerror=rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+async function bmMinutes(){
+  if(BM.busy) return;
+  if(!BM.blob){ _tlMsg('There is no recording yet.','err'); return; }
+  const go=document.getElementById('bm-go');
+  const out=document.getElementById('tl-out');
+  const acts=document.getElementById('tl-actions');
+  if(!go||!out||!acts) return;                 // panel closed mid-run
+  BM.busy=true; go.disabled=true;
+  out.innerHTML=''; acts.innerHTML=''; TL.result=null; TL.file=null; TL.parts=null;
+  const title=(document.getElementById('bm-title')||{}).value||'';
+  const who=(document.getElementById('bm-who')||{}).value||'';
+  try{
+    _tlMsg('Reading the recording…','');
+    const b64=await _bmB64(BM.blob);
+    if(b64.length>BM_B64_CAP){
+      _tlMsg('That recording is about '+Math.round(b64.length/1048576)
+        +'MB once encoded, and Bella can send about 18MB in one go — roughly 45 minutes of sound. '
+        +'Keep the audio with the button below and send a shorter stretch.','err');
+      _bmOfferAudio(); return;
+    }
+
+    _tlMsg('Listening to it and writing down what was said…','');
+    const tr=await bfetch(BACKEND+'/transcribe',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({audioBase64:b64,mimeType:BM.mime})});
+    if(!tr.ok){ _tlMsg(await _bmWhy(tr,'The recording could not be transcribed.'),'err');
+                _bmOfferAudio(); return; }
+    const td=await tr.json();
+    const transcript=String(td.transcription||'').trim();
+    if(!transcript){
+      _tlMsg('Bella could not make out any speech in that recording, so there is nothing to write minutes from.','err');
+      _bmOfferAudio(); return;
+    }
+
+    _tlMsg('Writing the minutes…','');
+    const body={transcript:transcript};
+    if(title) body.meetingTitle=title;
+    if(who)   body.attendees=String(who).split(/[,;।]+|\band\b/)
+                               .map(function(s){return s.trim();}).filter(Boolean);
+    if(BM.t0) body.duration=_bmClock(Date.now()-BM.t0);
+    const mr=await bfetch(BACKEND+'/meeting-notes',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!mr.ok){
+      /* The words were transcribed even if the minutes failed -- never throw
+         away the one expensive thing that did work. */
+      _tlMsg(await _bmWhy(mr,'The minutes could not be written, but what was said is below.'),'err');
+      out.innerHTML=_tlEsc(transcript);
+      TL.result={kind:'text',text:transcript,tag:_tlTag(td.detectedLanguage||'English'),
+                 title:'Transcript — '+(title||'the meeting')};
+      await tlActions(); _bmOfferAudio(); return;
+    }
+    const notes=await mr.json();
+    notes.transcript=transcript;
+    _tlSkipNow=['ok','meetingTitle'];
+    const html=_tlRender(notes,0);
+    out.innerHTML=html||_tlEsc(transcript);
+    TL.result={kind:'json',data:notes,title:'Minutes — '+(title||'the meeting')};
+    _tlMsg('Done'+(td.detectedLanguage&&td.detectedLanguage!=='Unknown'
+      ? ' — the meeting was in '+_tlEsc(td.detectedLanguage) : '')
+      +'. <b>Save as Word</b> gives you a file you can edit.','ok');
+    await tlActions();
+    _bmOfferAudio();
+  }catch(e){
+    _tlMsg('Could not reach Bella just now. Your recording is still here — try again in a moment.','err');
+    _bmOfferAudio();
+  }finally{
+    BM.busy=false;
+    const g=document.getElementById('bm-go'); if(g) g.disabled=false;
+  }
+}
+
+async function _bmWhy(resp,fallback){
+  let m=fallback;
+  try{ const e=await resp.json(); m=e.error||e.message||fallback; }catch(_){}
+  if(resp.status===401) m='You are signed out, so Bella could not be reached. Sign in and try again.';
+  if(resp.status===403) m='That one is owner-only, and this account is not the owner.';
+  return _tlEsc(m);
+}
+
+/* The recording itself is always worth keeping, however the rest went. */
+function _bmOfferAudio(){
+  const host=document.getElementById('tl-actions');
+  if(!host||!BM.blob) return;
+  if(host.querySelector('[data-bm-audio]')) return;
+  host.insertAdjacentHTML('beforeend',
+    '<button data-bm-audio="1" onclick="bmSaveAudio()">Keep the recording</button>');
+}
+function bmSaveAudio(){
+  if(!BM.blob) return;
+  _tlDownload(BM.blob,'bella-meeting-'+_tlStamp()+'.'+(BM.ext||'weba'));
+  _tlMsg('Saved to your Downloads folder.','ok');
+}
+</script>
 <script id="v87-workshop-data">
 /* ══════════════════════════════════════════════════════════════════════════
    THE WORKSHOP LIST — THE SINGLE SOURCE OF TRUTH.   2026-10-06.
@@ -13346,8 +13860,8 @@ const WORKSHOP = [
   ['\u{1F4D6}','Read Any File','now',"openTools('read')",''],
   ['\u{1F310}','Translate','now',"openTools('translate')",''],
   ['\u{1F5E8}️','Interpreter','now','openInterpreter','two languages, out loud'],
-  ['\u{1F3A7}','Transcribe','now',null,''],
-  ['\u{1F5BC}️','Image Transform','now',null,''],
+  ['\u{1F3A7}','Transcribe','now',"openTools('transcribe')",''],
+  ['\u{1F5BC}️','Image Transform','now',"openTools('image')",''],
   ['\u{1F4D1}','PDF Tools','now',"openTools('pdf')",''],
   ['\u{1F4C8}','Data Analysis','now',"openTools('data')",''],
   ['\u{1F4B0}','Money & Expenses','now',"openTools('money')",''],
@@ -13356,7 +13870,7 @@ const WORKSHOP = [
   ['\u{1F9F3}','Travel','now',"openTools('travel')",''],
   ['✅','Reminders & Tasks','now',null,''],
   ['\u{1F4CB}','Meeting Notes','now',"openTools('meeting')",''],
-  ['\u{1F49B}','Life Record','now',null,''],
+  ['\u{1F49B}','Life Record','now',"openTools('life')",''],
   ['\u{1F3A4}','Voice ID','now',null,''],
   // The note here said "labels need a font fix". The Dockerfile has installed
   // fonts-dejavu-core all along, so that was fixed in production before it was
@@ -13370,7 +13884,7 @@ const WORKSHOP = [
   ['\u{1F514}','Proactive Bella','now',null,'she speaks first'],
   ['☀️','Morning Briefing','now',null,''],
   ['\u{1F4F2}','Notifications','now',null,'reaches you with Bella closed'],
-  ['\u{1F3AC}','B-Meet','now',null,'records a call, returns Word minutes'],
+  ['\u{1F3AC}','B-Meet','now','openBMeet','records a call, returns Word minutes'],
   ['\u{1F6E1}️','Audit & Usage','now',null,'admin only'],
 
   // ── PHASE 3 ─────────────────────────────────────────────────────────────
@@ -13406,7 +13920,7 @@ function wsRenderZone(key){
   const tile = function(f){
     const icon=f[0], label=f[1], fn=f[3], note=f[4];
     const on   = fn ? ' feat-on' : '';
-    const tap  = fn ? ' onclick="' + fn + '()"' : '';
+    const tap  = fn ? ' onclick="' + (/\)\s*$/.test(fn) ? fn : fn + '()') + '"' : '';
     const badge= fn ? 'ON' : zbadge;
     const cls  = fn ? ' ws-on' : '';
     const ttl  = note ? ' title="' + label + ' — ' + note + '"' : ' title="' + label + '"';
