@@ -11536,6 +11536,28 @@ html body.dark .pl-note.pl-bad{color:#F09487!important}
 /* The line between what opens and what does not. A rule instead of a word, and
    it spans the whole grid rather than sitting in one of the three columns. */
 .ws-rule{ grid-column:1/-1; height:1px; background:rgba(11,37,69,.14); margin:5px 2px; }
+/* Rearrange. The bar sits above the tiles; 30px tall so it is tappable on a
+   phone without stealing room from the grid. */
+.ws-bar{ display:flex; align-items:center; gap:6px; padding:2px 2px 6px; flex-wrap:wrap; }
+.ws-barbtn{ min-height:36px; padding:7px 13px; border-radius:8px; font-size:10.5px;
+  font-weight:600; letter-spacing:.3px; cursor:pointer;
+  border:1px solid rgba(11,37,69,.22); background:#FFFFFF; color:#0B2545; }
+.ws-barbtn:hover{ border-color:#D4AF37; }
+.ws-barbtn.on{ background:#0B2545; color:#D4AF37; border-color:#0B2545; }
+.ws-barhint{ font-size:9px; color:var(--tmid); line-height:1.3; }
+/* A long press on a phone otherwise pops up the browser's own selection
+   menu, which would fight the gesture on every iPhone in the family. */
+.feat-item{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+/* touch-action is switched off ONLY while a tile is actually lifted, so the
+   Workshop list stays scrollable right up to that moment. */
+.feat-grid.ws-lifting{ touch-action:none; }
+.feat-item.ws-dragging{ opacity:.6; transform:scale(1.08); cursor:grabbing;
+  box-shadow:0 8px 22px rgba(11,37,69,.32); z-index:5; border-style:dashed; }
+html body.dark .ws-barbtn{ background:rgba(255,255,255,.07) !important;
+  color:#F5E6C8 !important; border-color:rgba(245,230,200,.26) !important; }
+html body.dark .ws-barbtn.on{ background:#D4AF37 !important; color:#0B2545 !important;
+  border-color:#D4AF37 !important; }
+html body.dark .ws-barhint{ color:rgba(245,230,200,.66) !important; }
 html body.dark .ws-rule{ background:rgba(245,230,200,.20) !important; }
 .ws-zone.open .ws-zbody{ display:block; }
 /* The zone notes were removed on 2026-10-07 -- the drawer IS the list, so a
@@ -12136,6 +12158,17 @@ async function invShowUpiQr(){
 /* B-Meet, recording. Red at 5.9:1 against white text, and repeated under
    body.dark below so the !important button rule cannot repaint it. */
 #tl-overlay .tl-go.bm-on{background:#9E2A3C;color:#FFFFFF;border-color:#9E2A3C}
+/* One task to a row, with its own Done button. */
+#tl-out .tl-task{display:flex;align-items:center;gap:9px;padding:8px 2px;
+  border-bottom:1px solid rgba(11,37,69,.10)}
+#tl-out .tl-task:last-child{border-bottom:0}
+#tl-out .tl-task-t{flex:1 1 auto;font-size:13.5px;line-height:1.45;color:#0B2545}
+#tl-out .tl-task.tl-done .tl-task-t{text-decoration:line-through;opacity:.6}
+#tl-out .tl-task-d{font-size:11px;color:#1D6B4F;font-weight:600}
+#tl-out .tl-task-b{flex:0 0 auto;min-height:34px;padding:6px 13px;border-radius:9px;
+  border:1px solid rgba(11,37,69,.22);background:#FFFFFF;color:#0B2545;
+  font-size:12px;font-weight:600;cursor:pointer}
+#tl-out .tl-task-b:hover{border-color:#D4AF37}
 #tl-overlay .tl-act{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
 #tl-overlay .tl-act button{flex:1 1 auto;min-width:92px;min-height:40px;padding:9px 10px;
   border-radius:10px;border:1.5px solid rgba(11,37,69,.18);background:#FAF8F4;color:#0B2545;
@@ -12231,6 +12264,11 @@ html body.dark #tl-overlay .tl-pick-n{color:#F5E6C8 !important}
 html body.dark #tl-overlay .tl-pick-d{color:rgba(245,230,200,.66) !important}
 html body.dark #tl-overlay .tl-go{background:#D4AF37 !important;color:#0B2545 !important}
 html body.dark #tl-overlay .tl-go.bm-on{background:#9E2A3C !important;color:#FFFFFF !important}
+html body.dark #tl-out .tl-task{border-bottom-color:rgba(245,230,200,.16) !important}
+html body.dark #tl-out .tl-task-t{color:#F5E6C8 !important}
+html body.dark #tl-out .tl-task-b{background:rgba(255,255,255,.07) !important;
+  color:#F5E6C8 !important;border-color:rgba(245,230,200,.26) !important}
+html body.dark #tl-out .tl-task-d{color:#7FD1A8 !important}
 html body.dark #tl-overlay .tl-act button{background:rgba(255,255,255,.07) !important;
   color:#F5E6C8 !important;border-color:rgba(245,230,200,.26) !important}
 html body.dark #tl-overlay .tl-mic{background:rgba(255,255,255,.1) !important;
@@ -12760,6 +12798,44 @@ function _tlWhen(iso){
   }catch(e){ return String(iso); }
 }
 
+/* The task list draws itself, because a key-value dump cannot carry a button.
+   Marking one done needs its taskId, and nobody is going to type a timestamp. */
+function _tlTaskList(d,out){
+  const list=Array.isArray(d.tasks)?d.tasks:[];
+  if(!list.length){ out.innerHTML='<div class="tl-kv">Nothing on the list yet.</div>'; return; }
+  const open=list.filter(function(x){ return x.status!=='completed'; });
+  const done=list.filter(function(x){ return x.status==='completed'; });
+  function row(x){
+    const id=String(x.taskId||'').replace(/'/g,'');
+    return '<div class="tl-task'+(x.status==='completed'?' tl-done':'')+'">'
+      +'<span class="tl-task-t">'+_tlEsc(x.task||'(no description)')+'</span>'
+      +(x.status==='completed'
+        ? '<span class="tl-task-d">done</span>'
+        : '<button class="tl-task-b" onclick="tlTaskDone(\''+id+'\')">Done</button>')
+      +'</div>';
+  }
+  out.innerHTML=(open.length?'<h4>Still to do</h4>'+open.map(row).join(''):'')
+    +(done.length?'<h4>Finished</h4>'+done.map(row).join(''):'');
+}
+
+/* Marks one task complete and reloads the list in place. */
+async function tlTaskDone(taskId){
+  const pk=_tlProfileKey();
+  if(!pk){ _tlMsg('I do not know who you are on this device yet.','err'); return; }
+  _tlMsg('Marking it done\u2026','');
+  try{
+    const r=await bfetch(BACKEND+'/task-manage',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({profileKey:pk,action:'complete',taskId:String(taskId)})});
+    if(!r.ok){
+      let m='That task could not be marked done.';
+      try{ const e=await r.json(); m=e.error||m; }catch(_){}
+      _tlMsg(_tlEsc(m),'err'); return;
+    }
+    await tlRun();                       // redraws the list from the sheet
+  }catch(e){ _tlMsg('Could not reach Bella just now.','err'); }
+}
+
 async function tlRun(){
   const t=TL.tool; if(!t) return;
   const go=document.getElementById('tl-go');
@@ -12912,7 +12988,7 @@ async function tlRun(){
       _tlMsg(t.msg?t.msg(d):'Done.','ok'); tlActions(); return;
     }
     const html=_tlRender(d,0);
-    if(!html){
+    if(!html && !t.after){
       /* An empty result is not automatically a fault: "you have no life record
          yet" is a true and useful answer. A tool that writes its own status line
          is trusted to say so; everything else still reports a failure. */
@@ -12920,6 +12996,7 @@ async function tlRun(){
       return;
     }
     out.innerHTML=html;
+    if(t.after) try{ t.after(d,out); }catch(e){}
     TL.result={kind:'json',data:d,title:t.label};
     _tlMsg(t.msg?t.msg(d):(d.disclaimer?'':'Done.'),(t.msg||!d.disclaimer)?'ok':'');
     tlActions();
@@ -13022,7 +13099,8 @@ const TL_GROUPS={
   read:'Read Any File', docedit:'Doc Edit & Convert', docs:'Documents & Slides',
   pdf:'PDF Tools', data:'Data Analysis', charts:'Charts & Graphs',
   money:'Money & Expenses', travel:'Travel', meeting:'Meeting Notes',
-  transcribe:'Transcribe', image:'Image Transform', life:'Life Record'
+  transcribe:'Transcribe', image:'Image Transform', life:'Life Record',
+  tasks:'Reminders & Tasks', voice:'Voice ID'
 };
 const DOC_ACCEPT='.pdf,.doc,.docx,.xls,.xlsx,.csv,.pptx,.txt,.md,.jpg,.jpeg,.png,.webp';
 const TONES=['Warm','Neutral','Formal','Friendly','Persuasive','Playful'];
@@ -13351,6 +13429,70 @@ const TOOLS=[
      if(!d.exists) return 'There is nothing written yet. Rebuild it and Bella will write it from your own conversations.';
      return d.updatedAt ? ('Last written '+_tlWhen(d.updatedAt)+'.') : 'Done.';
    }},
+
+  /* ── REMINDERS & TASKS ──────────────────────────────────────────────────
+     TASKS ARE COMPLETE: /task-manage creates, reads and completes, and the
+     Tasks tab exists with the headers it expects (verified 2026-10-08).
+     REMINDERS ARE WRITE-ONLY AND THE PANEL SAYS SO. The only reader of the
+     Reminders tab is /proactive-monitor, which is admin-only AND absent from
+     SCHEDULER_PATHS (that list is ['/backup-sheet'] alone), so nothing
+     delivers a reminder to anybody. There is also no endpoint for a user to
+     read their own. Promising a buzz here would be the "no false promises"
+     fault all over again -- [[bella-paushali-live-test-faults]]. */
+  {id:'remind',group:'tasks',label:'Remind me about something',ep:'/smart-reminder',
+   note:'Bella writes it in the book, and will have it to hand when you ask her. '
+       +'She cannot buzz your phone yet \u2014 that needs Notifications, which is still to be built.',
+   wantsProfile:true,need:['reminderText'],go:'Write it down',
+   fields:[['mic','reminderText','What should she remind you about','Call the bank at 4pm tomorrow\u2026'],
+           ['text','reminderTime','Exactly when, if you know','leave it blank and Bella works it out'],
+           ['sel','repeatType','How often',['once','daily','weekly','monthly']],
+           ['text','context','Anything else worth remembering','']],
+   skip:['ok','scheduledFor'],
+   msg:function(d){ return 'Written down for '+_tlWhen(d.scheduledFor)
+     +(d.repeatType&&d.repeatType!=='once'?', repeating '+d.repeatType:'')+'.'; }},
+
+  {id:'taskadd',group:'tasks',label:'Add a task',ep:'/task-manage',
+   note:'Goes on your own list. Nobody else can see it.',
+   fixed:{action:'create'},wantsProfile:true,need:['task'],go:'Add it',
+   fields:[['mic','task','What needs doing','']],
+   skip:['ok','action','taskId'],
+   msg:function(){ return 'Added to your list.'; }},
+
+  {id:'tasklist',group:'tasks',label:'My tasks',ep:'/task-manage',
+   note:'Everything on your list, and a button to tick one off.',
+   fixed:{action:'read'},wantsProfile:true,fields:[],go:'Show me',
+   skip:['ok','tasks','pending','completed'],
+   after:_tlTaskList,
+   msg:function(d){
+     const p=d.pending||0,c=d.completed||0;
+     if(!p&&!c) return 'Your list is empty.';
+     return p+' still to do, '+c+' finished.';
+   }},
+
+  /* ── VOICE ID ───────────────────────────────────────────────────────────
+     HONEST LABELLING. /voice-identify has an Azure Speaker Recognition path
+     and a Gemini fallback, and AZURE_SPEECH_KEY is NOT among the 19 env vars,
+     so the Gemini path is what runs. Gemini DESCRIBES a voice -- pitch, accent,
+     pace -- it does not match one against the saved prints. So these tools are
+     named for what they do, and the panel says what it cannot do. Real
+     who-is-speaking needs Azure switched on, which is a cost decision. */
+  {id:'voicesave',group:'voice',label:'Save my voice print',ep:'/voice-identify',
+   note:'A few seconds of you speaking. Bella describes the voice and keeps that description against your name.',
+   fixed:{action:'enroll'},wantsProfile:true,need:['audioBase64'],go:'Save it',
+   fields:[['file','audioBase64','A clip of your voice','audio/*,video/*']],
+   mime:{audioBase64:'mimeType'},
+   skip:['ok','action','provider','profileKey'],
+   msg:function(){ return 'Saved against your name.'; }},
+
+  {id:'voiceask',group:'voice',label:'Describe a voice',ep:'/voice-identify',
+   note:'Bella describes what she hears \u2014 pitch, accent, pace, roughly how old. '
+       +'She cannot yet tell you WHO it is: that needs a speaker-recognition service, and it is not switched on.',
+   fixed:{action:'identify'},wantsProfile:true,need:['audioBase64'],go:'Have a listen',
+   fields:[['file','audioBase64','The recording','audio/*,video/*']],
+   mime:{audioBase64:'mimeType'},
+   skip:['ok','action','provider','azureConfigured','note','profileKey','storedProfiles'],
+   msg:function(d){ return 'Described.'+(d.storedProfiles
+     ? ' '+d.storedProfiles+' voice print'+(d.storedProfiles===1?'':'s')+' saved so far.' : ''); }},
 
   {id:'liferebuild',group:'life',label:'Rebuild it from my conversations',ep:'/life-record',
    note:'Bella re-reads your own threads and rewrites the record. The old one is only replaced if the new one came out whole.',
@@ -13868,10 +14010,10 @@ const WORKSHOP = [
   ['✍️','Writing Help','now',"openTools('writing')",''],
   ['\u{1F393}','Study & Interview','now',"openTools('study')",''],
   ['\u{1F9F3}','Travel','now',"openTools('travel')",''],
-  ['✅','Reminders & Tasks','now',null,''],
+  ['✅','Reminders & Tasks','now',"openTools('tasks')",''],
   ['\u{1F4CB}','Meeting Notes','now',"openTools('meeting')",''],
   ['\u{1F49B}','Life Record','now',"openTools('life')",''],
-  ['\u{1F3A4}','Voice ID','now',null,''],
+  ['\u{1F3A4}','Voice ID','now',"openTools('voice')",''],
   // The note here said "labels need a font fix". The Dockerfile has installed
   // fonts-dejavu-core all along, so that was fixed in production before it was
   // ever written down -- [[bella-dockerfile-is-the-build]]. Stale label removed.
@@ -13906,6 +14048,240 @@ const WS_ZONES = [
   ['p3',  'Phase 3', 'SOON', ''],
 ];
 
+/* ══ HIS OWN ARRANGEMENT ═══════════════════════════════════════════════════
+   Savio, 2026-10-08: "in my workshop Bella should give the benefit of drag and
+   drop so they can tile their services they want to."
+
+   THREE DECISIONS WORTH KNOWING:
+
+   1. **Pointer Events, not HTML5 drag-and-drop.** The HTML5 drag API does not
+      fire on touch at all, so a dragdrop built that way would work on his Mac
+      and be dead on every phone in the family -- and the phone is the one that
+      matters [[bella-smart-device-adaptability-first]]. pointerdown/move/up
+      covers finger, trackpad and mouse through one path.
+
+   2. **An explicit Rearrange mode, not long-press.** Every tile is already a
+      tap target that opens something. Overloading the same gesture means a
+      slightly long tap opens a panel when he meant to move a tile, or moves a
+      tile when he meant to open it. A mode makes it unambiguous, and it is how
+      a phone home screen behaves, which he already knows.
+
+   3. **The order is saved PER PERSON, on this device** -- key
+      b_ws_order_<profileKey>, so two people sharing a browser do not inherit
+      each other's layout. It does NOT follow him to another device: that would
+      need a row per user somewhere, and the Memory tab already has a
+      duplicate problem. Said plainly rather than quietly assumed.
+
+   A label that is not in the saved list keeps its natural position at the end
+   of its bracket, so a tile added to WORKSHOP later still appears instead of
+   vanishing for anyone who has ever rearranged. */
+let WS_DRAG=null;
+const WS_HOLD_MS=450;      // long enough not to fire on a scroll flick
+const WS_SLOP=10;          // px of movement that still counts as "holding still"
+
+function wsOrderKey(){
+  let who='';
+  try{ who=(typeof _tlProfileKey==='function'?_tlProfileKey():'')||''; }catch(e){}
+  return 'b_ws_order_'+(who||'_device');
+}
+function wsOrderGet(){
+  try{
+    const raw=localStorage.getItem(wsOrderKey());
+    const a=raw?JSON.parse(raw):null;
+    return Array.isArray(a)?a.filter(function(x){ return typeof x==='string'; }):[];
+  }catch(e){ return []; }
+}
+function wsOrderSet(labels){
+  try{ localStorage.setItem(wsOrderKey(),JSON.stringify(labels)); }catch(e){}
+}
+/* Stable: known labels in his order, unknown ones after, original order kept. */
+function wsApplyOrder(list){
+  const order=wsOrderGet();
+  if(!order.length) return list;
+  const rank=function(f){
+    const i=order.indexOf(f[1]);
+    return i===-1?Number.MAX_SAFE_INTEGER:i;
+  };
+  return list.map(function(f,i){ return {f:f,i:i,r:rank(f)}; })
+    .sort(function(a,b){ return a.r-b.r || a.i-b.i; })
+    .map(function(x){ return x.f; });
+}
+
+/* One quiet line, no control. It teaches the gesture until the gesture has
+   been used, and then becomes the only way back to the original order. */
+function wsHint(){
+  return '<div class="ws-bar">'
+    + (wsOrderGet().length
+        ? '<span class="ws-barhint">Your own order.</span>'
+          +'<button class="ws-barbtn" onclick="wsResetOrder()">Reset</button>'
+        : '<span class="ws-barhint">Hold a tile to move it.</span>')
+    + '</div>';
+}
+
+/* Re-renders the tiles in place. wsRenderZone renders once and then refuses,
+   so the filled flag has to be cleared or nothing would ever change. */
+function wsRerender(){
+  const host=document.getElementById('ws-zones');
+  if(!host) return;
+  const bar=host.querySelector('.ws-bar');
+  if(bar) bar.outerHTML=wsHint();
+  for(const z of WS_ZONES){
+    const body=document.getElementById('ws-body-'+z[0]);
+    if(!body) continue;
+    // Only re-fill a zone that was already open; an unopened one stays light.
+    if(body.dataset.filled==='1'){ body.dataset.filled='0'; wsRenderZone(z[0]); }
+  }
+}
+
+function wsResetOrder(){
+  try{ localStorage.removeItem(wsOrderKey()); }catch(e){}
+  wsRerender();
+}
+
+/* ── THE GESTURE ──────────────────────────────────────────────────────────
+   Savio, 2026-10-08: "is the rearrange word necessary. can it just be press
+   drag and drop to re-tile".
+
+   It can, but not by treating any press-and-move as a drag. MEASURED: the
+   Workshop is 33 tiles three across, about 700px of content inside a sidebar
+   shorter than that on every phone -- so it SCROLLS, and on a phone a finger
+   pressing a tile and moving is almost always a scroll. Grabbing the tile
+   there would make the list unscrollable. That is why a phone home screen
+   makes you hold an icon before it lifts, and this does the same:
+
+     a quick tap            -> opens the tile, exactly as before
+     a press and a swipe    -> scrolls the list, because nothing is lifted yet
+     a hold of 450ms        -> the tile LIFTS, and then it follows the pointer
+
+   Nothing is prevented and touch-action is left alone until the tile actually
+   lifts, which is what keeps scrolling intact. With a mouse the hold applies
+   too, so there is one behaviour to learn rather than two.                  */
+function wsBindDrag(host){
+  host.querySelectorAll('.feat-item').forEach(function(el){
+    el.addEventListener('pointerdown',wsDragStart);
+  });
+}
+
+function wsDragStart(e){
+  if(WS_DRAG) return;
+  if(e.button&&e.button!==0) return;              // right-click is not a drag
+  const el=e.currentTarget;
+  WS_DRAG={el:el,id:e.pointerId,lifted:false,moved:false,
+           x0:e.clientX,y0:e.clientY,timer:null,
+           bracket:el.dataset.wsBracket,zone:el.dataset.wsZone};
+  WS_DRAG.timer=setTimeout(function(){ wsLift(el); },WS_HOLD_MS);
+  el.addEventListener('pointermove',wsDragMove);
+  el.addEventListener('pointerup',wsDragEnd);
+  el.addEventListener('pointercancel',wsDragEnd);
+}
+
+function wsLift(el){
+  const d=WS_DRAG;
+  if(!d||d.el!==el) return;
+  d.lifted=true;
+  d.timer=null;
+  el.classList.add('ws-dragging');
+  // touch-action is switched off ONLY now, so the list stayed scrollable right
+  // up to the moment the tile lifted.
+  const grid=el.parentNode;
+  if(grid&&grid.classList) grid.classList.add('ws-lifting');
+  try{ el.setPointerCapture(d.id); }catch(_){}
+}
+
+function wsDragMove(e){
+  const d=WS_DRAG;
+  if(!d||e.pointerId!==d.id) return;
+  if(!d.lifted){
+    // Still deciding. Movement beyond the slop means they are scrolling, not
+    // holding, so the hold is abandoned and the browser keeps the gesture.
+    if(Math.abs(e.clientX-d.x0)>WS_SLOP||Math.abs(e.clientY-d.y0)>WS_SLOP) wsDragCancel();
+    return;
+  }
+  e.preventDefault();
+  d.moved=true;
+  /* elementFromPoint, not the event target: the pointer is CAPTURED by the
+     lifted tile, so e.target is always that tile and would never say what it
+     is now over. */
+  d.el.style.pointerEvents='none';
+  const under=document.elementFromPoint(e.clientX,e.clientY);
+  d.el.style.pointerEvents='';
+  if(!under) return;
+  const over=under.closest?under.closest('.feat-item'):null;
+  if(!over||over===d.el) return;
+  // ON tiles stay above the rule and Phase 3 stays Phase 3 -- his own sort.
+  if(over.dataset.wsBracket!==d.bracket||over.dataset.wsZone!==d.zone) return;
+  const r=over.getBoundingClientRect();
+  const after=(e.clientX>r.left+r.width/2);
+  over.parentNode.insertBefore(d.el,after?over.nextSibling:over);
+}
+
+function wsDragCancel(){
+  const d=WS_DRAG;
+  if(!d) return;
+  if(d.timer) clearTimeout(d.timer);
+  wsDragRelease(d);
+  WS_DRAG=null;
+}
+
+function wsDragEnd(e){
+  const d=WS_DRAG;
+  if(!d||(e&&e.pointerId!==d.id)) return;
+  if(d.timer) clearTimeout(d.timer);
+  const lifted=d.lifted, moved=d.moved, el=d.el;
+  wsDragRelease(d);
+  WS_DRAG=null;
+  if(!lifted) return;                   // a tap: let the click open the tile
+  // A lift must never also count as a tap, or letting go would open the panel
+  // on top of the tile just moved. The click is swallowed once, in capture.
+  wsSwallowNextClick(el);
+  if(moved) wsSaveFromDom();
+}
+
+function wsDragRelease(d){
+  d.el.classList.remove('ws-dragging');
+  d.el.style.pointerEvents='';
+  const grid=d.el.parentNode;
+  if(grid&&grid.classList) grid.classList.remove('ws-lifting');
+  d.el.removeEventListener('pointermove',wsDragMove);
+  d.el.removeEventListener('pointerup',wsDragEnd);
+  d.el.removeEventListener('pointercancel',wsDragEnd);
+  try{ d.el.releasePointerCapture(d.id); }catch(_){}
+}
+
+/* The tile's own handler is an inline onclick, so it has to be stopped in the
+   CAPTURE phase on an ancestor -- by the time it bubbles it has already run. */
+function wsSwallowNextClick(el){
+  const host=document.getElementById('ws-zones');
+  if(!host) return;
+  const eat=function(ev){
+    ev.stopPropagation(); ev.preventDefault();
+    host.removeEventListener('click',eat,true);
+    clearTimeout(tmo);
+  };
+  host.addEventListener('click',eat,true);
+  // If no click follows (touch often sends none), stop listening rather than
+  // leaving a trap that eats the next real tap.
+  const tmo=setTimeout(function(){ host.removeEventListener('click',eat,true); },400);
+}
+
+/* The DOM is the truth. Every zone is walked, so one saved list covers both. */
+function wsSaveFromDom(){
+  const labels=[];
+  for(const z of WS_ZONES){
+    const body=document.getElementById('ws-body-'+z[0]);
+    if(!body) continue;
+    body.querySelectorAll('.feat-item').forEach(function(el){
+      const l=el.dataset.wsLabel;
+      if(l&&labels.indexOf(l)===-1) labels.push(l);
+    });
+  }
+  if(!labels.length) return;
+  wsOrderSet(labels);
+  // The hint has served its purpose; it becomes the way back instead.
+  const bar=document.querySelector('#ws-zones .ws-bar');
+  if(bar) bar.outerHTML=wsHint();
+}
+
 function wsRenderZone(key){
   const body = document.getElementById('ws-body-' + key);
   if(!body || body.dataset.filled === '1') return;       // render once, stay light
@@ -13915,16 +14291,22 @@ function wsRenderZone(key){
   // point: "when the SOON becomes ON it goes in the top bracket" — giving a
   // tile a `fn` is now the only thing needed to move it above the rule.
   const items = WORKSHOP.filter(f => f[2] === key);
-  const live  = items.filter(f => f[3]);
-  const soon  = items.filter(f => !f[3]);
+  // His own arrangement, applied INSIDE each bracket so the ON/SOON split he
+  // asked for still holds however he drags things about.
+  const live  = wsApplyOrder(items.filter(f => f[3]));
+  const soon  = wsApplyOrder(items.filter(f => !f[3]));
   const tile = function(f){
     const icon=f[0], label=f[1], fn=f[3], note=f[4];
     const on   = fn ? ' feat-on' : '';
+    // A tap ALWAYS opens the tile. There is no mode to be in -- moving a tile
+    // is a hold, which is a different gesture, so neither one shadows the other.
     const tap  = fn ? ' onclick="' + (/\)\s*$/.test(fn) ? fn : fn + '()') + '"' : '';
     const badge= fn ? 'ON' : zbadge;
     const cls  = fn ? ' ws-on' : '';
     const ttl  = note ? ' title="' + label + ' — ' + note + '"' : ' title="' + label + '"';
-    return '<div class="feat-item' + on + '"' + tap + ttl + '>'
+    return '<div class="feat-item' + on + '"' + tap + ttl
+         +   ' data-ws-label="' + label.replace(/"/g,'&quot;') + '"'
+         +   ' data-ws-zone="' + key + '" data-ws-bracket="' + (fn?'on':'soon') + '">'
          +   '<span class="feat-icon">' + icon + '</span>'
          +   '<span class="feat-label">' + label + '</span>'
          +   '<span class="feat-soon' + cls + '">' + badge + '</span>'
@@ -13936,6 +14318,7 @@ function wsRenderZone(key){
   html += soon.map(tile).join('') + '</div>';
   body.innerHTML = html;
   body.dataset.filled = '1';
+  wsBindDrag(body);
 }
 
 function wsToggleZone(key){
@@ -13953,7 +14336,7 @@ function wsToggleZone(key){
 function renderWorkshop(){
   const host = document.getElementById('ws-zones');
   if(!host || host.dataset.built === '1') return;
-  let html = '';
+  let html = wsHint();
   for(const z of WS_ZONES){
     const key = z[0], title = z[1];
     const n = WORKSHOP.filter(f => f[2] === key).length;
