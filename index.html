@@ -4218,8 +4218,33 @@ function _otpErrText(e){
 }
 
 // Always a NEW verifier. Never reuse one; never keep one after a failure.
+//
+// ── WHY THIS RENDERS INTO A FRESH CHILD ELEMENT EVERY TIME ──
+// Savio, 2026-10-08: could not get past the OTP screen at all. The screen said
+// "That code was never requested" and the Console carried:
+//   recaptcha__en.js  ... already been rendered in this element
+//   at _freshVerifier (4223) <- _reVerifier (4232) <- sendOTP (4260)
+// grecaptcha binds to the DOM ELEMENT, and it refuses to render into the same
+// element a second time. RecaptchaVerifier.clear() releases the Firebase
+// wrapper but does NOT release grecaptcha's claim on the div, so the SECOND
+// render inside one attempt always threw -- and every path here renders twice:
+//   sendOTP           -> _reVerifier on 'recaptcha-container'
+//   sendReturningOTP  -> _freshVerifier on 'recaptcha-container-returning'
+// The throw left _confirmationResult null, so verifyOTP reported a code that
+// was "never requested" -- true, but it read as a bad code and sent him back to
+// retype a correct one. The real fault was two renders into one div.
+// Each verifier now gets its own brand-new child div, so nothing is ever
+// rendered into an element twice. The named container is only the host.
+let _rcSlotSeq = 0;
 async function _freshVerifier(containerId){
-  const v = new firebase.auth.RecaptchaVerifier(containerId, { size: 'invisible', callback: () => {} });
+  const host = document.getElementById(containerId);
+  if (!host) throw new Error('reCAPTCHA host element missing: ' + containerId);
+  // Drop any widget a previous attempt left behind, then render into a new one.
+  host.innerHTML = '';
+  const slot = document.createElement('div');
+  slot.id = containerId + '-slot-' + (++_rcSlotSeq);
+  host.appendChild(slot);
+  const v = new firebase.auth.RecaptchaVerifier(slot.id, { size: 'invisible', callback: () => {} });
   await v.render();
   return v;
 }
