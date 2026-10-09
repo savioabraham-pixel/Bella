@@ -1636,7 +1636,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
             <!-- Attach file -->
             <label class="ibtn" title="Attach file" style="cursor:pointer">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-              <input id="fi" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.pptx,.jpg,.jpeg,.png,.webp,.txt,.md" onchange="hfile(event)" style="display:none">
+              <input id="fi" type="file" multiple accept=".pdf,.docx,.xlsx,.xls,.csv,.tsv,.pptx,.jpg,.jpeg,.png,.webp,.txt,.md,.json" onchange="hfile(event)" style="display:none">
             </label>
             <!-- Emoji -->
             <button class="ibtn" onclick="toggleEmojiPicker()" title="Emoji & GIFs">
@@ -7640,7 +7640,28 @@ async function hfile(e){
   document.getElementById('ti').focus();e.target.value='';
 }
 async function extractPDF(file){const ab=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:ab}).promise;let t='';for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const c=await pg.getTextContent();t+=c.items.map(x=>x.str).join(' ')+'\n';}return t||'[PDF appears scanned]';}
-async function extractDOCX(file){const ab=await file.arrayBuffer();const r=await mammoth.extractRawText({arrayBuffer:ab});return r.value||'[Could not extract Word text]';}
+/* A LEGACY .doc IS NOT A .docx AND NOTHING HERE CAN READ IT. mammoth opens the
+   zip a .docx is; a pre-2007 .doc is an OLE2 container and mammoth throws or
+   returns nothing, which used to surface as a bare "[Could not extract Word
+   text]" -- true, useless, and it never said what to do. The backend has the
+   same limit by the same cause (extractOfficeText has no msword branch and
+   falls into its failure catch). Detected from the file's own first bytes
+   rather than its name, because `accept` only filters the file PICKER: a
+   dragged-in file walks straight past it. The .doc was removed from every
+   picker on 2026-10-09; this is the other half of that fix. */
+async function extractDOCX(file){
+  const ab=await file.arrayBuffer();
+  const sig=new Uint8Array(ab.slice(0,4));
+  if(sig[0]===0xD0&&sig[1]===0xCF&&sig[2]===0x11&&sig[3]===0xE0)
+    return '[This is an old .doc file, which Bella cannot read. Open it in Word and use '
+         + 'Save As to make a .docx or a PDF, and she will read the whole thing.]';
+  try{
+    const r=await mammoth.extractRawText({arrayBuffer:ab});
+    return r.value||'[Could not extract Word text]';
+  }catch(e){
+    return '[That Word file could not be read — '+(e&&e.message||'unknown error')+'.]';
+  }
+}
 async function extractExcel(file){const ab=await file.arrayBuffer();const wb=XLSX.read(ab,{type:'array'});let t='';for(const n of wb.SheetNames){t+=`[Sheet: ${n}]\n${XLSX.utils.sheet_to_csv(wb.Sheets[n])}\n\n`;}return t||'[Could not extract spreadsheet]';}
 async function extractPPTX(file){try{const ab=await file.arrayBuffer();const zip=await JSZip.loadAsync(ab);let t='';const sf=Object.keys(zip.files).filter(n=>n.match(/ppt\/slides\/slide\d+\.xml$/)).sort();for(const s of sf){const xml=await zip.files[s].async('string');const m=xml.match(/<a:t[^>]*>([^<]+)<\/a:t>/g)||[];const st=m.map(x=>x.replace(/<[^>]+>/g,'')).join(' ');if(st.trim())t+=st+'\n';}return t||'[No text in slides]';}catch(err){return`[Could not read PPTX: ${err.message}]`;}}
 async function extractImageBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>{const d=e.target.result;res({mimeType:file.type,data:d.split(',')[1]});};r.onerror=rej;r.readAsDataURL(file);});}
