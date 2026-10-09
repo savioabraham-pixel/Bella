@@ -11553,8 +11553,16 @@ html body.dark .pl-note.pl-bad{color:#F09487!important}
 .feat-grid.ws-editing .feat-item{ cursor:grab; touch-action:none; opacity:1; }
 .feat-grid.ws-editing .feat-item.ws-grab{ border-style:dashed; }
 /* No transform here: the drag sets its own, and a CSS one would overwrite the
-   translate that makes the tile follow the pointer. */
-.feat-item.ws-dragging{ opacity:.85; cursor:grabbing; pointer-events:none;
+   translate that makes the tile follow the pointer.
+   AND NO pointer-events:none, WHICH IS WHAT BROKE THE DRAG ON HIS MAC.
+   It was a leftover from the first version, which asked document.elementFromPoint
+   what sat under the cursor and so needed to see THROUGH the dragged tile. The
+   drop target is pure geometry now, so nothing needs to see through anything --
+   and with pointer-events:none the tile cannot receive a pointer event by
+   hit-testing at all, so the moment pointer capture was lost the drag went
+   permanently deaf. Measured 2026-10-08: 107px of pointer movement produced
+   26.75px of tile movement and then silence. */
+.feat-item.ws-dragging{ opacity:.85; cursor:grabbing;
   box-shadow:0 8px 22px rgba(11,37,69,.32); z-index:20; position:relative; }
 html body.dark .ws-barbtn{ background:rgba(255,255,255,.07) !important;
   color:#F5E6C8 !important; border-color:rgba(245,230,200,.26) !important; }
@@ -12511,7 +12519,7 @@ async function tlTranslate(text,targetName,sourceName,onProgress){
 let TL={group:null,tool:null,files:{},result:null,file:null,parts:null};
 
 function openTools(group){
-  const list=TOOLS.filter(t=>t.group===group);
+  const list=_tlGroupList(group);
   if(!list.length) return;
   closeTools();
   TL={group:group,tool:null,files:{},result:null};
@@ -12533,10 +12541,33 @@ function closeTools(){ const o=document.getElementById('tl-overlay'); if(o) o.re
   /* B-Meet shares this overlay, so this is also the X on a live recording --
      without it the microphone and the screen share keep running invisibly. */
   if(typeof _bmTeardown==='function') try{ _bmTeardown(); }catch(e){} }
-function tlBack(){ if(TOOLS.filter(t=>t.group===TL.group).length>1) tlShowList(); else closeTools(); }
+function tlBack(){ if(_tlGroupList(TL.group).length>1) tlShowList(); else closeTools(); }
+
+/* ── A TOOL MAY APPEAR IN MORE THAN ONE LIST ─────────────────────────────
+   Savio, 2026-10-08: "In the PDF tile do you thin we can have analyze PDF or
+   read PDF as well?"
+
+   Bella could ALREADY do it -- Summarise, Ask a question, Pull the data out,
+   What does this tell me?, Turn it into a report and Compare two documents all
+   take a PDF, and all six sat under a tile called "Read Any File", which never
+   says the word PDF. So he opened PDF Tools, found three mechanical operations
+   and reasonably concluded the reading had not been built. **The capability was
+   not missing; the signpost was.** Same shape as the 25 empty dropdowns: he
+   went the long way round because the short way showed him nothing
+   [[savio-workaround-is-evidence]].
+
+   `also:['pdf']` lends a tool to another list without copying its row, so there
+   is exactly one definition of each tool and nothing can drift. A list shows
+   its OWN tools first, then the borrowed ones, because the tile is named after
+   its own. */
+function _tlInGroup(t,g){ return t.group===g || (t.also||[]).indexOf(g)>-1; }
+function _tlGroupList(g){
+  return TOOLS.filter(t=>_tlInGroup(t,g))
+              .sort((a,b)=>(a.group===g?0:1)-(b.group===g?0:1));
+}
 
 function tlShowList(){
-  const list=TOOLS.filter(t=>t.group===TL.group);
+  const list=_tlGroupList(TL.group);
   TL.tool=null; TL.files={}; TL.result=null;
   document.getElementById('tl-title').textContent=TL_GROUPS[TL.group]||'Tools';
   document.getElementById('tl-back').style.display='none';
@@ -12549,7 +12580,10 @@ function tlShowList(){
 function tlOpenTool(id){
   const t=TOOLS.find(x=>x.id===id); if(!t) return;
   TL.tool=t; TL.files={}; TL.result=null; TL.file=null; TL.parts=null; TL.orig=null;
-  const many=TOOLS.filter(x=>x.group===t.group).length>1;
+  /* TL.group, not t.group: the question is "is there a list to go BACK to",
+     which is about what the user opened, not where the tool happens to live.
+     Identical while every tool had one group; wrong the moment one is lent. */
+  const many=_tlGroupList(TL.group).length>1;
   document.getElementById('tl-title').textContent=t.label;
   document.getElementById('tl-back').style.display=many?'block':'none';
   let h='';
@@ -12561,6 +12595,42 @@ function tlOpenTool(id){
   document.getElementById('tl-body').innerHTML=h;
   _tlApplyPrefill(t);
   if(t.onOpen) try{ t.onOpen(); }catch(e){}
+}
+
+/* ── EVERY FILE BOX SAYS WHAT IT TAKES ───────────────────────────────────
+   Savio had to ASK how many formats could be uploaded -- which means no tile
+   ever told him. It is written from the `accept` string itself, so the sentence
+   on screen cannot drift from what the control actually allows: change the list
+   and the words change with it. Friendly names, not extensions, because
+   "PowerPoint" means something to everyone and ".pptx" does not. */
+const TL_FORMAT_NAMES=[
+  [['.pdf'],'PDF'], [['.docx','.doc'],'Word'], [['.xlsx','.xls'],'Excel'],
+  [['.pptx'],'PowerPoint'], [['.csv','.tsv'],'CSV'], [['.txt','.md'],'text'],
+  [['.json'],'JSON'], [['.jpg','.jpeg','.png','.webp','.gif','.heic'],'images']
+];
+function _tlFormatHint(accept){
+  const a=String(accept||'').toLowerCase();
+  if(!a) return '';
+  if(a.indexOf('audio/')>-1||a.indexOf('video/')>-1)
+    return '<div class="tl-hint">Any audio or video file from this device.</div>';
+  if(a.indexOf('image/')>-1)
+    return '<div class="tl-hint">Any image &mdash; photo, screenshot or scan.</div>';
+  const have=a.split(',').map(x=>x.trim()).filter(Boolean);
+  const names=[];
+  for(const [exts,name] of TL_FORMAT_NAMES)
+    if(exts.some(e=>have.indexOf(e)>-1) && names.indexOf(name)===-1) names.push(name);
+  if(!names.length) return '';
+  /* jpg and jpeg are one format spelled two ways; counting both would overstate
+     the number to anyone who adds it up. */
+  const n=new Set(have.map(e=>e==='.jpeg'?'.jpg':e)).size;
+  const list=names.length>1
+    ? names.slice(0,-1).join(', ')+' or '+names[names.length-1]
+    : names[0];
+  let out=list+' &mdash; '+n+' format'+(n===1?'':'s')+' in all.';
+  /* The one thing someone will actually get stuck on. */
+  if(have.indexOf('.docx')>-1 && have.indexOf('.doc')===-1)
+    out+=' An old <b>.doc</b> or <b>.ppt</b> must be saved as .docx or .pptx first.';
+  return '<div class="tl-hint">'+out+'</div>';
 }
 
 /* Field spec: [kind, backendKey, Label, extra]
@@ -12616,6 +12686,7 @@ function tlField(f){
   if(kind==='file'||kind==='files')
     return lbl+'<input id="'+id+'" type="file"'+(kind==='files'?' multiple':'')
       +' accept="'+_tlEsc(extra||'')+'" onchange="tlFile(\''+key+'\',this,'+(kind==='files')+')">'
+      +_tlFormatHint(extra)
       +'<div class="tl-file" id="tl-fn-'+key+'"></div>';
   return '';
 }
@@ -12633,11 +12704,13 @@ function tlField(f){
    JSZip for PowerPoint. No backend change, nothing new downloaded, and no
    dead control: a tool only gets the box if it has somewhere to put the text.
 
-   IT TELLS THE TRUTH ABOUT WHAT WILL BE READ. /analyse-data truncates at
-   5,000 characters, /data-to-chart and /forecast at 3,000 -- silently, inside
-   the endpoint. A 400-row sheet would be cut off with no warning at all.
-   `readCap` makes that visible BEFORE the run instead of after. Removing the
-   cap is a backend change and is queued, not pretended away. */
+   THE TRUNCATION THIS USED TO WARN ABOUT IS GONE. /analyse-data cut the data
+   at 5,000 characters and /data-to-chart and /forecast at 3,000 -- silently,
+   inside the endpoint -- so a 400-row sheet was answered from its first hundred
+   rows. Backend release 22 (bella-backend-00070-mxr, v7.3, deployed 2026-10-08)
+   raised that to 200,000 and gave all three a native file reader, so the
+   `readCap` warnings described a fault that no longer exists and were removed
+   with it. The three data tools now take the file itself -- see TOOLS below. */
 function _tlAttachKey(t){
   const f=t.fields||[];
   if(f.some(function(x){ return x[0]==='file'||x[0]==='files'; })) return null;  // native already
@@ -12656,15 +12729,16 @@ function _tlAttachKey(t){
 function tlAttachField(t){
   const key=_tlAttachKey(t);
   if(!key) return '';
-  const cap=t.readCap
-    ? ' Bella reads the first '+t.readCap.toLocaleString('en-IN')+' characters of it.'
-    : '';
   return '<div class="tl-lbl" style="margin-top:14px">Or attach a file &mdash; optional</div>'
-    +'<input id="tl-att" type="file" accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.pptx,.txt,.md,.json"'
+    /* `.doc` dropped here too, 2026-10-08. This box reads the file in the
+       BROWSER -- mammoth for Word -- and mammoth cannot open a legacy .doc any
+       more than the backend can, so it was offered and then failed. One list,
+       one truth, both sides. */
+    +'<input id="tl-att" type="file" accept=".pdf,.docx,.xlsx,.xls,.csv,.tsv,.pptx,.txt,.md,.json"'
     +' onchange="tlAttachRead(this,\''+key+'\')">'
-    +'<div class="tl-hint">Word, Excel, PDF, PowerPoint, CSV or text. Bella reads it here on your '
-    +'device and puts the contents in the box above, so you can check or edit it before sending.'
-    +_tlEsc(cap)+'</div>'
+    +'<div class="tl-hint">Word, Excel, PDF, PowerPoint, CSV or text &mdash; 10 formats in all. '
+    +'Bella reads it here on your device and puts the contents in the box above, so you can check '
+    +'or edit it before sending. An old <b>.doc</b> must be saved as .docx first.</div>'
     +'<div class="tl-file" id="tl-att-note"></div>';
 }
 
@@ -12698,29 +12772,108 @@ async function tlAttachRead(input,key){
     const n=text.length;
     let msg=file.name+' \u2014 '+n.toLocaleString('en-IN')+' characters read in.';
     if(trimmed) msg+=' The file was longer and was cut at 100,000.';
-    const t=TL.tool;
-    if(t&&t.readCap&&n>t.readCap){
-      msg+=' \u26A0 This tool only reads the first '+t.readCap.toLocaleString('en-IN')
-        +', so roughly '+Math.round((1-t.readCap/n)*100)+'% of it will be ignored. '
-        +'Trim it, or send the part that matters.';
-      if(note){ note.textContent=msg; note.style.color='#8A5A00'; }
-      return;
-    }
     if(note){ note.textContent=msg; note.style.color=''; }
   }catch(e){
     if(note) note.textContent='That file could not be read \u2014 '+(e&&e.message||'unknown error')+'.';
   }
 }
 
+/* THE BACKEND DECIDES HOW TO READ A FILE FROM ITS MIME TYPE, NOT ITS NAME.
+   docPart() keys off mimeType: a spreadsheetml type becomes CSV text, a
+   wordprocessingml type becomes its text, anything else is handed to Gemini as
+   inline_data. So an empty or generic file.type -- which is exactly what macOS
+   and some Android builds give for .xlsx, .csv and .md -- would have sent
+   'application/octet-stream', missed every branch, and shipped raw bytes Gemini
+   cannot read, while the user watched a confident answer come back about
+   nothing. The extension is the more reliable signal of the two here, so it
+   wins whenever the browser offers nothing usable. */
+const TL_MIME={
+  xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  xls:'application/vnd.ms-excel',
+  docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  doc:'application/msword',
+  pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  pdf:'application/pdf', csv:'text/csv', tsv:'text/tab-separated-values',
+  txt:'text/plain', md:'text/markdown', json:'application/json',
+  jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp',
+  gif:'image/gif', heic:'image/heic'
+};
+function _tlMimeOf(file){
+  const t=String(file.type||'').toLowerCase();
+  const ext=(String(file.name||'').split('.').pop()||'').toLowerCase();
+  const byExt=TL_MIME[ext];
+  /* A browser that says nothing, or says only "a pile of bytes", is overruled. */
+  if(!t||t==='application/octet-stream'||t==='binary/octet-stream')
+    return byExt||t||'application/octet-stream';
+  return t;
+}
+/* ── SEVERAL FILES, AS OBJECTS ───────────────────────────────────────────
+   /smart-presentation and /multi-doc-analyse both read `file.base64` AND
+   `file.mimeType` off each entry, but the engine's `files` kind sends a flat
+   array of base64 strings -- so every file would have arrived with no type and
+   `docPart` would have been skipped for all of them, silently producing a deck
+   about nothing. `shape` is the one sanctioned place a tool may rewrite its own
+   body, so both tools use this rather than the engine growing a special case.
+   The mime types come from TL.files, where _tlMimeOf has already corrected
+   whatever the browser claimed. */
+function _tlFilesAsObjects(body,key){
+  const got=(TL.files&&TL.files[key])||[];
+  body[key]=got.map(function(f){
+    return { base64:f.b64, mimeType:f.mime, name:f.name };
+  });
+}
+
 function _tlB64(file){ return new Promise((res,rej)=>{ const r=new FileReader();
-  r.onload=e=>res({name:file.name,mime:file.type||'application/octet-stream',
+  r.onload=e=>res({name:file.name,mime:_tlMimeOf(file),
                    b64:String(e.target.result).split(',')[1]||''});
   r.onerror=rej; r.readAsDataURL(file); }); }
+
+/* The longest pasted text any of these endpoints will look at. _dataParts()
+   caps `data` at 200,000 characters server-side; saying the same number here is
+   what makes the warning true rather than decorative. A FILE has no such cap --
+   docPart() converts the whole workbook -- which is why attaching beats pasting
+   for anything large, and why the hint says so. */
+const TL_TEXT_CAP=200000;
 
 async function tlFile(key,input,multi){
   const files=Array.from(input.files||[]);
   const note=document.getElementById('tl-fn-'+key);
   if(!files.length){ delete TL.files[key]; if(note) note.textContent=''; return; }
+
+  /* A CSV or a .txt is ALREADY text, and the browser reads it losslessly. Sent
+     as a file it would reach docPart() with a text/csv type, miss every Office
+     branch and go to Gemini as inline_data -- a path nothing here has ever
+     proven. So plain text goes into the visible box instead, where he can also
+     check and edit it. Excel, Word, PowerPoint, PDF and images still go
+     natively, whole, because for those the backend reader is better than
+     anything the browser can do. */
+  const _t=TL.tool, _at=_t&&_t.fileAsText;
+  if(_at && _at.key===key && !multi){
+    const f0=files[0];
+    const ext=(f0.name.split('.').pop()||'').toLowerCase();
+    if((_at.exts||[]).indexOf(ext)>-1){
+      const box=document.getElementById('tlf-'+_at.to);
+      if(box){
+        try{
+          let text=String(await f0.text()||'').trim();
+          if(!text){ if(note) note.textContent='Nothing could be read out of that file.'; return; }
+          delete TL.files[key];
+          input.value='';
+          const n=text.length;
+          box.value=text;
+          let msg=f0.name+' \u2014 '+n.toLocaleString('en-IN')+' characters, in the box below. You can edit it before sending.';
+          if(n>TL_TEXT_CAP)
+            msg+=' \u26A0 That is longer than '+TL_TEXT_CAP.toLocaleString('en-IN')
+              +' characters, which is the most Bella reads from typed-in text. Save it as an Excel '
+              +'file and attach that instead \u2014 she reads a spreadsheet in full, however long.';
+          if(note){ note.textContent=msg; note.style.color=n>TL_TEXT_CAP?'#8A5A00':''; }
+        }catch(e){
+          if(note) note.textContent='That file could not be read \u2014 '+(e&&e.message||'unknown error')+'.';
+        }
+        return;
+      }
+    }
+  }
   /* 18MB of base64 is the practical ceiling: Cloud Run caps a request at 32MB
      and Gemini's inline_data path caps the whole request near 20MB. Caught here
      with a readable sentence instead of a 413 nobody can interpret. */
@@ -13016,6 +13169,16 @@ async function tlRun(){
 
   /* Required fields, named in the sentence rather than a bare "required". */
   for(const f of (t.need||[])){
+    /* EITHER/OR, written down. Several endpoints guard with `!a && !b`, meaning
+       either one will do -- /analyse-data, /data-to-chart and /forecast all
+       take a FILE or pasted text since release 22. A flat list could only say
+       "both are required", which would have blocked the button on a tool that
+       was perfectly ready to run. The group carries its own sentence, because
+       stitching one out of two field labels reads like a fault. */
+    if(f && typeof f==='object' && Array.isArray(f.any)){
+      if(f.any.some(function(k){ return TL.files.hasOwnProperty(k) || _tlVal(k); })) continue;
+      _tlMsg(_tlEsc(f.msg||'I need one of those first.'),'err'); return;
+    }
     const isFile=TL.files.hasOwnProperty(f);
     if(!isFile && !_tlVal(f)){
       let label=(t.fields.find(x=>x[1]===f)||[,,f])[2];
@@ -13126,9 +13289,18 @@ async function tlRun(){
       const html=_tlRender(d,0);
       out.innerHTML=html||'';
       TL.result={kind:'json',data:d,title:t.label};
-      if(d.fileBase64) TL.file={b64:d.fileBase64,mime:d.mimeType||'application/octet-stream',
-                                name:d.filename||'bella-file',label:'Download the file'};
-      _tlMsg(d.fileWarning||'Done.',d.fileWarning?'warn':'ok');
+      /* `pick` names the field the file arrives in. It defaults to fileBase64,
+         which is what /restructure-doc and /fill-template use, so nothing that
+         already worked changes -- but /smart-presentation calls its field
+         pptBase64 and can now say so instead of needing its own branch. */
+      const _fb=d[t.pick||'fileBase64'];
+      if(_fb) TL.file={b64:_fb,mime:d.mimeType||'application/octet-stream',
+                       name:d.filename||'bella-file',label:'Download the file'};
+      /* A tool's own `msg` was ignored here, so /smart-presentation could not
+         report that it had left a chart out. `fileWarning` still wins, because
+         a warning outranks a summary; everything using out:'doc' without a
+         `msg` keeps the plain "Done." it had before. */
+      _tlMsg(d.fileWarning||(t.msg?t.msg(d):'Done.'),d.fileWarning?'warn':'ok');
       tlActions(); return;
     }
 
@@ -13426,7 +13598,32 @@ const TL_GROUPS={
   transcribe:'Transcribe', image:'Image Transform', life:'Life Record',
   tasks:'Reminders & Tasks', voice:'Voice ID'
 };
-const DOC_ACCEPT='.pdf,.doc,.docx,.xls,.xlsx,.csv,.pptx,.txt,.md,.jpg,.jpeg,.png,.webp';
+/* ── WHAT MAY BE ATTACHED, AND WHY `.doc` IS NO LONGER OFFERED ───────────
+   Savio, 2026-10-08: "Why cant we use uptodate formats rather than old
+   formats?" -- so the dead one is gone.
+
+   **`.doc` CANNOT BE READ.** Traced through the deployed backend:
+   `extractOfficeText` matches `wordprocessingml` for a .docx, and a legacy
+   `application/msword` falls through to the
+   `/officedocument|ms-excel|msword|.../` branch which returns '' -- i.e. "this
+   IS an Office file and extraction failed" -- so `docPart` substitutes a
+   sentence asking you to save it as .docx or PDF. Offering a format in the
+   picker that always ends in that sentence is the same fault as the 25 empty
+   dropdowns: a control that cannot do the job it advertises. Removed.
+
+   **`.xls` IS KEPT, because it genuinely works** -- `mt.includes('ms-excel')`
+   is matched BEFORE that fallthrough and the buffer goes to SheetJS, which
+   reads the old BIFF format. I had earlier told him .doc and .xls were both
+   dead; that was wrong about .xls and is corrected here. (Verified by reading
+   the code path, not by running a real .xls -- there is none on this Mac.)
+
+   The two lists now agree on the text formats (.csv .tsv .txt .md .json) so a
+   file that may be attached in one place is not mysteriously refused in
+   another. The ONE difference is deliberate: .pptx is a document, not a
+   dataset. Every file box prints its own list from this string via
+   `_tlFormatHint`, so the words on screen cannot drift from what is accepted. */
+const DOC_ACCEPT='.pdf,.docx,.xlsx,.xls,.pptx,.csv,.tsv,.txt,.md,.json,.jpg,.jpeg,.png,.webp';
+const DATA_ACCEPT='.xlsx,.xls,.csv,.tsv,.pdf,.docx,.txt,.md,.json,.jpg,.jpeg,.png,.webp';
 const TONES=['Warm','Neutral','Formal','Friendly','Persuasive','Playful'];
 
 const TOOLS=[
@@ -13512,33 +13709,33 @@ const TOOLS=[
            ['text','focusAreas','Anything to focus on','']]},
 
   /* ── READ ANY FILE ─────────────────────────────────────────────────── */
-  {id:'summarise',group:'read',label:'Summarise a document',ep:'/summarise-document',
+  {id:'summarise',group:'read',also:['pdf'],label:'Summarise a document',ep:'/summarise-document',
    note:'Attach it and I will read the whole thing.',need:['base64Data'],
    out:'text',pick:'summary',mime:{base64Data:'mimeType'},
    fields:[['file','base64Data','The document',DOC_ACCEPT],
            ['area','instruction','Anything particular to look for?','']]},
-  {id:'docqa',group:'read',label:'Ask a document a question',ep:'/doc-qa',
+  {id:'docqa',group:'read',also:['pdf'],label:'Ask a document a question',ep:'/doc-qa',
    note:'I answer from the document, not from guesswork.',need:['documentBase64','question'],
    mime:{documentBase64:'mimeType'},
    fields:[['file','documentBase64','The document',DOC_ACCEPT],
            ['mic','question','Your question','What is the notice period?']]},
-  {id:'extract',group:'read',label:'Pull the data out',ep:'/extract-data',
+  {id:'extract',group:'read',also:['pdf'],label:'Pull the data out',ep:'/extract-data',
    note:'Tables, figures, names and dates, as structured data.',need:['documentBase64'],
    mime:{documentBase64:'mimeType'},
    fields:[['file','documentBase64','The document',DOC_ACCEPT],
            ['sel','extractType','What to pull out',['tables','figures','dates','names','contacts','all']]]},
-  {id:'insights',group:'read',label:'What does this tell me?',ep:'/extract-insights',
+  {id:'insights',group:'read',also:['pdf'],label:'What does this tell me?',ep:'/extract-insights',
    note:'The points worth noticing, rather than a summary.',need:['documentBase64'],
    mime:{documentBase64:'mimeType'},
    fields:[['file','documentBase64','The document',DOC_ACCEPT],
            ['sel','insightType','What to look for',['general','financial','risks','opportunities','action items']]]},
-  {id:'report',group:'read',label:'Turn it into a report',ep:'/generate-report',
+  {id:'report',group:'read',also:['pdf'],label:'Turn it into a report',ep:'/generate-report',
    note:'A written report built from what you attach.',need:['documentBase64'],
    mime:{documentBase64:'mimeType'},
    fields:[['file','documentBase64','The source material',DOC_ACCEPT],
            ['sel','reportType','What kind of report',['summary','analysis','executive','technical','financial']],
            ['text','title','Title',''],['text','audience','Who will read it','']]},
-  {id:'compare',group:'read',label:'Compare two documents',ep:'/compare-docs',
+  {id:'compare',group:'read',also:['pdf'],label:'Compare two documents',ep:'/compare-docs',
    note:'What changed, and what it means.',need:['doc1Base64','doc2Base64'],
    mime:{doc1Base64:'mimeType1',doc2Base64:'mimeType2'},
    fields:[['file','doc1Base64','The first one',DOC_ACCEPT],
@@ -13549,6 +13746,52 @@ const TOOLS=[
    mime:{imageBase64:'mimeType'},
    fields:[['file','imageBase64','The picture','.jpg,.jpeg,.png,.webp'],
            ['text','language','Language, if you know it','']]},
+
+  /* ── EVERYTHING AT ONCE ────────────────────────────────────────────────
+     Savio, 2026-10-08: "analysing all documents together and giving her own
+     analysis ... a single PPT with Charts & Graphs & Opening SLides, Separator
+     Slides, Index, Closing Slide".
+
+     BOTH ENDPOINTS WERE ALREADY LIVE AND HAD NO CALLER -- grep found zero. They
+     are not admin-gated either, so any signed-in member could have used them
+     from the day they shipped and nobody could reach them. That is the same
+     fault as the six PDF reading tools hiding under another name, one step
+     worse: no signpost AND no door.
+
+     They are placed where someone would LOOK rather than in a tile of their
+     own: the deck builder in Documents & Slides, lent to Read Any File and PDF
+     Tools; the combined analysis in Read Any File, lent to PDF Tools. */
+  {id:'smartdeck',group:'docs',also:['read','pdf'],prefill:{slideCount:'10'},
+   label:'Build a deck from my documents',ep:'/smart-presentation',
+   note:'Attach as many as you like. Bella reads them together and writes the deck — opening slide, contents, section dividers, charts and a closing slide.',
+   need:['files'],out:'doc',pick:'pptBase64',mime:{logoBase64:'logoMime'},
+   skip:['pptBase64','mimeType','filename','ok'],
+   go:'Build the deck',working:'Reading everything, then writing the deck…',
+   shape:function(b){ _tlFilesAsObjects(b,'files'); },
+   msg:function(d){
+     /* The deck is the answer, so the status line is where the honest caveat
+        belongs: a chart Bella wanted but could not stand up behind must be
+        said out loud, not left for him to notice was missing. */
+     let m='Done — '+(d.slideCount||0)+' slides';
+     if(d.chartsDrawn) m+=', '+d.chartsDrawn+' chart'+(d.chartsDrawn>1?'s':'');
+     if(d.chartsSkipped) m+='. '+d.chartsSkipped+' chart'+(d.chartsSkipped>1?'s were':' was')
+       +' left out — the figures behind '+(d.chartsSkipped>1?'them':'it')+' did not add up.';
+     else m+='.';
+     return m;
+   },
+   fields:[['files','files','Your documents — attach as many as you like',DOC_ACCEPT],
+           ['text','presentationGoal','What is the deck for','e.g. a quarterly review for the board'],
+           ['text','audience','Who will see it','e.g. the board'],
+           ['num','slideCount','Roughly how many slides',''],
+           ['file','logoBase64','Your logo, if she should match your colours','.jpg,.jpeg,.png,.webp']]},
+  {id:'multidoc',group:'read',also:['pdf'],label:'Analyse several documents together',
+   ep:'/multi-doc-analyse',
+   note:'What they say as a set — the themes, the correlations, and where they contradict each other.',
+   need:['files'],
+   go:'Read them together',working:'Reading all of them together…',
+   shape:function(b){ _tlFilesAsObjects(b,'files'); },
+   fields:[['files','files','The documents — attach as many as you like',DOC_ACCEPT],
+           ['mic','question','Anything particular you want to know?','']]},
 
   /* ── DOC EDIT & CONVERT ────────────────────────────────────────────── */
   {id:'restructure',prefill:{title:'restructured'},group:'docedit',label:'Rewrite or convert a document',ep:'/restructure-doc',
@@ -13598,23 +13841,55 @@ const TOOLS=[
            ['num','opacity','How faint, 0 to 1',''],
            ['num','fontSize','Size','']]},
 
-  /* ── DATA ──────────────────────────────────────────────────────────── */
-  {id:'analyse',readCap:5000,group:'data',label:'Analyse some numbers',ep:'/analyse-data',
-   note:'Paste rows, or a CSV’s contents.',need:['data'],
-   fields:[['area','data','The data','e.g. Month,Sales\nApr,120\nMay,145'],
+  /* ── DATA ──────────────────────────────────────────────────────────────
+     ATTACH THE SHEET. Savio, 2026-10-08: "its easier for people to copy paste
+     or upload data sheets in various formats for anayzation rather than copy
+     paste into Bella."
+
+     All three of these send the file ITSELF now -- documentBase64 + mimeType --
+     which backend release 22 reads through docPart(): a workbook becomes CSV
+     text in full, a Word file becomes its text, a PDF goes to Gemini whole.
+     There is NO length limit on that path. Before release 22 the same tools cut
+     the data at 5,000 and 3,000 characters silently, which is why these rows
+     used to carry a `readCap` warning; both the cap and the warning are gone.
+
+     The file box comes FIRST because that is the easier path and the one he
+     asked for; the box below it still takes pasted rows for anyone who prefers
+     that, and either one on its own is enough to run -- hence `need` with
+     `any`. A plain .csv or .txt is read into the box instead of being sent as a
+     file (see `fileAsText`): the browser reads plain text losslessly, and it
+     keeps the data visible and editable before it goes. */
+  {id:'analyse',group:'data',label:'Analyse some numbers',ep:'/analyse-data',
+   note:'Attach a spreadsheet — Bella reads the whole file, not just the first few rows.',
+   need:[{any:['documentBase64','data'],
+          msg:'Attach your data file, or paste the rows in the box — I need one of those.'}],
+   mime:{documentBase64:'mimeType'},
+   fileAsText:{key:'documentBase64',to:'data',exts:['csv','tsv','txt','md','json']},
+   fields:[['file','documentBase64','Your data — Excel, CSV, PDF or Word',DATA_ACCEPT],
+           ['area','data','Or paste the rows instead','e.g. Month,Sales\nApr,120\nMay,145'],
            ['sel','dataType','What kind of data',['general','sales','financial','survey','health','traffic']],
            ['mic','question','What do you want to know?','']]},
-  {id:'forecast',readCap:3000,prefill:{forecastPeriods:'3'},group:'data',label:'Forecast ahead',ep:'/forecast',
-   note:'From numbers you already have.',need:['data'],
-   fields:[['area','data','The history','e.g. Apr,120\nMay,145\nJun,160'],
+  {id:'forecast',prefill:{forecastPeriods:'3'},group:'data',label:'Forecast ahead',ep:'/forecast',
+   note:'From numbers you already have. Attach the sheet or paste the history.',
+   need:[{any:['documentBase64','data'],
+          msg:'Attach the file with your history, or paste it in the box — I need one of those.'}],
+   mime:{documentBase64:'mimeType'},
+   fileAsText:{key:'documentBase64',to:'data',exts:['csv','tsv','txt','md','json']},
+   fields:[['file','documentBase64','The history — Excel, CSV, PDF or Word',DATA_ACCEPT],
+           ['area','data','Or paste it instead','e.g. Apr,120\nMay,145\nJun,160'],
            ['text','metric','What is being measured','e.g. monthly sales'],
            ['num','forecastPeriods','How many periods ahead','']]},
 
   /* ── CHARTS ────────────────────────────────────────────────────────── */
-  {id:'chart',readCap:3000,group:'charts',label:'Draw a chart',ep:'/data-to-chart',
-   note:'Paste the numbers and I will draw it as a picture.',
-   need:['data'],out:'img',pick:'chartImageBase64',fixed:{format:'png'},
-   fields:[['area','data','The data','e.g. Apr,120\nMay,145\nJun,160'],
+  {id:'chart',group:'charts',label:'Draw a chart',ep:'/data-to-chart',
+   note:'Attach the sheet, or paste the numbers, and I will draw it as a picture.',
+   need:[{any:['documentBase64','data'],
+          msg:'Attach the file to chart, or paste the numbers in the box — I need one of those.'}],
+   out:'img',pick:'chartImageBase64',fixed:{format:'png'},
+   mime:{documentBase64:'mimeType'},
+   fileAsText:{key:'documentBase64',to:'data',exts:['csv','tsv','txt','md','json']},
+   fields:[['file','documentBase64','The data — Excel, CSV, PDF or Word',DATA_ACCEPT],
+           ['area','data','Or paste the numbers instead','e.g. Apr,120\nMay,145\nJun,160'],
            ['sel','chartType','What kind of chart',['bar','line','pie','doughnut','area','scatter']],
            ['text','title','Title',''],
            ['text','xAxis','Bottom axis',''],['text','yAxis','Side axis','']]},
@@ -14332,7 +14607,7 @@ const WORKSHOP = [
   ['\u{1F5E8}️','Interpreter','now','openInterpreter','two languages, out loud'],
   ['\u{1F3A7}','Transcribe','now',"openTools('transcribe')",''],
   ['\u{1F5BC}️','Image Transform','now',"openTools('image')",''],
-  ['\u{1F4D1}','PDF Tools','now',"openTools('pdf')",''],
+  ['\u{1F4D1}','PDF Tools','now',"openTools('pdf')",'Join, split or watermark a PDF — and summarise, question or analyse one'],
   ['\u{1F4C8}','Data Analysis','now',"openTools('data')",''],
   ['\u{1F4B0}','Money & Expenses','now',"openTools('money')",''],
   ['✍️','Writing Help','now',"openTools('writing')",''],
@@ -14532,10 +14807,17 @@ function wsDragStart(e){
            x0:e.clientX,y0:e.clientY,ox:0,oy:0,
            bracket:el.dataset.wsBracket,zone:el.dataset.wsZone};
   el.classList.add('ws-dragging');
-  try{ el.setPointerCapture(e.pointerId); }catch(_){}
-  el.addEventListener('pointermove',wsDragMove);
-  el.addEventListener('pointerup',wsDragEnd);
-  el.addEventListener('pointercancel',wsDragEnd);
+  /* ON THE WINDOW, AND NO setPointerCapture. THIS IS THE FIX.
+     Re-ordering calls insertBefore on the dragged tile, and removing a node
+     from the document IMPLICITLY RELEASES POINTER CAPTURE -- so the first
+     re-order killed the very drag that caused it. Worse, insertBefore ran even
+     when the tile was ALREADY in that position (dragging onto your immediate
+     neighbour), which is a remove-and-reinsert that changes nothing and still
+     drops capture. Listening on the window needs no capture, so no amount of
+     DOM surgery can interrupt the drag. */
+  window.addEventListener('pointermove',wsDragMove,{passive:false});
+  window.addEventListener('pointerup',wsDragEnd);
+  window.addEventListener('pointercancel',wsDragEnd);
 }
 
 /* Every tile that this one is allowed to trade places with. */
@@ -14573,7 +14855,11 @@ function wsDragMove(e){
   if(e.clientY<best.r.top-4||e.clientY>best.r.bottom+4) return;
   const after=(e.clientX>best.cx);
   const ref=after?best.el.nextSibling:best.el;
-  if(ref===d.el||(after&&best.el.nextSibling===d.el)) return;
+  /* A move that changes nothing must not happen AT ALL. insertBefore(x, y) when
+     x already sits immediately before y still removes and re-inserts x, and
+     that used to be enough to end the drag. One test covers both directions:
+     the tile is already where it would be put. */
+  if(ref===d.el||d.el.nextSibling===ref) return;
 
   // 3. FLIP: keep the tile under the cursor across the layout change.
   const before=d.el.getBoundingClientRect();
@@ -14604,11 +14890,9 @@ function wsDragEnd(e){
 function wsDragRelease(d){
   d.el.classList.remove('ws-dragging');
   d.el.style.transform='';             // back into its slot, wherever that now is
-  d.el.style.pointerEvents='';
-  d.el.removeEventListener('pointermove',wsDragMove);
-  d.el.removeEventListener('pointerup',wsDragEnd);
-  d.el.removeEventListener('pointercancel',wsDragEnd);
-  try{ d.el.releasePointerCapture(d.id); }catch(_){}
+  window.removeEventListener('pointermove',wsDragMove);
+  window.removeEventListener('pointerup',wsDragEnd);
+  window.removeEventListener('pointercancel',wsDragEnd);
 }
 
 /* The DOM is the truth. Every zone is walked, so one saved list covers both. */
