@@ -1146,6 +1146,58 @@ body.dark button:hover{
 body.dark *{
   text-shadow:none !important;
 }
+
+/* ── 7. MY PROFILE IN DARK MODE — cream text was sitting on a white card ──
+   Found 2026-10-10 while adding the photo control, and PRE-EXISTING: the same
+   panel is unreadable on the committed build, so this is not fallout from that
+   change. Measured in headless Chrome at 390px, dark mode on:
+   every non-button line in the panel -- Full name, Email, Mobile, Date of
+   birth, Gender, User ID, Member since, the consent line and the advice box --
+   rendered #F5E6C8 on #FFFFFF. That is a contrast ratio of about 1.15:1, which
+   is not "low contrast", it is invisible.
+
+   CAUSE, and it is the trap already written up in the notes: the blanket
+   `body.dark *{color:#F5E6C8!important}` in section 2a beats the panel's own
+   inline hex, because !important plus a class-based selector outranks an inline
+   style. The card's background is a hardcoded #FFFFFF that the blanket never
+   touches, so the text inverted and the surface under it did not.
+
+   FIX, the small end of the two options: turn the SURFACE dark rather than
+   chase every text colour back to navy. The blanket has already made the text
+   cream, which is correct on navy, so the panel only needs its white surfaces
+   to agree with it -- four rules instead of a dozen, and no inline style in
+   openMyProfile or _profRow has to change.
+
+   Keyed off the #my-profile ID on purpose: an id outranks any number of
+   classes, so this wins against the blanket without an arms race of
+   !important. Same reasoning as the #wx-tabs and #fbdone-btn rules above.
+   Buttons are deliberately left alone -- `body.dark button` already paints them
+   #E8D9B8 with navy text, which reads correctly on navy. */
+html body.dark #my-profile > div{
+  background:#0B2545 !important;
+  box-shadow:0 24px 80px rgba(0,0,0,0.45) !important;
+}
+/* The two cream sub-surfaces: the "what Bella calls you" input and the advice
+   box. Left pale, they would be cream text on near-white all over again. */
+html body.dark #my-profile #prof-preferred{
+  background:#12233B !important;
+  border-color:rgba(245,230,200,0.28) !important;
+}
+html body.dark #my-profile div[style*="#FAF8F4"]{
+  background:#12233B !important;
+  border-color:rgba(245,230,200,0.18) !important;
+}
+/* Row separators were rgba(11,37,69,0.08) -- navy on navy, so the rows ran
+   together into one block of text. */
+html body.dark #my-profile div[style*="border-bottom"]{
+  border-bottom-color:rgba(245,230,200,0.16) !important;
+}
+/* The photo editor is its own fixed layer, so it needs saying separately. It is
+   already navy and cream and reads correctly; this only stops the blanket from
+   flattening its dashed gold ring. */
+html body.dark #pp-crop{
+  border-color:rgba(212,175,55,0.8) !important;
+}
 </style>
 
 
@@ -3714,10 +3766,29 @@ function openMyProfile(){
   const box=document.createElement('div');
   box.id='my-profile';
   box.style.cssText='position:fixed;inset:0;background:rgba(11,37,69,0.72);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:520;padding:16px';
-  const photo = d.photoUrl
-    ? '<img src="' + esc(d.photoUrl) + '" alt="" referrerpolicy="no-referrer" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid rgba(245,230,200,0.35)">'
+  // The photo is a SLOT, not a fixed image: #pp-img-wrap is re-rendered in place
+  // by _ppRenderSlot when it changes, so he sees it update where he changed it
+  // rather than having to close and reopen the panel.
+  //
+  // The camera badge is deliberately the SAME affordance, in the same corner, as
+  // the one on the Registration page. Savio uploads from both screens, and a
+  // control that moves between them is a control he has to learn twice.
+  const inner = d.photoUrl
+    ? '<img src="' + esc(d.photoUrl) + '" alt="" referrerpolicy="no-referrer" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid rgba(245,230,200,0.35);display:block">'
     : '<div style="width:72px;height:72px;border-radius:50%;background:#D4AF37;display:flex;align-items:center;justify-content:center;font-family:\'Cormorant Garamond\',serif;font-size:30px;font-weight:600;color:#0B2545">' +
       esc((d.preferredName||d.fullName||'?').trim().charAt(0).toUpperCase()) + '</div>';
+  const photo =
+    '<div style="position:relative;flex:none;width:72px;height:72px">' +
+      '<div id="pp-img-wrap">' + inner + '</div>' +
+      '<div onclick="document.getElementById(\'pp-file\').click()" title="Change your photo" ' +
+           'style="position:absolute;bottom:-2px;right:-2px;width:26px;height:26px;border-radius:50%;background:#D4AF37;' +
+           'display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid #0B2545">' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2.5">' +
+          '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>' +
+          '<circle cx="12" cy="13" r="4"/></svg>' +
+      '</div>' +
+      '<input id="pp-file" type="file" accept="image/*" style="display:none" onchange="ppPick(this)">' +
+    '</div>';
   box.innerHTML =
     '<div style="background:#FFFFFF;border-radius:20px;max-width:430px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.3)">' +
       '<div style="background:#0B2545;border-radius:20px 20px 0 0;padding:22px 24px;display:flex;align-items:center;gap:15px">' +
@@ -3728,6 +3799,12 @@ function openMyProfile(){
         '</div>' +
       '</div>' +
       '<div style="padding:18px 24px 22px">' +
+        '<div style="font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#5A6B8A;margin-bottom:6px">Your photo</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">' +
+          '<div style="flex:1;min-width:0;font-size:12px;color:#0B2545;line-height:1.6">Tap the camera on your photo to change it. It changes everywhere Bella shows you.</div>' +
+          '<button onclick="ppRemove()" style="flex:none;padding:9px 13px;border-radius:11px;border:1.5px solid rgba(11,37,69,0.25);background:transparent;color:#0B2545;font-size:12px;font-weight:600;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Remove</button>' +
+        '</div>' +
+        '<div id="pp-msg" style="font-size:11px;min-height:15px;color:#5A6B8A;margin-bottom:14px"></div>' +
         '<div style="font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#5A6B8A;margin-bottom:6px">What Bella calls you</div>' +
         '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">' +
           '<input id="prof-preferred" value="' + esc(d.preferredName||'') + '" maxlength="40" ' +
@@ -3767,8 +3844,20 @@ async function saveMyPreferredName(){
   try{
     // No profileKey is sent. The backend finds the row from the VERIFIED token,
     // and ignores a profileKey from the body for anyone who is not the owner.
+    // ── CORRECTED 2026-10-10: this 400'd for SAVIO and nobody else ──
+    // The comment below is right about everyone except the admin. /update-profile
+    // answers 400 "profileKey is required when acting as the owner" when
+    // _isAdmin(req) is true and no profileKey is in the body -- and Savio IS
+    // ADMIN_EMAIL, so the one person testing this screen was the one person it
+    // could never work for. Everyone else's row is still found from the verified
+    // token and this field is ignored for them, exactly as written below.
+    const _upd = { updates: { preferredName: name } };
+    try {
+      const _k = (_myProfileData().profileKey) || currentProfileKey || '';
+      if (_k) _upd.profileKey = _k;
+    } catch(e) {}
     const r=await bfetch(BACKEND+'/update-profile',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({updates:{preferredName:name}})});
+      body:JSON.stringify(_upd)});
     const j=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
     // Keep the device in step with the sheet, and the screen in step with both.
@@ -4122,30 +4211,85 @@ function updatePhotoTransform() {
   setTimeout(saveCroppedPhoto, 100);
 }
 
+// ── THE ONE CROPPER. Registration and My Profile both use this. ──────────
+//
+// Savio's protocol, 2026-10-10: there is ONE photo. Uploaded at registration it
+// shows in the app beside his name and in My Profile; changed in My Profile it
+// changes in both of the others too. One photo means one cropper, so the two
+// screens cannot drift apart or produce different-sized files.
+//
+// ── THE GEOMETRY BUG THIS FIXES, AS MEASURED ──
+// The old code drew `naturalWidth x naturalHeight x scale` into a 100x100
+// canvas. But the on-screen preview is a 100px box with `object-fit:cover`, so
+// the browser had ALREADY scaled the photo down to cover that box. The canvas
+// knew nothing about that, and drew at the photo's RAW pixel size.
+//
+// The centre was fine -- my first note here guessed the crop was offset, and
+// the harness disproved it. The ZOOM was what was wrong, badly. Measured in
+// headless Chrome on a 600x400 test image carrying a 60px marker dead centre:
+//   on screen, cover-fit:  marker is 15% of the circle   (60 * 0.25 / 100)
+//   old saved crop:        marker is 61% of the circle   -- 4x too zoomed
+//   new saved crop:        marker is 15.6%               -- matches the screen
+// The error grows with the photo: a 3000x2000 phone picture was drawn at
+// 3000x2000 into a 100px box, so the saved circle was a 100-pixel window on
+// the middle of it. Position a face in the preview and you saved a nostril.
+// Nobody would have read that as a cropping bug -- it just looked like Bella
+// mangled the photo.
+//
+// The fix replicates `object-fit:cover` -- the cover scale FIRST, then the
+// user's own zoom and drag on top. Proven by tests 2, 3, 6 and 7 of the photo
+// suite, which fail on the pre-change file.
+//
+// ── WHY 256 AND WHY A CHARACTER CAP ──
+// 100x100 was soft on a phone: the profile circle is 72 CSS px, which is 216
+// real pixels on a 3x screen. 256 is sharp there and still tiny.
+// The cap is not cosmetic. This data URL ends up in TWO places with hard
+// limits: localStorage (~5MB for the whole origin, shared with every thread)
+// and a single Google Sheets cell via /update-profile -> Users!I, which stops
+// dead at 50,000 characters and would SILENTLY truncate the row to junk.
+// So the quality steps down until it fits, and if it somehow still does not,
+// it redraws smaller rather than ever returning something oversized.
+const PHOTO_OUT_PX   = 256;
+const PHOTO_MAX_CHARS = 36000;   // safely inside the 50,000-character cell cap
+
+function _cropCircle(img, scale, offX, offY, outPx) {
+  if (!img || !img.naturalWidth || !img.naturalHeight) return '';
+  const OUT = outPx || PHOTO_OUT_PX;
+  const canvas = document.createElement('canvas');
+  canvas.width = OUT; canvas.height = OUT;
+  const ctx = canvas.getContext('2d');
+  ctx.beginPath();
+  ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2);
+  ctx.clip();
+  const imgW = img.naturalWidth, imgH = img.naturalHeight;
+  // `object-fit: cover` on the preview box, reproduced exactly.
+  const cover = Math.max(OUT / imgW, OUT / imgH);
+  const s = cover * (scale || 1);
+  // The offsets were measured in the 100px preview, so carry them up with it.
+  const k = OUT / 100;
+  const drawW = imgW * s, drawH = imgH * s;
+  const dx = OUT / 2 + (offX || 0) * k - drawW / 2;
+  const dy = OUT / 2 + (offY || 0) * k - drawH / 2;
+  ctx.drawImage(img, dx, dy, drawW, drawH);
+  let quality = 0.92;
+  let dataUrl = canvas.toDataURL('image/jpeg', quality);
+  while (dataUrl.length > PHOTO_MAX_CHARS && quality > 0.40) {
+    quality -= 0.06;
+    dataUrl = canvas.toDataURL('image/jpeg', quality);
+  }
+  // Still too big for the sheet cell? Then the picture is worth less than the
+  // row it would corrupt. Redraw smaller instead of returning something unsafe.
+  if (dataUrl.length > PHOTO_MAX_CHARS && OUT > 128) {
+    return _cropCircle(img, scale, offX, offY, 128);
+  }
+  return dataUrl.length > PHOTO_MAX_CHARS ? '' : dataUrl;
+}
+
 function saveCroppedPhoto() {
   if (!_photoImg) return;
   try {
-    const canvas = document.createElement('canvas');
-    canvas.width = 100; canvas.height = 100;
-    const ctx = canvas.getContext('2d');
-    ctx.beginPath();
-    ctx.arc(50, 50, 50, 0, Math.PI * 2);
-    ctx.clip();
-    const imgW = _photoImg.naturalWidth;
-    const imgH = _photoImg.naturalHeight;
-    const scale = _photoScale;
-    const dx = 50 + _photoOffsetX - (imgW * scale) / 2;
-    const dy = 50 + _photoOffsetY - (imgH * scale) / 2;
-    ctx.drawImage(_photoImg, dx, dy, imgW * scale, imgH * scale);
-    // FIX 3: Keep quality high but cap at 1MB
-    let quality = 0.92;
-    let dataUrl = canvas.toDataURL('image/jpeg', quality);
-    // Reduce quality until under 1MB (1048576 bytes ~ 786432 base64 chars)
-    while (dataUrl.length > 786432 && quality > 0.5) {
-      quality -= 0.05;
-      dataUrl = canvas.toDataURL('image/jpeg', quality);
-    }
-    _registrationData.photoUrl = dataUrl;
+    const dataUrl = _cropCircle(_photoImg, _photoScale, _photoOffsetX, _photoOffsetY);
+    if (dataUrl) _registrationData.photoUrl = dataUrl;
   } catch(e) { console.warn('Photo crop error:', e); }
 }
 
@@ -4242,6 +4386,268 @@ function clearPhoto() {
   if (input) input.value = '';
 }
 
+// ============================================================
+// MY PROFILE — CHANGING THE PHOTO
+// ============================================================
+// Savio's protocol, 2026-10-10, in his words: a photo uploaded on the
+// Registration page shows on the Bella app AND in My Profile; a photo changed
+// in My Profile shows on the Bella app AND on the Registration page.
+//
+// So there is exactly ONE photo and exactly one place it is written:
+//   b_registered_user.photoUrl   on this device
+//   Users!I                      on the sheet, via /update-profile
+// Everything on screen is a VIEW of that. _applyPhotoEverywhere is the only
+// function allowed to change it, which is what keeps the three screens in step
+// instead of each remembering its own copy.
+//
+// The editor below has its own element ids (pp-*) on purpose. The registration
+// cropper is bound to reg-* ids that still exist in the DOM behind the gate, and
+// two elements sharing an id would break BOTH screens. The crop MATHS is shared
+// (_cropCircle) -- only the chrome around it is separate.
+
+let _ppImg = null, _ppScale = 1, _ppOffX = 0, _ppOffY = 0;
+let _ppDrag = false, _ppStartX = 0, _ppStartY = 0;
+
+// The single writer. Device first, then the screens, then the sheet.
+async function _applyPhotoEverywhere(dataUrl, msgEl) {
+  // 1. The device. `photoLocked` is what stops a later Google sign-in putting
+  //    the Gmail picture back over a photo the person chose themselves.
+  let pk = '';
+  try {
+    const d = JSON.parse(localStorage.getItem('b_registered_user') || 'null') || {};
+    d.photoUrl = dataUrl || '';
+    d.photoLocked = dataUrl ? true : false;
+    localStorage.setItem('b_registered_user', JSON.stringify(d));
+    pk = d.profileKey || '';
+  } catch(e) {}
+
+  // 2. The app, beside the name above "Not you?" — the slot Savio pointed at.
+  try {
+    const sbAv = document.getElementById('sb-av');
+    if (sbAv) {
+      if (dataUrl) {
+        sbAv.innerHTML = '<img src="' + dataUrl + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+        sbAv.style.padding = '0';
+        sbAv.style.overflow = 'hidden';
+      } else {
+        const d2 = _myProfileData();
+        sbAv.innerHTML = '';
+        sbAv.textContent = String(d2.fullName || d2.preferredName || '?').substring(0, 2).toUpperCase();
+        sbAv.style.padding = '';
+      }
+    }
+  } catch(e) {}
+
+  // 3. The circle in the My Profile header, in place — no reload, so he sees it
+  //    change where he changed it.
+  try { _ppRenderSlot(dataUrl); } catch(e) {}
+
+  // 4. The Registration page preview, if that markup is still on screen. This is
+  //    the third leg of his protocol and it costs two lines.
+  try {
+    const gp = document.getElementById('gate-google-photo');
+    if (gp && dataUrl) { gp.src = dataUrl; gp.style.display = 'block'; }
+    if (typeof _registrationData === 'object' && _registrationData) {
+      _registrationData.photoUrl = dataUrl || '';
+    }
+  } catch(e) {}
+
+  // 5. The sheet. Last, because the four steps above must stand even if the
+  //    network is down — and because this is the only one that can fail.
+  if (msgEl) { msgEl.style.color = '#5A6B8A'; msgEl.textContent = 'Saving your photo…'; }
+  try {
+    if (dataUrl && dataUrl.length > PHOTO_MAX_CHARS) {
+      throw new Error('That photo is too large to store. Please try a different one.');
+    }
+    // ── WHY profileKey IS SENT ──
+    // /update-profile answers 400 "profileKey is required when acting as the
+    // owner" to an ADMIN who sends none. Savio IS the admin, so without this he
+    // would be the ONE person who cannot change his own photo — and he is the
+    // one most likely to test it. For everybody else the backend resolves the
+    // row from the verified token and ignores this field entirely, so sending
+    // it is harmless for them and necessary for him.
+    const body = { updates: { photo: dataUrl || '' } };
+    const key = pk || currentProfileKey || '';
+    if (key) body.profileKey = key;
+    const r = await bfetch(BACKEND + '/update-profile', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    if (msgEl) {
+      msgEl.style.color = '#1C6446';
+      msgEl.textContent = dataUrl ? 'Saved. That is you everywhere now.' : 'Photo removed.';
+    }
+    return true;
+  } catch(e) {
+    // Honest about what happened: the picture IS on this device and on screen,
+    // it is the sheet copy that did not land, so it will not follow them to
+    // another device yet. Saying "saved" here would be a lie.
+    if (msgEl) {
+      msgEl.style.color = '#A32B22';
+      msgEl.textContent = 'Changed on this device, but it did not reach Bella: ' +
+        ((e && e.message) ? e.message : 'please try again') + '.';
+    }
+    return false;
+  }
+}
+
+// Draw whatever the current photo is into the My Profile header slot.
+function _ppRenderSlot(dataUrl) {
+  const wrap = document.getElementById('pp-img-wrap');
+  if (!wrap) return;
+  const d = _myProfileData();
+  const url = (dataUrl === undefined) ? (d.photoUrl || '') : (dataUrl || '');
+  const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  if (url) {
+    wrap.innerHTML = '<img src="' + esc(url) + '" alt="" referrerpolicy="no-referrer" ' +
+      'style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid rgba(245,230,200,0.35);display:block">';
+  } else {
+    wrap.innerHTML = '<div style="width:72px;height:72px;border-radius:50%;background:#D4AF37;' +
+      'display:flex;align-items:center;justify-content:center;font-family:\'Cormorant Garamond\',serif;' +
+      'font-size:30px;font-weight:600;color:#0B2545">' +
+      esc(String(d.preferredName||d.fullName||'?').trim().charAt(0).toUpperCase()) + '</div>';
+  }
+}
+
+function ppPick(input) {
+  if (!input || !input.files || !input.files[0]) return;
+  const file = input.files[0];
+  // Same 5MB gate as registration. The cropper makes the SAVED file tiny
+  // whatever comes in; this is only about not choking the browser on a RAW
+  // 40-megapixel photo before it gets there.
+  if (file.size > 5 * 1024 * 1024) {
+    ppClose();
+    const m = document.getElementById('pp-msg');
+    if (m) { m.style.color = '#A32B22'; m.textContent = 'That photo is over 5MB. Please choose a smaller one.'; }
+    input.value = '';
+    return;
+  }
+  if (!/^image\//.test(file.type || '')) {
+    const m = document.getElementById('pp-msg');
+    if (m) { m.style.color = '#A32B22'; m.textContent = 'That is not an image file.'; }
+    input.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) { ppOpenEditor(e.target.result); input.value = ''; };
+  reader.onerror = function() {
+    const m = document.getElementById('pp-msg');
+    if (m) { m.style.color = '#A32B22'; m.textContent = 'That file could not be read. Please try another.'; }
+    input.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function ppOpenEditor(src) {
+  ppClose();
+  const box = document.createElement('div');
+  box.id = 'pp-editor';
+  // 530 sits above the My Profile modal (520) so it is never half-hidden.
+  box.style.cssText = 'position:fixed;inset:0;background:rgba(11,37,69,0.88);backdrop-filter:blur(10px);' +
+    'display:flex;align-items:center;justify-content:center;z-index:530;padding:16px;box-sizing:border-box';
+  box.innerHTML =
+    '<div style="background:#0B2545;border:1px solid rgba(212,175,55,0.35);border-radius:20px;padding:22px 24px;' +
+         'width:300px;max-width:92vw;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,0.5)">' +
+      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:18px;font-weight:600;color:#F5E6C8;margin-bottom:4px">Your photo</div>' +
+      '<div style="font-size:11px;color:rgba(245,230,200,0.6);line-height:1.6;margin-bottom:16px">Drag it to move. Use + and − to zoom.</div>' +
+      '<div id="pp-crop" style="position:relative;width:100px;height:100px;margin:0 auto;border-radius:50%;' +
+           'overflow:hidden;border:2px dashed rgba(212,175,55,0.8);cursor:grab;touch-action:none;background:#071a33"></div>' +
+      '<div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px">' +
+        '<button onclick="ppZoom(-0.1)" title="Zoom out" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(212,175,55,0.4);background:transparent;color:#D4AF37;font-size:16px;cursor:pointer;line-height:1">−</button>' +
+        '<button onclick="ppCentre()" title="Centre" style="height:30px;padding:0 12px;border-radius:15px;border:1px solid rgba(212,175,55,0.4);background:transparent;color:#D4AF37;font-size:11px;cursor:pointer">Centre</button>' +
+        '<button onclick="ppZoom(0.1)" title="Zoom in" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(212,175,55,0.4);background:transparent;color:#D4AF37;font-size:16px;cursor:pointer;line-height:1">+</button>' +
+      '</div>' +
+      '<button id="pp-use" onclick="ppSave()" style="width:100%;margin-top:18px;padding:12px;border-radius:12px;border:none;' +
+           'background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Use this photo</button>' +
+      '<button onclick="ppClose()" style="width:100%;margin-top:8px;padding:11px;border-radius:12px;border:1px solid rgba(245,230,200,0.25);' +
+           'background:transparent;color:rgba(245,230,200,0.8);font-size:13px;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Cancel</button>' +
+    '</div>';
+  document.body.appendChild(box);
+
+  const crop = document.getElementById('pp-crop');
+  _ppImg = document.createElement('img');
+  _ppImg.id = 'pp-editor-img';
+  _ppImg.src = src;
+  // 100px + object-fit:cover is what _cropCircle reproduces. If this styling
+  // ever changes, the cropper's `cover` maths must change with it.
+  _ppImg.style.cssText = 'position:absolute;top:50%;left:50%;width:100px;height:100px;object-fit:cover;' +
+    'max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:auto';
+  _ppScale = 1; _ppOffX = 0; _ppOffY = 0;
+  _ppImg.addEventListener('mousedown', ppDragStart);
+  _ppImg.addEventListener('touchstart', ppDragStartTouch, {passive:true});
+  crop.appendChild(_ppImg);
+  ppTransform();
+}
+
+function ppTransform() {
+  if (!_ppImg) return;
+  _ppImg.style.transform = 'translate(calc(-50% + ' + _ppOffX + 'px), calc(-50% + ' + _ppOffY + 'px)) scale(' + _ppScale + ')';
+}
+function ppZoom(d) { _ppScale = Math.max(0.5, Math.min(3, _ppScale + d)); ppTransform(); }
+function ppCentre() { _ppOffX = 0; _ppOffY = 0; _ppScale = 1; ppTransform(); }
+function ppDragStart(e) {
+  e.preventDefault();
+  _ppDrag = true; _ppStartX = e.clientX - _ppOffX; _ppStartY = e.clientY - _ppOffY;
+  document.addEventListener('mousemove', ppDragMove);
+  document.addEventListener('mouseup', ppDragEnd);
+}
+function ppDragStartTouch(e) {
+  _ppDrag = true;
+  _ppStartX = e.touches[0].clientX - _ppOffX; _ppStartY = e.touches[0].clientY - _ppOffY;
+  document.addEventListener('touchmove', ppDragMoveTouch, {passive:false});
+  document.addEventListener('touchend', ppDragEnd);
+}
+function ppDragMove(e) {
+  if (!_ppDrag) return;
+  _ppOffX = e.clientX - _ppStartX; _ppOffY = e.clientY - _ppStartY; ppTransform();
+}
+function ppDragMoveTouch(e) {
+  if (!_ppDrag) return;
+  e.preventDefault();
+  _ppOffX = e.touches[0].clientX - _ppStartX; _ppOffY = e.touches[0].clientY - _ppStartY; ppTransform();
+}
+function ppDragEnd() {
+  _ppDrag = false;
+  document.removeEventListener('mousemove', ppDragMove);
+  document.removeEventListener('mouseup', ppDragEnd);
+  document.removeEventListener('touchmove', ppDragMoveTouch);
+  document.removeEventListener('touchend', ppDragEnd);
+}
+function ppClose() {
+  const b = document.getElementById('pp-editor');
+  if (b) b.remove();
+  _ppImg = null; _ppDrag = false;
+  document.removeEventListener('mousemove', ppDragMove);
+  document.removeEventListener('mouseup', ppDragEnd);
+  document.removeEventListener('touchmove', ppDragMoveTouch);
+  document.removeEventListener('touchend', ppDragEnd);
+}
+
+async function ppSave() {
+  if (!_ppImg) { ppClose(); return; }
+  const btn = document.getElementById('pp-use');
+  const dataUrl = _cropCircle(_ppImg, _ppScale, _ppOffX, _ppOffY);
+  if (!dataUrl) {
+    const m = document.getElementById('pp-msg');
+    ppClose();
+    if (m) { m.style.color = '#A32B22'; m.textContent = 'That photo could not be made small enough to store. Please try another.'; }
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  ppClose();
+  await _applyPhotoEverywhere(dataUrl, document.getElementById('pp-msg'));
+}
+
+async function ppRemove() {
+  const msg = document.getElementById('pp-msg');
+  if (!(_myProfileData().photoUrl || '')) {
+    if (msg) { msg.style.color = '#5A6B8A'; msg.textContent = 'There is no photo to remove.'; }
+    return;
+  }
+  await _applyPhotoEverywhere('', msg);
+}
+
 // ── Photo resize handle functions ────────────────────────────────────
 let _resizing = false;
 let _resizeDir = '';
@@ -4288,27 +4694,14 @@ function showResizeHandles(show) {
   }
 }
 
-function previewPhoto(input) {
-  if (!input.files || !input.files[0]) return;
-  const file = input.files[0];
-  if (file.size > 5 * 1024 * 1024) {
-    alert('Photo must be under 5MB. Please choose a smaller image.');
-    input.value = '';
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const img = document.getElementById('reg-photo-img');
-    const initial = document.getElementById('reg-photo-initial');
-    if (img && initial) {
-      img.src = e.target.result;
-      img.style.display = 'block';
-      initial.style.display = 'none';
-    }
-    _registrationData.photoUrl = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
+// `previewPhoto` was DELETED on 2026-10-10. It had no caller -- the live input
+// is #reg-photo-input -> loadPhotoEditor -> the cropper above -- and it was the
+// unsafe version: it took the raw file's data URL with no resize at all, so a
+// 5MB photo became ~6.8MB of base64. That is 136x the 50,000-character limit of
+// the Google Sheets cell it would land in, and it would have silently truncated
+// the user's whole row in Users!I. It is not kept "just in case": leaving it
+// beside a NEW file input on My Profile is how it would eventually get wired up.
+// The elements it referenced (#reg-photo-img, #reg-photo-initial) do not exist.
 
 // ── OTP — ONE verifier per attempt, and the Google identity is KEPT ──
 //
@@ -4688,6 +5081,18 @@ async function completeRegistration() {
   // their id silently stopped matching the sheet and their own welcome email.
   let userId = '';
 
+  // ── A PHOTO THEY CHOSE THEMSELVES OUTLASTS THE GOOGLE ONE ──
+  // Third leg of Savio's protocol: a photo set in My Profile must also be the
+  // one the Registration page shows. `photoLocked` is set by
+  // _applyPhotoEverywhere, so a re-registration prefers their own picture over
+  // whatever Gmail happens to hold. Without this, signing in again silently
+  // replaced a chosen photo with the Google avatar and nothing said why.
+  if (!_registrationData.photoUrl) {
+    try {
+      const _prev = JSON.parse(localStorage.getItem('b_registered_user') || 'null') || {};
+      if (_prev.photoLocked && _prev.photoUrl) _registrationData.photoUrl = _prev.photoUrl;
+    } catch(e) {}
+  }
   // Ensure photo is captured — use Google photo as fallback
   const gPhotoEl = document.getElementById('gate-google-photo');
   const savedUser_photo = gPhotoEl && gPhotoEl.src && gPhotoEl.src.startsWith('http') ? gPhotoEl.src : '';
