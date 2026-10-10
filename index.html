@@ -3528,7 +3528,7 @@ function showNewUserGate() {
         <div style="font-size:12px;font-weight:600;color:#D4AF37;letter-spacing:.5px;margin-bottom:8px">VERIFY YOUR MOBILE</div>
         <div id="gate-otp-hint" style="font-size:12px;color:rgba(245,230,200,0.6);margin-bottom:16px;line-height:1.5"></div>
         <div style="position:relative;margin-bottom:10px">
-          <input id="gate-otp-input" type="tel" placeholder="Enter OTP" maxlength="6" style="width:100%;padding:14px 44px 14px 14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:22px;font-family:'BellaIndic','DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:10px;caret-color:#D4AF37" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'"
+          <input id="gate-otp-input" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="Enter OTP" maxlength="6" style="width:100%;padding:14px 44px 14px 14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:22px;font-family:'BellaIndic','DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:10px;caret-color:#D4AF37" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'"
           oninput="this.value=this.value.replace(/[^0-9]/g,'')">
           <button onclick="toggleOTPVisibility('gate-otp-input','otp-eye-new')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(245,230,200,0.5);font-size:16px;padding:4px" title="Show/Hide OTP"><span id="otp-eye-new">👁</span></button>
         </div>
@@ -3827,7 +3827,7 @@ function showReturningOTPGate(savedUser) {
       </div>
       <div id="recaptcha-container-returning" style="display:none"></div>
       <div style="position:relative;margin-bottom:10px">
-        <input id="gate-otp-returning" type="tel" placeholder="• • • • • •" maxlength="6"
+        <input id="gate-otp-returning" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="• • • • • •" maxlength="6"
           style="width:100%;padding:14px 44px 14px 14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:16px;font-family:'BellaIndic','DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:8px;caret-color:#D4AF37"
           onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'"
           oninput="this.value=this.value.replace(/[^0-9]/g,'')"
@@ -5215,13 +5215,33 @@ async function verifyReturningOTP(mobile) {
   }
 }
 
+// ── THE OTP IS HIDDEN BY DEFAULT ────────────────────────────────────────
+// Savio, 2026-10-10: "i cant hide my OTP code... when i type it should convert
+// to * for security reasons and towards the end you have that icon if you press
+// you get to see what you typed."
+// Both boxes were type="tel", which never masks, so the code sat in plain text
+// on screen for anyone stood behind you — and his own screenshots show exactly
+// that. They are type="password" now, and the eye reveals rather than hides.
+//
+// WHY NOT type="password" ALONE: on a phone that summons the full QWERTY
+// keyboard for a six-digit number. `inputmode="numeric"` with `pattern="[0-9]*"`
+// keeps the numeric keypad while the characters stay masked.
+// `autocomplete="one-time-code"` lets a real phone offer the code straight from
+// the SMS — no help to Savio, whose number is a Firebase TEST number that never
+// receives one, but it matters for everyone who joins after him.
+//
+// THE ICON SHOWS WHAT TAPPING WILL DO, which is the opposite of what this
+// function used to do: hidden shows an open eye ("show me"), visible shows the
+// covered eyes ("hide it"). Flipped deliberately — reading it as a status
+// indicator instead had the icon contradicting itself the moment the default
+// changed.
 function toggleOTPVisibility(inputId, eyeId){
   const inp = document.getElementById(inputId);
   const eye = document.getElementById(eyeId);
   if(!inp) return;
   if(inp.type === 'tel' || inp.type === 'password'){
     inp.type = inp.type === 'password' ? 'tel' : 'password';
-    if(eye) eye.textContent = inp.type === 'password' ? '🙈' : '👁';
+    if(eye) eye.textContent = inp.type === 'password' ? '👁' : '🙈';
   }
 }
 
