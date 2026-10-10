@@ -13214,6 +13214,14 @@ async function tlRun(){
       _tlMsg(_tlEsc(label)+' &mdash; I need that first.','err'); return;
     }
   }
+  /* A tool may state a condition the generic `need` check cannot: "at least
+     two files" is about COUNT, not presence. Runs before anything is built, so
+     nothing is sent and nothing is spent. */
+  if(t.check){
+    let problem=null;
+    try{ problem=t.check(); }catch(e){}
+    if(problem){ _tlMsg(_tlEsc(problem),'err'); return; }
+  }
   const body={};
   for(const f of t.fields){
     const [kind,key]=f;
@@ -13268,7 +13276,13 @@ async function tlRun(){
       return;
     }
 
-    const r=await bfetch(BACKEND+t.ep,{method:'POST',
+    /* `ep` may be a FUNCTION of the body. One tile can then route to the
+       endpoint that suits what was attached, instead of making the user pick
+       the right tile first -- which is how "Compare two documents" and
+       "Analyse several documents together" ended up as two tiles that sound
+       like the same thing. */
+    const _ep = (typeof t.ep==='function') ? t.ep(body) : t.ep;
+    const r=await bfetch(BACKEND+_ep,{method:'POST',
       headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!r.ok){
       let m='That did not work.';
@@ -13756,12 +13770,53 @@ const TOOLS=[
    fields:[['file','documentBase64','The source material',DOC_ACCEPT],
            ['sel','reportType','What kind of report',['summary','analysis','executive','technical','financial']],
            ['text','title','Title',''],['text','audience','Who will read it','']]},
-  {id:'compare',group:'read',also:['pdf'],label:'Compare two documents',ep:'/compare-docs',
-   note:'What changed, and what it means.',need:['doc1Base64','doc2Base64'],
-   mime:{doc1Base64:'mimeType1',doc2Base64:'mimeType2'},
-   fields:[['file','doc1Base64','The first one',DOC_ACCEPT],
-           ['file','doc2Base64','The second one',DOC_ACCEPT],
-           ['text','compareAspect','What to compare','e.g. the payment terms']]},
+  /* ── ONE SLOT, ANY NUMBER ────────────────────────────────────────────
+     Savio, 2026-10-10: "why do we have 2 slots cant we just have multiple
+     folders selected in the same slot and then compare like it does on the AI
+     platforms?"
+
+     He is right, and Bella could already do BOTH halves — they were just two
+     tiles that sounded like the same thing, so the limited one was the one he
+     found. They are genuinely different analyses, which is why both endpoints
+     stay:
+       · TWO documents -> /compare-docs, which returns `uniqueToDoc1` and
+         `uniqueToDoc2` alongside similarities and differences. That shape only
+         means anything for a pair: "unique to document 1" is nonsense across
+         five files.
+       · THREE OR MORE -> /multi-doc-analyse, which returns common themes,
+         correlations and CONTRADICTIONS across the whole set.
+     So the tile no longer asks him to know that. One slot takes as many files
+     as he likes and the right analysis is chosen from how many arrived. The
+     note says plainly what each count gets, so the behaviour is not a
+     surprise. `/compare-docs` is hard-limited to two by its own body shape and
+     is NOT being stretched to pretend otherwise. */
+  {id:'compare',group:'read',also:['pdf'],label:'Compare documents',
+   ep:function(b){ return b.files ? '/multi-doc-analyse' : '/compare-docs'; },
+   note:'Attach two and Bella sets them side by side. Attach more and she finds the themes, the correlations, and where they contradict each other.',
+   need:['files'],
+   go:'Compare them',working:'Reading them against each other…',
+   check:function(){
+     const n=((TL.files&&TL.files.files)||[]).length;
+     if(n===1) return 'One document on its own has nothing to be compared with — attach at least two.';
+     return null;
+   },
+   shape:function(b){
+     const got=(TL.files&&TL.files.files)||[];
+     const aspect=b.question||'';
+     delete b.files; delete b.question;
+     if(got.length===2){
+       /* A pair gets the side-by-side endpoint, which is the better answer for
+          two and the only one that can say what is unique to each. */
+       b.doc1Base64=got[0].b64; b.mimeType1=got[0].mime;
+       b.doc2Base64=got[1].b64; b.mimeType2=got[1].mime;
+       if(aspect) b.compareAspect=aspect;
+     }else{
+       b.files=got.map(function(f){ return {base64:f.b64,mimeType:f.mime,name:f.name}; });
+       if(aspect) b.question=aspect;
+     }
+   },
+   fields:[['files','files','The documents — attach two or more',DOC_ACCEPT],
+           ['text','question','Anything particular to compare','e.g. the payment terms']]},
   {id:'ocr',group:'read',label:'Read text in a picture',ep:'/ocr',
    note:'A photographed page, a receipt, a handwritten note.',need:['imageBase64'],
    mime:{imageBase64:'mimeType'},
@@ -13805,15 +13860,6 @@ const TOOLS=[
            ['text','audience','Who will see it','e.g. the board'],
            ['num','slideCount','Roughly how many slides',''],
            ['file','logoBase64','Your logo, if she should match your colours','.jpg,.jpeg,.png,.webp']]},
-  {id:'multidoc',group:'read',also:['pdf'],label:'Analyse several documents together',
-   ep:'/multi-doc-analyse',
-   note:'What they say as a set — the themes, the correlations, and where they contradict each other.',
-   need:['files'],
-   go:'Read them together',working:'Reading all of them together…',
-   shape:function(b){ _tlFilesAsObjects(b,'files'); },
-   fields:[['files','files','The documents — attach as many as you like',DOC_ACCEPT],
-           ['mic','question','Anything particular you want to know?','']]},
-
   /* ── DOC EDIT & CONVERT ────────────────────────────────────────────── */
   {id:'restructure',prefill:{title:'restructured'},group:'docedit',label:'Rewrite or convert a document',ep:'/restructure-doc',
    note:'Reshape it, or turn it into another format. You get the file back.',
