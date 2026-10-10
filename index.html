@@ -2642,6 +2642,11 @@ async function loadUserMemory(profileKey,addressedName){
           try{ updateTopbarUser(userMemory.addressedName || addressedName, d.user.userId); }catch(e){}
         }
       }
+      // The photo follows the record too, for exactly the reason the user id
+      // does above: it is stored once and read on every device. Before this,
+      // Users!I was write-only and a second device showed an empty circle.
+      try { if (d.user) _adoptPhotoFromRecord(d.user.photoUrl); } catch(e) {}
+
       // ── BACKFILL A MISSING USER ID ──
       // `allocateUserId` was sent from exactly ONE place: completeRegistration().
       // A RETURNING login never asked for one, so anybody whose row lost its id
@@ -4408,6 +4413,58 @@ function clearPhoto() {
 let _ppImg = null, _ppScale = 1, _ppOffX = 0, _ppOffY = 0;
 let _ppDrag = false, _ppStartX = 0, _ppStartY = 0;
 
+// Paint the photo everywhere it is shown. Touches NO storage and calls NO
+// backend -- it is pure display, so both the saver below and the sign-in path
+// can use it without one pretending to be the other.
+function _paintPhoto(dataUrl) {
+  // The app, beside the name above "Not you?" — the slot Savio pointed at.
+  try {
+    const sbAv = document.getElementById('sb-av');
+    if (sbAv) {
+      if (dataUrl) {
+        sbAv.innerHTML = '<img src="' + dataUrl + '" alt="" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+        sbAv.style.padding = '0';
+        sbAv.style.overflow = 'hidden';
+      } else {
+        const d2 = _myProfileData();
+        sbAv.innerHTML = '';
+        sbAv.textContent = String(d2.fullName || d2.preferredName || '?').substring(0, 2).toUpperCase();
+        sbAv.style.padding = '';
+      }
+    }
+  } catch(e) {}
+  // The circle in the My Profile header, in place — no reload needed.
+  try { _ppRenderSlot(dataUrl); } catch(e) {}
+  // The Registration page preview, if that markup is still on screen.
+  try {
+    const gp = document.getElementById('gate-google-photo');
+    if (gp && dataUrl) { gp.src = dataUrl; gp.style.display = 'block'; }
+    if (typeof _registrationData === 'object' && _registrationData) {
+      _registrationData.photoUrl = dataUrl || '';
+    }
+  } catch(e) {}
+}
+
+// ── THE PHOTO FOLLOWS THE ACCOUNT, NOT THE BROWSER ──
+// Savio, 2026-10-10: he set his photo on the laptop, cleared his phone's cache,
+// signed in there and was offered an empty circle. "Isn't the account linked?"
+// It is — the photo was written to his record and never read back out of it.
+// Called from loadUserMemory with whatever /memory-read returns, so a photo set
+// on ANY device shows on every other one at the next sign-in.
+// Writes storage and repaints, but never calls the backend: this is Bella
+// catching the device up with the record, not the device changing it.
+function _adoptPhotoFromRecord(photoUrl) {
+  try {
+    const d = JSON.parse(localStorage.getItem('b_registered_user') || 'null') || {};
+    const incoming = String(photoUrl || '');
+    if (!incoming || incoming === d.photoUrl) return false;
+    d.photoUrl = incoming;
+    localStorage.setItem('b_registered_user', JSON.stringify(d));
+    _paintPhoto(incoming);
+    return true;
+  } catch(e) { return false; }
+}
+
 // The single writer. Device first, then the screens, then the sheet.
 async function _applyPhotoEverywhere(dataUrl, msgEl) {
   // 1. The device. `photoLocked` is what stops a later Google sign-in putting
@@ -4421,36 +4478,9 @@ async function _applyPhotoEverywhere(dataUrl, msgEl) {
     pk = d.profileKey || '';
   } catch(e) {}
 
-  // 2. The app, beside the name above "Not you?" — the slot Savio pointed at.
-  try {
-    const sbAv = document.getElementById('sb-av');
-    if (sbAv) {
-      if (dataUrl) {
-        sbAv.innerHTML = '<img src="' + dataUrl + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
-        sbAv.style.padding = '0';
-        sbAv.style.overflow = 'hidden';
-      } else {
-        const d2 = _myProfileData();
-        sbAv.innerHTML = '';
-        sbAv.textContent = String(d2.fullName || d2.preferredName || '?').substring(0, 2).toUpperCase();
-        sbAv.style.padding = '';
-      }
-    }
-  } catch(e) {}
-
-  // 3. The circle in the My Profile header, in place — no reload, so he sees it
-  //    change where he changed it.
-  try { _ppRenderSlot(dataUrl); } catch(e) {}
-
-  // 4. The Registration page preview, if that markup is still on screen. This is
-  //    the third leg of his protocol and it costs two lines.
-  try {
-    const gp = document.getElementById('gate-google-photo');
-    if (gp && dataUrl) { gp.src = dataUrl; gp.style.display = 'block'; }
-    if (typeof _registrationData === 'object' && _registrationData) {
-      _registrationData.photoUrl = dataUrl || '';
-    }
-  } catch(e) {}
+  // 2-4. Every place the photo is shown. Split out so the LOGIN path can repaint
+  //      from the record without pretending to save anything.
+  _paintPhoto(dataUrl);
 
   // 5. The sheet. Last, because the four steps above must stand even if the
   //    network is down — and because this is the only one that can fail.
@@ -4476,7 +4506,14 @@ async function _applyPhotoEverywhere(dataUrl, msgEl) {
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
     if (msgEl) {
       msgEl.style.color = '#1C6446';
-      msgEl.textContent = dataUrl ? 'Saved. That is you everywhere now.' : 'Photo removed.';
+      // Wording matters here. The old line said "That is you everywhere now."
+      // while the photo was write-only, so it promised something that was not
+      // true until the record could be read back. It says what it has actually
+      // done: saved to the account, and it appears on another device when that
+      // device next signs in.
+      msgEl.textContent = dataUrl
+        ? 'Saved to your account. It will appear on your other devices next time you open Bella there.'
+        : 'Photo removed from your account.';
     }
     return true;
   } catch(e) {
