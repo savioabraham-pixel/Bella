@@ -3530,7 +3530,7 @@ function showNewUserGate() {
         <div style="position:relative;margin-bottom:10px">
           <input id="gate-otp-input" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="Enter OTP" maxlength="6" style="width:100%;padding:14px 44px 14px 14px;border-radius:12px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:22px;font-family:'BellaIndic','DM Sans',sans-serif;box-sizing:border-box;outline:none;text-align:center;letter-spacing:10px;caret-color:#D4AF37" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'"
           oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-          <button onclick="toggleOTPVisibility('gate-otp-input','otp-eye-new')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(245,230,200,0.5);font-size:16px;padding:4px" title="Show/Hide OTP"><span id="otp-eye-new">👁</span></button>
+          <button onclick="toggleOTPVisibility('gate-otp-input','otp-eye-new')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(245,230,200,0.5);font-size:16px;padding:4px" title="Show/Hide OTP"><span id="otp-eye-new" style="display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span></button>
         </div>
         <div id="gate-error-3" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-top:8px;text-align:center"></div>
         <div id="recaptcha-container" style="display:none"></div>
@@ -3832,7 +3832,7 @@ function showReturningOTPGate(savedUser) {
           onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'"
           oninput="this.value=this.value.replace(/[^0-9]/g,'')"
           >
-        <button onclick="toggleOTPVisibility('gate-otp-returning','otp-eye-ret')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(245,230,200,0.5);font-size:16px;padding:4px" title="Show/Hide OTP"><span id="otp-eye-ret">👁</span></button>
+        <button onclick="toggleOTPVisibility('gate-otp-returning','otp-eye-ret')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(245,230,200,0.5);font-size:16px;padding:4px" title="Show/Hide OTP"><span id="otp-eye-ret" style="display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span></button>
       </div>
       <div id="gate-otp-returning-error" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-bottom:10px;text-align:center"></div>
       <button onclick="verifyReturningOTP('${savedUser.mobile}')" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif">
@@ -5215,6 +5215,24 @@ async function verifyReturningOTP(mobile) {
   }
 }
 
+// ── WHY THESE ARE DRAWN ICONS AND NOT EMOJI ────────────────────────────
+// Savio, 2026-10-10: "the numbers do convert to * but the eye or the masking
+// icon is still missing." It was not missing. It was INVISIBLE.
+// The button carried the 👁 emoji styled color:rgba(245,230,200,0.5) — but an
+// emoji is a colour glyph and ignores `color` entirely, so it rendered as its
+// own dark eye on Bella's dark navy input. MEASURED off the screenshot:
+// glyph rgb(47,47,61) against box rgb(24,49,77) — a contrast ratio of
+// **1.01:1**, where 3:1 is the floor for an icon. Invisible, not absent.
+// Worse on Android, where a missing emoji font draws nothing at all.
+//
+// An inline SVG with stroke="#D4AF37" is a shape Bella controls, so it is gold
+// on navy wherever it renders and cannot be dropped for want of a font.
+// HARDCODED #D4AF37, never var(--gold): the brand tokens INVERT under
+// body.dark, which would paint a navy icon on a navy box — the identical
+// failure in a different disguise. Same trap as the sidebar toggle.
+const _EYE_SHOW = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+const _EYE_HIDE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
 // ── THE OTP IS HIDDEN BY DEFAULT ────────────────────────────────────────
 // Savio, 2026-10-10: "i cant hide my OTP code... when i type it should convert
 // to * for security reasons and towards the end you have that icon if you press
@@ -5241,7 +5259,7 @@ function toggleOTPVisibility(inputId, eyeId){
   if(!inp) return;
   if(inp.type === 'tel' || inp.type === 'password'){
     inp.type = inp.type === 'password' ? 'tel' : 'password';
-    if(eye) eye.textContent = inp.type === 'password' ? '👁' : '🙈';
+    if(eye) eye.innerHTML = inp.type === 'password' ? _EYE_SHOW : _EYE_HIDE;
   }
 }
 
