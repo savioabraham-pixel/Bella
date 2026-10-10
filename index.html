@@ -4943,7 +4943,59 @@ async function _reVerifier(containerId){
 // the condition is visible rather than silent.
 let _legacyPhoneUser = false;
 
+// ── "THAT CODE WAS NEVER REQUESTED" WAS A RACE, NOT A BAD CODE ──────────
+// Savio, 2026-10-10, with two screenshots eight seconds apart: first press
+// "That code was never requested — press Resend to get a new one.", second
+// press "Verifying..." and straight in. He had been working around it for days
+// by pressing twice.
+//
+// It is not reCAPTCHA failing. The OTP screen appears and invites you to type
+// while sendOTP is STILL RUNNING -- and it is slow, because Firebase does not
+// fetch grecaptcha until that moment. MEASURED on the live site at a 390px
+// viewport: 1,127-1,427ms for the first render on a FAST desktop connection.
+// His screenshots are on LTE, where it is several times that.
+// He knows his test code by heart, so he types six digits and presses Verify
+// inside that window. _confirmationResult is still null, so verifyOTP reported
+// a code that was "never requested" -- literally true, useless as a message,
+// and it told him to press Resend, which RESTARTS the very wait that caused it.
+//
+// Three faults, all mine: the hint said "will be sent" and never updated; the
+// Verify button was live before there was anything to verify; and the error
+// blamed his code. This fixes all three. The button is held while the request
+// is in flight, the hint says what is actually happening, and a press during
+// that window WAITS for the request instead of scolding him.
+//
+// It would have hit every member, and hardest on the slowest connection.
+let _otpSendInFlight = null;
+
+function _otpSetSending(sending, mobile, ok) {
+  const btn  = document.querySelector('#gate-step-3 button');
+  const hint = document.getElementById('gate-otp-hint');
+  if (btn) {
+    btn.disabled = !!sending;
+    btn.textContent = sending ? 'Sending your code…' : 'Verify & Enter Bella';
+    btn.style.opacity = sending ? '0.65' : '';
+  }
+  if (hint) {
+    if (sending) hint.textContent = 'Asking for your code now — this can take a few seconds on mobile data.';
+    else if (ok) hint.textContent = 'Code sent to ' + (mobile || 'your mobile') + '. Enter it below.';
+  }
+}
+
 async function sendOTP(mobile) {
+  const p = _sendOTPCore(mobile);
+  _otpSendInFlight = p;
+  _otpSetSending(true, mobile);
+  let ok = false;
+  try { ok = await p; }
+  finally {
+    if (_otpSendInFlight === p) _otpSendInFlight = null;
+    _otpSetSending(false, mobile, ok);
+  }
+  return ok;
+}
+
+async function _sendOTPCore(mobile) {
   const errEl = document.getElementById('gate-error-3');
   if (errEl) errEl.textContent = '';
   // Spend the old one before building the next, so a half-finished attempt
@@ -5044,7 +5096,23 @@ let _returningUserData = null;
 // because the old code never linked one. Those users are linked on their next
 // sign-in instead -- so this is correct for the existing accounts and the new
 // ones without a migration step.
+// The returning-member gate races in exactly the same way, for exactly the same
+// reason. Fixed the same way rather than left for someone to rediscover.
+let _otpReturningInFlight = null;
+
 async function sendReturningOTP(mobile, savedUser) {
+  const btn = document.querySelector('#bella-gate button[onclick*="verifyReturningOTP"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending your code…'; btn.style.opacity = '0.65'; }
+  const p = _sendReturningOTPCore(mobile, savedUser);
+  _otpReturningInFlight = p;
+  try { return await p; }
+  finally {
+    if (_otpReturningInFlight === p) _otpReturningInFlight = null;
+    if (btn) { btn.disabled = false; btn.textContent = 'Verify & Enter Bella'; btn.style.opacity = ''; }
+  }
+}
+
+async function _sendReturningOTPCore(mobile, savedUser) {
   _returningUserData = savedUser;
   const errEl = document.getElementById('gate-otp-returning-error');
   if (errEl) errEl.textContent = '';
@@ -5103,6 +5171,11 @@ async function verifyReturningOTP(mobile) {
   if (errEl) errEl.textContent = '';
   if (btn) { btn.textContent = 'Verifying...'; btn.disabled = true; }
   try {
+    if (!_returningConfirmationResult && _otpReturningInFlight) {
+      if (btn) btn.textContent = 'Sending your code…';
+      try { await _otpReturningInFlight; } catch (e) {}
+      if (btn) btn.textContent = 'Verifying...';
+    }
     if (!_returningConfirmationResult) throw new Error('No OTP session');
     await _returningConfirmationResult.confirm(otp);
     // OTP verified — reload full userData from localStorage (set during original registration)
@@ -5167,7 +5240,19 @@ async function verifyOTP() {
   // that was never the problem. The two are separated here, and the real
   // Firebase error code is shown rather than one catch-all sentence. Same fault,
   // and same fix, as the sending path earlier on 2026-10-07.
+  // The code may simply not have been ASKED FOR yet — see the note above
+  // sendOTP. Wait for the request rather than telling him his code is wrong.
+  if (!_confirmationResult && _otpSendInFlight) {
+    errEl.textContent = '';
+    btn.textContent = 'Sending your code…';
+    btn.disabled = true;
+    try { await _otpSendInFlight; } catch (e) {}
+    btn.textContent = 'Verifying...';
+    btn.disabled = true;
+  }
   if (!_confirmationResult) {
+    // Now it is genuinely true: nothing was ever requested and nothing is on
+    // its way, so Resend really is the right thing to press.
     errEl.textContent = 'That code was never requested — press Resend to get a new one.';
     btn.textContent = 'Verify & Enter Bella';
     btn.disabled = false;
