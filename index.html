@@ -6351,6 +6351,12 @@ async function _adminLoadCost(){
     const days = Array.isArray(rec.perDay) ? rec.perDay.slice().reverse() : [];
     let html = '';
 
+    // THE REAL BILL FIRST. Everything below it is Gemini tokens Bella counted
+    // herself; this is Google's own figure for the whole project, sent by the
+    // budget several times a day and already in rupees. It goes at the top
+    // because it is the number he actually asked for — the rest is detail.
+    html += _adminBilling(d.billing);
+
     if(recOk){
       html += '<div style="text-align:center;padding:14px 8px;border:1px solid rgba(212,175,55,0.35);border-radius:12px;margin-bottom:14px">' +
         '<div style="color:rgba(245,230,200,0.5);font-size:11px;text-transform:uppercase;letter-spacing:0.06em">Gemini, recorded so far</div>' +
@@ -6399,8 +6405,8 @@ async function _adminLoadCost(){
     // believe that is his bill. It is not: this counts Gemini tokens the
     // backend saw itself, starting the day the Usage tab was first written.
     html += _adminNote(
-      '<b style="color:#F5E6C8">What this number is, and is not.</b><br>' +
-      'It counts <b>Gemini only</b>, and only from ' + _adminEsc(_adminWhen((days[days.length-1]||{}).date || d.since)) +
+      '<b style="color:#F5E6C8">What the numbers below the top figure are.</b><br>' +
+      'They count <b>Gemini only</b>, and only from ' + _adminEsc(_adminWhen((days[days.length-1]||{}).date || d.since)) +
       ', when Bella first started saving these figures. It does not include ElevenLabs voice, the spreadsheet, Cloud Run, ' +
       'or any Gemini call made before that. Your measured all-in running cost is around ₹100 a month, of which Gemini is about 95%. ' +
       'Converted at <b>' + _adminEsc((d.rateUsed||{}).inrPerUsd) + '</b> to the dollar. ' +
@@ -6409,6 +6415,78 @@ async function _adminLoadCost(){
 
     b.innerHTML = html;
   }catch(e){ _adminFail(e.message); }
+}
+
+// Google's real figure, or an honest account of why it is not here yet.
+// Three states, all of them real: the backend may predate this (undefined),
+// the wiring may not have delivered anything yet (available:false), or we have
+// it. The middle state is the one worth being clear about — it is what he will
+// see between the deploy and the first notification arriving.
+function _adminBilling(b){
+  if(!b){
+    return '<div style="padding:10px 12px;border:1px dashed rgba(212,175,55,0.35);border-radius:10px;margin-bottom:14px;color:rgba(245,230,200,0.6);font-size:12px;line-height:1.65">' +
+      'Bella is not yet connected to Google\'s billing figure, so the only numbers here are the Gemini calls she counted herself.</div>';
+  }
+  if(!b.available || !Array.isArray(b.budgets) || !b.budgets.length){
+    return '<div style="padding:10px 12px;border:1px dashed rgba(255,167,38,0.5);border-radius:10px;margin-bottom:14px;color:rgba(245,230,200,0.7);font-size:12px;line-height:1.65">' +
+      '<b style="color:#FFA726">Waiting for the first figure from Google.</b><br>' +
+      _adminEsc(b.why || '') + ' Google sends it a few times a day, and the first one can take several hours to arrive.</div>';
+  }
+  const money = function(v, cur){
+    return (String(cur||'').toUpperCase() === 'INR') ? _adminRupees(v)
+         : (_adminEsc(String(cur||'').toUpperCase()) + ' ' + _adminNum(v));
+  };
+  const pctOf = function(x){
+    return (x.budgetAmount && isFinite(x.budgetAmount) && x.budgetAmount > 0)
+      ? Math.min(100, Math.round((Number(x.costAmount)/Number(x.budgetAmount))*100)) : null;
+  };
+  const colourFor = function(p){ return p>=90 ? '#EF5350' : (p>=70 ? '#FFA726' : '#66BB6A'); };
+  const barFor = function(x, thick){
+    const p = pctOf(x);
+    if(p === null) return '';
+    return '<div style="margin-top:' + (thick?10:6) + 'px">' +
+why_bar_inner(p, thick) +
+      '<div style="color:rgba(245,230,200,0.55);font-size:11.5px;margin-top:5px">' + p +
+        '% of a ' + money(x.budgetAmount, x.currency) + ' monthly budget</div></div>';
+  };
+  function why_bar_inner(p, thick){
+    return '<div style="height:' + (thick?7:5) + 'px;border-radius:4px;background:rgba(245,230,200,0.14);overflow:hidden">' +
+      '<div style="height:100%;width:' + p + '%;background:' + colourFor(p) + '"></div></div>';
+  }
+
+  // The widest-scoped budget is the headline. Everything else is listed under
+  // it on its own terms.
+  const head = b.budgets[0], rest = b.budgets.slice(1);
+  let html = '<div style="padding:16px 12px;border:1px solid rgba(212,175,55,0.45);border-radius:12px;margin-bottom:14px;text-align:center">' +
+      '<div style="color:rgba(245,230,200,0.5);font-size:11px;text-transform:uppercase;letter-spacing:0.06em">What Bella has cost this month</div>' +
+      '<div style="color:#D4AF37;font-family:\'Cormorant Garamond\',serif;font-size:44px;line-height:1.1">' +
+        money(head.costAmount, head.currency) + '</div>' +
+      '<div style="color:rgba(245,230,200,0.6);font-size:12px">' + _adminEsc(head.name || 'your budget') + '</div>' +
+      barFor(head, true) +
+      '<div style="color:rgba(245,230,200,0.42);font-size:11px;margin-top:9px;line-height:1.6">Billing period from ' +
+        _adminEsc(_adminWhen((head.periodStart||'').slice(0,10))) + ' · last updated ' + _adminEsc(_adminWhen(head.asAt)) + '<br>' +
+        'Google\'s own figure. Estimated until the invoice is finalised.</div>' +
+    '</div>';
+
+  if(rest.length){
+    html += '<div style="color:#F5E6C8;font-size:15px;margin:16px 0 6px">Where it is going</div>';
+    html += rest.map(function(x){
+      return '<div style="padding:8px 0;border-bottom:1px solid rgba(245,230,200,0.08)">' +
+        '<div style="display:flex;flex-wrap:wrap;gap:4px 10px">' +
+          '<span style="color:#F5E6C8;word-break:break-word">' + _adminEsc(x.name) + '</span>' +
+          '<span style="color:#D4AF37;margin-left:auto">' + money(x.costAmount, x.currency) + '</span>' +
+        '</div>' + barFor(x, false) + '</div>';
+    }).join('');
+    // NEVER sum these. An all-up budget and a Gemini-only budget overlap, so a
+    // total would count the same rupee twice. Saying so is the honest move.
+    html += '<div style="color:rgba(245,230,200,0.5);font-size:11.5px;margin-top:8px;line-height:1.6">' +
+      'These are separate budgets and they can cover the same spending, so they are deliberately <b>not added up</b>. ' +
+      'Each is measured against its own limit.</div>';
+  } else {
+    html += '<div style="color:rgba(245,230,200,0.5);font-size:11.5px;margin:-6px 0 14px;line-height:1.6;text-align:center">' +
+      'Want a breakdown? Add a budget in Google Cloud filtered to one service and point it at the same topic — it appears here on its own. Budgets are free.</div>';
+  }
+  return html;
 }
 
 // ── AUDIT, CONSENTS, DELETIONS — all read from their tab ─────────────────
