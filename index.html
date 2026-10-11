@@ -2022,6 +2022,10 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
       </div>
       <div class="menu-items" id="sec-admin">
         <div class="menu-item" onclick="openAdminPanel();closeUserMenu()">Manage Accounts</div>
+        <div class="menu-item" onclick="openAdminScreen('cost');closeUserMenu()">What Bella Costs</div>
+        <div class="menu-item" onclick="openAdminScreen('audit');closeUserMenu()">Audit Log</div>
+        <div class="menu-item" onclick="openAdminScreen('consents');closeUserMenu()">Consents</div>
+        <div class="menu-item" onclick="openAdminScreen('deletions');closeUserMenu()">Deletions</div>
       </div>
     </div>
     <!-- Sign Out -->
@@ -6056,6 +6060,322 @@ function adminAct(email, action){
       showAuthAlert(words[0] + ' done for ' + email + '.' + (d.deleted!==undefined ? ' ' + d.deleted + ' row(s) archived and removed.' : ''));
     }catch(e){ msg.textContent = e.message; this.disabled=false; this.textContent='Confirm'; }
   };
+}
+
+// ── THE FOUR ADMIN SCREENS ───────────────────────────────────────────────
+// Savio has never been able to see, inside Bella, what she costs him or what
+// has been done to an account. Four answers already existed and nothing had
+// ever read any of them back:
+//   What Bella Costs -> GET /usage              (admin-gated inside the handler,
+//                                                NOT via ADMIN_ONLY_PATHS)
+//   Audit Log        -> /sheets-read Audit!A:F
+//   Consents         -> /sheets-read Consents!A:E
+//   Deletions        -> /sheets-read Deletions!A:H
+// `/audit-log` is a WRITER, not a reader, which is why the log is read from the
+// tab instead. `/sheets-read` IS in ADMIN_ONLY_PATHS, so the server refuses
+// everybody else. This menu is a convenience; the boundary is the token.
+//
+// COLUMN POSITIONS COME FROM THE BACKEND'S WRITERS, NEVER FROM ROW 1.
+// Measured 2026-10-11 by reading the live sheet directly: two of these four
+// tabs still carry a header from the original 28-tab spec that no longer
+// describes what the code appends underneath it. `_ensureTab()` returns early
+// when a tab already exists, so it has never corrected either one.
+//   Usage    row 1 says "estimatedCost" over column G. G actually holds
+//            cachedTokens, and the rupee figure is in H under no header at all.
+//            Labelling from row 1 would have shown 9,357 as a cost of ₹0.35.
+//   Consents row 1 says "profileKey" over column A. A actually holds the
+//            timestamp; the email is in C and the notice version in D.
+// So every label below comes from the append calls in index.js. These screens
+// read correctly whether or not the sheet's own headers are ever fixed.
+let _adminScreenRows = [];
+
+// IST, 24-hour, always. His issue #10: 24-hour time everywhere. The zone is
+// pinned rather than left to the device so an operator record cannot quietly
+// shift by five and a half hours when read on a laptop set to another country.
+function _adminWhen(v){
+  if(v === undefined || v === null || v === '') return '—';
+  // Only ever parse something that really is a date. Every column fed to this
+  // holds an ISO string or a YYYY-MM-DD, so anything else means the wrong
+  // column arrived — and `new Date()` is far too forgiving to be told that
+  // from: Chrome reads a User ID like 'BE-00000009' as 1 September 2001 rather
+  // than refusing it. Without this guard a column mix-up would show a
+  // plausible wrong date instead of something visibly out of place.
+  const s = String(v);
+  if(!/^\d{4}-\d{2}-\d{2}/.test(s)) return s;
+  const d = new Date(s);
+  if(isNaN(d.getTime())) return s;
+  // A bare date carries no time, so do not invent one. Rendered as an instant
+  // it came out as midnight UTC — "11 Oct 2026 05:30 IST" — which reads as a
+  // precise moment that nothing actually happened at.
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s.trim())){
+    try{
+      return new Intl.DateTimeFormat('en-GB', {timeZone:'UTC', day:'2-digit',
+        month:'short', year:'numeric'}).format(d);
+    }catch(e){ return s; }
+  }
+  try{
+    return new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Kolkata', day:'2-digit',
+      month:'short', year:'numeric', hour:'2-digit', minute:'2-digit',
+      hourCycle:'h23'}).format(d).replace(',', '') + ' IST';
+  }catch(e){ return String(v); }
+}
+function _adminEsc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function _adminPlural(n, one, many){
+  return _adminNum(n) + ' ' + (Number(n) === 1 ? one : many);
+}
+function _adminNum(n){
+  const v = Number(n);
+  if(!isFinite(v)) return '0';
+  return v.toLocaleString('en-IN');
+}
+function _adminRupees(n){
+  const v = Number(n);
+  if(!isFinite(v)) return '₹0.00';
+  return '₹' + v.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+// Row 1 is dropped only when it really is the header. Checked against the
+// labels that are actually in the sheet AND the ones the code would write if
+// the tab were ever recreated, so a corrected header is still recognised — and
+// if row 1 is ever something else, it is shown rather than silently swallowed.
+function _adminStripHeader(rows, firstCellLabels){
+  if(!rows.length) return rows;
+  const a = String((rows[0]||[])[0]||'').trim().toLowerCase();
+  return firstCellLabels.indexOf(a) !== -1 ? rows.slice(1) : rows;
+}
+
+const ADMIN_SCREENS = {
+  cost:      {icon:'₹',  title:'What Bella Costs'},
+  audit:     {icon:'📋', title:'Audit Log'},
+  consents:  {icon:'✍️', title:'Consents'},
+  deletions: {icon:'🗑️', title:'Deletions'}
+};
+
+function openAdminScreen(which){
+  const meta = ADMIN_SCREENS[which];
+  if(!meta) return;
+  const old = document.getElementById('admin-screen-overlay');
+  if(old) old.remove();
+  const ov = document.createElement('div');
+  ov.id = 'admin-screen-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:400;display:flex;align-items:flex-start;justify-content:center;padding:12px;overflow:auto';
+  // Hardcoded navy/gold, exactly as Manage Accounts does. The app carries
+  // blanket `body.dark button{...!important}` rules that beat class-based
+  // overrides, so an operator screen that themed itself would be the one place
+  // a contrast bug could hide. This looks the same in light and dark.
+  ov.innerHTML =
+    '<div style="background:#0B2545;border:1px solid rgba(212,175,55,0.4);border-radius:16px;max-width:760px;width:100%;margin:auto;padding:18px;box-sizing:border-box">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">' +
+        '<div style="font-family:\'Cormorant Garamond\',serif;font-size:21px;color:#F5E6C8;line-height:1.2">' +
+          meta.icon + ' ' + _adminEsc(meta.title) + '</div>' +
+        '<button onclick="document.getElementById(\'admin-screen-overlay\').remove()" aria-label="Close" style="background:none;border:none;color:#D4AF37;font-size:24px;cursor:pointer;line-height:1;padding:0 4px">×</button>' +
+      '</div>' +
+      '<div id="admin-screen-body" style="color:rgba(245,230,200,0.8);font-size:13px;line-height:1.6">Loading…</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  if(which === 'cost') _adminLoadCost();
+  else _adminLoadTab(which);
+}
+
+function _adminScreenBody(){ return document.getElementById('admin-screen-body'); }
+
+function _adminFail(msg){
+  const b = _adminScreenBody();
+  if(b) b.innerHTML = '<div style="color:#EF5350">' + _adminEsc(msg) + '</div>';
+}
+
+// A record is a stack of caption/value pairs, never a table. At 320px a table
+// would either scroll sideways — hiding columns with nothing to say they were
+// there, the fault the feedback chips had — or squeeze the text unreadably.
+function _adminRecord(pairs, accent){
+  return '<div style="border-left:2px solid ' + (accent||'rgba(212,175,55,0.45)') +
+    ';padding:8px 0 8px 10px;margin-bottom:8px;background:rgba(245,230,200,0.03);border-radius:0 8px 8px 0">' +
+    pairs.filter(p => p && p[1] !== '' && p[1] !== undefined && p[1] !== null).map(p =>
+      '<div style="margin-bottom:3px">' +
+        '<span style="color:rgba(245,230,200,0.45);font-size:11px;text-transform:uppercase;letter-spacing:0.04em">' + _adminEsc(p[0]) + '</span><br>' +
+        '<span style="color:' + (p[2]||'#F5E6C8') + ';word-break:break-word">' + p[1] + '</span>' +
+      '</div>').join('') +
+    '</div>';
+}
+function _adminNote(text){
+  return '<div style="margin-top:14px;padding:10px;border:1px dashed rgba(212,175,55,0.35);border-radius:10px;color:rgba(245,230,200,0.6);font-size:12px;line-height:1.65">' + text + '</div>';
+}
+function _adminEmpty(headline, why){
+  return '<div style="padding:18px 2px"><div style="color:#F5E6C8;font-size:15px;margin-bottom:6px">' + _adminEsc(headline) + '</div>' +
+    '<div style="color:rgba(245,230,200,0.6);font-size:12.5px;line-height:1.7">' + why + '</div></div>';
+}
+
+// ── WHAT BELLA COSTS ─────────────────────────────────────────────────────
+// Two different numbers, deliberately both shown and clearly separated:
+// `recorded` is summed from the Usage tab and SURVIVES a deploy; the live
+// counters are what this one Cloud Run instance happens to be holding and reset
+// on every deploy and every scale-to-zero. Showing only the second is what made
+// the figure meaningless before release 26.
+async function _adminLoadCost(){
+  try{
+    const r = await bfetch(BACKEND + '/usage');
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok){ _adminFail(d.error || ('Could not read the usage figures (HTTP ' + r.status + ')')); return; }
+    const b = _adminScreenBody();
+    if(!b) return;
+    const rec = d.recorded || {};
+    const recOk = !rec.error;
+    const days = Array.isArray(rec.perDay) ? rec.perDay.slice().reverse() : [];
+    let html = '';
+
+    if(recOk){
+      html += '<div style="text-align:center;padding:14px 8px;border:1px solid rgba(212,175,55,0.35);border-radius:12px;margin-bottom:14px">' +
+        '<div style="color:rgba(245,230,200,0.5);font-size:11px;text-transform:uppercase;letter-spacing:0.06em">Gemini, recorded so far</div>' +
+        '<div style="color:#D4AF37;font-family:\'Cormorant Garamond\',serif;font-size:38px;line-height:1.15">' + _adminRupees(rec.inr) + '</div>' +
+        '<div style="color:rgba(245,230,200,0.55);font-size:12px">' +
+          _adminPlural((rec.sinceFirstFlush||{}).calls, 'call', 'calls') + ' over ' +
+          _adminPlural(rec.flushes, 'saved batch', 'saved batches') + '</div>' +
+      '</div>';
+    } else {
+      html += '<div style="padding:10px;border:1px solid #EF5350;border-radius:10px;margin-bottom:14px;color:#EF5350">' +
+        'The Usage tab could not be read, so the figure that survives a deploy is unavailable: ' + _adminEsc(rec.error) + '</div>';
+    }
+
+    if(days.length){
+      html += '<div style="color:#F5E6C8;font-size:15px;margin:16px 0 6px">By day</div>';
+      html += days.map(x =>
+        '<div style="display:flex;flex-wrap:wrap;gap:4px 10px;padding:6px 0;border-bottom:1px solid rgba(245,230,200,0.08)">' +
+          '<span style="color:#F5E6C8;min-width:92px">' + _adminEsc(x.date) + '</span>' +
+          '<span style="color:rgba(245,230,200,0.6)">' + _adminPlural(x.calls, 'call', 'calls') + '</span>' +
+          '<span style="color:#D4AF37;margin-left:auto">' + _adminRupees(x.inr) + '</span>' +
+        '</div>').join('');
+    }
+
+    html += '<div style="color:#F5E6C8;font-size:15px;margin:18px 0 6px">This server, since it last restarted</div>';
+    html += _adminRecord([
+      ['Started counting', _adminEsc(_adminWhen(d.since))],
+      ['Revision', _adminEsc(d.revision)],
+      ['Gemini calls', _adminNum(d.calls)],
+      ['Tokens in / out', _adminNum((d.tokens||{}).input) + ' / ' + _adminNum((d.tokens||{}).output)],
+      ['Served from cache', _adminNum((d.tokens||{}).cached) + ' (' + _adminEsc((d.tokens||{}).cachedShare) + ' of input)'],
+      ['Cost of these calls', '<b style="color:#D4AF37">' + _adminRupees((d.estimatedCost||{}).inr) + '</b>'],
+      (d.unreadableResponses ? ['Replies it could not count', _adminNum(d.unreadableResponses), '#FFA726'] : null)
+    ]);
+
+    const pe = Array.isArray(d.perEndpoint) ? d.perEndpoint : [];
+    if(pe.length){
+      html += '<div style="color:#F5E6C8;font-size:15px;margin:18px 0 6px">Busiest features, this server</div>';
+      html += pe.map(x =>
+        '<div style="display:flex;flex-wrap:wrap;gap:4px 10px;padding:5px 0;border-bottom:1px solid rgba(245,230,200,0.08)">' +
+          '<span style="color:#F5E6C8;word-break:break-all">' + _adminEsc(x.endpoint) + '</span>' +
+          '<span style="color:rgba(245,230,200,0.55);margin-left:auto">' + _adminPlural(x.calls, 'call', 'calls') + '</span>' +
+        '</div>').join('');
+    }
+
+    // THE HONEST CAVEAT. Without this he would read a few rupees here and
+    // believe that is his bill. It is not: this counts Gemini tokens the
+    // backend saw itself, starting the day the Usage tab was first written.
+    html += _adminNote(
+      '<b style="color:#F5E6C8">What this number is, and is not.</b><br>' +
+      'It counts <b>Gemini only</b>, and only from ' + _adminEsc(_adminWhen((days[days.length-1]||{}).date || d.since)) +
+      ', when Bella first started saving these figures. It does not include ElevenLabs voice, the spreadsheet, Cloud Run, ' +
+      'or any Gemini call made before that. Your measured all-in running cost is around ₹100 a month, of which Gemini is about 95%. ' +
+      'Converted at <b>' + _adminEsc((d.rateUsed||{}).inrPerUsd) + '</b> to the dollar. ' +
+      'It is an <b>upper bound</b> — caching usually makes the real bill lower. ' +
+      'The true invoice is always the one in Google Cloud Billing.');
+
+    b.innerHTML = html;
+  }catch(e){ _adminFail(e.message); }
+}
+
+// ── AUDIT, CONSENTS, DELETIONS — all read from their tab ─────────────────
+const _ADMIN_TABS = {
+  audit: {
+    range: 'Audit!A:F', header: ['timestamp'],
+    empty: ['Nothing has been logged yet.',
+      'Every admin action and every erasure writes a line here. An empty list means none has happened — not that the log is broken.'],
+    // A:F — A timestamp, B profileKey, C action, D details, E status, F userEmail
+    render: function(row){
+      const status = String(row[4]||'').trim().toLowerCase();
+      const colour = (status === 'failed') ? '#EF5350' : (status ? '#66BB6A' : 'rgba(245,230,200,0.5)');
+      return _adminRecord([
+        ['When', _adminEsc(_adminWhen(row[0]))],
+        ['Action', '<b>' + _adminEsc(row[2]) + '</b>'],
+        ['Who it was done to', _adminEsc(row[1])],
+        ['Details', _adminEsc(row[3])],
+        ['Result', _adminEsc(row[4]||'—'), colour],
+        ['Done by', _adminEsc(row[5])]
+      ], colour === '#EF5350' ? '#EF5350' : null);
+    },
+    note: 'An erasure is deliberately the <b>thinnest</b> line in this log — the User ID and the time, nothing else. ' +
+          'Keeping the name or the email of someone who asked to be erased would be keeping the person.'
+  },
+  consents: {
+    range: 'Consents!A:E', header: ['profilekey','consentedat'],
+    empty: ['No consent has been recorded yet.',
+      'Bella has only been writing this since <b>11 October 2026</b>, and it is written when somebody <b>registers</b>. ' +
+      'Everyone already signed up at that point is not here, and will not appear until a new person joins. An empty list is expected, not a fault.'],
+    // A:E — A consentedAt, B userId, C email, D noticeVersion, E method.
+    // Row 1 still says profileKey / consentType / noticeVersion / method /
+    // grantedAt, which is the old spec and describes none of this.
+    render: function(row){
+      return _adminRecord([
+        ['When', _adminEsc(_adminWhen(row[0]))],
+        ['User ID', _adminEsc(row[1]||'—')],
+        ['Email', _adminEsc(row[2])],
+        ['Notice version accepted', '<b>' + _adminEsc(row[3]) + '</b>'],
+        ['How', _adminEsc(row[4])]
+      ]);
+    },
+    note: 'One line per person per version of the notice — consenting twice to the same version does not write twice. ' +
+          'The email here is the <b>verified</b> one from the sign-in token, not anything the browser claimed.'
+  },
+  deletions: {
+    range: 'Deletions!A:H', header: ['userid'],
+    empty: ['Nobody has deleted their account.',
+      'Since <b>11 October 2026</b> the Delete Account button truly erases, and every erasure writes a line here. ' +
+      'This list being empty is the single most important <b>untested</b> thing in Bella — it has never been proved on a real account. ' +
+      'Use a throwaway account when you test it, never your own.'],
+    // A:H — A userId, G requestDate, H status. B to F are the personal columns
+    // (profileKey, name, email, mobile, reason) and are written EMPTY on
+    // purpose: a tab that recorded the erasure by naming the person would
+    // defeat the erasure.
+    render: function(row){
+      const st = String(row[7]||'').trim().toLowerCase();
+      const colour = (st === 'erased') ? '#66BB6A' : '#FFA726';
+      return _adminRecord([
+        ['When', _adminEsc(_adminWhen(row[6]))],
+        ['User ID', '<b>' + _adminEsc(row[0]||'not readable at the time') + '</b>'],
+        ['Status', _adminEsc(row[7]||'—'), colour],
+        (row[5] ? ['Reason given', _adminEsc(row[5])] : null)
+      ], colour);
+    },
+    note: 'The name, email, mobile and reason columns are left <b>empty on purpose</b>. The rows themselves were copied to the ' +
+          'Archive tab before being removed, so an erasure is recoverable — and the weekly backup email keeps a copy in your Gmail, ' +
+          'which is the one part of erasure still outstanding.'
+  }
+};
+
+async function _adminLoadTab(which){
+  const cfg = _ADMIN_TABS[which];
+  if(!cfg) return;
+  try{
+    const r = await bfetch(BACKEND + '/sheets-read', {method:'POST',
+      headers:{'Content-Type':'application/json'}, body: JSON.stringify({range: cfg.range})});
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok){ _adminFail(d.error || ('Could not read that tab (HTTP ' + r.status + ')')); return; }
+    const b = _adminScreenBody();
+    if(!b) return;
+    const rows = _adminStripHeader(Array.isArray(d.values) ? d.values : [], cfg.header);
+    _adminScreenRows = rows;
+    if(!rows.length){
+      b.innerHTML = _adminEmpty(cfg.empty[0], cfg.empty[1]) + _adminNote(cfg.note);
+      return;
+    }
+    // Newest first — the most recent thing that happened is what he opened
+    // this screen to see.
+    b.innerHTML = '<div style="color:rgba(245,230,200,0.5);margin-bottom:10px">' + _adminNum(rows.length) +
+        ' record' + (rows.length === 1 ? '' : 's') + ', newest first.</div>' +
+      rows.slice().reverse().map(cfg.render).join('') +
+      _adminNote(cfg.note);
+  }catch(e){ _adminFail(e.message); }
 }
 
 // ── The device half of a reset ───────────────────────────────────────
