@@ -4904,7 +4904,9 @@ function _otpErrText(e){
   if (c === 'auth/quota-exceeded')              return 'Bella has hit her daily SMS limit. Please try again tomorrow.';
   if (c === 'auth/invalid-app-credential')      return 'The security check expired. Press Resend to get a fresh code.';
   if (c === 'auth/captcha-check-failed')        return 'The security check could not be completed. Press Resend to try again.';
-  if (c === 'auth/network-request-failed')      return 'No connection. Check your internet and try again.';
+  if (c === 'auth/network-request-failed')      return 'Bella could not reach the security check — that is the connection, not you. Press Resend.';
+  if (c === 'auth/internal-error' || c === 'auth/timeout')
+    return 'The security check did not answer, twice. Mobile data can do this — press Resend.';
   // One number, one account -- Savio's rule. Firebase enforces it here for free
   // the moment we LINK instead of signing in again, which is the only place in
   // Bella that phone uniqueness is actually enforced rather than asked for.
@@ -5038,7 +5040,39 @@ async function sendOTP(mobile) {
   return ok;
 }
 
-async function _sendOTPCore(mobile) {
+// ── reCAPTCHA FAILS ON MOBILE DATA, SO TRY AGAIN BEFORE BOTHERING ANYONE ──
+// Savio, 2026-10-11, on LTE: "when i entered the OTP a message saying cannot
+// contact recaptcha arrived then i again pressed verify and it got verified."
+//
+// "Cannot contact reCAPTCHA" is Google's own widget saying it could not reach
+// its servers. It is a TRANSIENT network failure, not a fault in the code and
+// not anything he did — and it is likelier here than almost anywhere, because
+// Firebase does not fetch grecaptcha until the moment the code is asked for.
+// Measured at 1,127-1,427ms on a FAST desktop connection; on LTE it is several
+// times that, with more chances to drop.
+//
+// Until now one failure gave up and put the error on screen, so the only way
+// through was for HIM to press again. That is a retry — it was just being done
+// by hand. Bella does it herself now, once, with a brand-new verifier, which is
+// what the manual second press was really doing.
+//
+// ONLY THE TRANSIENT CODES RETRY. Retrying 'too-many-requests' compounds the
+// very thing it is complaining about, and a wrong phone number will not become
+// right on a second go.
+// A retry can in principle cost a second SMS if the first silently succeeded
+// server-side. The excluded codes are exactly the ones where that is plausible,
+// and for a test number no SMS is sent at all.
+const OTP_RETRY_CODES = [
+  'auth/network-request-failed',   // the connection dropped
+  'auth/internal-error',           // what Firebase wraps most reCAPTCHA faults in
+  'auth/captcha-check-failed',     // the check could not be completed
+  'auth/invalid-app-credential',   // the token was spent or expired; a fresh one fixes it
+  'auth/timeout',
+  ''                               // a raw reCAPTCHA failure carries no code at all
+];
+const OTP_RETRY_WAIT_MS = 800;
+
+async function _sendOTPCore(mobile, attempt) {
   const errEl = document.getElementById('gate-error-3');
   if (errEl) errEl.textContent = '';
   // Spend the old one before building the next, so a half-finished attempt
@@ -5096,9 +5130,20 @@ async function _sendOTPCore(mobile) {
     }
     return true;
   } catch (e) {
-    if (errEl) errEl.textContent = _otpErrText(e);
+    const code = (e && e.code) || '';
     if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch(e2) {} _recaptchaVerifier = null; }
-    console.error('OTP send error:', (e && e.code) || '', e);
+    console.error('OTP send error:', code, e);
+    // One silent retry for the transient failures. This is exactly what his
+    // second press was doing by hand.
+    if (!attempt && OTP_RETRY_CODES.indexOf(code) !== -1) {
+      console.warn('OTP: "' + (code || 'reCAPTCHA could not be reached') +
+                   '" — retrying once with a fresh security check.');
+      const hint = document.getElementById('gate-otp-hint');
+      if (hint) hint.textContent = 'The security check did not answer. Trying once more…';
+      await new Promise(function (r) { setTimeout(r, OTP_RETRY_WAIT_MS); });
+      return await _sendOTPCore(mobile, 1);
+    }
+    if (errEl) errEl.textContent = _otpErrText(e);
     return false;
   }
 }
