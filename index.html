@@ -1899,15 +1899,28 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         <div style="font-size:11px;font-weight:600;color:#0B2545;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Tell us more</div>
         <div style="position:relative;border:1.5px solid rgba(11,37,69,0.15);border-radius:12px;overflow:hidden;transition:border-color .2s" id="feedback-box-wrap">
           <textarea id="feedback-text" rows="4" placeholder="Share your thoughts... feel free to use emojis too! 😊" style="width:100%;padding:12px 14px;border:none;font-family:'BellaIndic','DM Sans',sans-serif;font-size:13px;color:#0B2545;background:#F8F5EF;resize:none;outline:none;box-sizing:border-box" onfocus="document.getElementById('feedback-box-wrap').style.borderColor='#D4AF37'" onblur="document.getElementById('feedback-box-wrap').style.borderColor='rgba(11,37,69,0.15)'"></textarea>
-          <div style="padding:6px 10px;background:#F8F5EF;border-top:1px solid rgba(11,37,69,0.08);display:flex;gap:4px">
-            <button onclick="addFeedbackEmoji('😊')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px">😊</button>
-            <button onclick="addFeedbackEmoji('👍')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px">👍</button>
-            <button onclick="addFeedbackEmoji('❤️')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px">❤️</button>
-            <button onclick="addFeedbackEmoji('🙏')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px">🙏</button>
-            <button onclick="addFeedbackEmoji('✨')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px">✨</button>
-            <button onclick="addFeedbackEmoji('🐛')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px">🐛</button>
-            <button onclick="addFeedbackEmoji('💡')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px">💡</button>
-            <button onclick="addFeedbackEmoji('🔥')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px">🔥</button>
+          <!-- EMOJI: EVERY ICON HERE OPENS A LIST — Savio, 2026-10-11 ────────
+               This row used to be eight loose emoji that each inserted only
+               themselves, so eight was all you could ever reach. His ask: "when
+               a User selects any of the icons the whole list under that
+               selection opens with options like they have on whatsapp". So each
+               icon is now a CATEGORY and its full list opens underneath, over
+               the same EMOJI_DATA the chat picker uses — one list to maintain,
+               not two. The old eight survive as what Recent shows before
+               anyone has picked anything, so nothing that worked is lost.
+               Selection is shown with a GOLD BACKGROUND, never gold TEXT:
+               `body.dark #feedback-overlay *` forces color:#0B2545 !important
+               (section 2c above) and an !important stylesheet rule beats a
+               normal inline style, so gold text would come out navy-on-navy in
+               dark mode. [[bella-dark-mode-css-traps]]
+               The chips WRAP; they do not scroll sideways. At 320px a 7-chip
+               row would push the last categories off-screen with nothing on
+               screen to say they were there — the Workshop 400px trap again.
+               Each chip carries a WORD beside its emoji, so an Android without
+               that emoji font still shows a readable control. -->
+          <div style="padding:6px 8px;background:#F8F5EF;border-top:1px solid rgba(11,37,69,0.08)">
+            <div id="fb-emoji-cats" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+            <div id="fb-emoji-grid" style="display:none;grid-template-columns:repeat(7,1fr);gap:2px;max-height:124px;overflow-y:auto;margin-top:6px;padding-top:6px;border-top:1px solid rgba(11,37,69,0.08)"></div>
           </div>
         </div>
       </div>
@@ -7160,11 +7173,15 @@ function insertEmoji(emoji){
   ti.selectionStart=ti.selectionEnd=start+emoji.length;
   ti.focus();
   arz(ti);
-  // Track recent
+  _rememberEmoji(emoji);
+}
+// Recents are shared by the chat picker and the feedback picker — one list, so
+// what you reach for in a message is already to hand when you write feedback.
+function _rememberEmoji(emoji){
   _recentEmojis=_recentEmojis.filter(e=>e!==emoji);
   _recentEmojis.unshift(emoji);
   if(_recentEmojis.length>24)_recentEmojis=_recentEmojis.slice(0,24);
-  localStorage.setItem('bella_recent_emojis',JSON.stringify(_recentEmojis));
+  try{localStorage.setItem('bella_recent_emojis',JSON.stringify(_recentEmojis));}catch(e){}
 }
 function searchGifs(query){
   clearTimeout(_gifDebounce);
@@ -7208,6 +7225,8 @@ function openFeedback(){
   const ov=document.getElementById('feedback-overlay');
   ov.style.display='flex';
   document.getElementById('feedback-text').value='';
+  _renderFeedbackEmojiCats();
+  _closeFeedbackEmoji();
   _selectedFeedbackCat='';
   document.querySelectorAll('.fcat-btn').forEach(b=>{
     b.style.border='1.5px solid rgba(11,37,69,0.15)';
@@ -7222,6 +7241,7 @@ function closeFeedback(){
   if(body) body.style.display='';
   if(done) done.style.display='none';
   const ta=document.getElementById('feedback-text'); if(ta) ta.value='';
+  _closeFeedbackEmoji();
   _selectedFeedbackCat=null;
   document.querySelectorAll('.fcat-btn').forEach(b=>{
     b.style.border='1.5px solid rgba(11,37,69,0.15)';
@@ -7239,10 +7259,75 @@ function selectFeedbackCat(btn,cat){
   btn.style.border='1.5px solid #0B2545';
   btn.style.background='rgba(11,37,69,0.06)';
 }
+// ── THE FEEDBACK EMOJI PICKER ───────────────────────────────
+// Seven icons, each of which OPENS ITS WHOLE LIST underneath, WhatsApp-style.
+// The lists are EMOJI_DATA, the same ones the chat picker shows.
+const FEEDBACK_EMOJI_CATS=[
+  ['recent','🕐','Recent'],
+  ['smileys','😊','Faces'],
+  ['people','👋','People'],
+  ['nature','🌿','Nature'],
+  ['food','🍕','Food'],
+  ['travel','✈️','Travel'],
+  ['symbols','❤️','Symbols']
+];
+// The eight that used to sit loose in this row. They are what Recent shows
+// until the person has picked something of their own, so the emoji that were
+// one tap away yesterday are still one tap away.
+const FEEDBACK_EMOJI_SEED=['😊','👍','❤️','🙏','✨','🐛','💡','🔥'];
+let _fbEmojiCat='';   // '' = no list open
+
+function _renderFeedbackEmojiCats(){
+  const row=document.getElementById('fb-emoji-cats');
+  if(!row||row.childElementCount) return;   // built once
+  row.innerHTML=FEEDBACK_EMOJI_CATS.map(function(c){
+    return '<button type="button" class="fb-ecat-btn" id="fb-ecat-'+c[0]+'" onclick="toggleFeedbackEmojiCat(\''+c[0]+'\')" aria-expanded="false" title="'+c[2]+' emoji">'
+      +'<span style="font-size:13px" aria-hidden="true">'+c[1]+'</span>'+c[2]+'</button>';
+  }).join('');
+}
+
+// Pressing the icon that is already open closes it again — the list is a
+// disclosure, not a mode you get stuck in.
+function toggleFeedbackEmojiCat(cat){
+  const grid=document.getElementById('fb-emoji-grid');
+  if(!grid) return;
+  const open=(_fbEmojiCat!==cat);
+  _fbEmojiCat=open?cat:'';
+  // Only the state is written here. The gold tint is CSS keyed on
+  // aria-expanded — an inline style loses to dark mode's !important rules.
+  document.querySelectorAll('.fb-ecat-btn').forEach(function(b){
+    b.setAttribute('aria-expanded',(open&&b.id==='fb-ecat-'+cat)?'true':'false');
+  });
+  if(!open){grid.style.display='none';grid.innerHTML='';return;}
+  const list=(cat==='recent')
+    ?(_recentEmojis.length?_recentEmojis:FEEDBACK_EMOJI_SEED)
+    :(EMOJI_DATA[cat]||[]);
+  grid.innerHTML=list.map(function(e){
+    return '<button type="button" onclick="addFeedbackEmoji(\''+e+'\')" title="'+e+'">'+e+'</button>';
+  }).join('');
+  grid.style.display='grid';
+}
+
+function _closeFeedbackEmoji(){
+  _fbEmojiCat='';
+  const g=document.getElementById('fb-emoji-grid');
+  if(g){g.style.display='none';g.innerHTML='';}
+  document.querySelectorAll('.fb-ecat-btn').forEach(function(b){
+    b.setAttribute('aria-expanded','false');
+  });
+}
+
 function addFeedbackEmoji(emoji){
   const ta=document.getElementById('feedback-text');
-  ta.value+=emoji;
+  if(!ta) return;
+  // Was `ta.value+=emoji`, which always landed at the very end — an emoji
+  // could never go inside a sentence already typed.
+  const s=(typeof ta.selectionStart==='number')?ta.selectionStart:ta.value.length;
+  const e=(typeof ta.selectionEnd==='number')?ta.selectionEnd:s;
+  ta.value=ta.value.substring(0,s)+emoji+ta.value.substring(e);
   ta.focus();
+  try{ta.selectionStart=ta.selectionEnd=s+emoji.length;}catch(_){}
+  _rememberEmoji(emoji);
 }
 // ══ TICKET NUMBERS ═════════════════════════════════════════════════════════
 // Savio asked whether feedback, support and errors should be three streams.
@@ -11730,6 +11815,23 @@ html body.dark #wx-panel .wx-day{background:#12233B!important;
    invisible. Repeating the class lifts this to (0,8,1) and wins. Verified with
    CSS.getMatchedStylesForNode, not by reading the file. */
 body.dark .msg-actions .msg-act-btn.muted.muted.muted.muted.muted{background:#D4AF37!important;border-color:#D4AF37!important;color:#0B2545!important}
+
+/* ── THE FEEDBACK EMOJI CATEGORY CHIPS ─────────────────────────────────────
+   In CSS, not inline, and that is the whole point. `body.dark button` (block
+   v82) forces background:#E8D9B8 and border:none with !important, and an
+   !important stylesheet rule BEATS an inline style — so the gold "this one is
+   open" tint written by the script was, measured in dark mode, byte-identical
+   to an unopened chip: you could not see which list you had opened. The state
+   now lives in aria-expanded, which the control needs anyway, and the look
+   follows from it in both themes. [[bella-dark-mode-css-traps]] */
+.fb-ecat-btn{display:flex;align-items:center;gap:3px;padding:3px 7px;border-radius:8px;
+  border:1.5px solid rgba(11,37,69,0.15);background:transparent;cursor:pointer;
+  font-family:'BellaIndic','DM Sans',sans-serif;font-size:11px;font-weight:600;color:#0B2545}
+.fb-ecat-btn:hover{background:rgba(11,37,69,0.06)}
+.fb-ecat-btn[aria-expanded="true"]{background:rgba(212,175,55,0.22);border-color:#D4AF37}
+#fb-emoji-grid button{background:none;border:none;font-size:19px;line-height:1.25;
+  cursor:pointer;padding:3px;border-radius:6px}
+#fb-emoji-grid button:hover{background:rgba(11,37,69,0.08)}
 </style>
 
 
@@ -11849,6 +11951,38 @@ html body.dark #sb-shutter{ background:#0B2545 !important; }
 /* 7 — Workshop tile labels sit on the raised surface now */
 html body.dark .feat-item .feat-label,
 html body.dark .feat-item .feat-icon{ color:#F5E6C8 !important; }
+
+/* 8 — THE FEEDBACK BOX: WHAT YOU TYPED WAS INVISIBLE. Measured 2026-10-11 at
+       1.03:1, and PRE-EXISTING — it is the same on the committed build, not
+       fallout from the emoji work. Two rules collided: `html body.dark
+       textarea` (rule 2 above) paints the field #12233B navy, while section 2c
+       of v82, `body.dark #feedback-overlay *{color:#0B2545!important}`, carries
+       an id and so wins the COLOUR — navy letters on a navy field. The panel is
+       a white card in both themes, so the field is given the card's own cream
+       back rather than fighting over the text. */
+html body.dark #feedback-text{
+  background:#F8F5EF !important;
+  color:#0B2545 !important;
+  border:none !important;
+}
+html body.dark #feedback-text::placeholder{ color:rgba(11,37,69,.55) !important; }
+
+/* 9 — the emoji category chips. `body.dark button` would otherwise paint every
+       chip the same cream slab and strip its border, taking the open/closed
+       state with it. Same look as light, one shade stronger on the gold so it
+       still reads against the cream row. */
+html body.dark .fb-ecat-btn{
+  background:transparent !important;
+  border:1.5px solid rgba(11,37,69,0.15) !important;
+  color:#0B2545 !important;
+}
+html body.dark .fb-ecat-btn:hover{ background:rgba(11,37,69,.06) !important; }
+html body.dark .fb-ecat-btn[aria-expanded="true"]{
+  background:rgba(212,175,55,.45) !important;
+  border-color:#8A6D1F !important;
+}
+html body.dark #fb-emoji-grid button{ background:transparent !important; }
+html body.dark #fb-emoji-grid button:hover{ background:rgba(11,37,69,.08) !important; }
 </style>
 
 
