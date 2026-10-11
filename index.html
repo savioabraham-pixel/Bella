@@ -237,7 +237,8 @@ body.dark #rec-lbl{color:#0B2545}
    CHAT AREA
    ============================================================ */
 #chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.chat-topbar{padding:0;border-bottom:1px solid var(--border);display:flex;align-items:stretch;gap:0;flex-shrink:0;background:var(--white);height:68px;position:relative}
+.chat-topbar{padding:0;border-bottom:1px solid var(--border);display:flex;align-items:stretch;gap:0;flex-shrink:0;background:var(--white);height:68px;position:relative;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.chat-topbar::-webkit-scrollbar{display:none}
 .chat-topbar-left{display:flex;align-items:center;gap:10px;flex-shrink:0}
 /* Base column width — all fixed cells use this */
 /* 160, not 180. Five fixed cells at 180px claimed 900px before the Food For
@@ -246,7 +247,11 @@ body.dark #rec-lbl{color:#0B2545}
    149px, location 105px. 160 would leave the date just 3px of slack — too tight to
    trust when font loading can shift text width — so 165, which still frees 75px for
    the thought. Below 1024px the bar scrolls instead, and below 680px this drops to 150. */
-:root{--tb-col:165px}
+/* 165 -> 155 on Savio's instruction 2026-10-11, to hand the width to Food For
+   Thought. Safe for these four because every value in them is .tb-primary /
+   .tb-secondary, which clip with an ellipsis. Convert is NOT on this variable
+   any more -- see below. */
+:root{--tb-col:155px}
 /* Dashboard panel cells — all equal width */
 .tb-cell{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 16px;border-right:1px solid var(--border);height:100%;flex-shrink:0;cursor:default;width:var(--tb-col)}
 .tb-cell-expand{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 20px;border-right:1px solid var(--border);height:100%;text-align:center}
@@ -328,7 +333,15 @@ body.dark .read-offer-btn.ghost{background:transparent;color:#F5E6C8;border-colo
 .tb-thought-row .tb-thought-text{flex:1 1 auto;min-width:0;max-width:100%}
 /* The cell is a fixed-width flex child; without min-width:0 its contents
    refuse to shrink and the emoji gets pushed past the right-hand edge. */
-#tb-thought-cell{min-width:0;overflow:hidden}
+/* FLOOR, measured 2026-10-11. This cell is the only flexible one, so it ate
+   every shortfall: at 1440px it collapsed to 190px and fitted 31 characters,
+   NARROWER than the 240px it gets on a smaller screen in scroll mode. The
+   prompt asks Gemini for up to 50 characters, so the design was asking for
+   text it had no room to show. 320px fits 56 — the 50-character limit plus six
+   of buffer — at every width from 1280 up. min-width must be set HERE, at ID
+   specificity: a .tb-cell-expand rule loses to this selector and silently
+   does nothing. */
+#tb-thought-cell{min-width:320px;overflow:hidden}
 /* The emoji is now a real animated GIF (Noto Animated Emoji, /emoji/*.gif) that
    blinks and smiles on its own, so the old CSS bounce+glow keyframes are gone —
    two motions at once read as jitter, and dropping them costs no compositing.
@@ -350,7 +363,22 @@ body.dark .read-offer-btn.ghost{background:transparent;color:#F5E6C8;border-colo
 .tb-thought-emoji img{width:15px;height:15px;display:block;pointer-events:none}
 body.dark .tb-thought-emoji{filter:drop-shadow(0 0 5px rgba(212,175,55,.8))}
 /* Convert cell */
-.tb-conv-btn{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 16px;border-right:1px solid var(--border);height:100%;cursor:pointer;flex-shrink:0;width:var(--tb-col);transition:background .15s}
+/* "i cant have convert getting cut" -- Savio, 2026-10-11. Two separate things
+   had to be true for that. (1) Its own width no longer follows --tb-col, which
+   he has just narrowed to 155px: measured, this cell needs 151px for
+   "Currency · Units · Time", so 165px is its own floor and shrinking it was
+   never safe. (2) It is STICKY, beside the search/account panel. When the bar
+   scrolls it used to slide underneath that panel and read "Conv...", which is
+   exactly what he saw. Pinning it means the three things you can PRESS are
+   always reachable and the cells you only READ are the ones that scroll. */
+.tb-conv-btn{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 16px;border-right:1px solid var(--border);height:100%;cursor:pointer;flex-shrink:0;width:165px;transition:background .15s;position:sticky;right:104px;z-index:3;background:var(--white)}
+body.dark .tb-conv-btn{background:#0B2545!important}
+/* Actions is pinned at ALL widths, not only under the breakpoint, because the
+   bar can now overflow at any width and Convert sits against this edge. If
+   only one of the two were sticky they would come apart when it scrolled. */
+.tb-actions{position:sticky;right:0;z-index:3;background:var(--white);
+  box-shadow:-8px 0 12px -6px rgba(0,0,0,.12)}
+body.dark .tb-actions{background:#0B2545!important}
 .tb-conv-btn:hover{background:var(--goldpale)}
 /* Clock toggle */
 .tb-clock-icon{cursor:pointer;user-select:none;font-size:11px}
@@ -1428,7 +1456,11 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
       </div>
 
       <!-- CELL — Search + Profile (right anchor, same width as other cells) -->
-      <div class="tb-actions" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;flex-shrink:0;height:100%;border-left:1px solid var(--border);width:var(--tb-col)">
+      <!-- width:auto, not var(--tb-col): this cell held a full 165px column for two
+           ~30px icons, and the 135px it was not using came straight out of Food For
+           Thought next door. The width is INLINE, so no stylesheet rule could have
+           corrected it without !important. -->
+      <div class="tb-actions" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;flex-shrink:0;height:100%;border-left:1px solid var(--border);width:104px">
         <button class="topbar-btn" id="search-btn" onclick="toggleSearch()" title="Search conversations" style="background:#0B2545;border:1px solid rgba(212,175,55,0.3)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
@@ -12273,7 +12305,7 @@ body.dark #tb-menu-btn{background:#0B2545!important;color:#D4AF37!important;
    1024px the old rule it was measured at 195px; at 1280px, 41px. Scrolling is
    this bar's own documented answer to not fitting — it just needed to start
    earlier. Above 1400px there is nothing to scroll and these rules are inert. */
-@media(max-width:1400px){
+@media(max-width:1600px){
   /* Scroll the dashboard rather than clip it. Nothing is hidden — every cell
      stays reachable, because these are real features, not decoration. */
   .chat-topbar{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
