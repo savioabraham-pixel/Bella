@@ -683,6 +683,36 @@ body.dark #voice-pick .lang-pick-opt.on.on.on.on.on{background:#D4AF37!important
 .menu-item:last-child{border-bottom:none}
 .menu-item.danger{color:#cc0000}
 .menu-item.danger:hover{background:#fff0f0}
+/* ── DARK MODE — THE WHITE SURFACES THE BLANKET RULE FORGOT ──────────────
+   Measured 2026-10-11 across the whole app in dark mode: 22 pieces of text sat
+   at 1.23:1, which is invisible. ONE cause. `body.dark *{color:#F5E6C8
+   !important}` repaints nearly everything cream, but `.menu-items` is a
+   HARDCODED white — so every item in the user menu was cream on white.
+   Savio found it; it predates today (identical on 9e03d1f) and is not new.
+
+   Fixed by darkening the SURFACE rather than fighting for the text colour.
+   That matters: the blanket rule sets only `color`, so a `background` rule
+   needs no !important and no specificity contest — the trap that has caught
+   this file repeatedly, where "class-based overrides lose even with
+   !important". Cream on #0B2545 measures 12.48:1.
+   A white slab inside a dark panel was the odd one out anyway: the panel's
+   own header and section bars are already dark. */
+body.dark .menu-items{background:#0B2545}
+/* Notification Settings keeps its light card by design — a navy header over a
+   white body — so here the text is given BACK rather than the surface taken
+   away. #notif-settings is an ID, which is what outranks the blanket rule;
+   a class-based attempt would silently do nothing. */
+body.dark #notif-settings .ns-body,
+body.dark #notif-settings .ns-body *{color:#0B2545!important}
+body.dark #notif-settings .ns-muted{color:#5A6B8A!important}
+body.dark .menu-item{border-bottom-color:rgba(245,230,200,0.10)}
+/* The divider inside the sign-out pane, same reasoning. */
+body.dark #sec-signout div[style*="background"]{background:transparent!important}
+/* "Delete Account" must stay a warning. The blanket paints it cream like
+   everything else, so this needs an ID to outrank it — #user-menu-panel is
+   that ID. Light red, not #cc0000, which is unreadable on navy. */
+body.dark #user-menu-panel .menu-item.danger{color:#FF8A80!important}
+body.dark #user-menu-panel .menu-item.danger:hover{background:#3A1515!important;color:#FF8A80!important}
 .menu-items{display:none;padding:4px 0 8px}
 .menu-items.open{display:block}
 .menu-item{padding:9px 24px;font-family:'BellaIndic','DM Sans',sans-serif;font-size:13px;color:var(--text);cursor:pointer;transition:background .15s}
@@ -2070,7 +2100,7 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         <span class="menu-section-arrow" id="arr-signout">▲</span>
       </div>
       <div class="menu-items" id="sec-signout">
-        <div style="padding:14px 20px;background:#fff">
+        <div style="padding:14px 20px">
           <div style="font-size:13px;color:#0B2545;margin-bottom:12px">Are you sure you want to sign out?</div>
           <div style="display:flex;gap:8px">
             <button onclick="signOut();closeUserMenu()" style="flex:1;padding:9px;border-radius:10px;border:none;background:#0B2545;color:#F5E6C8;font-size:12px;font-weight:600;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif">Yes, Sign Out</button>
@@ -3945,7 +3975,7 @@ function _myProfileData(){
 }
 function _profRow(label, value, note){
   const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const shown = value ? esc(value) : '<span style="color:#9AA8BF">Not recorded</span>';
+  const shown = value ? esc(value) : '<span style="color:#5A6B8A">Not recorded</span>';
   return '<div style="padding:12px 0;border-bottom:1px solid rgba(11,37,69,0.08)">' +
     '<div style="font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:#5A6B8A">' + esc(label) + '</div>' +
     '<div style="font-size:14px;color:#0B2545;margin-top:3px;word-break:break-word">' + shown + '</div>' +
@@ -4107,11 +4137,11 @@ function openNotificationSettings(){
         '<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:600;color:#F5E6C8">Notification Settings</div>' +
         '<div style="font-size:11px;color:rgba(245,230,200,0.6);margin-top:2px">How Bella gets your attention</div>' +
       '</div>' +
-      '<div style="padding:22px 24px">' +
+      '<div class="ns-body" style="padding:22px 24px">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px">' +
           '<div style="min-width:0">' +
             '<div style="font-size:13px;font-weight:600;color:#0B2545">Notification sound</div>' +
-            '<div style="font-size:11px;color:#5A6B8A;line-height:1.6;margin-top:3px">A short chime when Bella opens and when she answers.</div>' +
+            '<div class="ns-muted" style="font-size:11px;color:#5A6B8A;line-height:1.6;margin-top:3px">A short chime when Bella opens and when she answers.</div>' +
           '</div>' +
           '<button id="notif-sound-tog" role="switch" aria-checked="' + (on?'true':'false') + '" onclick="toggleNotifSound()" ' +
             'style="flex:none;width:52px;height:30px;border-radius:999px;border:none;cursor:pointer;position:relative;transition:background .18s;' +
@@ -4120,7 +4150,7 @@ function openNotificationSettings(){
           '</button>' +
         '</div>' +
         '<div style="height:1px;background:rgba(11,37,69,0.10);margin:18px 0"></div>' +
-        '<div style="font-size:11px;color:#5A6B8A;line-height:1.8">' +
+        '<div class="ns-muted" style="font-size:11px;color:#5A6B8A;line-height:1.8">' +
           '<strong style="color:#0B2545">Not here yet.</strong> Bella does not send browser or phone ' +
           'notifications, so there is nothing else to switch. When she can reach you while she is ' +
           'closed, the choice will appear here.' +
@@ -5886,7 +5916,7 @@ function renderAdminUsers(users){
           // Checking is harmless, so this button only ever INSPECTS. Deleting
           // needs a second, explicit press on the result.
           '<button onclick="adminPhoneLogin(' + _i + ')" style="margin:3px 4px 0 0;padding:6px 10px;border-radius:8px;border:1px solid rgba(245,230,200,0.35);background:transparent;color:rgba(245,230,200,0.8);font-size:12px;cursor:pointer">Check sign-in login</button>' +
-          btn('wipe','Wipe completely','#EF5350') +
+          btn('wipe','Wipe completely','#FF8A80') +
           btn('clear-data','Clear data, keep account','#FFA726') +
           (me ? '' : btn('lockout','Security lock-out','#29B6F6')) +
           (me ? '' : (u.state==='frozen' ? btn('unfreeze','Unfreeze','#66BB6A') : btn('freeze','Freeze','#AB47BC'))) +
@@ -5919,7 +5949,7 @@ async function adminPhoneLogin(i){
       body: JSON.stringify({ phone: phone, action: 'inspect' })
     });
     const d = await r.json().catch(()=>({}));
-    if(!r.ok){ out.innerHTML = '<span style="color:#EF5350">' + esc(d.error || ('HTTP ' + r.status)) + '</span>'; return; }
+    if(!r.ok){ out.innerHTML = '<span style="color:#FF8A80">' + esc(d.error || ('HTTP ' + r.status)) + '</span>'; return; }
     if(!d.found){
       out.innerHTML = '<span style="color:#66BB6A">No separate phone login holds ' + esc(phone) +
         '. A registration on this number will link cleanly — nothing to do.</span>';
@@ -5934,9 +5964,9 @@ async function adminPhoneLogin(i){
     }
     out.innerHTML = head +
       '<div style="color:#FFA726;margin-top:4px">Stale phone-only login. Removing it lets the next registration on this number carry the verified Gmail, which is what makes the welcome email send.</div>' +
-      '<button onclick="adminPhoneLoginDelete(' + i + ')" style="margin-top:6px;padding:6px 10px;border-radius:8px;border:1px solid #EF5350;background:transparent;color:#EF5350;font-size:12px;cursor:pointer">Remove this stale login</button>';
+      '<button onclick="adminPhoneLoginDelete(' + i + ')" style="margin-top:6px;padding:6px 10px;border-radius:8px;border:1px solid #FF8A80;background:transparent;color:#FF8A80;font-size:12px;cursor:pointer">Remove this stale login</button>';
   }catch(e){
-    out.innerHTML = '<span style="color:#EF5350">' + esc(e.message) + '</span>';
+    out.innerHTML = '<span style="color:#FF8A80">' + esc(e.message) + '</span>';
   }
 }
 
@@ -5948,7 +5978,7 @@ async function adminPhoneLoginDelete(i){
   const phone = String(u.mobile || '').trim();
   const reason = prompt('Why are you removing this stale sign-in login?\n(It goes in the Audit tab.)', 'stale phone-only login blocking account linking');
   if(reason === null) return;                    // cancelled
-  if(!String(reason).trim()){ out.innerHTML = '<span style="color:#EF5350">A reason is required — it goes in the audit record.</span>'; return; }
+  if(!String(reason).trim()){ out.innerHTML = '<span style="color:#FF8A80">A reason is required — it goes in the audit record.</span>'; return; }
   out.textContent = 'Removing…';
   try{
     const r = await bfetch(BACKEND + '/admin-phone-account', {
@@ -5956,10 +5986,10 @@ async function adminPhoneLoginDelete(i){
       body: JSON.stringify({ phone: phone, action: 'delete', confirm: phone, reason: String(reason).trim() })
     });
     const d = await r.json().catch(()=>({}));
-    if(!r.ok){ out.innerHTML = '<span style="color:#EF5350">' + esc(d.error || ('HTTP ' + r.status)) + '</span>'; return; }
+    if(!r.ok){ out.innerHTML = '<span style="color:#FF8A80">' + esc(d.error || ('HTTP ' + r.status)) + '</span>'; return; }
     out.innerHTML = '<span style="color:#66BB6A">Removed. ' + esc(d.note || '') + '</span>';
   }catch(e){
-    out.innerHTML = '<span style="color:#EF5350">' + esc(e.message) + '</span>';
+    out.innerHTML = '<span style="color:#FF8A80">' + esc(e.message) + '</span>';
   }
 }
 
@@ -5981,7 +6011,7 @@ async function adminRenumberIds(apply){
     });
     const d = await r.json().catch(()=>({}));
     if(!r.ok){
-      out.innerHTML = '<span style="color:#EF5350">' + esc(d.error || ('HTTP ' + r.status)) + '</span>';
+      out.innerHTML = '<span style="color:#FF8A80">' + esc(d.error || ('HTTP ' + r.status)) + '</span>';
       return;
     }
     const plan = Array.isArray(d.plan) ? d.plan : [];
@@ -6007,9 +6037,9 @@ async function adminRenumberIds(apply){
       rows +
       (d.adminRowsFound === 0 ? '<div style="color:#FFA726;margin-top:6px">No row matched the admin address, so nobody is being pinned to BE-00000001. Check ADMIN_EMAIL before applying.</div>' : '') +
       '<div style="margin-top:10px;color:#FFA726">This rewrites ids people may already have in writing. It cannot be undone from here.</div>' +
-      '<button onclick="adminRenumberIds(true)" style="margin-top:8px;padding:7px 12px;border-radius:8px;border:1px solid #EF5350;background:transparent;color:#EF5350;font-size:12px;cursor:pointer">Apply this plan</button>';
+      '<button onclick="adminRenumberIds(true)" style="margin-top:8px;padding:7px 12px;border-radius:8px;border:1px solid #FF8A80;background:transparent;color:#FF8A80;font-size:12px;cursor:pointer">Apply this plan</button>';
   }catch(e){
-    out.innerHTML = '<span style="color:#EF5350">' + esc(e.message) + '</span>';
+    out.innerHTML = '<span style="color:#FF8A80">' + esc(e.message) + '</span>';
   }
 }
 
@@ -6050,7 +6080,7 @@ function adminChangeMobile(i){
     '<input id="admin-reason" style="width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid rgba(212,175,55,0.35);background:#0a1f3c;color:#F5E6C8;font-size:13px;margin-bottom:12px">' +
     '<div style="font-size:12px;color:rgba(245,230,200,0.55);margin-bottom:6px">Type <b style="color:#D4AF37">' + esc(u.email) + '</b> to confirm</div>' +
     '<input id="admin-confirm-email" autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid rgba(212,175,55,0.35);background:#0a1f3c;color:#F5E6C8;font-size:13px">' +
-    '<div id="admin-confirm-msg" style="font-size:12px;color:#EF5350;margin-top:8px;min-height:16px"></div>' +
+    '<div id="admin-confirm-msg" style="font-size:12px;color:#FF8A80;margin-top:8px;min-height:16px"></div>' +
     '<div style="display:flex;gap:8px;margin-top:10px">' +
       '<button onclick="document.getElementById(\'admin-confirm\').remove()" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(245,230,200,0.3);background:transparent;color:#F5E6C8;font-size:13px;cursor:pointer">Cancel</button>' +
       '<button id="admin-go" style="flex:1;padding:10px;border-radius:10px;border:none;background:#D4AF37;color:#0B2545;font-size:13px;font-weight:600;cursor:pointer">Save number</button>' +
@@ -6108,7 +6138,7 @@ function adminAct(email, action){
     '<input id="admin-reason" style="width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid rgba(212,175,55,0.35);background:#0a1f3c;color:#F5E6C8;font-size:13px;margin-bottom:12px">' +
     '<div style="font-size:12px;color:rgba(245,230,200,0.55);margin-bottom:6px">Type <b style="color:#D4AF37">' + email + '</b> to confirm</div>' +
     '<input id="admin-confirm-email" autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid rgba(212,175,55,0.35);background:#0a1f3c;color:#F5E6C8;font-size:13px">' +
-    '<div id="admin-confirm-msg" style="font-size:12px;color:#EF5350;margin-top:8px;min-height:16px"></div>' +
+    '<div id="admin-confirm-msg" style="font-size:12px;color:#FF8A80;margin-top:8px;min-height:16px"></div>' +
     '<div style="display:flex;gap:8px;margin-top:10px">' +
       '<button onclick="document.getElementById(\'admin-confirm\').remove()" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(245,230,200,0.3);background:transparent;color:#F5E6C8;font-size:13px;cursor:pointer">Cancel</button>' +
       '<button id="admin-go" style="flex:1;padding:10px;border-radius:10px;border:none;background:#D4AF37;color:#0B2545;font-size:13px;font-weight:600;cursor:pointer">Confirm</button>' +
@@ -6309,7 +6339,7 @@ function _adminScreenBody(){ return document.getElementById('admin-screen-body')
 
 function _adminFail(msg){
   const b = _adminScreenBody();
-  if(b) b.innerHTML = '<div style="color:#EF5350">' + _adminEsc(msg) + '</div>';
+  if(b) b.innerHTML = '<div style="color:#FF8A80">' + _adminEsc(msg) + '</div>';
 }
 
 // A record is a stack of caption/value pairs, never a table. At 320px a table
@@ -6366,7 +6396,7 @@ async function _adminLoadCost(){
           _adminPlural(rec.flushes, 'saved batch', 'saved batches') + '</div>' +
       '</div>';
     } else {
-      html += '<div style="padding:10px;border:1px solid #EF5350;border-radius:10px;margin-bottom:14px;color:#EF5350">' +
+      html += '<div style="padding:10px;border:1px solid #FF8A80;border-radius:10px;margin-bottom:14px;color:#FF8A80">' +
         'The Usage tab could not be read, so the figure that survives a deploy is unavailable: ' + _adminEsc(rec.error) + '</div>';
     }
 
@@ -6440,7 +6470,7 @@ function _adminBilling(b){
     return (x.budgetAmount && isFinite(x.budgetAmount) && x.budgetAmount > 0)
       ? Math.min(100, Math.round((Number(x.costAmount)/Number(x.budgetAmount))*100)) : null;
   };
-  const colourFor = function(p){ return p>=90 ? '#EF5350' : (p>=70 ? '#FFA726' : '#66BB6A'); };
+  const colourFor = function(p){ return p>=90 ? '#FF8A80' : (p>=70 ? '#FFA726' : '#66BB6A'); };
   const barFor = function(x, thick){
     const p = pctOf(x);
     if(p === null) return '';
@@ -6498,7 +6528,7 @@ const _ADMIN_TABS = {
     // A:F — A timestamp, B profileKey, C action, D details, E status, F userEmail
     render: function(row){
       const status = String(row[4]||'').trim().toLowerCase();
-      const colour = (status === 'failed') ? '#EF5350' : (status ? '#66BB6A' : 'rgba(245,230,200,0.5)');
+      const colour = (status === 'failed') ? '#FF8A80' : (status ? '#66BB6A' : 'rgba(245,230,200,0.5)');
       return _adminRecord([
         ['When', _adminEsc(_adminWhen(row[0]))],
         ['Action', '<b>' + _adminEsc(row[2]) + '</b>'],
@@ -6506,7 +6536,7 @@ const _ADMIN_TABS = {
         ['Details', _adminEsc(row[3])],
         ['Result', _adminEsc(row[4]||'—'), colour],
         ['Done by', _adminEsc(row[5])]
-      ], colour === '#EF5350' ? '#EF5350' : null);
+      ], colour === '#FF8A80' ? '#FF8A80' : null);
     },
     note: 'An erasure is deliberately the <b>thinnest</b> line in this log — the User ID and the time, nothing else. ' +
           'Keeping the name or the email of someone who asked to be erased would be keeping the person.'
