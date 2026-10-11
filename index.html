@@ -3551,7 +3551,7 @@ function showNewUserGate() {
         </div>
         <div id="gate-error-3" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-top:8px;text-align:center"></div>
         <div id="recaptcha-container" style="display:none"></div>
-        <button onclick="verifyOTP()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;letter-spacing:.3px">
+        <button id="gate-verify-btn" onclick="verifyOTP()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;letter-spacing:.3px">
           Verify & Enter Bella
         </button>
         <button onclick="resendOTP()" style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(245,230,200,0.15);background:transparent;color:rgba(245,230,200,0.5);font-size:12px;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;margin-top:8px">
@@ -4985,8 +4985,34 @@ let _legacyPhoneUser = false;
 // It would have hit every member, and hardest on the slowest connection.
 let _otpSendInFlight = null;
 
+// ── THE STATUS TEXT WAS LANDING IN THE EYE BUTTON ───────────────────────
+// Savio, 2026-10-11, with a screenshot from his Pixel: the placeholder
+// "Enter OTP" and the words "Sending your code…" drawn ON TOP of each other
+// inside the input, and no eye. He asked whether it was because his phone is a
+// Pixel. It was not. It was every device, and it was mine.
+//
+// `document.querySelector('#gate-step-3 button')` takes the FIRST button in the
+// step — and that is the EYE TOGGLE, which sits inside the input's relative
+// wrapper, before the Verify button in the DOM. So:
+//   - every status label was written into the eye button, which is absolutely
+//     positioned over the input, hence the overlapping text;
+//   - `textContent` on it DESTROYED the eye icon;
+//   - and the Verify button was never actually disabled, so the guard I added
+//     for the race was not guarding the thing I thought it was.
+//
+// That selector is PRE-EXISTING — verifyOTP has used it all along, which is why
+// "Verify & Enter Bella" is sitting inside the input box in his screenshots
+// from the day BEFORE the eye existed. Adding the eye only made it visible.
+//
+// MY TESTS AGREED WITH THE BUG because they used the same selector to find the
+// button they then asserted on. A test that locates an element the same wrong
+// way as the code can only ever confirm it. The suite now checks the eye
+// SURVIVES a send, which is the assertion that would have caught this.
+//
+// Addressed by id now. Never select a control by its position among siblings:
+// adding one element in front of it silently re-points everything.
 function _otpSetSending(sending, mobile, ok) {
-  const btn  = document.querySelector('#gate-step-3 button');
+  const btn  = document.getElementById('gate-verify-btn');
   const hint = document.getElementById('gate-otp-hint');
   if (btn) {
     btn.disabled = !!sending;
@@ -5285,7 +5311,7 @@ async function verifyOTP() {
   const errEl = document.getElementById('gate-error-3');
   if (!otp || otp.length < 6) { errEl.textContent = 'Please enter the 6-digit OTP.'; return; }
   errEl.textContent = '';
-  const btn = document.querySelector('#gate-step-3 button');
+  const btn = document.getElementById('gate-verify-btn');
   btn.textContent = 'Verifying...';
   btn.disabled = true;
   // ── TWO FAILURES, TWO MESSAGES ──
