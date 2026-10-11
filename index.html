@@ -3393,7 +3393,7 @@ function showNewUserGate() {
         <!-- DPDP Act 2023 requires a clear notice BEFORE consent. Signing in with
              Google is the moment data is first collected, so the notice belongs
              here, not after. "Your data is private and secure" said nothing. -->
-        <div style="font-size:10px;color:rgba(245,230,200,0.45);text-align:center;margin-top:16px;line-height:1.7">
+        <div style="font-size:11.5px;color:rgba(245,230,200,0.72);text-align:center;margin-top:16px;line-height:1.75">
           Continuing shares your name, email and profile photo with Bella, so she can recognise you and remember your conversations.<br>
           Never used for marketing. Never shared. Delete it all any time from My Account.<br>
           <a href="#" onclick="event.preventDefault();showLegalDoc('privacy')" style="color:#D4AF37;text-decoration:underline">Privacy Notice</a>
@@ -3548,6 +3548,19 @@ function showNewUserGate() {
           </div>
 
         </div>
+
+        <!-- CONSENT — the affirmative action. Deliberately NOT pre-ticked: a
+             pre-ticked box is not consent under the DPDP Act, and a consent
+             record that cannot be relied on is worse than none, because it
+             says on paper that someone agreed when they only pressed past. -->
+        <label id="reg-consent-wrap" for="reg-consent" style="display:flex;gap:10px;align-items:flex-start;padding:12px 13px;margin-top:16px;border:1px solid rgba(212,175,55,0.35);border-radius:12px;background:rgba(212,175,55,0.06);cursor:pointer">
+          <input type="checkbox" id="reg-consent" onchange="_consentTouched()" style="width:18px;height:18px;margin:1px 0 0 0;accent-color:#D4AF37;flex-shrink:0;cursor:pointer">
+          <span style="font-size:12px;color:rgba(245,230,200,0.85);line-height:1.65">
+            I agree that Bella may store my name, email, photo, mobile number and our conversations, so she can recognise me and remember what we talk about. I can delete all of it at any time. I have read the
+            <a href="#" onclick="event.preventDefault();event.stopPropagation();showLegalDoc('privacy')" style="color:#D4AF37;text-decoration:underline">Privacy Notice</a>
+            and <a href="#" onclick="event.preventDefault();event.stopPropagation();showLegalDoc('terms')" style="color:#D4AF37;text-decoration:underline">Terms of Use</a>.
+          </span>
+        </label>
 
         <div id="gate-error-2" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-top:10px;text-align:center"></div>
 
@@ -4187,6 +4200,17 @@ function notYouFromSidebar() {
   location.reload();
 }
 
+function _consentTouched(){
+  const w = document.getElementById('reg-consent-wrap');
+  const b = document.getElementById('reg-consent');
+  if (w) {
+    w.style.borderColor = (b && b.checked) ? 'rgba(212,175,55,0.35)' : 'rgba(212,175,55,0.35)';
+    w.style.background  = (b && b.checked) ? 'rgba(212,175,55,0.10)' : 'rgba(212,175,55,0.06)';
+  }
+  const e = document.getElementById('gate-error-2');
+  if (e && b && b.checked && e.textContent.indexOf('tick the box') !== -1) e.textContent = '';
+}
+
 async function submitRegistration() {
   const firstName = document.getElementById('reg-firstname').value.trim();
   const lastName = document.getElementById('reg-lastname').value.trim();
@@ -4256,6 +4280,18 @@ async function submitRegistration() {
     errEl.textContent = '';
     return;
   }
+
+  // CONSENT IS NOT OPTIONAL. Checked after the fields so somebody with a
+  // half-filled form is told about the field first, not sent back twice.
+  const _consentBox = document.getElementById('reg-consent');
+  if (_consentBox && !_consentBox.checked) {
+    const w = document.getElementById('reg-consent-wrap');
+    if (w) { w.style.borderColor = '#ff6b6b'; w.style.background = 'rgba(255,107,107,0.08)'; }
+    errEl.textContent = 'Please tick the box above to agree before continuing.';
+    try { (w || _consentBox).scrollIntoView({behavior:'smooth', block:'center'}); } catch(e) {}
+    return;
+  }
+
   // FIX 1: Auto-save photo if user didn't click Save tick
   if (window._photoLoaded && _photoImg) {
     saveCroppedPhoto();
@@ -5509,7 +5545,7 @@ async function completeRegistration() {
   try{
     bfetch(BACKEND+'/consent-record', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ noticeVersion: LEGAL_UPDATED, userId: userId, method: 'registration' })
+      body: JSON.stringify({ noticeVersion: LEGAL_UPDATED, userId: userId, method: 'registration-tickbox' })
     }).then(function(r){ if(!r.ok) console.warn('Consent record refused:', r.status); })
       .catch(function(e){ console.warn('Consent record failed:', e); });
   }catch(e){ console.warn('Consent record failed:', e); }
@@ -5707,6 +5743,10 @@ function completeLogin(userData) {
       enforceAccountState();
     }
   }catch(e){}
+  // Asked only of people who registered before the tickbox existed, and again
+  // if the notice wording changes. After everything else, so it can never be
+  // what stands between somebody and Bella loading.
+  try{ maybeAskConsent(); }catch(e){}
 }
 
 // ============================================================
@@ -6060,6 +6100,60 @@ function adminAct(email, action){
       showAuthAlert(words[0] + ' done for ' + email + '.' + (d.deleted!==undefined ? ' ' + d.deleted + ' row(s) archived and removed.' : ''));
     }catch(e){ msg.textContent = e.message; this.disabled=false; this.textContent='Confirm'; }
   };
+}
+
+// ── CONSENT FOR PEOPLE WHO JOINED BEFORE THE TICKBOX ────────────────────
+// Shown AFTER Bella is on screen, never before, and wrapped so that any fault
+// in here leaves Bella working normally rather than locking somebody out of
+// their own account. Asked once per version of the notice.
+function _consentAccepted(){
+  try { return localStorage.getItem('b_consent_v') === LEGAL_UPDATED; } catch(e) { return true; }
+}
+function maybeAskConsent(){
+  try{
+    if(_consentAccepted()) return;
+    if(document.getElementById('consent-catchup')) return;
+    const ov = document.createElement('div');
+    ov.id = 'consent-catchup';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:450;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto';
+    ov.innerHTML =
+      '<div style="background:#0B2545;border:1px solid rgba(212,175,55,0.4);border-radius:16px;max-width:460px;width:100%;margin:auto;padding:22px;box-sizing:border-box">' +
+        '<div style="font-family:\'Cormorant Garamond\',serif;font-size:21px;color:#F5E6C8;margin-bottom:10px">Before you carry on</div>' +
+        '<div style="font-size:13px;color:rgba(245,230,200,0.8);line-height:1.7;margin-bottom:14px">' +
+          'Bella stores your name, email, photo, mobile number and your conversations, so she can recognise you and remember what you talk about. ' +
+          'Never used for marketing. Never shared. You can delete all of it at any time from My Account.' +
+        '</div>' +
+        '<div style="font-size:12px;color:rgba(245,230,200,0.6);line-height:1.7;margin-bottom:16px">' +
+          'We are asking again because we now keep a proper record of who agreed and when. ' +
+          '<a href="#" onclick="event.preventDefault();showLegalDoc(\'privacy\')" style="color:#D4AF37;text-decoration:underline">Privacy Notice</a>' +
+          ' &nbsp;·&nbsp; ' +
+          '<a href="#" onclick="event.preventDefault();showLegalDoc(\'terms\')" style="color:#D4AF37;text-decoration:underline">Terms of Use</a>' +
+        '</div>' +
+        '<button id="consent-accept-btn" onclick="acceptConsentCatchup(this)" style="width:100%;padding:12px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">I agree</button>' +
+        '<div id="consent-catchup-msg" style="font-size:11px;color:rgba(245,230,200,0.55);text-align:center;margin-top:10px;min-height:14px"></div>' +
+      '</div>';
+    document.body.appendChild(ov);
+  }catch(e){ /* never block Bella over a consent prompt */ }
+}
+async function acceptConsentCatchup(btn){
+  const msg = document.getElementById('consent-catchup-msg');
+  if(btn){ btn.disabled = true; btn.textContent = 'Recording…'; }
+  let userId = '';
+  try { userId = (JSON.parse(localStorage.getItem('b_registered_user')||'{}').userId) || ''; } catch(e){}
+  try{
+    const r = await bfetch(BACKEND + '/consent-record', {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({noticeVersion: LEGAL_UPDATED, userId: userId, method: 'existing-user'})});
+    if(!r.ok){
+      // Their agreement is real even if the server could not be reached; do not
+      // make them say it twice. The next sign-in retries.
+      if(msg) msg.textContent = 'Saved on this device — Bella will record it next time.';
+    }
+  }catch(e){
+    if(msg) msg.textContent = 'Saved on this device — Bella will record it next time.';
+  }
+  try{ localStorage.setItem('b_consent_v', LEGAL_UPDATED); }catch(e){}
+  setTimeout(function(){ const o = document.getElementById('consent-catchup'); if(o) o.remove(); }, 350);
 }
 
 // ── THE FOUR ADMIN SCREENS ───────────────────────────────────────────────
