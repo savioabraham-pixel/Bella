@@ -5495,6 +5495,21 @@ async function completeRegistration() {
   userData.consentedAt = new Date().toISOString();
   userData.consentNoticeVersion = LEGAL_UPDATED;
 
+  // ...AND ON THE RECORD, not only on this phone. Until now both lines above
+  // were written to localStorage and shown back in My Profile and the export,
+  // which LOOKS like a record and is one nobody else can ever see. DPDP expects
+  // a data fiduciary to be able to demonstrate consent; a consent readable only
+  // on the consenter's own device demonstrates nothing.
+  // Not awaited and never fatal: a registration must not fail because a log
+  // line did. The server decides whose consent it is from the verified token.
+  try{
+    bfetch(BACKEND+'/consent-record', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ noticeVersion: LEGAL_UPDATED, userId: userId, method: 'registration' })
+    }).then(function(r){ if(!r.ok) console.warn('Consent record refused:', r.status); })
+      .catch(function(e){ console.warn('Consent record failed:', e); });
+  }catch(e){ console.warn('Consent record failed:', e); }
+
   // Save to localStorage
   localStorage.setItem('b_registered_user', JSON.stringify(userData));
   // Save lightweight recogniser — survives tab close — used only to show returning user gate
@@ -6268,19 +6283,66 @@ async function confirmIdentity(profileKey,addressedName){
   await requestLocationPermission(addressedName);
 }
 
+// ── WHO IS THIS? THE SUBSTRING TEST THAT LET STRANGERS IN ────────────────
+// This used to be `t.includes(p.firstName)` — a SUBSTRING test against a list
+// of nineteen family first names and nicknames. The nicknames are ordinary
+// words: Joy, Josh, Neil, Papa, Babu, Munu, Urmi, Sreya. So "Joyce Fernandes"
+// contains "joy" and was handed Joydeep's account, his family, his history and
+// his memories. Measured in the notes at eight of ten stranger names landing
+// inside a real member's account. This is the single thing that stopped Bella
+// being opened to anyone outside the family.
+//
+// THE TRADE-OFF, and why it is not simply "trust the email". PROFILES exists so
+// that a family member who has never signed in still arrives to a Bella who
+// knows them. Keying identity on the email address alone would protect every
+// stranger AND take that away from every new family member. So the test is
+// tightened rather than removed: names must match as WHOLE WORDS, and a given
+// name alone is never enough — the surname must agree too.
+//
+//   "Joydeep Chatterjee"  -> Joydeep. Both names match. His history is waiting.
+//   "Joy Chatterjee"      -> Joydeep. The nickname plus the surname.
+//   "Joyce Fernandes"     -> nobody. Her own key, her own blank slate.
+//   "Joydeep"             -> ambiguous: Bella ASKS for the surname. She already
+//                            has that conversation built, and asking is always
+//                            better than guessing at somebody's identity.
+function _nameWords(s){
+  return String(s||'').toLowerCase()
+    .replace(/[^a-z\u0900-\u097F\u0980-\u09FF\s]/g,' ')
+    .replace(/\s+/g,' ').trim().split(' ').filter(Boolean);
+}
 function matchName(t){
+  const words=_nameWords(t);
+  if(!words.length) return null;
+  const given=[], full=[];
   for(const[key,p]of Object.entries(PROFILES)){
-    if(t.includes(p.firstName.toLowerCase())||t.includes(p.familyName.toLowerCase())){
-      if(AMBIGUOUS_NAMES.includes(p.familyName.toLowerCase()))return'ambiguous';return key;
-    }
+    const first=String(p.firstName||'').toLowerCase();
+    const fam=String(p.familyName||'').toLowerCase();
+    const last=String(p.lastName||'').toLowerCase();
+    const givenHit=(first&&words.includes(first))||(fam&&words.includes(fam));
+    if(!givenHit) continue;
+    if(last&&words.includes(last)) full.push(key);
+    given.push(key);
   }
+  // A first name AND the surname: this is them.
+  if(full.length===1) return full[0];
+  if(full.length>1) return 'ambiguous';
+  // A given name with no surname to confirm it. Never guess — two people can
+  // share a first name, and a stranger can share it too. Ask.
+  if(given.length) return 'ambiguous';
   return null;
 }
 function resolveByLastName(hint,lastName){
+  const hw=_nameWords(hint), last=String(lastName||'').toLowerCase();
+  if(!last) return null;
   for(const[key,p]of Object.entries(PROFILES)){
-    if((hint.includes(p.firstName.toLowerCase())||hint.includes(p.familyName.toLowerCase()))&&p.lastName.toLowerCase()===lastName.toLowerCase())return key;
+    const first=String(p.firstName||'').toLowerCase();
+    const fam=String(p.familyName||'').toLowerCase();
+    if(((first&&hw.includes(first))||(fam&&hw.includes(fam)))&&String(p.lastName||'').toLowerCase()===last)return key;
   }
-  for(const[key,p]of Object.entries(PROFILES)){if(p.lastName.toLowerCase()===lastName.toLowerCase())return key;}
+  // Surname alone, only if it belongs to exactly ONE member. Two Chatterjees
+  // and a surname is not an identification, it is a coin toss.
+  const byLast=Object.entries(PROFILES).filter(function(e){return String(e[1].lastName||'').toLowerCase()===last;});
+  if(byLast.length===1) return byLast[0][0];
   return null;
 }
 
@@ -6662,14 +6724,15 @@ function closeLegalDoc(){
 // "Download My Data" — a real export, replacing a button that did nothing.
 // DPDP gives a right of access; this is how it is honoured.
 //
-// Format: a self-contained HTML DOCUMENT, not JSON. JSON satisfies the letter
-// of a portability right but is unreadable to the person it belongs to — they
-// open it and see brackets. HTML opens in any browser on any device, reads like
-// a document, and the user can Print > Save as PDF themselves if they want one.
-// PDF/Word would both need a backend call, which costs money and can fail; this
-// costs nothing, works offline, and cannot fail once the file is written.
-// The machine-readable JSON is still embedded in a <script type="application/json">
-// block at the end, so portability to another service is not lost.
+// FORMAT: A REAL WORD DOCUMENT. Savio's standing rule is that every file Bella
+// hands over is a true Office file — never CSV, HTML or JSON. This used to
+// write an HTML page, and the comment here claimed Word "would need a backend
+// call, which costs money and can fail". That was wrong on the facts: a .docx
+// is a ZIP of XML files, and JSZip is already loaded in this page (line 40) to
+// read the .docx and .pptx people upload. So the document is built HERE, in the
+// browser: no network, no cost, no session needed, and it cannot fail because a
+// server is down — which matters, because a right of access that stops working
+// when the backend does is not much of a right.
 function _expEsc(v){
   return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;')
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -6689,9 +6752,55 @@ function _expText(entry){
   if(typeof entry.text==='string') return entry.text;
   return '';
 }
-function _expThreads(obj, deleted){
+
+// ── WORDPROCESSINGML, THE SMALL SUBSET THIS NEEDS ─────────────────────────
+const DX_W='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+// XML 1.0 forbids most control characters OUTRIGHT. One stray control byte in
+// somebody's pasted text and Word refuses the whole file, giving no useful
+// reason. They are stripped before the entity escaping, not after.
+function _dxEsc(v){
+  return _expEsc(String(v==null?'':v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,''));
+}
+function _dxRpr(o){
+  o=o||{}; let r='';
+  if(o.bold)r+='<w:b/>';
+  if(o.italic)r+='<w:i/>';
+  if(o.color)r+='<w:color w:val="'+o.color+'"/>';
+  if(o.size)r+='<w:sz w:val="'+o.size+'"/><w:szCs w:val="'+o.size+'"/>';
+  return r?'<w:rPr>'+r+'</w:rPr>':'';
+}
+// A newline inside a conversation has to become a real line break: Word ignores
+// a bare newline, so a multi-line answer would otherwise arrive as one long
+// unbroken line.
+function _dxRun(text,o){
+  const rpr=_dxRpr(o);
+  return String(text==null?'':text).split('\n').map(function(line,i){
+    return (i?'<w:r>'+rpr+'<w:br/></w:r>':'')+
+      '<w:r>'+rpr+'<w:t xml:space="preserve">'+_dxEsc(line)+'</w:t></w:r>';
+  }).join('');
+}
+function _dxP(text,o){
+  o=o||{}; let ppr='';
+  if(o.style)ppr+='<w:pStyle w:val="'+o.style+'"/>';
+  if(o.before!=null||o.after!=null)ppr+='<w:spacing'+(o.before!=null?' w:before="'+o.before+'"':'')+(o.after!=null?' w:after="'+o.after+'"':'')+'/>';
+  if(o.indent)ppr+='<w:ind w:left="'+o.indent+'"/>';
+  return '<w:p>'+(ppr?'<w:pPr>'+ppr+'</w:pPr>':'')+_dxRun(text,o)+'</w:p>';
+}
+function _dxTable(rows){
+  if(!rows.length) return '';
+  const border=['top','left','bottom','right','insideH','insideV'].map(function(s){
+    return '<w:'+s+' w:val="single" w:sz="4" w:space="0" w:color="E3DED3"/>';}).join('');
+  const cell=function(t,w,o){
+    return '<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/></w:tcPr>'+_dxP(t,o)+'</w:tc>';};
+  return '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders>'+border+'</w:tblBorders></w:tblPr>'+
+    rows.map(function(r){
+      return '<w:tr>'+cell(r[0],3200,{bold:true,color:'5A6B8A'})+cell(r[1],5800,{})+'</w:tr>';
+    }).join('')+
+    '</w:tbl>'+_dxP('',{after:120});
+}
+function _dxThreads(obj, deleted){
   const ids=Object.keys(obj||{});
-  if(ids.length===0) return '<p class="none">None.</p>';
+  if(ids.length===0) return _dxP('None.',{italic:true,color:'9AA0A6'});
   return ids.map(function(id){
     const t=obj[id]||{};
     const hist=Array.isArray(t.hist)?t.hist:[];
@@ -6699,99 +6808,145 @@ function _expThreads(obj, deleted){
     if(t.created) meta.push('Started ' + _expDate(t.created));
     if(deleted && t.deletedAt) meta.push('Deleted ' + _expDate(t.deletedAt));
     meta.push(hist.length + (hist.length===1?' message':' messages'));
-    const rows = hist.length===0
-      ? '<p class="none">No messages in this conversation.</p>'
+    const head=_dxP(t.name||'Untitled conversation',{style:'Heading2'})
+      + _dxP(meta.join('  ·  '),{italic:true,color:'8A8A8A',size:18,after:80});
+    const body = hist.length===0
+      ? _dxP('No messages in this conversation.',{italic:true,color:'9AA0A6'})
       : hist.map(function(e){
-          const who = (e && e.role==='model') ? 'Bella' : 'You';
-          const cls = (e && e.role==='model') ? 'bella' : 'you';
-          const txt = _expText(e);
+          const txt=_expText(e);
           if(!txt) return '';
-          return '<div class="msg ' + cls + '"><div class="who">' + who + '</div><div class="txt">' + _expEsc(txt).replace(/\n/g,'<br>') + '</div></div>';
+          const who=(e && e.role==='model') ? 'Bella' : 'You';
+          return '<w:p><w:pPr><w:spacing w:after="60"/><w:ind w:left="284"/></w:pPr>'
+            + _dxRun(who+': ',{bold:true,color:(who==='Bella'?'0B2545':'5A6B8A')})
+            + _dxRun(txt,{}) + '</w:p>';
         }).join('');
-    return '<section class="thread"><h3>' + _expEsc(t.name||'Untitled conversation') + '</h3>' +
-           '<div class="meta">' + _expEsc(meta.join('  \u00b7  ')) + '</div>' + rows + '</section>';
+    return head+body;
   }).join('');
 }
-function downloadMyData(){
+const _DX_DECL='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+function _dxStyles(){
+  return _DX_DECL+'<w:styles '+DX_W+'>'
+   +'<w:docDefaults><w:rPrDefault><w:rPr>'
+   // cs = the COMPLEX SCRIPT font. Bengali, Hindi and Marathi conversations run
+   // through this one, and Calibri has no Devanagari or Bengali glyphs at all.
+   +'<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Nirmala UI"/>'
+   +'<w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults>'
+   +'<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>'
+   +'<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/>'
+   +'<w:pPr><w:spacing w:after="60"/></w:pPr>'
+   +'<w:rPr><w:b/><w:color w:val="0B2545"/><w:sz w:val="48"/><w:szCs w:val="48"/></w:rPr></w:style>'
+   +'<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/>'
+   +'<w:pPr><w:spacing w:before="360" w:after="120"/>'
+   +'<w:pBdr><w:bottom w:val="single" w:sz="8" w:space="2" w:color="D4AF37"/></w:pBdr></w:pPr>'
+   +'<w:rPr><w:b/><w:color w:val="0B2545"/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr></w:style>'
+   +'<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/>'
+   +'<w:pPr><w:spacing w:before="240" w:after="40"/></w:pPr>'
+   +'<w:rPr><w:b/><w:color w:val="14477A"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:style>'
+   +'</w:styles>';
+}
+// Everything the person has, from THIS device, as one Word document. Returned
+// rather than saved, so the file can be built and inspected without a download
+// ever happening — which is how it is tested.
+async function _buildMyDataDocx(){
+  const acct = JSON.parse(localStorage.getItem('b_registered_user')||'null') || {};
+  const conv = JSON.parse(localStorage.getItem('b_threads')||'{}') || {};
+  const del  = JSON.parse(localStorage.getItem(TRASH_KEY)||'{}') || {};
+  const prefs = {
+    theme: (localStorage.getItem('b_dark')==='1') ? 'dark'
+          : (localStorage.getItem('b_dark')==='0') ? 'light' : null,
+    clockFormat: localStorage.getItem('b_clock_fmt')||null,
+    voiceLanguage: localStorage.getItem('b_voice_lang')||null
+  };
+  const exportedAt=new Date();
+  const nConv=Object.keys(conv).length, nDel=Object.keys(del).length;
+
+  const FIELDS=[['Name','fullName'],['Known to Bella as','preferredName'],['Email','email'],
+    ['Mobile','mobile'],['Gender','gender'],['Date of birth','dob'],['Registered','registeredDate'],
+    ['User ID','userId'],['Consent given','consentedAt'],['Notice version','consentNoticeVersion']];
+  const acctRows=[];
+  FIELDS.forEach(function(f){
+    let v = f[1]==='userId' ? (acct.userId||localStorage.getItem('b_userid')||'') : acct[f[1]];
+    if(f[1]==='consentedAt') v=_expDate(v);
+    if(v) acctRows.push([f[0], v]);
+  });
+
+  const body =
+    _dxP('My Bella.ai Data',{style:'Title'})
+  + _dxP('Exported ' + _expDate(exportedAt.toISOString()),{italic:true,color:'6B7280',size:18})
+  + _dxP('Everything Bella holds about you on this device: ' + nConv + ' conversation' + (nConv===1?'':'s')
+       + ', ' + nDel + ' in Deleted, and your account details.',{after:120})
+  + _dxP('Your details',{style:'Heading1'})
+  + (acctRows.length ? _dxTable(acctRows)
+                     : _dxP('No account details stored on this device.',{italic:true,color:'9AA0A6'}))
+  + _dxP('Your conversations (' + nConv + ')',{style:'Heading1'})
+  + _dxThreads(conv,false)
+  + _dxP('Deleted conversations (' + nDel + ')',{style:'Heading1'})
+  + _dxP('These are recoverable in Bella for 30 days from the date they were deleted.',
+         {italic:true,color:'6B7280',size:18})
+  + _dxThreads(del,true)
+  + _dxP('Your preferences',{style:'Heading1'})
+  + _dxTable([['Theme',prefs.theme||'default'],
+              ['Clock',prefs.clockFormat==='12'?'12-hour':'24-hour'],
+              ['Voice language',prefs.voiceLanguage||'English']])
+  + _dxP('About this file',{style:'Heading1'})
+  + _dxP('Conversations are kept on the device you used, so this covers this browser only. '
+       + 'Sign in elsewhere and that device would have its own.',{after:80})
+  + _dxP('This is a Word document. It opens in Word, Pages, Google Docs or LibreOffice, and you can '
+       + 'edit it, print it, or save it as a PDF from there.',{after:80})
+  + _dxP('Questions: ' + LEGAL_CONTACT,{color:'6B7280',size:18});
+
+  const docXml = _DX_DECL + '<w:document ' + DX_W + '><w:body>' + body
+    + '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>'
+    + '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/>'
+    + '</w:sectPr></w:body></w:document>';
+
+  const iso=exportedAt.toISOString().replace(/\.\d+Z$/,'Z');
+  const zip=new JSZip();
+  zip.file('[Content_Types].xml', _DX_DECL
+    +'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    +'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+    +'<Default Extension="xml" ContentType="application/xml"/>'
+    +'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+    +'<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
+    +'<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
+    +'</Types>');
+  zip.file('_rels/.rels', _DX_DECL
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+    +'<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+    +'</Relationships>');
+  zip.file('word/_rels/document.xml.rels', _DX_DECL
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+    +'</Relationships>');
+  zip.file('docProps/core.xml', _DX_DECL
+    +'<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"'
+    +' xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/"'
+    +' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+    +'<dc:title>My Bella.ai Data</dc:title><dc:creator>Bella.ai</dc:creator>'
+    +'<cp:lastModifiedBy>Bella.ai</cp:lastModifiedBy>'
+    +'<dcterms:created xsi:type="dcterms:W3CDTF">'+iso+'</dcterms:created>'
+    +'<dcterms:modified xsi:type="dcterms:W3CDTF">'+iso+'</dcterms:modified>'
+    +'</cp:coreProperties>');
+  zip.file('word/styles.xml', _dxStyles());
+  zip.file('word/document.xml', docXml);
+
+  const blob=await zip.generateAsync({type:'blob',
+    mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    compression:'DEFLATE'});
+  return {blob:blob, nConv:nConv, nDel:nDel,
+    name:'My-Bella-Data-' + exportedAt.toISOString().slice(0,10) + '.docx'};
+}
+async function downloadMyData(){
   try{
-    const acct = JSON.parse(localStorage.getItem('b_registered_user')||'null') || {};
-    const conv = JSON.parse(localStorage.getItem('b_threads')||'{}') || {};
-    const del  = JSON.parse(localStorage.getItem(TRASH_KEY)||'{}') || {};
-    const prefs = {
-      theme: (localStorage.getItem('b_dark')==='1') ? 'dark'
-            : (localStorage.getItem('b_dark')==='0') ? 'light' : null,
-      clockFormat: localStorage.getItem('b_clock_fmt')||null,
-      voiceLanguage: localStorage.getItem('b_voice_lang')||null
-    };
-    const payload = {
-      exportedAt:new Date().toISOString(),
-      note:'Your Bella.ai data, exported from this device. Conversations are stored per-device, so this file covers this browser only.',
-      account:acct, userId:localStorage.getItem('b_userid')||null,
-      conversations:conv, deletedConversations:del, preferences:prefs
-    };
-
-    const FIELDS=[['Name','fullName'],['Known to Bella as','preferredName'],['Email','email'],
-      ['Mobile','mobile'],['Gender','gender'],['Date of birth','dob'],['Registered','registeredDate'],
-      ['User ID','userId'],['Consent given','consentedAt'],['Notice version','consentNoticeVersion']];
-    const acctRows = FIELDS.map(function(f){
-      let v = f[1]==='userId' ? (acct.userId||localStorage.getItem('b_userid')||'') : acct[f[1]];
-      if(f[1]==='consentedAt') v=_expDate(v);
-      if(!v) return '';
-      return '<tr><th>' + f[0] + '</th><td>' + _expEsc(v) + '</td></tr>';
-    }).join('') || '<tr><td class="none">No account details stored on this device.</td></tr>';
-
-    const nConv=Object.keys(conv).length, nDel=Object.keys(del).length;
-    const doc =
-'<!doctype html><html lang="en"><head><meta charset="utf-8">' +
-'<meta name="viewport" content="width=device-width,initial-scale=1">' +
-'<title>My Bella.ai Data</title><style>' +
-'*{box-sizing:border-box}body{margin:0;padding:32px 20px;background:#F5F3EF;color:#1B2A4A;' +
-'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65}' +
-'.wrap{max-width:760px;margin:0 auto;background:#fff;border:1px solid #E3DED3;border-radius:16px;padding:32px;box-shadow:0 2px 18px rgba(27,42,74,.06)}' +
-'.brand{display:flex;align-items:center;gap:12px;border-bottom:2px solid #D4AF37;padding-bottom:16px;margin-bottom:8px}' +
-'.dot{width:40px;height:40px;border-radius:50%;background:#D4AF37;color:#0B2545;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0}' +
-'h1{font-size:22px;margin:0;color:#0B2545}h2{font-size:15px;margin:34px 0 10px;color:#0B2545;border-bottom:1px solid #E3DED3;padding-bottom:6px}' +
-'h3{font-size:14px;margin:0 0 2px;color:#0B2545}.sub{font-size:12px;color:#6B7280;margin:0 0 4px}' +
-'table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;width:38%;padding:7px 10px 7px 0;color:#6B7280;font-weight:500;vertical-align:top}' +
-'td{padding:7px 0;border-bottom:1px solid #F0EDE6}' +
-'.thread{margin:16px 0 22px;padding:14px 16px;background:#FAF8F4;border:1px solid #EDE8DE;border-radius:12px;page-break-inside:avoid}' +
-'.meta{font-size:11px;color:#8A8A8A;margin-bottom:10px}' +
-'.msg{margin:0 0 10px;padding-left:12px;border-left:3px solid #E3DED3}' +
-'.msg.bella{border-left-color:#D4AF37}.who{font-size:11px;font-weight:700;color:#6B7280;margin-bottom:2px}' +
-'.txt{font-size:13px;white-space:pre-wrap;word-wrap:break-word}' +
-'.none{font-size:13px;color:#9AA0A6;font-style:italic}' +
-'.foot{margin-top:34px;padding-top:14px;border-top:1px solid #E3DED3;font-size:11px;color:#6B7280}' +
-'@media print{body{background:#fff;padding:0}.wrap{border:0;box-shadow:none;padding:0}}' +
-'</style></head><body><div class="wrap">' +
-'<div class="brand"><div class="dot">B</div><div><h1>My Bella.ai Data</h1>' +
-'<p class="sub">Exported ' + _expDate(payload.exportedAt) + '</p></div></div>' +
-'<p class="sub">Everything Bella holds about you on this device: ' + nConv + ' conversation' + (nConv===1?'':'s') +
-', ' + nDel + ' in Deleted, and your account details.</p>' +
-'<h2>Your details</h2><table>' + acctRows + '</table>' +
-'<h2>Your conversations (' + nConv + ')</h2>' + _expThreads(conv,false) +
-'<h2>Deleted conversations (' + nDel + ')</h2>' +
-'<p class="sub">These are recoverable in Bella for 30 days from the date they were deleted.</p>' + _expThreads(del,true) +
-'<h2>Your preferences</h2><table>' +
-'<tr><th>Theme</th><td>' + _expEsc(prefs.theme||'default') + '</td></tr>' +
-'<tr><th>Clock</th><td>' + (prefs.clockFormat==='12'?'12-hour':'24-hour') + '</td></tr>' +
-'<tr><th>Voice language</th><td>' + _expEsc(prefs.voiceLanguage||'English') + '</td></tr></table>' +
-'<div class="foot"><strong>About this file.</strong> Conversations are stored on the device you used, ' +
-'so this covers this browser only. Sign in elsewhere and that device would have its own.<br>' +
-'To keep a PDF, open this file and choose Print, then "Save as PDF".<br>' +
-'The same information is embedded below in machine-readable form, so you can move it to another service.<br>' +
-'Questions: ' + LEGAL_CONTACT + '</div></div>' +
-'<script type="application/json" id="bella-data">' +
-JSON.stringify(payload).replace(/</g,'\\u003c') +
-'<\/script></body></html>';
-
-    const blob = new Blob([doc],{type:'text/html;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
+    const out = await _buildMyDataDocx();
+    const url = URL.createObjectURL(out.blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'My-Bella-Data-' + new Date().toISOString().slice(0,10) + '.html';
+    a.download = out.name;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-    bellaMsg('**Your data is on its way down** \ud83d\udcc1\n\nI have put everything I hold on this device into one file in your Downloads folder — your details, all ' + nConv + ' conversation' + (nConv===1?'':'s') + ', anything in Deleted, and your preferences.\n\nIt opens in any browser and reads like a document. If you want a PDF, open it and choose **Print**, then **Save as PDF**.\n\nOne thing worth knowing: conversations are kept on the device you are using, so this file covers this browser. Signing in elsewhere would give you that device\'s conversations instead.');
+    bellaMsg('**Your data is on its way down** 📁\n\nI have put everything I hold on this device into one **Word document** in your Downloads folder — your details, all ' + out.nConv + ' conversation' + (out.nConv===1?'':'s') + ', anything in Deleted, and your preferences.\n\nIt opens in Word, Pages or Google Docs, and you can edit it or save it as a PDF from there.\n\nOne thing worth knowing: conversations are kept on the device you are using, so this file covers this browser. Signing in elsewhere would give you that device\'s conversations instead.');
   }catch(e){
     bellaMsg('I could not build the export just now. Please try again, and if it keeps happening let Savio know.');
   }
@@ -6999,15 +7154,40 @@ async function submitDeleteAccount(){
   const btn = document.querySelector('#delete-account-modal button');
   btn.textContent = 'Processing...'; btn.disabled = true;
 
+  // ── THIS BUTTON NOW ERASES. IT USED TO ONLY ASK. ───────────────────────
+  // What it did before: wrote one row to Deletions saying 'deletion_requested',
+  // emailed Savio, and told the person their account would be actioned within
+  // 72 hours. Nothing was deleted. Every row they owned sat exactly where it
+  // was until he wiped it by hand, so the app was making a promise only a human
+  // could keep — and the person had no way of knowing that.
+  // /delete-user now performs the real erasure: it archives every row, deletes
+  // them bottom-up, writes ONE audit line (User ID and time, nothing else) and
+  // revokes every session. It works out WHO from the verified token, so nothing
+  // this page sends can point it at another person's rows.
+  let _erased = null;
   try {
-    // Write to Deletions tab in Sheets
-    await bfetch(BACKEND+'/sheets-write', {
+    const er = await bfetch(BACKEND+'/delete-user', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        range:'Deletions!A:H', append:true,
-        values:[[userId, currentProfileKey||'', userName, userEmail, savedUser.mobile||'', fullReason, now, 'deletion_requested']]
-      })
+      body: JSON.stringify({ email: userEmail, reason: fullReason })
     });
+    const ed = await er.json().catch(function(){ return {}; });
+    if(er.ok && ed && ed.erased) _erased = ed;
+    else console.warn('Erasure refused:', er.status, JSON.stringify(ed).slice(0,200));
+  } catch(e){ console.warn('Erasure call failed:', e); }
+
+  try {
+    // ONLY when the erasure did not happen. The backend writes its own
+    // Deletions row on success, with the personal columns left empty — a row
+    // that named the person would defeat the erasure it is recording.
+    if(!_erased){
+      await bfetch(BACKEND+'/sheets-write', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          range:'Deletions!A:H', append:true,
+          values:[[userId, currentProfileKey||'', userName, userEmail, savedUser.mobile||'', fullReason, now, 'deletion_requested']]
+        })
+      });
+    }
 
     // Send urgent email to admin
     const emailBody = `
@@ -7026,6 +7206,19 @@ async function submitDeleteAccount(){
       </table>
       <p style="margin-top:16px;color:#666">Account status set to <strong>deletion_requested</strong>. Please action within 72 hours.</p>`;
 
+    // When the erasure DID happen there is nothing for him to action, and an
+    // email listing the mobile and date of birth of somebody just erased would
+    // be keeping the very data that was removed. ID, time and reason only.
+    const erasedBody = `
+      <h2 style="color:#1F6F5C">Account erased</h2>
+      <table style="border-collapse:collapse;width:100%">
+        <tr><td style="padding:8px;border:1px solid #ddd"><strong>User ID</strong></td><td style="padding:8px;border:1px solid #ddd">${userId}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #ddd"><strong>Rows removed</strong></td><td style="padding:8px;border:1px solid #ddd">${(_erased&&_erased.deleted)||0} (archived first)</td></tr>
+        <tr><td style="padding:8px;border:1px solid #ddd"><strong>Reason given</strong></td><td style="padding:8px;border:1px solid #ddd">${fullReason}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #ddd"><strong>When</strong></td><td style="padding:8px;border:1px solid #ddd">${now}</td></tr>
+      </table>
+      <p style="margin-top:16px;color:#666">No action needed. The rows are in the Archive tab if this was a mistake.</p>`;
+
     // This call carried NO `type` at all, and /send-email's first line is
     // `if (!type) return 400`. So every deletion request ever made was written
     // to the Deletions tab and then emailed to nobody — the 72-hour notice
@@ -7039,13 +7232,19 @@ async function submitDeleteAccount(){
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         type: 'delete',
-        name: userName,
+        name: _erased ? '' : userName,
         userId,
         email: userEmail,
         reason: fullReason,
-        to: 'support.bella.ai@gmail.com',
-        subject: `Urgent - Deletion of Account - ${userName} / ${userId}`,
-        body: emailBody,
+        // 'support' resolves to GMAIL_USER on the server. The literal address
+        // used to be typed here, and in three other places in this file, and
+        // one character of drift from the server's value silently 403s the
+        // send — which is exactly how the new-joiner alerts were lost once.
+        to: 'support',
+        subject: _erased
+          ? `Account erased - ${userId}`
+          : `Urgent - Deletion of Account - ${userName} / ${userId}`,
+        body: _erased ? erasedBody : emailBody,
         profileKey: currentProfileKey||''
       })
     });
@@ -7074,7 +7273,19 @@ async function submitDeleteAccount(){
 
   // Remove modal and show goodbye message
   document.getElementById('delete-account-modal').remove();
-  bellaMsg(`Goodbye, ${userName}. 🤍\n\nYour request has been received and will be actioned within **72 hours**. Until then your account stays accessible, in case you change your mind — I've sent you an email confirming it, with your User ID.\n\nWhen it is actioned, your conversations, memories and preferences are removed. You're always welcome back — though it'll be a fresh start.\n\nWishing you all the very best. It was a privilege to be your companion. 🌸`);
+  if(_erased){
+    // Said in the past tense because it is now true. The device is cleared a
+    // moment later so the words can be read first — their session is already
+    // revoked on the server, so nothing here is still signed in.
+    bellaMsg(`Goodbye, ${userName}. 🤍\n\n**It is done.** Your account and everything in it have been removed — ${(_erased.deleted||0)} record${(_erased.deleted===1?'':'s')} across my memory, your conversations and your details. I have emailed you a confirmation with your User ID, **${userId}**.\n\nThis device will clear itself in a moment. You are always welcome back — though it would be a fresh start, with nothing remembered.\n\nWishing you all the very best. It was a privilege to be your companion. 🌸`);
+    setTimeout(function(){ try{ hardResetDevice(); }catch(e){ location.reload(); } }, 9000);
+  } else {
+    // The erasure could not be carried out — a backend outage, or no profile
+    // resolved. The request is still recorded and Savio still gets the alert,
+    // so the person is never left with nothing. Saying "72 hours" is only
+    // honest on THIS branch.
+    bellaMsg(`Goodbye, ${userName}. 🤍\n\nYour request has been received and will be actioned within **72 hours**. Until then your account stays accessible, in case you change your mind — I've sent you an email confirming it, with your User ID.\n\nWhen it is actioned, your conversations, memories and preferences are removed. You're always welcome back — though it'll be a fresh start.\n\nWishing you all the very best. It was a privilege to be your companion. 🌸`);
+  }
 }
 function toggleShutter(){
   const shutter=document.getElementById('sb-shutter');
@@ -7773,7 +7984,7 @@ async function send(){
     const bellaMsgId=bellaMsg(reply);
     // Long answers (8+ sentences) speak only the short summary and point to
     // the screen for the rest. Short answers are spoken in full, as before.
-    const sentenceCount=(reply.match(/[^.!?\n]+[.!?]+|[^.!?\n]+$/g)||[reply]).length;
+    const sentenceCount=_spokenUnits(reply);
     // The model MAY ignore the length rule, so this does not rest on it: anything
     // not materially shorter than the answer is treated as no summary at all.
     const usableSummary=(voiceSummary && voiceSummary.length < reply.length*0.5)?voiceSummary:null;
@@ -7967,6 +8178,61 @@ const speechQueue={
       else curAudio.play().catch(()=>{});
     }catch(e){}
   },
+  // ══ HOW MUCH BELLA SAYS ALOUD ════════════════════════════════════════════
+  // THE CHUNKER BELOW IS NOT A LIMIT. Its caps (180/900/1400) only decide where
+  // one request to /speak ends and the next begins — its own comment says "so
+  // nothing gets dropped for long answers", which is the opposite of a cap. A
+  // 6,000-character answer was sent in full, as five requests.
+  //
+  // That is harmless only while ElevenLabs credits are empty and the device
+  // voice runs instead. ElevenLabs bills PER CHARACTER: on the Starter plan
+  // (30,000 credits for $6, checked 2026-10-11, USD/INR 96.83 from Bella's own
+  // /currency-convert) one character is one credit on the multilingual model —
+  // about Rs.0.019 each. An uncapped 5,000-character answer is therefore about
+  // Rs.97 TO SAY ONCE. That is a whole month of Bella's running cost, for one
+  // reply, and nothing in the code stood between him and it.
+  //
+  // It is also simply too long to listen to: 5,000 characters is about six
+  // minutes of speech for an answer that takes thirty seconds to read.
+  //
+  // So: SHE SPEAKS THE FIRST PART AND SAYS SO. The written answer on screen is
+  // never touched — it stays complete. The cut lands on a SENTENCE boundary
+  // (including the Devanagari/Bengali danda), never mid-word, and the line that
+  // follows is spoken in the same language she was speaking.
+  maxSpokenChars:1600,
+  spokenTail:{
+    en:' The rest is on your screen.',
+    hi:' बाकी आपकी स्क्रीन पर है।',
+    bn:' বাকিটা আপনার স্ক্রিনে আছে।',
+    mr:' बाकीचं तुमच्या स्क्रीनवर आहे.'
+  },
+  // SAVIO, 2026-10-11, AND HE WAS RIGHT: "for the big answers beyond 7 to 8
+  // lines, anyway Bella gives an option to summarize or highlight her findings
+  // because people can read right?" She does — SPOKEN_FULL_SENTENCES is 8, and
+  // past that she speaks nothing and shows the offer instead. So this cap is a
+  // BACKSTOP, not the main control, and it must never fire on the one path
+  // where somebody has pressed "Read it in full": they asked for all of it, and
+  // cutting them off at 1,600 characters to say "the rest is on your screen"
+  // would be an insult, not a saving. That path passes uncapped:true.
+  capSpoken(text,lang){
+    const t=String(text||'');
+    if(t.length<=this.maxSpokenChars) return t;
+    const head=t.slice(0,this.maxSpokenChars);
+    // Last sentence end inside the allowance. The danda ends a sentence in
+    // Hindi, Marathi and Bengali exactly as a full stop does in English.
+    let cut=-1;
+    ['.','!','?','\u0964','\n'].forEach(function(m){
+      const k=head.lastIndexOf(m);
+      if(k>cut) cut=k;
+    });
+    // If there is no sentence end in the back half, this is one long run-on —
+    // fall back to a word boundary rather than cutting a word in two.
+    if(cut < this.maxSpokenChars*0.5){
+      const sp=head.lastIndexOf(' ');
+      cut = sp>0 ? sp-1 : head.length-1;
+    }
+    return head.slice(0,cut+1).trim() + (this.spokenTail[lang]||this.spokenTail.en);
+  },
   // Splits on sentence boundaries and caps chunk size well under any TTS
   // backend limit, so nothing gets dropped for long answers.
   splitToChunks(text){
@@ -8006,13 +8272,15 @@ const speechQueue={
     if(cur.trim())chunks.push(cur.trim());
     return chunks.length?chunks:[text];
   },
-  async enqueue(text,lang,msgId){
+  async enqueue(text,lang,msgId,opts){
     this.stop(); // never let a new answer's speech start while an old one is still going
     const myToken=this.stopToken;
     this.msgId=msgId||null;
     const allowedLangs=['en','hi','bn','mr'];
     if(!allowedLangs.includes(lang))lang='en';
-    const clean=speakableText(text);
+    // opts.uncapped — the person pressed "Read it in full". Honour it exactly.
+    const spoken=speakableText(text);
+    const clean=(opts&&opts.uncapped)?spoken:this.capSpoken(spoken,lang);
     if(!clean.trim()||!audioUnlocked)return;
     this.playing=true;
     setSpeakingState(true);
@@ -8251,6 +8519,21 @@ function speakableText(text){
 // reads the short version and then asks whether the user wants the rest — in
 // their own language — instead of silently truncating or reading for 90 seconds.
 const SPOKEN_FULL_SENTENCES = 8;
+// HOW LONG IS "LONG"? Savio's rule is 7-8 lines: past that Bella offers instead
+// of reading. The old counter was `reply.match(/[^.!?\n]+[.!?]+|[^.!?\n]+$/g)`,
+// which only counts text ENDING in . ! or ? — so a bulleted answer with no full
+// stops counted as ONE SENTENCE and slid straight past the offer to be read out
+// whole, however long it was. Measured 2026-10-11: a ten-bullet, 232-character
+// answer scored 1, while ten short prose sentences scored 10.
+// Lines count too now, and the larger of the two wins: prose is measured by its
+// sentences, a list by its items, and an answer that is both by whichever makes
+// it long.
+function _spokenUnits(t){
+  const s=String(t||'');
+  const sentences=(s.match(/[^.!?\n]+[.!?]+/g)||[]).length;
+  const lines=s.split('\n').map(function(x){return x.trim();}).filter(Boolean).length;
+  return Math.max(sentences,lines,1);
+}
 const OFFER_TEXT = {
   en:{ask:'That\u2019s a long answer. Shall I read it all, or summarise the important points?',
       full:'Read it all',sum:'Summarise',other:'Discuss another topic',
@@ -8304,7 +8587,9 @@ function offerFullReading(msgId, fullText, summary, lang){
     const st=window._offerStore[msgId]||{}; const act=b.dataset.act;
     box.remove(); delete window._offerStore[msgId];
     try{ speechQueue.stop(); }catch(err){}
-    if(act==='full'){ try{ speakText(st.full, st.lang, msgId); }catch(err){} }
+    // UNCAPPED, deliberately. This button means "read me the whole thing", so
+    // the length backstop in speechQueue must not apply to it.
+    if(act==='full'){ try{ speakText(st.full, st.lang, msgId, {uncapped:true}); }catch(err){} }
     else if(act==='sum'){
       // It used to ONLY speak, so in Text mode pressing Summarise did nothing you
       // could see. Savio: the points have to "reappear after the long detailed
@@ -8358,9 +8643,9 @@ function stopMsgSpeech(msgId){
   if(!speechQueue.msgId||speechQueue.msgId===msgId)speechQueue.stop();
   paintSpeechBtn(msgId);
 }
-async function speakAlways(text,lang,msgId){
+async function speakAlways(text,lang,msgId,opts){
   if(!audioUnlocked)return;
-  await speechQueue.enqueue(text,lang,msgId);
+  await speechQueue.enqueue(text,lang,msgId,opts);
 }
 
 function setSpeakingState(speaking){
@@ -8384,10 +8669,10 @@ function setSpeakingState(speaking){
   }
 }
 
-async function speakText(text,lang,msgId){
+async function speakText(text,lang,msgId,opts){
   if(!continuousVoice)return;
   if(!audioUnlocked)return;
-  await speechQueue.enqueue(text,lang,msgId);
+  await speechQueue.enqueue(text,lang,msgId,opts);
 }
 function autoPlay(url){
   speechQueue.stop(); // never let a manual Replay overlap with anything else speaking
