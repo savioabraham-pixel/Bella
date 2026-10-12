@@ -3135,7 +3135,14 @@ function switchThread(id){
   // conversation was never saved and never synced. That is why the Threads tab
   // filled with conversations named "Welcome..." and holding nothing.
   {const _tt=document.getElementById('topbar-thread');if(_tt)_tt.textContent=threads[id].name;}
-  document.getElementById('topbar-sub').textContent=threads[id].hist.length>0?threads[id].hist.length+' messages':'Start a conversation';
+  // ...and `topbar-sub` on THIS line was missed when the guard above was added,
+  // so switchThread() went on throwing `Cannot set properties of null` at exactly
+  // the point the comment claims to have fixed. Proven on the LIVE page 2026-10-12:
+  // renderThreadList() and saveThreadsLocal() below NEVER RAN, and newThread() calls
+  // switchThread() unguarded at :3115 -- so pressing New Conversation delivered NO
+  // GREETING and, on a phone, never closed the sidebar. A guard on one of two
+  // adjacent lines is not a fix. Pranav flagged this as H1 in August.
+  {const _ts=document.getElementById('topbar-sub');if(_ts)_ts.textContent=threads[id].hist.length>0?threads[id].hist.length+' messages':'Start a conversation';}
   renderThreadList();
   saveThreadsLocal();
 }
