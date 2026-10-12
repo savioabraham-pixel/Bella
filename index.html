@@ -2794,13 +2794,21 @@ function _showMemAlert(threshold, memCount, threadCount){
     if(continuousVoice) speakText(msg,'en');
   }
 }
+// 'pending' until the call settles. Savio asked on 2026-10-12 why My Memory said
+// he had none; he had none, but the screen says the same sentence when the call
+// FAILED, when the session is dead, and when the key resolves to nobody. A screen
+// that cannot say "I could not check" will eventually say something untrue.
+let _memLoadState='pending';
 async function loadUserMemory(profileKey,addressedName){
   userMemory={addressedName,memories:'',lastSeen:'',proactiveFollowUp:''};
+  _memLoadState='pending';
   try{
     // Use backend memory endpoint — works without user OAuth
     const r=await bfetch(BACKEND+'/memory-read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey})});
+    if(!r.ok) _memLoadState='failed';
     if(r.ok){
       const d=await r.json();
+      _memLoadState = d.user ? 'ok' : 'no-record';
       if(d.user){
         userMemory={
           addressedName:d.user.addressedName||addressedName,
@@ -2864,7 +2872,7 @@ async function loadUserMemory(profileKey,addressedName){
       // Load memory progress
       updateMemoryProgress(profileKey);
     }
-  }catch(e){console.warn('Memory load error:',e);}
+  }catch(e){_memLoadState='failed';console.warn('Memory load error:',e);}
 }
 async function saveMemory(profileKey,newMem){
   if(_lastMemAlert>=100){
@@ -2957,7 +2965,8 @@ async function syncThreadsFromBackend(){
     rows.forEach(function(row){
       const id=row&&row.threadId;
       if(!id)return;
-      if(deletedThreads&&deletedThreads[id])return;   // deleted here, stay deleted
+      if(deletedThreads&&deletedThreads[id])return;   // in the bin -- stay deleted
+      if(isTombstoned(id))return;                     // deleted and PURGED -- stay deleted for ever
       let hist=row.history;
       if(typeof hist==='string'){ try{hist=JSON.parse(hist);}catch(e){hist=[];} }
       if(!Array.isArray(hist))hist=[];
@@ -3163,8 +3172,28 @@ function startRename(id,e){
 const TRASH_KEY='b_threads_deleted';
 const TRASH_DAYS=30;
 let deletedThreads={};
+// ── WHY A TOMBSTONE EXISTS AT ALL ───────────────────────────────────────
+// syncThreadsFromBackend() suppresses a conversation by looking it up in
+// `deletedThreads`. purgeExpiredTrash() DELETES that entry at 30 days. The
+// backend copy is never deleted by either. So on DAY 31 the suppression was
+// gone, the cloud row was still there, and the next login re-imported a
+// conversation the user had deleted a month earlier. The bin was working and
+// the promise was still being broken.
+//
+// The tombstone keeps the ID ONLY -- no name, no messages, nothing readable --
+// for ever, so "deleted" does not quietly expire. Ids are short, and the list
+// is bounded by how many conversations one person ever deletes.
+const TOMB_KEY='b_thread_tombstones';
+let threadTombstones={};
+function loadTombstones(){
+  try{ threadTombstones=JSON.parse(localStorage.getItem(TOMB_KEY)||'{}')||{}; }catch(e){ threadTombstones={}; }
+}
+function saveTombstones(){ try{ localStorage.setItem(TOMB_KEY,JSON.stringify(threadTombstones)); }catch(e){} }
+function tombstoneThread(id){ if(!id)return; threadTombstones[id]=1; saveTombstones(); }
+function isTombstoned(id){ return !!(id && threadTombstones[id]); }
 function loadTrash(){
   try{ deletedThreads=JSON.parse(localStorage.getItem(TRASH_KEY)||'{}')||{}; }catch(e){ deletedThreads={}; }
+  loadTombstones();
   purgeExpiredTrash();
 }
 function saveTrash(){ try{ localStorage.setItem(TRASH_KEY,JSON.stringify(deletedThreads)); }catch(e){} }
@@ -3172,7 +3201,12 @@ function purgeExpiredTrash(){
   const cutoff=Date.now()-TRASH_DAYS*24*60*60*1000; let changed=false;
   Object.keys(deletedThreads).forEach(id=>{
     const d=deletedThreads[id]; const when=d&&d.deletedAt?new Date(d.deletedAt).getTime():0;
-    if(!when||when<cutoff){ delete deletedThreads[id]; changed=true; }
+    if(!when||when<cutoff){
+      // The CONTENT goes; the fact of deletion stays. Dropping both is what
+      // let the backend copy walk back in on day 31.
+      tombstoneThread(id);
+      delete deletedThreads[id]; changed=true;
+    }
   });
   if(changed) saveTrash();
 }
@@ -3192,11 +3226,15 @@ function destroyThreadForever(id,e){
   if(e)e.stopPropagation();
   const d=deletedThreads[id]; const nm=d&&d.name?d.name:'this conversation';
   if(!confirm('Permanently delete "'+nm+'"?\n\nThis cannot be undone.')) return;
+  // "This cannot be undone" has to be true. Without the tombstone the next
+  // sync pulled it straight back from the backend copy.
+  tombstoneThread(id);
   delete deletedThreads[id]; saveTrash(); renderTrashList();
 }
 function emptyTrash(){
   const n=Object.keys(deletedThreads).length; if(!n) return;
   if(!confirm('Permanently delete all '+n+' conversation'+(n===1?'':'s')+' in Deleted?\n\nThis cannot be undone.')) return;
+  Object.keys(deletedThreads).forEach(tombstoneThread);
   deletedThreads={}; saveTrash(); renderTrashList();
 }
 /* ── Ticking several at once ───────────────────────────────────────────
@@ -7305,8 +7343,11 @@ const LEGAL_DOCS = {
     'That does not happen on your device, and it happens whenever the microphone is on\n' +
     '- **ElevenLabs** — turning her replies into speech, and only when voice is switched on\n' +
     '- **OpenStreetMap** — turning your coordinates into the name of your area, only if you allow location\n' +
-    '- **OpenWeather** — your coordinates, to fetch your local forecast, only if you allow location\n\n' +
-    'Your location goes to those last two on its own. No name, no email and no account goes with it.\n\n' +
+    '- **OpenWeather** — your coordinates, to fetch your local forecast, only if you allow location\n' +
+    '- **open.er-api.com** — live exchange rates for the currency converter. Only the two currency ' +
+    'codes are sent, nothing else: no location, no name, no account\n\n' +
+    'Your location goes to OpenStreetMap and OpenWeather on its own. No name, no email and no ' +
+    'account goes with it.\n\n' +
     '**Where it is kept**\n\n' +
     'Your conversations are kept in **two** places: in your own browser, and in a private Google account ' +
     'belonging to Savio. That second copy is what lets a conversation you began on your laptop carry on ' +
@@ -7780,6 +7821,17 @@ function showWhatsNew(){
 function showMyMemory(){
   if(userMemory&&userMemory.memories){
     bellaMsg("**What I Remember About You**\n\n"+userMemory.memories);
+    return;
+  }
+  // Four different situations used to print the same sentence. Only ONE of them
+  // means "you have no memories", and claiming it in the other three is how a
+  // real loss would go unnoticed.
+  if(_memLoadState==='failed'){
+    bellaMsg("**I could not check your memory just now.**\n\nThat is not the same as having none — I could not reach it, so I do not know what is there. Nothing has been lost. Please try again in a moment, and tell Savio if it keeps happening.");
+  } else if(_memLoadState==='pending'){
+    bellaMsg("**I am still fetching your memory.**\n\nGive me a moment and ask me again.");
+  } else if(_memLoadState==='no-record'){
+    bellaMsg("**I have no record for this account yet.**\n\nThat usually means this is a new account, or that your history sits under a different sign-in. It does not mean anything was deleted. Worth mentioning to Savio if you expected to find something here.");
   } else {
     bellaMsg("I don't have any stored memories for you yet. As we talk, I will remember important things you share with me.");
   }
@@ -8757,7 +8809,13 @@ async function send(){
 function _whereTheyAreNote(){
   let d=null;
   try{ d=JSON.parse(sessionStorage.getItem('b_location_data')||'null'); }catch(e){}
-  if(!d || (!d.area && !d.city)){
+  // THE COORDINATES ARE A LOCATION. This guard used to test the place NAME only,
+  // so when Nominatim's reverse lookup failed -- measured 6 of 6 on some Kolkata
+  // coordinates on 2026-10-07, because its India edge cache serves them with no
+  // CORS header -- Bella was told nobody had shared a location while this very
+  // object held an exact lat/lon. `_plCoords()` already does it the right way.
+  const _hasXY = !!d && Number.isFinite(d.lat) && Number.isFinite(d.lon);
+  if(!d || ((!d.area && !d.city) && !_hasXY)){
     return '\n\nWHERE THEY ARE: unknown — this device has not shared a location. '
       + 'If the question depends on where they are ("near me", "nearby", "around here", '
       + 'directions, local services), ASK WHERE THEY ARE before answering. '
@@ -8765,9 +8823,12 @@ function _whereTheyAreNote(){
       + 'mentioned there is where someone works or lives, not where this person is standing now.';
   }
   const here=[d.area,d.city,d.country].filter(Boolean).join(', ');
-  const co=(typeof d.lat==='number'&&typeof d.lon==='number')
-    ? ' Their coordinates are '+d.lat.toFixed(4)+', '+d.lon.toFixed(4)+'.' : '';
-  return '\n\nWHERE THEY ARE RIGHT NOW: '+here+'.'+co
+  const co=_hasXY ? ' Their coordinates are '+d.lat.toFixed(4)+', '+d.lon.toFixed(4)+'.' : '';
+  // Coordinates but no name: say so plainly rather than printing an empty place.
+  const lead = here
+    ? 'WHERE THEY ARE RIGHT NOW: '+here+'.'
+    : 'WHERE THEY ARE RIGHT NOW: at the coordinates below. The place NAME could not be looked up, which is a failure of that one lookup and NOT a sign they withheld their location — do not ask them where they are.';
+  return '\n\n'+lead+co
     + ' Use THIS for anything local — "near me", "nearby", "around here", distances, directions, '
     + 'opening hours, local services. '
     + 'A place named in their background notes is where someone works or lives; it is NOT where '
@@ -14075,11 +14136,21 @@ async function invDownload(fmt){
   try{
     let r;
     if(fmt==='pdf'){
+      // THE PDF USED TO LOSE THE GST SPLIT AND THE ROUND-OFF. It sent one
+      // `taxRate` and nothing else, so the backend printed a single
+      // "Tax (18%)" line -- not a compliant tax invoice -- while the Excel and
+      // Word versions showed CGST+SGST (or IGST) on their own rows. The
+      // round-off was applied on screen and in those two, and dropped from the
+      // PDF, so the same invoice could show two different totals.
+      // The two STATES go, not the computed split: the server derives the
+      // place of supply itself, so a tax document can never display figures a
+      // caller chose. Backend v8.1.
       const body = INV.kind==='invoice'
         ? {seller:d.seller,buyer:d.buyer,items:d.items,taxRate:d.t.rate,currency:d.currency,
-           notes:d.notes,invoiceNumber:d.ref,format:'pdf'}
+           notes:d.notes,invoiceNumber:d.ref,format:'pdf',
+           sellerState:d.t.sState||'',buyerState:d.t.bState||'',roundOff:d.t.round||0}
         : {company:d.seller,clientName:d.buyer.name,items:d.items,taxRate:d.t.rate,
-           currency:d.currency,notes:d.notes,format:'pdf'};
+           currency:d.currency,notes:d.notes,format:'pdf',roundOff:d.t.round||0};
       r=await bfetch(BACKEND+'/'+(INV.kind==='invoice'?'generate-invoice':'generate-quotation'),
         {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     }else{
