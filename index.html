@@ -722,8 +722,8 @@ body.dark #theme-now{color:rgba(245,230,200,.72)!important}
 .menu-section-header{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;transition:background .15s;user-select:none;background:#0B2545}
 .menu-section-header:hover{background:#142F5A}
 .menu-section-title{font-family:'BellaIndic','DM Sans',sans-serif;font-size:11px;font-weight:700;color:#D4AF37;text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:8px}
-.menu-section-arrow{font-size:10px;color:rgba(212,175,55,0.6);transition:transform .2s;display:inline-block}
-.menu-section-arrow.open{transform:rotate(180deg)}
+.menu-section-arrow{font-size:10px;color:rgba(212,175,55,0.6);transition:transform .2s;display:inline-block;transform:rotate(180deg)}
+.menu-section-arrow.open{transform:rotate(0deg)}
 .menu-items{background:#FFFFFF}
 .menu-item{padding:11px 20px;font-size:13px;color:#0B2545;cursor:pointer;transition:background .15s;border-bottom:1px solid rgba(11,37,69,0.06)}
 .menu-item:hover{background:#F5E6C8;color:#0B2545}
@@ -2086,9 +2086,9 @@ try{
     <div class="menu-section">
       <div class="menu-section-header" onclick="toggleMenuSection('sec-about')">
         <span class="menu-section-title">ℹ️ About</span>
-        <span class="menu-section-arrow" id="arr-about">▲</span>
+        <span class="menu-section-arrow open" id="arr-about">▲</span>
       </div>
-      <div class="menu-items" id="sec-about">
+      <div class="menu-items open" id="sec-about">
         <div class="menu-item" onclick="showAboutBella();closeUserMenu()">About Bella</div>
         <div class="menu-item" onclick="showWhatsNew();closeUserMenu()">What's New</div>
       </div>
@@ -2097,9 +2097,9 @@ try{
     <div class="menu-section">
       <div class="menu-section-header" onclick="toggleMenuSection('sec-profile')">
         <span class="menu-section-title">👤 Profile & Account</span>
-        <span class="menu-section-arrow" id="arr-profile">▲</span>
+        <span class="menu-section-arrow open" id="arr-profile">▲</span>
       </div>
-      <div class="menu-items" id="sec-profile">
+      <div class="menu-items open" id="sec-profile">
         <div class="menu-item" onclick="openMyProfile();closeUserMenu()">My Profile</div>
         <div class="menu-item" onclick="openNotificationSettings();closeUserMenu()">Notification Settings</div>
         <div class="menu-item" onclick="openVoicePick(event)">Bella's Voice</div>
@@ -2116,9 +2116,9 @@ try{
     <div class="menu-section">
       <div class="menu-section-header" onclick="toggleMenuSection('sec-data')">
         <span class="menu-section-title">🔒 Data & Privacy</span>
-        <span class="menu-section-arrow" id="arr-data">▲</span>
+        <span class="menu-section-arrow open" id="arr-data">▲</span>
       </div>
-      <div class="menu-items" id="sec-data">
+      <div class="menu-items open" id="sec-data">
         <div class="menu-item" onclick="showMyMemory();closeUserMenu()">My Memory</div>
         <div class="menu-item" onclick="downloadMyData();closeUserMenu()">Download My Data</div>
         <div class="menu-item" onclick="clearAllThreads();closeUserMenu()">Clear All Threads</div>
@@ -2129,9 +2129,9 @@ try{
     <div class="menu-section">
       <div class="menu-section-header" onclick="toggleMenuSection('sec-legal')">
         <span class="menu-section-title">⚖️ Legal</span>
-        <span class="menu-section-arrow" id="arr-legal">▲</span>
+        <span class="menu-section-arrow open" id="arr-legal">▲</span>
       </div>
-      <div class="menu-items" id="sec-legal">
+      <div class="menu-items open" id="sec-legal">
         <div class="menu-item" onclick="showLegalDoc('terms');closeUserMenu()">Terms of Use</div>
         <div class="menu-item" onclick="showLegalDoc('privacy');closeUserMenu()">Privacy Notice</div>
         <div class="menu-item" onclick="showLegalDoc('security');closeUserMenu()">Security Information</div>
@@ -2144,7 +2144,7 @@ try{
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           Help Bella Improve
         </span>
-        <span class="menu-section-arrow">▲</span>
+        <span class="menu-section-arrow open">▲</span>
       </div>
     </div>
     <!-- Admin — owner only. Revealed by revealAdminUI(); the real gate is
@@ -2152,9 +2152,9 @@ try{
     <div class="menu-section" id="admin-section" style="display:none">
       <div class="menu-section-header" onclick="toggleMenuSection('sec-admin')">
         <span class="menu-section-title">🛡️ Admin</span>
-        <span class="menu-section-arrow" id="arr-admin">▲</span>
+        <span class="menu-section-arrow open" id="arr-admin">▲</span>
       </div>
-      <div class="menu-items" id="sec-admin">
+      <div class="menu-items open" id="sec-admin">
         <div class="menu-item" onclick="openAdminPanel();closeUserMenu()">Manage Accounts</div>
         <div class="menu-item" onclick="openAdminScreen('cost');closeUserMenu()">What Bella Costs</div>
         <div class="menu-item" onclick="openAdminScreen('audit');closeUserMenu()">Audit Log</div>
@@ -2169,9 +2169,9 @@ try{
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           Sign Out
         </span>
-        <span class="menu-section-arrow" id="arr-signout">▲</span>
+        <span class="menu-section-arrow open" id="arr-signout">▲</span>
       </div>
-      <div class="menu-items" id="sec-signout">
+      <div class="menu-items open" id="sec-signout">
         <div style="padding:14px 20px">
           <div style="font-size:13px;color:#0B2545;margin-bottom:12px">Are you sure you want to sign out?</div>
           <div style="display:flex;gap:8px">
