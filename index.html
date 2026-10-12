@@ -819,7 +819,10 @@ body.dark #user-menu-panel .menu-item.danger:hover{background:#3A1515!important;
 }
 
 .thread-preview{
-  color:rgba(27,42,74,.6)!important;
+  /* .6 measured 4.02:1 on white -- under the 4.5 that body text needs, and it
+     is content he reads, not decoration. .7 gives 5.43:1. Light only: dark has
+     its own rule further down and already passes at cream-on-navy. */
+  color:rgba(27,42,74,.7)!important;
 }
 
 .thread-icon{
@@ -13085,6 +13088,22 @@ html body.dark #sidebar .sb-new-chat *,
 html body.dark .inp-actions .sbtn{ color:#0B2545 !important; }
 html body.dark #sidebar .sb-new-chat svg,
 html body.dark .inp-actions .sbtn svg{ stroke:#0B2545 !important; }
+
+/* ══ TWO MORE ICONS THE BLANKET DARK STROKE WAS SWALLOWING ══════════════════
+   `html body.dark svg{ stroke:#F5E6C8 !important }` above is right for an icon
+   sitting on navy and wrong for one sitting on a LIGHT surface -- and because
+   it is !important it even beats a hardcoded stroke="" attribute. Exactly the
+   trap from the colour sweep: the blanket rule is fine, the exception is the
+   control whose own surface is already pale. Measured in dark mode:
+
+     .thread-btn svg          cream on cream  #E8D9B8   1.13:1   (Rename/Delete)
+     "Change your photo" svg  cream on gold   #D4AF37   1.71:1
+
+   currentColor lets Rename/Delete follow .thread-btn's own tokenised colour,
+   so the hover state keeps working; the camera keeps the navy it was authored
+   with. [[bella-contrast-auditor-blind-to-icons]] */
+html body.dark .thread-btn svg{ stroke: currentColor !important; }
+html body.dark [title="Change your photo"] svg{ stroke:#0B2545 !important; }
 </style>
 
 <style id="v88-invoice">
