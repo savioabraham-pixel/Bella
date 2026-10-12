@@ -6501,9 +6501,22 @@ why_bar_inner(p, thick) +
       '<div style="height:100%;width:' + p + '%;background:' + colourFor(p) + '"></div></div>';
   }
 
-  // The widest-scoped budget is the headline. Everything else is listed under
-  // it on its own terms.
-  const head = b.budgets[0], rest = b.budgets.slice(1);
+  // THE WIDEST-SCOPED BUDGET IS THE HEADLINE, and that is decided HERE rather
+  // than trusted from the order it arrived in. The backend sorts by cost, so
+  // budgets[0] is merely the biggest NUMBER. Those agree today only because the
+  // account-wide budget happens to be the largest -- but the all-up figure is
+  // reported AFTER credits while a per-service budget is not, so one service
+  // could overtake it in an odd month and silently become "What Bella has cost
+  // this month", understating the whole bill.
+  // A budget's own LIMIT is the honest proxy for its scope: the account-wide
+  // budget is set to Rs.300, each service budget to Rs.50. Sort by that, with
+  // cost as the tie-break, and a missing limit never wins.
+  const ranked = b.budgets.slice().sort(function(x, y){
+    const bx = Number(x.budgetAmount) || 0, by = Number(y.budgetAmount) || 0;
+    if(by !== bx) return by - bx;
+    return (Number(y.costAmount) || 0) - (Number(x.costAmount) || 0);
+  });
+  const head = ranked[0], rest = ranked.slice(1);
   let html = '<div style="padding:16px 12px;border:1px solid rgba(212,175,55,0.45);border-radius:12px;margin-bottom:14px;text-align:center">' +
       '<div style="color:rgba(245,230,200,0.5);font-size:11px;text-transform:uppercase;letter-spacing:0.06em">What Bella has cost this month</div>' +
       '<div style="color:#D4AF37;font-family:\'Cormorant Garamond\',serif;font-size:44px;line-height:1.1">' +
