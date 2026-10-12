@@ -2960,8 +2960,8 @@ function renderThreadList(){
         <div class="thread-preview">${preview}</div>
       </div>
       <div class="thread-actions">
-        <button class="thread-btn" onclick="startRename('${id}',event)" title="Rename" aria-label="Rename this conversation"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(245,230,200,0.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-        <button class="thread-btn" onclick="deleteThread('${id}',event)" title="Delete" aria-label="Delete this conversation"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(245,230,200,0.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+        <button class="thread-btn" onclick="startRename('${id}',event)" title="Rename" aria-label="Rename this conversation"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button class="thread-btn" onclick="deleteThread('${id}',event)" title="Delete" aria-label="Delete this conversation"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
       </div>`;
     el.onclick=(e)=>{if(!e.target.closest('.thread-actions'))switchThread(id);};
     list.appendChild(el);
@@ -5834,6 +5834,10 @@ let _bellaAdmin = false;
 function revealAdminUI(){
   const s = document.getElementById('admin-section');
   if(s) s.style.display = _bellaAdmin ? '' : 'none';
+  // _bellaAdmin lands after /account-state answers, which is usually AFTER the
+  // Workshop has rendered. Without this the admin tile stays hidden from the
+  // owner until the drawer is closed and reopened.
+  if(typeof wsRerender === 'function') wsRerender();
 }
 
 // Ask only who we are, WITHOUT acting on account state. Used on the load right
@@ -6168,8 +6172,20 @@ function adminAct(email, action){
 // Shown AFTER Bella is on screen, never before, and wrapped so that any fault
 // in here leaves Bella working normally rather than locking somebody out of
 // their own account. Asked once per version of the notice.
+// Set when the prompt has been answered in THIS tab. Only consulted when
+// localStorage cannot be read at all — see the catch below.
+let _consentAskedThisSession = false;
 function _consentAccepted(){
-  try { return localStorage.getItem('b_consent_v') === LEGAL_UPDATED; } catch(e) { return true; }
+  try { return localStorage.getItem('b_consent_v') === LEGAL_UPDATED; }
+  catch(e){
+    // Storage unreadable — private browsing, or storage switched off. This used
+    // to return TRUE, which meant Bella silently concluded consent had been
+    // given and never asked. That is the wrong way to fail on a consent gate:
+    // asking twice costs nothing, while never asking leaves a consent that
+    // cannot be demonstrated. FAIL CLOSED — but only once per session, or a
+    // private window would be asked again on every single load.
+    return _consentAskedThisSession;
+  }
 }
 function maybeAskConsent(){
   try{
@@ -6214,6 +6230,7 @@ async function acceptConsentCatchup(btn){
   }catch(e){
     if(msg) msg.textContent = 'Saved on this device — Bella will record it next time.';
   }
+  _consentAskedThisSession = true;      // holds even when storage cannot
   try{ localStorage.setItem('b_consent_v', LEGAL_UPDATED); }catch(e){}
   setTimeout(function(){ const o = document.getElementById('consent-catchup'); if(o) o.remove(); }, 350);
 }
@@ -16438,7 +16455,10 @@ const WORKSHOP = [
   ['☀️','Morning Briefing','now',null,''],
   ['\u{1F4F2}','Notifications','now',null,'reaches you with Bella closed'],
   ['\u{1F3AC}','B-Meet','now','openBMeet','records a call, returns Word minutes'],
-  ['\u{1F6E1}️','Audit & Usage','now',null,'admin only'],
+  // `fn` set 11 Oct when the four admin screens shipped; the sixth field marks
+  // it admin-only so wsRenderZone drops it for everyone else, rather than
+  // showing a tile that could only ever 403. [[bella-admin-screens-built]]
+  ['\u{1F6E1}️','Audit & Usage','now',"openAdminScreen('cost')",'cost, audit log, consents and deletions','admin'],
 
   // ── PHASE 3 ─────────────────────────────────────────────────────────────
   ['\u{1F5A5}️','Bella Presence','p3',null,''],
@@ -16725,7 +16745,9 @@ function wsRenderZone(key){
   // Split by whether the tile OPENS, not by the order it was typed in. Savio's
   // point: "when the SOON becomes ON it goes in the top bracket" — giving a
   // tile a `fn` is now the only thing needed to move it above the rule.
-  const items = WORKSHOP.filter(f => f[2] === key);
+  // f[5]==='admin' means owner-only: hide it from everyone else rather than
+  // greying it, so no member sees a screen they can never open.
+  const items = WORKSHOP.filter(f => f[2] === key && (f[5] !== 'admin' || _bellaAdmin));
   // His own arrangement, applied INSIDE each bracket so the ON/SOON split he
   // asked for still holds however he drags things about.
   const live  = wsApplyOrder(items.filter(f => f[3]));
