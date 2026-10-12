@@ -3127,7 +3127,10 @@ function switchThread(id){
   }
   currentThreadId=id;
   document.getElementById('msgs').innerHTML='';
-  document.getElementById('empty-state')&&document.getElementById('msgs').appendChild(Object.assign(document.createElement('div'),{className:'empty-state',id:'empty-state',innerHTML:'<div class="empty-logo">B</div><div class="empty-text">'+threads[id].name+'<br><span style="font-size:11px;color:var(--tsoft)">Ask Bella anything</span></div>'}));
+  // The thread NAME is user-supplied (startRename uses prompt()) and also arrives
+  // from the backend sync, so it goes in escaped. _adminEsc is the one escaper
+  // this file already has -- a second one would only drift from it.
+  document.getElementById('empty-state')&&document.getElementById('msgs').appendChild(Object.assign(document.createElement('div'),{className:'empty-state',id:'empty-state',innerHTML:'<div class="empty-logo">B</div><div class="empty-text">'+_adminEsc(threads[id].name)+'<br><span style="font-size:11px;color:var(--tsoft)">Ask Bella anything</span></div>'}));
   threads[id].hist.forEach(m=>{if(m.role==='user')userMsg(m.parts[0].text.replace(/^\[User: [^\]]+\]\n/,''),[]);else bellaMsg(m.parts[0].text);});
   // #topbar-thread was removed from the markup (see the comment near deliverGreeting)
   // but three places still addressed it. Each threw a silent TypeError — and the
@@ -7137,7 +7140,32 @@ function doSearch(q){
     if(el)el.style.background='var(--goldpale)';
   });
   if(!matches.length){res.innerHTML='<div style="font-size:12px;color:var(--tsoft);padding:6px">No results found</div>';return;}
-  res.innerHTML=matches.map(m=>`<div onclick="switchThread('${m.id}');highlightMessages('${q}');toggleSearch()" style="padding:7px 8px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text);font-family:'BellaIndic','DM Sans',sans-serif;display:flex;align-items:center;gap:6px" onmouseover="this.style.background='var(--goldpale)'" onmouseout="this.style.background=''"><span style="font-size:10px">${m.inContent?'💬':'🗂️'}</span>${m.name}</div>`).join('');
+  // BUILT, NOT INTERPOLATED. This row used to be a template string with the
+  // SEARCH TEXT dropped inside an onclick attribute --
+  //   onclick="...highlightMessages('${q}')..."
+  // -- and the thread name dropped in unescaped beside it. An apostrophe in
+  // either one closed the JS string early; escaping it for HTML does not help,
+  // because the parser decodes the entity back to an apostrophe BEFORE the JS
+  // string is parsed. Attribute-escaping and JS-escaping are different jobs and
+  // mixing them is how this class of bug survives a review.
+  // So there is no inline JS left here: the row is a real element, the name
+  // goes in as TEXT via textContent, and the handler is a closure that already
+  // holds `id` and `q` as values. Nothing is parsed, so nothing can break out.
+  res.innerHTML='';
+  matches.forEach(mt=>{
+    const row=document.createElement('div');
+    row.style.cssText="padding:7px 8px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text);font-family:'BellaIndic','DM Sans',sans-serif;display:flex;align-items:center;gap:6px";
+    const icon=document.createElement('span');
+    icon.style.fontSize='10px';
+    icon.textContent=mt.inContent?'\u{1F4AC}':'\u{1F5C2}\u{FE0F}';
+    const label=document.createElement('span');
+    label.textContent=mt.name;          // TEXT, so markup in a thread name is inert
+    row.appendChild(icon); row.appendChild(label);
+    row.addEventListener('mouseover',()=>{row.style.background='var(--goldpale)';});
+    row.addEventListener('mouseout',()=>{row.style.background='';});
+    row.addEventListener('click',()=>{switchThread(mt.id);highlightMessages(q);toggleSearch();});
+    res.appendChild(row);
+  });
 }
 function highlightMessages(q){
   if(!q)return;
