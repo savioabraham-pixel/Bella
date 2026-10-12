@@ -88,7 +88,6 @@ body.dark .toggle-sw.on{background:var(--gold)}
 body.dark 
 body.dark 
 body.dark #theme-tog{background:var(--gold)}
-body.dark #theme-knob{background:#0B2545!important}
 body.dark .topbar-sep-rhs{background:var(--gold)!important;opacity:.5!important}
 body.dark 
 body.dark 
@@ -563,6 +562,54 @@ body.dark #voice-pick{background:#0E2B50;border-color:rgba(245,230,200,.22);box-
 body.dark #voice-pick .lang-pick-opt{color:#F5E6C8}
 body.dark #voice-pick .lang-pick-opt:hover{background:rgba(245,230,200,.12)}
 body.dark #voice-pick .lang-pick-opt.on.on.on.on.on{background:#D4AF37!important;border-color:#D4AF37!important;color:#0B2545!important}
+
+/* ── MY ACCOUNT > THEME ───────────────────────────────────────────────
+   Three stacked full-width rows, NOT a floating pill strip like #lang-pick.
+   "Match my device" is 16 characters; measured at 320px the pill row either
+   wrapped mid-label or pushed itself off the panel, and the 320px width is the
+   one that must work ([[bella-smart-device-adaptability-first]]).
+   The selected row needs an ID in its selector to beat `body.dark *{color:
+   #F5E6C8 !important}` -- a class-based override loses even with !important,
+   which is the trap this file has fallen into repeatedly. #theme-pick is that
+   ID; the repeated `.on` follows the proven #lang-pick pattern above. */
+#theme-pick{display:none;padding:2px 14px 8px}
+#theme-pick.open{display:block}
+#theme-pick .theme-opt{appearance:none;display:flex;align-items:center;gap:9px;width:100%;
+  text-align:left;padding:9px 11px;margin:3px 0;border-radius:9px;cursor:pointer;
+  background:transparent;border:1px solid rgba(11,37,69,.18);color:#0B2545;
+  font-family:'BellaIndic','DM Sans',sans-serif;font-size:12.5px;font-weight:500;
+  transition:background .15s,border-color .15s}
+#theme-pick .theme-opt:hover{background:rgba(11,37,69,.06)}
+#theme-pick .theme-opt .theme-tick{flex:0 0 14px;width:14px;height:14px;border-radius:50%;
+  border:1.5px solid rgba(11,37,69,.35);display:inline-block}
+#theme-pick .theme-opt.on{background:#0B2545;border-color:#0B2545;color:#F5E6C8;font-weight:600}
+#theme-pick .theme-opt.on .theme-tick{border-color:var(--gold);background:var(--gold)}
+#theme-pick .theme-opt.on:hover{background:#0B2545;color:#F5E6C8}
+#theme-pick .theme-note{font-size:10.5px;line-height:1.5;color:#4A5A7A;padding:3px 12px 0}
+/* THE BLANKET body.dark button RULE at index.html:1259 --
+   `background:#E8D9B8!important; color:#0B2545!important; border:none!important`
+   -- outscores any class-level selector, so the first version of these rules
+   did NOTHING and the picker painted as three borderless CREAM chips with navy
+   text inside the navy panel. Measured 2026-10-12 with a DevTools probe, not
+   assumed. The contrast auditor passed it, correctly: navy on cream is
+   perfectly readable. It measured fine and looked wrong, which is why the
+   probe exists -- a contrast audit is not a design review.
+   ID-level specificity WITH !important is the only thing that wins here. It is
+   the same workaround #trash-del-sel already needed, and it is in CLAUDE.md as
+   a standing trap. Unselected rows go TRANSPARENT so the panel's own navy
+   shows through, matching `body.dark .menu-items{background:#0B2545}`.
+   The :hover override is NOT optional: `body.dark button:hover` repaints every
+   button gold, which would make an unselected row look selected on touch. */
+body.dark #theme-pick .theme-opt{background:transparent!important;color:#F5E6C8!important;
+  border:1px solid rgba(245,230,200,.22)!important}
+body.dark #theme-pick .theme-opt:hover{background:rgba(245,230,200,.12)!important;color:#F5E6C8!important}
+body.dark #theme-pick .theme-opt .theme-tick{border-color:rgba(245,230,200,.45)!important;background:transparent!important}
+body.dark #theme-pick .theme-opt.on{background:#D4AF37!important;border-color:#D4AF37!important;color:#0B2545!important}
+body.dark #theme-pick .theme-opt.on:hover{background:#D4AF37!important;color:#0B2545!important}
+body.dark #theme-pick .theme-opt.on .theme-tick{border-color:#0B2545!important;background:#0B2545!important}
+body.dark #theme-pick .theme-note{color:rgba(245,230,200,.62)!important}
+#theme-now{float:right;font-size:11px;font-weight:600;color:#4A5A7A}
+body.dark #theme-now{color:rgba(245,230,200,.72)!important}
 .msg-act-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:10px;cursor:pointer;font-family:'BellaIndic','DM Sans',sans-serif;transition:all .15s;border:1px solid var(--border);background:transparent;color:var(--tsoft)}
 .user-actions{justify-content:flex-end}
 .user-actions .msg-act-btn{color:var(--tmid)}
@@ -1338,10 +1385,25 @@ body.dark #sidebar .sb-new-chat span{
    class of bug that once blanked the page for every new user. splashTap() still
    calls applyDark() as before, which syncs `isDark` and the knob; adding the
    class a second time is a no-op.
-   This does NOT make Bella follow the operating system's theme -- that is a
-   separate change that would alter what every existing user sees, and it has
-   not been approved. This only honours a choice the user already made. */
-try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'); }catch(e){}
+   SINCE 2026-10-12 this honours a THREE-WAY choice -- Light, Dark, or Match my
+   device -- set under My Account > Theme. It still touches nothing but the
+   class, and it still reads localStorage directly rather than calling
+   themePref(), which is not defined for thousands of lines yet. Referencing it
+   from here would be a ReferenceError at parse time, the exact class of bug
+   that once blanked the page for every new user.
+   DEPLOYING THE PICKER CANNOT CHANGE WHAT ANY EXISTING USER SEES: a person who
+   has never chosen resolves to LIGHT, exactly as before. Following the device
+   is something they opt into. */
+try{
+  var _tp=localStorage.getItem('b_theme');
+  if(_tp!=='light'&&_tp!=='dark'&&_tp!=='system'){
+    _tp = (localStorage.getItem('b_dark')==='1') ? 'dark' : 'light';
+  }
+  if(_tp==='dark' || (_tp==='system' && window.matchMedia &&
+     window.matchMedia('(prefers-color-scheme: dark)').matches)){
+    document.body.classList.add('dark');
+  }
+}catch(e){}
 </script>
 
 <!-- SPLASH -->
@@ -1823,14 +1885,14 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
                DELIBERATELY LEFT IN PLACE -- inert with no element to match, and
                needed again the day the voice page is built. The recogniser is
                unaffected: micLang()/micLangTag() read localStorage, not the DOM. -->
-          <!-- Light/Dark toggle -->
-          <div style="display:flex;align-items:center;gap:3px">
-            <span style="font-size:9px;color:#0B2545;font-weight:500">Light</span>
-            <div onclick="toggleTheme()" id="theme-btn" style="width:28px;height:16px;border-radius:10px;background:#0B2545;cursor:pointer;display:flex;align-items:center;padding:0 2px;transition:background .2s" title="Light / Dark">
-              <div id="theme-knob" style="width:14px;height:14px;border-radius:50%;background:var(--gold);transition:transform .2s;transform:translateX(0)"></div>
-            </div>
-            <span style="font-size:9px;color:#0B2545;font-weight:500">Dark</span>
-          </div>
+          <!-- THE LIGHT/DARK TOGGLE WAS REMOVED FROM HERE 2026-10-12, Savio's
+               decision, and it is NOT lost -- it became a three-way choice
+               under My Account > Theme: Light, Dark, Match my device. A
+               two-state switch could not express "follow the device" at all,
+               and the footer is the most crowded strip on a 320px phone.
+               applyDark()/applyLight() no longer touch #theme-btn/#theme-knob,
+               and the one CSS rule for the knob went with it, so nothing is
+               left looking for an element that cannot exist. -->
           <!-- Disclosure -->
           <div class="disc" style="flex:1;text-align:center">* Bella may make mistakes — Always Confirm important actions. Conversations stored securely to your account.</div>
           <!-- Voice toggle -->
@@ -2041,6 +2103,13 @@ try{ if(localStorage.getItem('b_dark')==='1') document.body.classList.add('dark'
         <div class="menu-item" onclick="openMyProfile();closeUserMenu()">My Profile</div>
         <div class="menu-item" onclick="openNotificationSettings();closeUserMenu()">Notification Settings</div>
         <div class="menu-item" onclick="openVoicePick(event)">Bella's Voice</div>
+        <div class="menu-item" onclick="toggleThemePick(event)">Theme<span id="theme-now">&mdash;</span></div>
+        <div id="theme-pick">
+          <button type="button" class="theme-opt" data-theme-opt="light" onclick="setThemePref('light')"><span class="theme-tick"></span>Light</button>
+          <button type="button" class="theme-opt" data-theme-opt="dark" onclick="setThemePref('dark')"><span class="theme-tick"></span>Dark</button>
+          <button type="button" class="theme-opt" data-theme-opt="system" onclick="setThemePref('system')"><span class="theme-tick"></span>Match my device</button>
+          <div class="theme-note" id="theme-note"></div>
+        </div>
       </div>
     </div>
     <!-- Data & Privacy -->
@@ -3213,7 +3282,12 @@ function closeSidebar(){document.getElementById('sidebar').classList.remove('mob
 async function splashTap(){
   try{const ctx=new(window.AudioContext||window.webkitAudioContext)();ctx.resume();}catch(e){}
   audioUnlocked=true;
-  if(localStorage.getItem('b_dark')==='1')applyDark();
+  // The three-way preference, resolved. applyResolvedTheme() also paints the
+  // picker and applyLight() is now reachable from here, which matters for
+  // "Match my device": the pre-paint bootstrap adds the class, and if the
+  // device flipped to light since, this is where it comes back off.
+  applyResolvedTheme();
+  bindSystemThemeWatch();
   document.getElementById('splash').style.opacity='0';
   document.getElementById('splash').style.transition='opacity .3s';
   setTimeout(()=>{
@@ -7075,6 +7149,7 @@ function highlightMessages(q){
   },300);
 }
 function openUserMenu(){
+  paintThemeRowOnOpen();
   document.getElementById('user-menu-panel').classList.add('on');
   document.getElementById('user-menu-overlay').classList.add('on');
 }
@@ -7439,8 +7514,13 @@ async function _buildMyDataDocx(){
   const conv = JSON.parse(localStorage.getItem('b_threads')||'{}') || {};
   const del  = JSON.parse(localStorage.getItem(TRASH_KEY)||'{}') || {};
   const prefs = {
-    theme: (localStorage.getItem('b_dark')==='1') ? 'dark'
-          : (localStorage.getItem('b_dark')==='0') ? 'light' : null,
+    // The three-way preference as the person set it, plus what it currently
+    // resolves to -- "match my device" alone would not tell them what they
+    // are actually looking at.
+    theme: (function(){
+      const p = themePref();
+      return p==='system' ? 'match my device (' + (themeIsDark()?'dark':'light') + ' right now)' : p;
+    })(),
     clockFormat: localStorage.getItem('b_clock_fmt')||null,
     voiceLanguage: localStorage.getItem('b_voice_lang')||null
   };
@@ -10565,19 +10645,108 @@ function startSelectedRecording(){
 function saveRecordingToDrive(url,filename){
   bellaMsg('Saving straight to your Google Drive needs your own Google sign-in, which is not built yet — so I have not saved anything. Use the download arrow beside the file to keep it on this device now.');
 }
-function toggleTheme(){isDark=!isDark;isDark?applyDark():applyLight();localStorage.setItem('b_dark',isDark?'1':'0');}
-function applyDark(){
-  const knob=document.getElementById('theme-knob');
-  if(knob)knob.style.transform='translateX(12px)';
-  const btn=document.getElementById('theme-btn');
-  if(btn)btn.style.background='var(--navy)';
-  isDark=true;document.body.classList.add('dark');}
-function applyLight(){
-  const knob=document.getElementById('theme-knob');
-  if(knob)knob.style.transform='translateX(0px)';
-  const btn=document.getElementById('theme-btn');
-  if(btn)btn.style.background='#0B2545';
-  isDark=false;document.body.classList.remove('dark');}
+// ── THEME: Light / Dark / Match my device ────────────────────────────
+// Savio agreed this design 2026-10-12. It replaces the two-state footer
+// switch, which could not express "follow the device" at all.
+//
+// `b_theme` is the single source of truth and holds one of three words.
+// `b_dark` is still WRITTEN, in sync, for two reasons: reverting this build
+// must not lose somebody's choice, and anything still reading the old key must
+// not silently disagree with the page. It is no longer READ except as the
+// migration fallback below and inside emailPalette(), which has its own rule.
+//
+// A PERSON WHO HAS NEVER CHOSEN RESOLVES TO LIGHT, exactly as before, so
+// shipping the picker cannot change what any existing user sees. Following the
+// device is opt-in. The pre-paint bootstrap at the top of <body> applies the
+// same three-way resolution and must be kept in step with themeIsDark().
+function themePref(){
+  try{
+    const t=localStorage.getItem('b_theme');
+    if(t==='light'||t==='dark'||t==='system')return t;
+    const d=localStorage.getItem('b_dark');
+    if(d==='1')return 'dark';
+    if(d==='0')return 'light';
+  }catch(e){}
+  return 'light';
+}
+function systemPrefersDark(){
+  try{ return !!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches); }
+  catch(e){ return false; }
+}
+function themeIsDark(){
+  const p=themePref();
+  return p==='dark'?true:p==='light'?false:systemPrefersDark();
+}
+function setThemePref(p){
+  if(p!=='light'&&p!=='dark'&&p!=='system')p='light';
+  try{
+    localStorage.setItem('b_theme',p);
+    localStorage.setItem('b_dark',(p==='dark'||(p==='system'&&systemPrefersDark()))?'1':'0');
+  }catch(e){}
+  applyResolvedTheme();
+  bindSystemThemeWatch();
+}
+function applyResolvedTheme(){
+  themeIsDark()?applyDark():applyLight();
+  paintThemePick();
+}
+// Follow the device LIVE, but only while "Match my device" is the choice: an
+// explicit Light or Dark must never be overridden by the operating system.
+// The listener is attached once and checks the preference each time it fires,
+// so switching away from "Match my device" needs no unbinding.
+// addListener() is the pre-14 Safari spelling and iOS Safari is a target here,
+// so both are tried.
+let _themeMQ=null;
+function bindSystemThemeWatch(){
+  try{
+    if(_themeMQ||!window.matchMedia)return;
+    _themeMQ=window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange=function(){ if(themePref()==='system')applyResolvedTheme(); };
+    if(_themeMQ.addEventListener)_themeMQ.addEventListener('change',onChange);
+    else if(_themeMQ.addListener)_themeMQ.addListener(onChange);
+  }catch(e){}
+}
+// Kept as a function because the old footer switch is gone but a keyboard or a
+// future gesture may still want a straight flip. It sets an EXPLICIT choice --
+// flipping out of "Match my device" lands on the opposite of what is on screen
+// now, which is what a person means when they flip a theme.
+function toggleTheme(){ setThemePref(themeIsDark()?'light':'dark'); }
+function toggleThemePick(ev){
+  try{ ev.stopPropagation(); }catch(e){}
+  const box=document.getElementById('theme-pick');
+  if(!box)return;
+  box.classList.toggle('open');
+  if(box.classList.contains('open'))paintThemePick();
+}
+// Called when My Account opens, so the row shows the real choice even if the
+// picker is never expanded. Measured 2026-10-12: with paint driven only by
+// toggleThemePick(), opening the panel any other way left the row reading a
+// bare em-dash and the note blank.
+function paintThemeRowOnOpen(){ try{ paintThemePick(); }catch(e){} }
+// Repaints the three rows, the "Light"/"Dark"/"Match my device" label on the
+// menu row, and the note. Safe to call before the panel exists.
+function paintThemePick(){
+  const p=themePref();
+  try{
+    const opts=document.querySelectorAll('#theme-pick .theme-opt');
+    for(let i=0;i<opts.length;i++){
+      const on=opts[i].getAttribute('data-theme-opt')===p;
+      opts[i].classList.toggle('on',on);
+      opts[i].setAttribute('aria-pressed',on?'true':'false');
+    }
+    const now=document.getElementById('theme-now');
+    if(now)now.textContent=p==='system'?'Match my device':p==='dark'?'Dark':'Light';
+    const note=document.getElementById('theme-note');
+    if(note){
+      note.textContent = p==='system'
+        ? 'Following this device, which is set to '+(systemPrefersDark()?'dark':'light')+
+          ' right now. Bella changes with it.'
+        : 'Always '+p+', whatever this device is set to.';
+    }
+  }catch(e){}
+}
+function applyDark(){ isDark=true;document.body.classList.add('dark'); }
+function applyLight(){ isDark=false;document.body.classList.remove('dark'); }
 
 // Which palette a Bella email should use for the person about to READ it.
 // Savio's rule, 2026-10-02: every email follows the reader's own device, with no
@@ -10592,13 +10761,24 @@ function applyLight(){
 // Bella's own toggle wins when they have actually touched it; otherwise the
 // operating system decides. 'navy' on anything unexpected, which is also the
 // backend's own default, so a missing value can never produce an unstyled email.
+// DELIBERATELY NOT ROUTED THROUGH themePref(). Its "nobody has chosen" default
+// is LIGHT, so that shipping the three-way picker cannot change what anyone
+// SEES on screen. But Savio's email rule of 2026-10-02 is the opposite for
+// MAIL: when the person has not said, the DEVICE decides. Collapsing the two
+// would have quietly turned every unconfigured reader's email cream.
+// So: an explicit Light or Dark wins; 'system' or no preference at all follows
+// the device, exactly as this function did before the picker existed.
 function emailPalette(){
   try{
-    const set = localStorage.getItem('b_dark');
-    if(set === '1') return 'navy';
-    if(set === '0') return 'cream';
-    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-      ? 'navy' : 'cream';
+    const t = localStorage.getItem('b_theme');
+    if(t === 'dark') return 'navy';
+    if(t === 'light') return 'cream';
+    if(t !== 'system'){
+      const set = localStorage.getItem('b_dark');
+      if(set === '1') return 'navy';
+      if(set === '0') return 'cream';
+    }
+    return systemPrefersDark() ? 'navy' : 'cream';
   }catch(e){ return 'navy'; }
 }
 
