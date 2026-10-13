@@ -2708,6 +2708,35 @@ let currentThreadId=null;
 function getHist(){return currentThreadId&&threads[currentThreadId]?threads[currentThreadId].hist:[];}
 function setHist(h){if(currentThreadId&&threads[currentThreadId])threads[currentThreadId].hist=h;}
 
+// ── A LOCAL COMMAND IS STILL A CONVERSATION ─────────────────────────────
+// Savio, 2026-10-13: "every time I type Bella backup spreadsheet it is not
+// getting stored in any of the threads, and when I log in there are only 2."
+// He was right, and the cause is mechanical. The admin commands in send()
+// answer WITHOUT going to Gemini, and they `return` long before the single
+// place history is ever written. So the exchange was painted on screen and
+// recorded nowhere: the thread stayed hist:[], the sidebar went on saying
+// "New Conversation / Start a conversation" under a screen full of messages,
+// and on the next load pruneEmptyThreads() deleted it as empty.
+// The irony is exact: the backups that WORKED were the ones that vanished,
+// while the ones where the trigger missed became ordinary chat and were kept.
+// pruneEmptyThreads is not the bug -- an untouched conversation really is
+// disposable. The bug is calling a conversation empty when real work happened
+// in it.
+function recordLocalExchange(userText, bellaText){
+  if(!currentThreadId || !threads[currentThreadId]) return;
+  const h=getHist();
+  h.push({role:'user',parts:[{text:'[User: '+(currentAddressedName||'User')+']\n'+userText}]});
+  if(bellaText) h.push({role:'model',parts:[{text:bellaText}]});
+  setHist(h);
+  // Same naming rule the normal path uses, so these look like any other thread.
+  const t=threads[currentThreadId];
+  if(t.name==='New Conversation'||String(t.name||'').startsWith('Welcome')){
+    t.name=userText.substring(0,30)+(userText.length>30?'...':'');
+  }
+  try{ renderThreadList(); }catch(e){}
+  saveThreadsLocal();
+}
+
 // ============================================================
 // GOOGLE SHEETS MEMORY
 // ============================================================
@@ -8611,7 +8640,8 @@ async function send(){
   // The proper fix is Cloud Scheduler (backend 4.1) so it runs weekly by
   // itself. This is the manual trigger until then.
   if(_isAdmin && /bella[,\s]*(please\s+)?(back\s?up|backup)\b.*(spreadsheet|sheet|memory|data)/i.test(disp)){
-    await backupSheetNow();
+    const _said = await backupSheetNow();
+    recordLocalExchange(disp, _said);
     clearFiles(); endTurn(); return;
   }
 
@@ -8626,13 +8656,13 @@ async function send(){
     }
     _testMode=true; _testProfileKey=_foundKey||currentProfileKey; _testAddressedName=_testName;
     const _ack=`Switching to test mode for ${_testName}'s profile. I'll respond as if speaking with ${_testName}. Say 'Bella, end test' to return to your own profile.`;
-    bellaMsg(_ack);speakText(_ack,'en');clearFiles();endTurn();return;
+    bellaMsg(_ack);speakText(_ack,'en');recordLocalExchange(disp,_ack);clearFiles();endTurn();return;
   }
 
   if(_isAdmin && _testMode && /bella[,\s]+end test/i.test(disp)){
     _testMode=false;_testProfileKey=null;_testAddressedName=null;
     const _endAck=`Test mode ended. Welcome back, Savio. I'm back to your profile.`;
-    bellaMsg(_endAck);speakText(_endAck,'en');clearFiles();endTurn();return;
+    bellaMsg(_endAck);speakText(_endAck,'en');recordLocalExchange(disp,_endAck);clearFiles();endTurn();return;
   }
 
   // SECURITY RULE 1 — Block identity switch for all non-admin users
@@ -8837,6 +8867,27 @@ function _whereTheyAreNote(){
     + 'Do not state a distance unless you actually looked it up — say "a few minutes away" or '
     + 'name the area instead of inventing a figure.';
 }
+// ── WHAT SHE CAN ACTUALLY DO, FOR THE OWNER ONLY ───────────────────────
+// Savio asked four different ways to back up the spreadsheet on 11 and 13 Oct.
+// The trigger needs the word "Bella" -- HIS DECISION, 2026-10-13, and a sound
+// one: it is a deliberate safety catch so an ordinary sentence about backups
+// can never fire a real one. But when the catch did not trip, the message went
+// to Gemini and Bella answered "As an AI, I don't have direct access to your
+// computer or files." That is FALSE -- she does it in 24 seconds -- and a
+// confident denial of a real capability is worse than silence, because it
+// stops you asking again.
+// Owner-only, because the command is owner-only. Nobody else is told about a
+// button they cannot press.
+function _ownerCapabilityNote(){
+  if(!_bellaAdmin) return '';
+  return '\n\nWHAT YOU CAN ACTUALLY DO FOR THIS PERSON (they are the owner): '
+    + 'you CAN back up the Bella spreadsheet yourself and email it to them — it takes about 25 seconds. '
+    + 'It runs only when they address you by name, which is deliberate, so the exact words are '
+    + '"Bella, back up the spreadsheet". '
+    + 'If they ask for a backup in any other way, DO NOT say you are unable to do it and DO NOT '
+    + 'explain how to back up a spreadsheet by hand — that is false and unhelpful. Say that you can, '
+    + 'and ask them to say "Bella, back up the spreadsheet" so the command is unmistakable.';
+}
 function _replyLangNote(){
   const NAMES={bn:'Bengali',hi:'Hindi',mr:'Marathi'};
   // A deliberate press of the language button OUTRANKS script detection. This is
@@ -8883,7 +8934,7 @@ async function callBella(useSearch,memCtx,signal){
   // uncapped 'short' came back as long as the answer itself.
   const voiceNote='\n\nAt the very end of your reply, on its own new line, always add a short summary of your answer in this exact format: [VOICE]- first point\\n- second point\\n- third point[/VOICE]. Rules for it: 3 to 5 points, each on its own line beginning with \"- \", each a single short clause, FORTY-FIVE WORDS IN TOTAL AT THE ABSOLUTE MOST. It must be dramatically shorter than your answer — it is the highlights, not a retelling. Write it in the SAME language as your reply. This tag is never shown as part of your answer; it is used for the spoken version and for the Summarise button.';
   const _opening=`Understood. I am Bella, ready to assist ${_activeAddressedName}.`;
-  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_whereTheyAreNote()+_replyLangNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
+  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_replyLangNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
   const r=await bfetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch}),signal});
   if(!r.ok)throw new Error('Backend error: '+r.status);
   const d=await r.json();
@@ -9601,8 +9652,11 @@ function clearFiles(){pFiles=[];pTexts=[];pImages=[];document.getElementById('fb
 // ============================================================
 // Asks the backend to build a full .xlsx of every tab and email it. Owner
 // only, enforced server-side — this just carries the signed-in session.
+// Returns the LAST thing it said, so send() can record the exchange. Before
+// this it returned nothing and the caller had nothing to store.
 async function backupSheetNow(){
   const start=Date.now();
+  const _say=function(t){ bellaMsg(t); return t; };
   bellaMsg('Backing up the spreadsheet now — this takes a moment.');
   try{
     const ctl=new AbortController();
@@ -9614,20 +9668,19 @@ async function backupSheetNow(){
     clearTimeout(kill);
     const d=await r.json().catch(()=>({}));
     if(!r.ok){
-      bellaMsg(r.status===403
+      return _say(r.status===403
         ? 'That one is owner-only, and this account is not the owner.'
         : ('The backup did not complete: '+((d&&d.error)||('HTTP '+r.status))));
-      return;
     }
-    if(d&&d.skipped){ bellaMsg('There is already a recent backup — '+d.skipped+'.'); return; }
+    if(d&&d.skipped){ return _say('There is already a recent backup — '+d.skipped+'.'); }
     const secs=Math.round((Date.now()-start)/1000);
-    bellaMsg('Backup done in '+secs+'s. I have emailed '+(d.tabs||0)+' tabs and '+
+    return _say('Backup done in '+secs+'s. I have emailed '+(d.tabs||0)+' tabs and '+
              (d.rows||0).toLocaleString('en-IN')+' rows to '+(d.to||'you')+
              ' as '+(d.fileName||'a spreadsheet')+'.'+
              ((d.unreadable&&d.unreadable.length)
                ? ' Tabs I could not read: '+d.unreadable.map(u=>u.tab).join(', ')+'.' : ''));
   }catch(e){
-    bellaMsg(e&&e.name==='AbortError'
+    return _say(e&&e.name==='AbortError'
       ? 'The backup is taking longer than two minutes. It may still finish — check your email shortly.'
       : ('The backup could not run: '+(e&&e.message?e.message:'unknown error')));
   }
