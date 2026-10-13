@@ -6125,12 +6125,10 @@ async function openAdminPanel(){
         'A request applies by itself after 48 hours. Approve to do it now, or reject to stop it. ' +
         'Bella emails you the address whenever somebody asks.' +
       '</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-        '<input id="pcx-admin-email" type="email" placeholder="their email address" ' +
-          'style="flex:1;min-width:180px;padding:10px 12px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:13px;font-family:\'BellaIndic\',\'DM Sans\',sans-serif;outline:none;box-sizing:border-box">' +
-        '<button onclick="adminPhoneChange(\'approve\')" style="padding:10px 16px;border-radius:10px;border:none;background:#D4AF37;color:#0B2545;font-size:13px;font-weight:700;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Approve now</button>' +
-        '<button onclick="adminPhoneChange(\'reject\')" style="padding:10px 16px;border-radius:10px;border:1px solid rgba(255,138,128,0.5);background:transparent;color:#ff8a80;font-size:13px;font-weight:600;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Reject</button>' +
-      '</div>' +
+      // Release 33 replaced a box you had to TYPE an address into with the real
+      // list. A control that needs copying and pasting at three in the morning
+      // is a control that gets used on the wrong account.
+      '<div id="pcx-admin-list" style="font-size:13px;color:rgba(245,230,200,0.6)">Loading…</div>' +
       '<div id="pcx-admin-msg" style="font-size:12px;min-height:16px;margin-top:8px;line-height:1.6"></div>' +
     '</div>' +
     '<div id="admin-body" style="color:rgba(245,230,200,0.65);font-size:13px">Loading…</div></div>';
@@ -6140,20 +6138,82 @@ async function openAdminPanel(){
     const d = await r.json().catch(()=>({}));
     if(!r.ok){ document.getElementById('admin-body').textContent = 'Could not load accounts: ' + (d.error||r.status); return; }
     renderAdminUsers(d.users||[]);
+    loadPhoneChanges();
   }catch(e){
     const b = document.getElementById('admin-body'); if(b) b.textContent = 'Could not load accounts: ' + e.message;
   }
 }
 
+/* ── THE OWNER'S LIST OF NUMBER CHANGES ─────────────────────────────────
+   Rows are BUILT, never interpolated into an onclick. An email address goes
+   into a handler as a closure value, so an apostrophe in somebody's address
+   can never become markup -- the same lesson the conversation search taught
+   on 12 October. Backend v8.3. */
+async function loadPhoneChanges(){
+  const box = document.getElementById('pcx-admin-list');
+  if(!box) return;
+  try{
+    const r = await bfetch(BACKEND + '/phone-change-list', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok){ box.textContent = 'Could not load number changes: ' + (d.error || r.status); return; }
+    renderPhoneChanges(d.changes || []);
+  }catch(e){ box.textContent = 'Could not load number changes: ' + e.message; }
+}
+function renderPhoneChanges(list){
+  const box = document.getElementById('pcx-admin-list');
+  if(!box) return;
+  box.innerHTML = '';
+  if(!list.length){
+    box.textContent = 'Nobody has asked to change their number.';
+    return;
+  }
+  const LIVE = {pending:1, approved:1};
+  list.forEach(function(c){
+    const live = !!LIVE[c.state];
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:9px 0;border-top:1px solid rgba(245,230,200,0.1)';
+    const who = document.createElement('div');
+    who.style.cssText = 'flex:1;min-width:190px;line-height:1.5';
+    const addr = document.createElement('div');
+    addr.style.cssText = 'color:#F5E6C8;font-size:13px';
+    addr.textContent = c.email;                       // TEXT, never markup
+    const sub = document.createElement('div');
+    sub.style.cssText = 'font-size:11px;color:rgba(245,230,200,0.5)';
+    // Only the last four digits ever leave the server, so only four are shown.
+    let when = '';
+    if(live && c.effectiveAt){
+      const t = new Date(c.effectiveAt);
+      if(!isNaN(t.getTime())){
+        const hrs = Math.round((t.getTime() - Date.now()) / 3600000);
+        when = hrs > 0 ? (' — applies in ' + hrs + ' hour' + (hrs===1?'':'s')) : ' — applying now';
+      }
+    }
+    sub.textContent = 'new number ends ' + (c.newPhoneLast4 || '????') + ' · ' + c.state + when;
+    who.appendChild(addr); who.appendChild(sub);
+    row.appendChild(who);
+    if(live){
+      const ap = document.createElement('button');
+      ap.textContent = 'Approve now';
+      ap.style.cssText = 'padding:8px 14px;border-radius:9px;border:none;background:#D4AF37;color:#0B2545;font-size:12px;font-weight:700;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif';
+      ap.addEventListener('click', function(){ adminPhoneChange('approve', c.email); });
+      const rj = document.createElement('button');
+      rj.textContent = 'Reject';
+      rj.style.cssText = 'padding:8px 14px;border-radius:9px;border:1px solid rgba(255,138,128,0.5);background:transparent;color:#ff8a80;font-size:12px;font-weight:600;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif';
+      rj.addEventListener('click', function(){ adminPhoneChange('reject', c.email); });
+      row.appendChild(ap); row.appendChild(rj);
+    }
+    box.appendChild(row);
+  });
+}
+
 /* Approve skips the 48-hour wait and binds the number immediately; reject
    stops it for good. Both are owner-only at the SERVER -- /phone-change-admin
    is in ADMIN_ONLY_PATHS -- so this screen is a convenience, never the guard. */
-async function adminPhoneChange(action){
-  const inp = document.getElementById('pcx-admin-email');
+async function adminPhoneChange(action, emailArg){
   const msg = document.getElementById('pcx-admin-msg');
   const say = (t, bad) => { if(msg){ msg.textContent = t; msg.style.color = bad ? '#ff8a80' : '#9fd39f'; } };
-  const email = (inp ? inp.value.trim() : '');
-  if(!email || email.indexOf('@') < 0){ say('Type the email address from the alert.', true); return; }
+  const email = String(emailArg || '').trim();
+  if(!email || email.indexOf('@') < 0){ say('No account was selected.', true); return; }
   if(action === 'reject' && !confirm('Reject the number change for ' + email + '?\n\nThey keep their current number and will have to ask again.')) return;
   if(action === 'approve' && !confirm('Approve the number change for ' + email + ' NOW?\n\nThis skips the 48-hour wait. Only do this if you are sure it is really them.')) return;
   say('Working…');
@@ -6167,6 +6227,7 @@ async function adminPhoneChange(action){
     if(action === 'reject') say('Rejected. ' + email + ' keeps their current number.');
     else say(d.applied ? ('Approved and applied — ' + email + ' can sign in on the new number now.')
                        : ('Approved, but it has not applied yet: ' + ((d.detail && d.detail.why) || 'see the Audit tab') + '.'), !d.applied);
+    loadPhoneChanges();     // so the row reflects what just happened
   }catch(e){ say('Bella could not be reached: ' + e.message, true); }
 }
 
