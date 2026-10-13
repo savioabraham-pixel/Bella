@@ -2285,6 +2285,68 @@ async function bfetch(url, opts){
   }
   return _r;
 }
+
+// ══ ERROR ALERTING ════════════════════════════════════════════════════════
+// Until today a failure reached console.warn and stopped there, where nobody
+// would ever see it. Savio has no way of knowing Bella broke for someone else,
+// and the person it broke for almost never says so -- Paushali's whole first
+// sign-in failed four different ways and the only reason we found out was that
+// she said so in person.
+//
+// THIS NEVER CARRIES CONVERSATION CONTENT. Not the message, not the memory
+// text, not a thread. Only what is needed to find the fault. The Privacy
+// Notice promises conversations are not shared, and a fault report is not an
+// exception to that.
+//
+// Plain fetch, NOT bfetch: a report must still arrive when the fault IS the
+// session -- a failed sign-in has no token to attach, and those are precisely
+// the faults worth hearing about.
+const _ERR_SEEN = Object.create(null);
+let _errSent = 0;
+const _ERR_MAX_PER_SESSION = 8;   // a loop must never become a mail storm
+async function bellaReportError(where, detail, meta){
+  try{
+    const sig = String(where) + '|' + String(detail == null ? '' : detail).slice(0, 200);
+    if(_ERR_SEEN[sig]){ _ERR_SEEN[sig]++; return; }   // the same fault twice is not news
+    _ERR_SEEN[sig] = 1;
+    if(_errSent >= _ERR_MAX_PER_SESSION) return;
+    _errSent++;
+    let uid = '';
+    try{ uid = localStorage.getItem('b_userid') || ''; }catch(e){}
+    const payload = {
+      where:  String(where).slice(0, 80),
+      detail: String(detail == null ? '' : detail).slice(0, 500),
+      userId: uid,
+      ua:     String(navigator.userAgent || '').slice(0, 160),
+      at:     new Date().toISOString()
+    };
+    if(meta && typeof meta === 'object'){
+      try{ payload.meta = JSON.stringify(meta).slice(0, 300); }catch(e){}
+    }
+    await fetch(BACKEND + '/client-error', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+      keepalive: true          // survives the page being closed on the fault
+    });
+  }catch(e){
+    // Reporting a fault must never itself break the page. This is the one
+    // empty catch in the file that is load-bearing.
+  }
+}
+// Anything that got past every try/catch in the page. Without this, a thrown
+// ReferenceError blanks the screen in silence -- which is exactly what
+// _clockFormat24 did to every new user in production.
+window.addEventListener('error', function(ev){
+  bellaReportError('window.onerror',
+    (ev && ev.message ? ev.message : 'unknown') +
+    ' @ ' + ((ev && ev.filename ? String(ev.filename).split('/').pop() : '?')) +
+    ':' + ((ev && ev.lineno) || 0));
+});
+window.addEventListener('unhandledrejection', function(ev){
+  const r = ev && ev.reason;
+  bellaReportError('unhandledrejection',
+    (r && r.message) ? r.message : String(r == null ? 'unknown' : r));
+});
 // OAUTH_CLIENT_ID / SHEET_ID / SHEETS_API removed — the browser no longer talks to
 // the Sheets API directly; the backend owns that credential and the sheet id.
 // GIPHY key stored on backend only — not in frontend
@@ -2911,24 +2973,48 @@ async function loadUserMemory(profileKey,addressedName){
     }
   }catch(e){_memLoadState='failed';console.warn('Memory load error:',e);}
 }
+// RETURNS TRUE ONLY IF THE MEMORY REALLY LANDED.
+// It used to return nothing at all, never look at the response, and append to
+// userMemory.memories regardless -- while the caller said "I've stored that in
+// my memory" unconditionally. So a 500 from /memory-write produced a promise
+// that nothing had been kept, a progress bar that moved, and no trace anywhere.
+// Checking .ok is the whole fix; the rest is telling the truth about it.
 async function saveMemory(profileKey,newMem){
   if(_lastMemAlert>=100){
     console.warn('Memory full — skipping write for',profileKey);
-    return;
+    return false;
   }
   try{
-    await bfetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey,addressedName:currentAddressedName,memoryText:newMem,type:'memory'})});
+    const r=await bfetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey,addressedName:currentAddressedName,memoryText:newMem,type:'memory'})});
+    if(!r.ok){
+      let why='HTTP '+r.status;
+      try{ const e=await r.json(); if(e&&e.error) why=e.error; }catch(_){}
+      console.warn('Memory save refused:',why);
+      bellaReportError('saveMemory',why,{status:r.status});
+      return false;            // and NOTHING is written locally -- see above
+    }
     userMemory.memories=userMemory.memories?userMemory.memories+'\n'+newMem:newMem;
     // Refresh progress bar after write
     if(profileKey) setTimeout(()=>updateMemoryProgress(profileKey),500);
-  }catch(e){console.warn('Memory save error:',e);}
+    return true;
+  }catch(e){
+    console.warn('Memory save error:',e);
+    bellaReportError('saveMemory',e&&e.message?e.message:String(e));
+    return false;
+  }
 }
 function detectMemoryRequest(t){const l=t.toLowerCase();return l.includes('remember')||l.includes('store this')||l.includes("don't forget")||l.includes('dont forget')||l.includes('keep in mind')||l.includes('note this');}
 function detectPronunciationCorrection(t){const l=t.toLowerCase();return l.includes('pronounce')||l.includes('pronounced')||l.includes('say my name')||l.includes('my name is pronounced')||l.includes('sounds like')||l.includes('rhymes with');}
 async function savePronunciation(profileKey,correctionText){
   try{
-    await bfetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey,addressedName:currentAddressedName,memoryText:correctionText,type:'pronunciation'})});
-  }catch(e){console.warn('Pronunciation save error:',e);}
+    const r=await bfetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey,addressedName:currentAddressedName,memoryText:correctionText,type:'pronunciation'})});
+    if(!r.ok){ bellaReportError('savePronunciation','HTTP '+r.status,{status:r.status}); return false; }
+    return true;
+  }catch(e){
+    console.warn('Pronunciation save error:',e);
+    bellaReportError('savePronunciation',e&&e.message?e.message:String(e));
+    return false;
+  }
 }
 
 // ============================================================
@@ -2973,11 +3059,30 @@ async function syncThreadToBackend(id){
   // a thread before a word is typed, and those were filling the sheet with
   // entries named "Welcome..." holding nothing.
   if(!Array.isArray(t.hist)||t.hist.length===0)return;
-  try{
-    await bfetch(BACKEND+'/threads-write',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({profileKey:currentProfileKey,threadId:id,
-        threadName:t.name||'',history:_trimHistoryForSync(t.hist||[])})});
-  }catch(e){ /* the local copy is already saved; the next save retries */ }
+  // THE RESPONSE USED TO BE THROWN AWAY ENTIRELY -- no .ok check, no retry,
+  // and a comment claiming "the next save retries". That is only true if the
+  // person sends another message in the same conversation; the LAST state of
+  // every conversation never retried at all. A backend refusing every write
+  // was indistinguishable from one that worked, which is the likeliest reason
+  // the Threads tab held a single real row on 10 Oct.
+  // One retry after four seconds, then report it. Never nags the user: their
+  // local copy is already safe, so this is Savio's problem to see, not theirs.
+  for(let attempt=0; attempt<2; attempt++){
+    try{
+      const r=await bfetch(BACKEND+'/threads-write',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({profileKey:currentProfileKey,threadId:id,
+          threadName:t.name||'',history:_trimHistoryForSync(t.hist||[])})});
+      if(r.ok) return;
+      if(r.status===401||r.status===403){        // not a glitch; retrying cannot help
+        bellaReportError('syncThreadToBackend','HTTP '+r.status,{status:r.status});
+        return;
+      }
+      if(attempt===1) bellaReportError('syncThreadToBackend','HTTP '+r.status+' after retry',{status:r.status});
+    }catch(e){
+      if(attempt===1) bellaReportError('syncThreadToBackend',e&&e.message?e.message:String(e));
+    }
+    if(attempt===0) await new Promise(function(f){ setTimeout(f,4000); });
+  }
 }
 // Debounced: a conversation is saved on every message, and there is no reason
 // to write the whole history to a spreadsheet that often.
@@ -8998,7 +9103,15 @@ async function send(){
 
   if(detectMemoryRequest(disp)){
     const memItem=disp.replace(/remember|store this|don't forget|dont forget|keep in mind|note this/gi,'').trim();
-    if(memItem&&currentProfileKey){await saveMemory(currentProfileKey,memItem);const ack=`Got it, ${currentAddressedName}. I've stored that in my memory.`;bellaMsg(ack);speakText(ack,'en');endTurn();return;}
+    if(memItem&&currentProfileKey){
+      const _kept=await saveMemory(currentProfileKey,memItem);
+      // Never claim a save that did not happen. The old line said "I've stored
+      // that in my memory" even when the write had been refused.
+      const ack=_kept
+        ? `Got it, ${currentAddressedName}. I've stored that in my memory.`
+        : `I'm sorry ${currentAddressedName} — I could not save that to my memory just now, so please tell me again in a little while. I have not kept it.`;
+      bellaMsg(ack);speakText(ack,'en');endTurn();return;
+    }
   }
   if(detectPronunciationCorrection(disp)&&currentProfileKey){
     await savePronunciation(currentProfileKey,disp);
