@@ -4000,6 +4000,15 @@ async function signInReturningUser() {
       const _as = await bfetch(BACKEND + '/account-state', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
       if(_as.ok){
         const _d = await _as.json().catch(()=>({}));
+        /* A SCHEDULED NUMBER CHANGE MAY HAVE JUST MATURED, server-side, on this
+           very call. The sheet now holds the new number -- but FIREBASE still
+           has the OLD one bound to this user, and reauthenticateWithPhoneNumber
+           refuses any number that is not already bound. So the device has to
+           unlink and re-link, and only a FRESH sign-in is allowed to do that.
+           We are seconds past the Google popup here, which is the one moment
+           it is permitted. Remembered for the OTP step below. */
+        _pcxJustApplied = !!(_d && _d.phoneChange && _d.phoneChange.applied);
+        _pcxPending = (_d && _d.phoneChange && _d.phoneChange.state === 'pending') ? _d.phoneChange : null;
         if(_d && typeof _d.mobile === 'string' && _d.mobile.length >= 8 && _d.mobile !== savedUser.mobile){
           savedUser.mobile = _d.mobile;
           localStorage.setItem('b_returning_mobile', _d.mobile);
@@ -4372,13 +4381,81 @@ function showRecoveryHelp(){
         (email  ? '<div>Email: <strong style="color:#F5E6C8">'+esc(email)+'</strong></div>' : '') +
         (mobile ? '<div>Number: <strong style="color:#F5E6C8">'+esc(mobile)+'</strong></div>' : '') +
       '</div>' +
-      '<a href="' + esc(mailto) + '" style="display:block;text-align:center;width:100%;padding:13px;border-radius:12px;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;text-decoration:none;font-family:\'BellaIndic\',\'DM Sans\',sans-serif;box-sizing:border-box">Write to Savio</a>' +
-      '<div style="font-size:11px;color:rgba(245,230,200,0.5);line-height:1.8;margin-top:14px;text-align:center">' +
-        'If that button does nothing, write to<br><strong style="color:#F5E6C8;user-select:all">' + esc(LEGAL_CONTACT) + '</strong><br>and say which number to change it to.' +
+      // SELF-SERVICE, added 2026-10-13. Until now the only door was an email to
+      // Savio and a wait for him to edit the sheet by hand. Google has already
+      // verified who this person is -- they are past the popup -- so they can
+      // ASK for the change themselves. It still does not take effect for 48
+      // hours, and Savio is emailed and can reject it, because the warning
+      // email goes to the Gmail an attacker would have taken.
+      '<div id="pcx-form">' +
+        '<div style="font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:rgba(245,230,200,0.45);margin-bottom:8px">Move my account to a new number</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:10px">' +
+          '<div style="padding:11px 12px;border-radius:10px;background:rgba(245,230,200,0.06);border:1.5px solid rgba(245,230,200,0.15);color:rgba(245,230,200,0.75);font-size:13px">+91</div>' +
+          '<input id="pcx-mobile" type="tel" inputmode="numeric" placeholder="New mobile number" ' +
+            'oninput="this.value=this.value.replace(/[^0-9]/g,\'\')" ' +
+            'style="flex:1;padding:11px 14px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:13px;font-family:\'BellaIndic\',\'DM Sans\',sans-serif;outline:none;box-sizing:border-box">' +
+        '</div>' +
+        '<div id="pcx-msg" style="font-size:11.5px;min-height:16px;margin-bottom:10px;text-align:center;line-height:1.6"></div>' +
+        '<button id="pcx-btn" onclick="requestPhoneChange()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:700;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Request this change</button>' +
+        '<div style="font-size:11px;color:rgba(245,230,200,0.5);line-height:1.8;margin-top:12px;text-align:center">' +
+          'It takes effect after <strong style="color:#F5E6C8">48 hours</strong>. Your current number keeps working until then, and Savio is told so he can stop it if it was not you.' +
+        '</div>' +
+      '</div>' +
+      '<div style="height:1px;background:rgba(245,230,200,0.12);margin:18px 0"></div>' +
+      '<a href="' + esc(mailto) + '" style="display:block;text-align:center;width:100%;padding:11px;border-radius:12px;border:1px solid rgba(212,175,55,0.45);background:transparent;color:#D4AF37;font-size:13px;font-weight:600;text-decoration:none;font-family:\'BellaIndic\',\'DM Sans\',sans-serif;box-sizing:border-box">Or ask Savio directly</a>' +
+      '<div style="font-size:11px;color:rgba(245,230,200,0.5);line-height:1.8;margin-top:12px;text-align:center">' +
+        'Use this if you cannot sign in at all, or want it done sooner. Write to<br><strong style="color:#F5E6C8;user-select:all">' + esc(LEGAL_CONTACT) + '</strong>' +
       '</div>' +
       '<button onclick="document.getElementById(\'recovery-help\').remove()" style="width:100%;margin-top:16px;padding:10px;border-radius:10px;border:1px solid rgba(245,230,200,0.15);background:transparent;color:rgba(245,230,200,0.6);font-size:12px;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Back</button>' +
     '</div>';
   document.body.appendChild(box);
+}
+
+/* ── ASKING TO MOVE TO A NEW NUMBER ──────────────────────────────────────
+   Runs only where Google has already vouched for the person, so `bfetch`
+   carries a verified token and the server never has to take an email from the
+   body. Everything that decides anything happens server-side: uniqueness, the
+   waiting period, the two emails. This function's whole job is to ask, and to
+   report honestly what came back. Backend v8.2. */
+async function requestPhoneChange(){
+  const inp = document.getElementById('pcx-mobile');
+  const msg = document.getElementById('pcx-msg');
+  const btn = document.getElementById('pcx-btn');
+  const say = (t, bad) => { if(msg){ msg.textContent = t; msg.style.color = bad ? '#ff8a80' : 'rgba(245,230,200,0.75)'; } };
+  const digits = (inp ? inp.value.trim() : '').replace(/[^0-9]/g,'');
+  if(digits.length < 8){ say('Please enter the new mobile number.', true); return; }
+  if(btn){ btn.disabled = true; btn.textContent = 'Asking…'; }
+  try{
+    const r = await bfetch(BACKEND + '/phone-change-request', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ newMobile: '+91' + digits })
+    });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok){
+      // The server's wording is the honest one -- "that number is already on
+      // another Bella account" is more use than "something went wrong".
+      say(d.error || ('That did not work (' + r.status + ').'), true);
+      if(btn){ btn.disabled = false; btn.textContent = 'Request this change'; }
+      return;
+    }
+    const when = d.effectiveAt ? new Date(d.effectiveAt) : null;
+    const whenTxt = when && !isNaN(when.getTime())
+      ? when.toLocaleString(undefined, {weekday:'long', hour:'2-digit', minute:'2-digit'})
+      : ('about ' + (d.waitHours || 48) + ' hours from now');
+    const form = document.getElementById('pcx-form');
+    if(form){
+      form.innerHTML =
+        '<div style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.35);border-radius:12px;padding:15px;font-size:13px;color:#F5E6C8;line-height:1.8">' +
+          '<strong>Asked for.</strong><br>' +
+          'Your account moves to the new number <strong>' + whenTxt + '</strong>.<br><br>' +
+          'Until then your current number still works. We have emailed you, and Savio knows — ' +
+          'if this was not you, tell him and he will stop it.' +
+        '</div>';
+    }
+  }catch(e){
+    say('Bella could not be reached just now. Please try again in a moment.', true);
+    if(btn){ btn.disabled = false; btn.textContent = 'Request this change'; }
+  }
 }
 
 // The five identifiers that let the returning-user gate greet someone by name.
@@ -5441,6 +5518,9 @@ async function resendOTP() {
 // ── RETURNING USER OTP FUNCTIONS ──
 let _returningRecaptchaVerifier = null;
 let _returningConfirmationResult = null;
+// Set at the gate from /account-state, read by the OTP step a moment later.
+let _pcxJustApplied = false;
+let _pcxPending = null;
 let _returningUserData = null;
 
 // The returning path had the SAME identity fault as registration: it called
@@ -5481,7 +5561,22 @@ async function _sendReturningOTPCore(mobile, savedUser) {
     _returningRecaptchaVerifier = await _freshVerifier('recaptcha-container-returning');
     const user = fbAuth.currentUser;
     if (user) {
-      const hasPhone = (user.providerData || []).some(function(p){ return p && p.providerId === 'phone'; });
+      let hasPhone = (user.providerData || []).some(function(p){ return p && p.providerId === 'phone'; });
+      /* THE RE-BINDING. Without this the whole 48-hour flow would end in the
+         same lockout it exists to cure: the sheet would hold the new number
+         and Firebase would still demand the old one. Unlinking needs a recent
+         sign-in, which is exactly what just happened. If it fails we fall
+         through to the ordinary path rather than strand them -- the worst
+         case is the old behaviour, not a worse one. */
+      if (hasPhone && _pcxJustApplied) {
+        try {
+          await user.unlink('phone');
+          hasPhone = false;
+          console.log('PHONE CHANGE: old number unlinked, binding the new one.');
+        } catch (unlinkErr) {
+          console.warn('PHONE CHANGE: could not unlink the old number — ' + (unlinkErr && unlinkErr.message));
+        }
+      }
       if (hasPhone) {
         _returningConfirmationResult = await user.reauthenticateWithPhoneNumber(mobile, _returningRecaptchaVerifier);
       } else {
@@ -6018,6 +6113,26 @@ async function openAdminPanel(){
       '<div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;color:#F5E6C8">🛡️ Manage Accounts</div>' +
       '<button onclick="document.getElementById(\'admin-overlay\').remove()" style="background:none;border:none;color:#D4AF37;font-size:22px;cursor:pointer;line-height:1">×</button>' +
     '</div>' +
+    /* NUMBER CHANGES, where Savio either waits or intervenes. Bella emails him
+       the account and the last four digits the moment one is requested; this is
+       where he acts on it. There is deliberately no list of pending changes yet
+       -- that needs a backend endpoint release 32 does not have, and holding the
+       whole feature for it would have been the wrong trade. The email carries
+       everything needed to use this. A listing is queued for release 33. */
+    '<div style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.3);border-radius:12px;padding:14px;margin-bottom:14px">' +
+      '<div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#D4AF37;margin-bottom:8px">Mobile number changes</div>' +
+      '<div style="font-size:12px;color:rgba(245,230,200,0.62);line-height:1.7;margin-bottom:10px">' +
+        'A request applies by itself after 48 hours. Approve to do it now, or reject to stop it. ' +
+        'Bella emails you the address whenever somebody asks.' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+        '<input id="pcx-admin-email" type="email" placeholder="their email address" ' +
+          'style="flex:1;min-width:180px;padding:10px 12px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:rgba(245,230,200,0.06);color:#F5E6C8;font-size:13px;font-family:\'BellaIndic\',\'DM Sans\',sans-serif;outline:none;box-sizing:border-box">' +
+        '<button onclick="adminPhoneChange(\'approve\')" style="padding:10px 16px;border-radius:10px;border:none;background:#D4AF37;color:#0B2545;font-size:13px;font-weight:700;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Approve now</button>' +
+        '<button onclick="adminPhoneChange(\'reject\')" style="padding:10px 16px;border-radius:10px;border:1px solid rgba(255,138,128,0.5);background:transparent;color:#ff8a80;font-size:13px;font-weight:600;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Reject</button>' +
+      '</div>' +
+      '<div id="pcx-admin-msg" style="font-size:12px;min-height:16px;margin-top:8px;line-height:1.6"></div>' +
+    '</div>' +
     '<div id="admin-body" style="color:rgba(245,230,200,0.65);font-size:13px">Loading…</div></div>';
   document.body.appendChild(ov);
   try{
@@ -6028,6 +6143,31 @@ async function openAdminPanel(){
   }catch(e){
     const b = document.getElementById('admin-body'); if(b) b.textContent = 'Could not load accounts: ' + e.message;
   }
+}
+
+/* Approve skips the 48-hour wait and binds the number immediately; reject
+   stops it for good. Both are owner-only at the SERVER -- /phone-change-admin
+   is in ADMIN_ONLY_PATHS -- so this screen is a convenience, never the guard. */
+async function adminPhoneChange(action){
+  const inp = document.getElementById('pcx-admin-email');
+  const msg = document.getElementById('pcx-admin-msg');
+  const say = (t, bad) => { if(msg){ msg.textContent = t; msg.style.color = bad ? '#ff8a80' : '#9fd39f'; } };
+  const email = (inp ? inp.value.trim() : '');
+  if(!email || email.indexOf('@') < 0){ say('Type the email address from the alert.', true); return; }
+  if(action === 'reject' && !confirm('Reject the number change for ' + email + '?\n\nThey keep their current number and will have to ask again.')) return;
+  if(action === 'approve' && !confirm('Approve the number change for ' + email + ' NOW?\n\nThis skips the 48-hour wait. Only do this if you are sure it is really them.')) return;
+  say('Working…');
+  try{
+    const r = await bfetch(BACKEND + '/phone-change-admin', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email: email, action: action })
+    });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok){ say(d.error || ('That did not work (' + r.status + ').'), true); return; }
+    if(action === 'reject') say('Rejected. ' + email + ' keeps their current number.');
+    else say(d.applied ? ('Approved and applied — ' + email + ' can sign in on the new number now.')
+                       : ('Approved, but it has not applied yet: ' + ((d.detail && d.detail.why) || 'see the Audit tab') + '.'), !d.applied);
+  }catch(e){ say('Bella could not be reached: ' + e.message, true); }
 }
 
 // Held so the row buttons can pass an INDEX. The destructive actions below
