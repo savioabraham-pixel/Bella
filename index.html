@@ -7226,15 +7226,83 @@ async function _adminLoadTab(which){
 async function enforceAccountState(){
   try{
     const r = await bfetch(BACKEND + '/account-state', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-    if(!r.ok) return false;
+    // A REFUSAL IS AN ANSWER. This used to `return false` here, which is how
+    // the device-reset instruction was lost: an admin wipe revokes every
+    // session, so the one call that fetches the instruction is the one call
+    // that cannot be made. Measured live 2026-10-12 -- the page just looked
+    // broken and the browser had to be cleared by hand.
+    if(!r.ok){
+      if(r.status === 401 || r.status === 403) return await _reauthAfterRevoke();
+      return false;
+    }
     const d = await r.json().catch(()=>({}));
     // Same answer carries who we are, so this costs no extra call.
     _bellaAdmin = !!d.admin;
     revealAdminUI();
     if(d.state === 'reset_pending'){ hardResetDevice(); return true; }
     if(d.state === 'frozen'){ showFrozenNotice(d.reason); return true; }
+    // `locked` reaches here only when the server could not revoke the session
+    // itself. Signing in again is what clears a lockout -- the backend sets the
+    // account back to active the moment it sees a session newer than the lock.
+    if(d.state === 'locked'){ showReauthNotice('lockout'); return true; }
   }catch(e){ /* offline or backend down: never strand the user */ }
   return false;
+}
+
+// A refused /account-state, handled without destroying anything.
+// An ordinary hour-old token and a revoked one look identical from here, so
+// this asks Firebase for a fresh one FIRST and only treats the session as gone
+// when a brand-new token is refused too.
+async function _reauthAfterRevoke(){
+  try{
+    const u = fbAuth && fbAuth.currentUser;
+    if(u){
+      await u.getIdToken(true);                    // force a refresh, not the cache
+      const r2 = await bfetch(BACKEND + '/account-state', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+      if(r2.ok){
+        const d2 = await r2.json().catch(()=>({}));
+        _bellaAdmin = !!d2.admin;
+        revealAdminUI();
+        if(d2.state === 'reset_pending'){ hardResetDevice(); return true; }
+        if(d2.state === 'frozen'){ showFrozenNotice(d2.reason); return true; }
+        if(d2.state === 'locked'){ showReauthNotice('lockout'); return true; }
+        return false;                              // it really was just a stale token
+      }
+    }
+  }catch(e){ /* no Firebase user, or offline: fall through */ }
+  // The session is genuinely gone. Sign in again -- NEVER a data wipe here.
+  showReauthNotice('revoked');
+  return true;
+}
+
+// Full-screen, same treatment as showFrozenNotice: its own fixed palette, so it
+// reads identically in light mode and dark and owns no theme variables.
+function showReauthNotice(why){
+  const line = (why === 'lockout')
+    ? 'This account was locked for its own safety. Signing in again unlocks it straight away.'
+    : 'Your session was ended on another device. Signing in again brings everything back.';
+  document.body.innerHTML = '<div style="position:fixed;inset:0;background:#0B2545;display:flex;align-items:center;justify-content:center;padding:24px">' +
+    '<div style="max-width:380px;text-align:center">' +
+      // Explicit colour, not inherited: in dark mode the inherited value is the
+      // same navy as this panel, so the glyph measured 1:1 against its own
+      // background. A colour emoji paints itself and was never invisible -- but
+      // a permanently-failing line in the audit is how a real one gets ignored.
+      '<div style="font-size:40px;margin-bottom:14px;color:#F5E6C8">🔑</div>' +
+      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;color:#F5E6C8;margin-bottom:10px">Please sign in again</div>' +
+      '<div style="font-size:13px;color:rgba(245,230,200,0.75);line-height:1.7;margin-bottom:18px">' + line + '</div>' +
+      '<div style="font-size:12px;color:rgba(245,230,200,0.55);line-height:1.6;margin-bottom:18px">Your conversations are kept.</div>' +
+      '<button id="reauth-go" style="padding:11px 26px;border-radius:10px;border:none;background:#D4AF37;color:#0B2545;font-size:14px;font-weight:600;cursor:pointer">Sign in</button>' +
+    '</div></div>';
+  const b = document.getElementById('reauth-go');
+  // Reuses the proven teardown: endSession() signs out and clears the session
+  // keys, the returning identifiers go with them, and the reload comes back at
+  // the gate. THREADS ARE DELIBERATELY NOT TOUCHED.
+  if(b) b.onclick = function(){
+    try{ endSession(); }catch(e){}
+    try{ _RETURNING_KEYS.forEach(k => localStorage.removeItem(k)); }catch(e){}
+    try{ sessionStorage.clear(); }catch(e){}
+    location.reload();
+  };
 }
 
 // Forget everything this browser knows, so the joining protocol runs from the
@@ -7257,7 +7325,7 @@ function hardResetDevice(){
 function showFrozenNotice(reason){
   document.body.innerHTML = '<div style="position:fixed;inset:0;background:#0B2545;display:flex;align-items:center;justify-content:center;padding:24px">' +
     '<div style="max-width:380px;text-align:center">' +
-      '<div style="font-size:40px;margin-bottom:14px">🔒</div>' +
+      '<div style="font-size:40px;margin-bottom:14px;color:#F5E6C8">🔒</div>' +
       '<div style="font-family:\'Cormorant Garamond\',serif;font-size:22px;color:#F5E6C8;margin-bottom:10px">This account is suspended</div>' +
       '<div style="font-size:13px;color:rgba(245,230,200,0.65);line-height:1.7">Please contact <a href="mailto:support.bella.ai@gmail.com" style="color:#D4AF37">support.bella.ai@gmail.com</a> and we will sort it out.</div>' +
     '</div></div>';
