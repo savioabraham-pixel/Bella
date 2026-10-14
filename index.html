@@ -2527,7 +2527,7 @@ PERSONALITY & TONE (STRICT):
 - Understand Hinglish, Benglish, and Marathish naturally
 
 CONVERSATION FLOW — EVERY NEW SESSION (STRICT — DO NOT SKIP ANY STEP):
-${_sessionGreeting?`Step 1: ALREADY COMPLETED. You have ALREADY greeted ${addressedName} this session, with exactly these words: "${_sessionGreeting}". That greeting is on their screen right now. DO NOT GREET AGAIN. Do not open with "Good morning", "Good afternoon", "Good evening", "Hello" or "Hi", and do not ask how they are — you have already asked. Their next message is their REPLY to that greeting, so begin at Step 2: read their mood and respond to what they actually said. If what they said is a question, task or request rather than a mood, answer it directly and immediately — skip the small talk entirely and do not force it back to Step 2.`:`Step 1: Greet warmly by preferred name — time-of-day greeting, then ask how they are. THE GREETING OBEYS THE LANGUAGE RULE ABOVE LIKE EVERYTHING ELSE: if their first message is in English, greet in English ("Good morning ${addressedName}! How are you today?"); if it is in Bengali, Hindi or Marathi, greet in that language and that script. The English wording here is an example of the SHAPE, not a phrase to copy.`}
+${_sessionGreeting?((_greetingOnScreen&&getHist().length<=1)?`Step 1: ALREADY COMPLETED. You have ALREADY greeted ${addressedName} this session, with exactly these words: "${_sessionGreeting}". That greeting is on their screen right now. DO NOT GREET AGAIN. Do not open with "Good morning", "Good afternoon", "Good evening", "Hello" or "Hi", and do not ask how they are — you have already asked. Their next message is their REPLY to that greeting, so begin at Step 2: read their mood and respond to what they actually said. If what they said is a question, task or request rather than a mood, answer it directly and immediately — skip the small talk entirely and do not force it back to Step 2.`:`Step 1: ALREADY COMPLETED, AND STILL DO NOT GREET AGAIN. You greeted ${addressedName} earlier in this same session, with these words: "${_sessionGreeting}". They are now continuing an EARLIER CONVERSATION, so that greeting is NOT on their screen — never refer to it, never say "as I said when you arrived", and do not treat their message as a reply to it. They have been greeted once already this session and greeting them a second time is exactly what this rule exists to prevent. Do not open with "Good morning", "Good afternoon", "Good evening", "Hello" or "Hi", and do not ask how they are. Pick this conversation up where it left off and answer what they have just said. If they greet YOU, a short warm acknowledgement is fine — but never the full opening greeting again.`):`Step 1: Greet warmly by preferred name — time-of-day greeting, then ask how they are. THE GREETING OBEYS THE LANGUAGE RULE ABOVE LIKE EVERYTHING ELSE: if their first message is in English, greet in English ("Good morning ${addressedName}! How are you today?"); if it is in Bengali, Hindi or Marathi, greet in that language and that script. The English wording here is an example of the SHAPE, not a phrase to copy.`}
 Step 2: WAIT for their reply. Read their mood carefully.
 
 IF POSITIVE (they say they are well, good, fine, great, happy, doing good):
@@ -3387,6 +3387,8 @@ function switchThread(id){
   }
   currentThreadId=id;
   document.getElementById('msgs').innerHTML='';
+  // The greeting is painted, never stored, so this line is what removes it.
+  _greetingOnScreen=false;
   // The thread NAME is user-supplied (startRename uses prompt()) and also arrives
   // from the backend sync, so it goes in escaped. _adminEsc is the one escaper
   // this file already has -- a second one would only drift from it.
@@ -9226,7 +9228,11 @@ async function send(){
   let reply=null;
   window._chatAbortController=new AbortController();
   try{
-    reply=await callBella(true,userMemory.memories||'',window._chatAbortController.signal);
+    // An attachment is never a social turn — a file always goes out in the
+    // search lane, exactly as it did before this router existed.
+    const _route=(pTexts.length===0&&pImages.length===0)?routeTurn(fullMsg):{lane:'search',why:'attachment present'};
+    _recordRoute(fullMsg,_route);
+    reply=await callBella(_route.lane==='search',userMemory.memories||'',window._chatAbortController.signal,_route);
   }catch(err){
     window._chatAbortController=null;
     hideThinking();
@@ -9417,7 +9423,7 @@ function _replyLangNote(){
   return '\n\nREPLY LANGUAGE FOR THIS MESSAGE: English.';
 }
 
-async function callBella(useSearch,memCtx,signal){
+async function callBella(useSearch,memCtx,signal,route){
   // Use test profile if admin test mode is active — nothing saved to real user data
   const _activeProfileKey = (_testMode && _testProfileKey) ? _testProfileKey : currentProfileKey;
   const _activeAddressedName = (_testMode && _testAddressedName) ? _testAddressedName : currentAddressedName;
@@ -9434,7 +9440,13 @@ async function callBella(useSearch,memCtx,signal){
   const voiceNote='\n\nAt the very end of your reply, on its own new line, always add a short summary of your answer in this exact format: [VOICE]- first point\\n- second point\\n- third point[/VOICE]. Rules for it: 3 to 5 points, each on its own line beginning with \"- \", each a single short clause, FORTY-FIVE WORDS IN TOTAL AT THE ABSOLUTE MOST. It must be dramatically shorter than your answer — it is the highlights, not a retelling. Write it in the SAME language as your reply. This tag is never shown as part of your answer; it is used for the spoken version and for the Summarise button.';
   const _opening=`Understood. I am Bella, ready to assist ${_activeAddressedName}.`;
   const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_replyLangNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
-  const r=await bfetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch}),signal});
+  // The two tool sets cannot travel together (see routeTurn), so this is written
+  // as an either/or and not as two independent fields. While BELLA_TOOLS_READY is
+  // false the second branch is unreachable and the request on the wire is
+  // byte-identical to the one this page has always sent.
+  const _payload={contents,useSearch};
+  if(BELLA_TOOLS_READY&&route&&route.lane==='tools'){_payload.useSearch=false;_payload.tools=[{functionDeclarations:_TOOL_INTENTS.map(x=>x.declaration)}];}
+  const r=await bfetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_payload),signal});
   if(!r.ok)throw new Error('Backend error: '+r.status);
   const d=await r.json();
   return d.candidates?.[0]?.content?.parts?.[0]?.text||null;
@@ -10063,6 +10075,116 @@ function answerTimeQuery(text){
 }
 
 function isTimeSensitive(t){const l=t.toLowerCase();return['today','tonight','now','current','latest','recent','live','score','weather','price','news','update','right now','this week','this month','happening','2026','2025','breaking','just','aaj','abhi','kal','what time','time is it','what\'s the time','current time in','time zone in','timezone','time zone',"o'clock"].some(w=>l.includes(w));}
+
+// ══ THE PRE-ROUTER — which lane does this turn leave in? ═══════════════════
+// MEASURED 2026-10-13 by calling the API rather than reading the docs: Gemini
+// answers HTTP 400 "Built-in tools ({google_search}) and Function Calling cannot
+// be combined in the same request" — in BOTH arrangements, with no nesting that
+// gets round it. Each tool ALONE returns 200. So a turn carries google_search OR
+// functionDeclarations, never both, and something local has to CHOOSE before the
+// request is built. This is that chooser.
+//
+// It is plain word rules running in this browser. No second model call, so it
+// adds no cost and no wait. Asking Gemini itself "which lane is this?" would be
+// an extra paid API round-trip on every single message; this is the free design.
+//
+//   'tools'  — the message asks Bella to DO something. Needs functionDeclarations.
+//   'chat'   — social, acknowledgement, or an instruction to remember. Needs neither.
+//   'search' — EVERYTHING ELSE, and the default.
+//
+// ── WHY 'search' IS THE DEFAULT AND 'chat' IS AN ALLOW-LIST ──────────────
+// This is the entire safety argument and it must not be softened later.
+// Search used to be gated on isTimeSensitive() directly above — a ~30-word
+// keyword list — and that list decided FOR the model. "How much does a Tesla
+// cost" missed it (the list holds 'price', not 'cost') and "who runs Twitter
+// now" missed it too, so the tool was never attached and the answer came back
+// from training data: stale, with nothing on screen to say so. The gate was
+// removed deliberately for that reason. This router must not quietly become it
+// again. So a message only LOSES the search tool when it MATCHES a known-harmless
+// shape; anything these rules do not recognise keeps searching. A wrong 'chat'
+// is the only expensive mistake this function can make, and every rule below
+// exists to make it hard to reach.
+//
+// Flip BELLA_TOOLS_READY the day /chat can carry functionDeclarations (the
+// backend half is written up in BACKEND-QUEUE.md and is NOT deployed). Until
+// then routeTurn never returns 'tools', so the live behaviour of this page is
+// two-lane and the third lane cannot fire by accident.
+const BELLA_TOOLS_READY=false;
+
+// Whole-string matches, never includes(). A substring test against short words
+// is precisely how "Joyce" was handed Joydeep's account; the same mistake here
+// would strip the search tool off a real question because the word "hi" happens
+// to sit inside "which". Every pattern below is anchored at both ends.
+const _CHAT_SHAPES=[
+  /^(hi|hey|hello|yo|hiya|halo)[\s!.,]*(bella)?[\s!.,]*$/,
+  /^(good\s*(morning|afternoon|evening|night)|gm|gn)[\s!.,]*(bella)?[\s!.,]*$/,
+  /^(how are you|how r u|how are you doing|how's it going|hows it going|you ok|you okay)[\s?!.,]*$/,
+  /^(thanks|thank you|thanx|thx|ty|cheers|great|nice|lovely|perfect|excellent|awesome|cool|brilliant|well done|good job|good one)[\s!.,]*(bella)?[\s!.,]*$/,
+  /^(ok|okay|k|kk|yes|yeah|yep|yup|no|nope|nah|sure|fine|alright|all right|got it|understood|noted|right|indeed)[\s!.,]*$/,
+  /^(bye|goodbye|see you|see ya|good night|night|talk later|ttyl|catch you later)[\s!.,]*(bella)?[\s!.,]*$/,
+  /^(sorry|my bad|oops|apologies)[\s!.,]*$/,
+  /^(i am|i'm|im)\s+(fine|good|well|ok|okay|great|tired|happy|sad|sleepy)[\s!.,]*$/,
+  // The same handful in the languages this household actually speaks. Kolkata
+  // Bengali register, as everywhere else in this page.
+  /^(namaste|namaskar|nomoskar|nomoshkar|dhanyavaad|dhonnobad|shukriya|accha|achha|theek hai|thik ache|bhalo|haan|nahi|na)[\s!.,]*(bella)?[\s!.,]*$/,
+  /^(নমস্কার|নমস্তে|ধন্যবাদ|ভালো|ভাল আছি|হ্যাঁ|না|আচ্ছা|ঠিক আছে)[\s!.,।]*$/,
+  /^(नमस्ते|नमस्कार|धन्यवाद|शुक्रिया|अच्छा|ठीक है|हाँ|हां|नहीं)[\s!.,।]*$/
+];
+
+// Phase 2 fills this in alongside the functionDeclarations it sends. Listed here
+// so the routing rule and the declaration can never drift apart: a name in this
+// array with no matching declaration is a turn routed to a tool that does not
+// exist. Inert while BELLA_TOOLS_READY is false.
+const _TOOL_INTENTS=[];
+
+// Returns {lane, why} — `why` exists so a wrong route can be read off the log
+// instead of guessed at. Never throws: a router that throws would take the whole
+// turn down, and the safe answer is always 'search'.
+function routeTurn(t){
+  try{
+    const raw=String(t==null?'':t).trim();
+    if(!raw) return {lane:'search',why:'empty'};
+    const l=raw.toLowerCase();
+    // Tools are checked BEFORE the time veto on purpose. "Send that email now"
+    // is an instruction, not a question, and web search has nothing to offer it
+    // — letting the word "now" pull an action into the search lane would make
+    // the tools lane unreachable for the most natural way of asking.
+    if(BELLA_TOOLS_READY){
+      const hit=_TOOL_INTENTS.find(x=>x.re.test(l));
+      if(hit) return {lane:'tools',why:'action intent: '+hit.name,tool:hit.name};
+    }
+    // THE VETO. Anything that reads as volatile keeps the search tool, whatever
+    // else it matches below.
+    if(isTimeSensitive(raw)) return {lane:'search',why:'time-sensitive wording'};
+    // A question mark is treated as a question, full stop. "How are you?" losing
+    // its search tool would be harmless, but the rule that lets it through is the
+    // same rule that would let a real question through, so neither is allowed.
+    if(raw.indexOf('?')!==-1) return {lane:'search',why:'question mark'};
+    // "Remember that I take my tea without sugar" is an instruction to store
+    // something; no web search can help. The veto above already protects
+    // "remember today's gold price".
+    if(detectMemoryRequest(raw)) return {lane:'chat',why:'memory instruction'};
+    // Social turns only, and only short ones. The cap is a second guard behind
+    // the anchors: a long message is doing something more than saying hello.
+    if(raw.length<=40&&_CHAT_SHAPES.some(re=>re.test(l))) return {lane:'chat',why:'social turn'};
+    return {lane:'search',why:'default'};
+  }catch(e){
+    console.warn('routeTurn failed, defaulting to search:',e);
+    return {lane:'search',why:'router error'};
+  }
+}
+
+// The last 50 decisions, so the router can be checked against real messages
+// rather than against the examples it was written from. Held in memory only —
+// nothing is stored and nothing leaves the browser.
+const _routeLog=[];
+function _recordRoute(text,route){
+  try{
+    _routeLog.push({at:new Date().toISOString(),lane:route.lane,why:route.why,chars:(text||'').length});
+    if(_routeLog.length>50)_routeLog.shift();
+    console.debug('[router]',route.lane,'—',route.why);
+  }catch(e){}
+}
 
 // ============================================================
 // FILE HANDLING
@@ -11436,6 +11558,14 @@ function emailPalette(){
 // The greeting deliverGreeting() already spoke this session, replayed to Gemini so
 // it knows Step 1 is done. Empty until sign-in, and never persisted.
 let _sessionGreeting='';
+// deliverGreeting() draws through bellaMsg(), which paints the screen and never
+// writes to a thread's stored history. switchThread() then clears #msgs and
+// repaints from that thread's saved messages -- so opening an earlier
+// conversation WIPES the greeting off the screen while _sessionGreeting still
+// holds its text. The system prompt was telling Gemini "that greeting is on
+// their screen right now" when it demonstrably was not. This flag is the
+// difference between the two, so what Bella is told matches what Savio sees.
+let _greetingOnScreen=false;
 function timeOfDay(){const h=new Date().getHours();return h<12?'morning':h<17?'afternoon':'evening';}
 // The one source of truth for "where and when is this user". getHours() and
 // toLocaleDateString() with no timeZone already follow the device clock, so this
@@ -11778,6 +11908,7 @@ function deliverGreeting(addressedName){
   // throws away whatever the user actually typed first. Recorded here and replayed
   // into the model's opening turn by callBella.
   _sessionGreeting=msg;
+  _greetingOnScreen=true;
   bellaMsg(msg);speakText(msg,_gl);
   // Said on screen rather than left in the console. Deliberately NOT spoken and
   // NOT recorded as the session greeting — it is an operational notice, not
