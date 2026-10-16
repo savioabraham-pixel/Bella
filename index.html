@@ -2179,6 +2179,7 @@ try{
         <div class="menu-item" onclick="openAdminScreen('audit');closeUserMenu()">Audit Log</div>
         <div class="menu-item" onclick="openAdminScreen('consents');closeUserMenu()">Consents</div>
         <div class="menu-item" onclick="openAdminScreen('deletions');closeUserMenu()">Deletions</div>
+        <div class="menu-item" onclick="adminBackupNow();closeUserMenu()">Back up now</div>
       </div>
     </div>
     <!-- Sign Out -->
@@ -8129,9 +8130,95 @@ function _dxStyles(){
    +'<w:rPr><w:b/><w:color w:val="14477A"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:style>'
    +'</w:styles>';
 }
-// Everything the person has, from THIS device, as one Word document. Returned
-// rather than saved, so the file can be built and inspected without a download
-// ever happening — which is how it is tested.
+// ── THE ACCOUNT RECORD, FROM BELLA'S SERVER ───────────────────────────────
+// This document used to be built entirely from localStorage, and said so
+// honestly — "everything I hold on this device". That is not the export a
+// person has a right to. What is actually HELD about them lives in the
+// spreadsheet: their Users row, their saved memories, and the server copy of
+// their threads. `/export-data` has existed for weeks with ZERO callers.
+// Found auditing register 1 on 2026-10-16: closed on format, open on substance.
+//
+// The endpoint is SELF-gated, not admin-gated. It resolves the caller from the
+// verified token and DELIBERATELY IGNORES any profileKey in the body, so this
+// cannot fetch another person's record even if asked to.
+//
+// It must never be able to break the download. Any failure returns null and
+// the file is still built from the device, with a line saying the section is
+// missing rather than empty — somebody pressing this is often somebody
+// leaving, and handing them nothing is the worst of the three outcomes.
+async function _fetchAccountRecord(){
+  try{
+    const ctl=new AbortController();
+    const kill=setTimeout(()=>ctl.abort(),30000);   // three sequential tab reads
+    const r=await bfetch(BACKEND+'/export-data',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({}),signal:ctl.signal
+    });
+    clearTimeout(kill);
+    if(!r.ok) return null;
+    const d=await r.json().catch(()=>null);
+    return (d && typeof d==='object' && !d.error) ? d : null;
+  }catch(e){ return null; }
+}
+// Column positions read out of the DEPLOYED writer, never guessed — the sheet's
+// own row-1 labels have lied before. Users: upsertUserRow()'s `col` map.
+// Memory: /save-memory appends [profileKey, addressedName, memoryText, type,
+// timestamp, email]. Threads: /threads-write writes [profileKey, threadId,
+// threadName, historyJSON, created, updated]. accountStatus is index 17, named
+// as such where the backend reads it back.
+const _SRV_USER_COLS=[['Name',1],['Known to Bella as',2],['Email',3],['Mobile',4],
+  ['Gender',5],['City',6],['Date of birth',7],['Language',9],
+  ['Registered',13],['Last seen',10],['User ID',16],['Account status',17]];
+function _dxServerRecord(rec){
+  if(!rec){
+    return _dxP('Held in your Bella account',{style:'Heading1'})
+      + _dxP('Bella could not reach the server while building this file, so this part is '
+           + 'MISSING — which is not the same as empty. Everything above came from this device '
+           + 'and is complete. Please try the download again, or write to ' + LEGAL_CONTACT
+           + ' and ask for your account record directly.',{italic:true,color:'9E2A3C'});
+  }
+  const prof=Array.isArray(rec.profile)?rec.profile:[];
+  const mem=Array.isArray(rec.memories)?rec.memories:[];
+  const thr=Array.isArray(rec.threads)?rec.threads:[];
+  const profRows=[];
+  _SRV_USER_COLS.forEach(function(c){
+    const v=prof[c[1]];
+    if(v!==undefined && v!==null && String(v).trim()!=='') profRows.push([c[0], String(v)]);
+  });
+  // The server rows are adapted into the shape _dxThreads already renders, so
+  // there is one conversation renderer in this file and not two.
+  const tobj={};
+  thr.forEach(function(r,i){
+    let hist=[];
+    try{ const h=JSON.parse(((r||[])[3])||'[]'); if(Array.isArray(h)) hist=h; }catch(e){}
+    tobj[((r||[])[1])||('row'+i)]={name:((r||[])[2])||'Untitled conversation',
+                                   hist:hist, created:((r||[])[4])||''};
+  });
+  return _dxP('Your account record',{style:'Heading1'})
+    + _dxP('This is the row Bella keeps for you on her server. It is what follows you '
+         + 'between devices.',{italic:true,color:'6B7280',size:18,after:80})
+    + (profRows.length ? _dxTable(profRows)
+        : _dxP('No account row was found on the server for this sign-in.',
+               {italic:true,color:'9AA0A6'}))
+    + _dxP('What Bella remembers about you (' + mem.length + ')',{style:'Heading1'})
+    + _dxP('Facts Bella has saved, oldest first. These live on the server, not on this device.',
+           {italic:true,color:'6B7280',size:18,after:80})
+    + (mem.length
+        ? _dxTable(mem.map(function(r){
+            const kind=String(((r||[])[3])||'memory');
+            return [_expDate(((r||[])[4])||'') || 'Undated',
+                    String(((r||[])[2])||'') + (kind && kind!=='memory' ? '  (' + kind + ')' : '')];
+          }))
+        : _dxP('Nothing saved yet.',{italic:true,color:'9AA0A6'}))
+    + _dxP('Conversations saved to your account (' + thr.length + ')',{style:'Heading1'})
+    + _dxP('The server copy. A conversation held on another device appears here and not in the '
+         + 'section above.',{italic:true,color:'6B7280',size:18,after:80})
+    + _dxThreads(tobj,false);
+}
+
+// Everything the person has — this device AND their account on the server — as
+// one Word document. Returned rather than saved, so the file can be built and
+// inspected without a download ever happening, which is how it is tested.
 async function _buildMyDataDocx(){
   const acct = JSON.parse(localStorage.getItem('b_registered_user')||'null') || {};
   const conv = JSON.parse(localStorage.getItem('b_threads')||'{}') || {};
@@ -8149,6 +8236,17 @@ async function _buildMyDataDocx(){
   };
   const exportedAt=new Date();
   const nConv=Object.keys(conv).length, nDel=Object.keys(del).length;
+  // Awaited BEFORE the document is assembled, because the intro sentence has to
+  // tell the truth about whether the account half made it in.
+  // Belt AND braces. _fetchAccountRecord already swallows its own failures,
+  // but the builder must not depend on that staying true: a future edit, or a
+  // missing AbortController, would otherwise take the whole download down and
+  // hand a person leaving Bella nothing at all. Proven by test 46, which
+  // failed here until this existed.
+  let srv=null;
+  try{ srv=await _fetchAccountRecord(); }catch(e){ srv=null; }
+  const nMem=(srv&&Array.isArray(srv.memories))?srv.memories.length:0;
+  const nSrvConv=(srv&&Array.isArray(srv.threads))?srv.threads.length:0;
 
   const FIELDS=[['Name','fullName'],['Known to Bella as','preferredName'],['Email','email'],
     ['Mobile','mobile'],['Gender','gender'],['Date of birth','dob'],['Registered','registeredDate'],
@@ -8163,8 +8261,14 @@ async function _buildMyDataDocx(){
   const body =
     _dxP('My Bella.ai Data',{style:'Title'})
   + _dxP('Exported ' + _expDate(exportedAt.toISOString()),{italic:true,color:'6B7280',size:18})
-  + _dxP('Everything Bella holds about you on this device: ' + nConv + ' conversation' + (nConv===1?'':'s')
-       + ', ' + nDel + ' in Deleted, and your account details.',{after:120})
+  + _dxP(srv
+      ? ('Everything Bella holds about you, in two parts. On this device: ' + nConv + ' conversation'
+         + (nConv===1?'':'s') + ' and ' + nDel + ' in Deleted. In your account on Bella\'s server: '
+         + nMem + ' saved memor' + (nMem===1?'y':'ies') + ' and ' + nSrvConv + ' conversation'
+         + (nSrvConv===1?'':'s') + '.')
+      : ('Everything Bella holds about you on this device: ' + nConv + ' conversation'
+         + (nConv===1?'':'s') + ', ' + nDel + ' in Deleted, and your account details. The part held '
+         + 'on Bella\'s server could not be reached — see the end of this file.'),{after:120})
   + _dxP('Your details',{style:'Heading1'})
   + (acctRows.length ? _dxTable(acctRows)
                      : _dxP('No account details stored on this device.',{italic:true,color:'9AA0A6'}))
@@ -8174,13 +8278,16 @@ async function _buildMyDataDocx(){
   + _dxP('These are recoverable in Bella for 30 days from the date they were deleted.',
          {italic:true,color:'6B7280',size:18})
   + _dxThreads(del,true)
+  + _dxServerRecord(srv)
   + _dxP('Your preferences',{style:'Heading1'})
   + _dxTable([['Theme',prefs.theme||'default'],
               ['Clock',prefs.clockFormat==='12'?'12-hour':'24-hour'],
               ['Voice language',prefs.voiceLanguage||'English']])
   + _dxP('About this file',{style:'Heading1'})
-  + _dxP('Conversations are kept on the device you used, so this covers this browser only. '
-       + 'Sign in elsewhere and that device would have its own.',{after:80})
+  + _dxP('This file has two halves. The device half is whatever this browser is holding, so '
+       + 'signing in elsewhere would show that device its own conversations. The account half is '
+       + 'what Bella keeps on her server under your verified email, and is the same wherever you '
+       + 'sign in.',{after:80})
   + _dxP('This is a Word document. It opens in Word, Pages, Google Docs or LibreOffice, and you can '
        + 'edit it, print it, or save it as a PDF from there.',{after:80})
   + _dxP('Questions: ' + LEGAL_CONTACT,{color:'6B7280',size:18});
@@ -8224,7 +8331,7 @@ async function _buildMyDataDocx(){
   const blob=await zip.generateAsync({type:'blob',
     mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     compression:'DEFLATE'});
-  return {blob:blob, nConv:nConv, nDel:nDel,
+  return {blob:blob, nConv:nConv, nDel:nDel, server:!!srv, nMem:nMem, nSrvConv:nSrvConv,
     name:'My-Bella-Data-' + exportedAt.toISOString().slice(0,10) + '.docx'};
 }
 async function downloadMyData(){
@@ -8236,7 +8343,12 @@ async function downloadMyData(){
     a.download = out.name;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-    bellaMsg('**Your data is on its way down** 📁\n\nI have put everything I hold on this device into one **Word document** in your Downloads folder — your details, all ' + out.nConv + ' conversation' + (out.nConv===1?'':'s') + ', anything in Deleted, and your preferences.\n\nIt opens in Word, Pages or Google Docs, and you can edit it or save it as a PDF from there.\n\nOne thing worth knowing: conversations are kept on the device you are using, so this file covers this browser. Signing in elsewhere would give you that device\'s conversations instead.');
+    bellaMsg('**Your data is on its way down** 📁\n\nI have put everything I hold about you into one **Word document** in your Downloads folder.\n\n'
+      + '**On this device** — your details, all ' + out.nConv + ' conversation' + (out.nConv===1?'':'s') + ', anything in Deleted, and your preferences.\n'
+      + (out.server
+          ? ('**In your account, on my server** — your account record, ' + out.nMem + ' saved memor' + (out.nMem===1?'y':'ies') + ' and ' + out.nSrvConv + ' conversation' + (out.nSrvConv===1?'':'s') + '. That half is the same wherever you sign in.\n')
+          : ('**In your account, on my server** — I could not reach it just now, so that part is **missing from this file**, which is not the same as it being empty. Please try again in a moment, and if it keeps happening write to ' + LEGAL_CONTACT + '.\n'))
+      + '\nIt opens in Word, Pages or Google Docs, and you can edit it or save it as a PDF from there.');
   }catch(e){
     bellaMsg('I could not build the export just now. Please try again, and if it keeps happening let Savio know.');
   }
@@ -8263,9 +8375,9 @@ function showMemoryPromise(){
 
 Nothing Bella learns about you is ever lost — unless you choose to delete it.
 
-Every conversation, every preference, every correction you share is stored permanently in your personal space — tied to your verified Gmail, accessible from any device, any browser, any thread.
+**What follows you everywhere.** Your account and everything Bella has saved about you — your details, your preferences, the facts you have told her — are tied to your verified Gmail. Sign in on any device, any browser, and Bella knows you.
 
-Start a new conversation and Bella remembers everything. Switch devices and your full profile is right there waiting for you.
+**What stays on the device.** Your conversations are kept on the device you had them on. Signing in elsewhere gives you that device's conversations, not these. Bella is still learning to carry the whole thread between devices, and until she does, **Download My Data** is how you take a conversation with you.
 
 Bella doesn't just assist. She remembers. And she never forgets anything you've asked her to hold on to — until you tell her to let go.`;
   bellaMsg(msg);
@@ -10636,7 +10748,26 @@ function clearFiles(){pFiles=[];pTexts=[];pImages=[];document.getElementById('fb
 // only, enforced server-side — this just carries the signed-in session.
 // Returns the LAST thing it said, so send() can record the exchange. Before
 // this it returned nothing and the caller had nothing to store.
+// The guard is on the ENTRY POINT, so typing the phrase twice is protected as
+// well as pressing the button twice. A backup reads every tab, and two at once
+// is how the Sheets read quota gets starved — the exact fault release 35
+// existed to fix. The proven body below is unchanged; it was only renamed.
+let _backupInFlight=false;
 async function backupSheetNow(){
+  if(_backupInFlight){
+    const _busy='A backup is already running — give it a moment. Two at once would starve the '
+      + 'spreadsheet read quota, so I will not start a second one.';
+    bellaMsg(_busy); return _busy;
+  }
+  _backupInFlight=true;
+  try{ return await _backupSheetRun(); }
+  finally{ _backupInFlight=false; }
+}
+// Admin → Back up now. The endpoint is owner-only server-side; this only
+// carries the signed-in session. Routed through backupSheetNow() so the button
+// and the typed phrase are ONE proven code path, not two.
+async function adminBackupNow(){ await backupSheetNow(); }
+async function _backupSheetRun(){
   const start=Date.now();
   const _say=function(t){ bellaMsg(t); return t; };
   bellaMsg('Backing up the spreadsheet now — this takes a moment.');
