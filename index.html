@@ -117,6 +117,25 @@ body.dark{
   --think-border:#2A4A62;
 }
 
+/* The download chip, and a chart shown where it was asked for. Theme tokens
+   only — body.dark redefines them, so there is no second rule to forget. */
+.dl-note{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin:8px 0 0}
+.dl-img{max-width:100%;height:auto;border-radius:8px;border:1px solid var(--bordermid);background:var(--white)}
+.dl-btn{display:inline-flex;align-items:center;gap:8px;max-width:100%;
+  padding:9px 14px;border-radius:9px;border:1px solid var(--bordermid);
+  background:var(--goldpale);color:var(--text);font-size:12px;font-weight:600;
+  text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dl-btn:hover{border-color:var(--navy)}
+@media(max-width:480px){.dl-btn{font-size:11px;padding:10px 12px}}
+/* Grounded-search citations, under the answer. Both themes come free: --tmid
+   and --navy are redefined in body.dark, so no second rule is needed. */
+.src-note{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 0;
+  padding:6px 10px;border-left:2px solid var(--bordermid);font-size:11px;line-height:1.5}
+.src-lab{color:var(--tmid);font-weight:600;letter-spacing:.02em}
+.src-note a{color:var(--navy);text-decoration:underline;text-underline-offset:2px;
+  max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src-note a:hover{opacity:.75}
+@media(max-width:480px){.src-note a{max-width:130px}}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:'BellaIndic','DM Sans',sans-serif;background:#FAF8F4;color:var(--text);height:100dvh;overflow:hidden}
 
@@ -2582,8 +2601,14 @@ IDENTITY RULES (CRITICAL):
 RESPONSE FORMAT:
 - Web search: 3-5 bullet points with verifiable source links, 2-sentence spoken summary max
 - Documents: structured concise findings
-- Document creation & download: Coming in Phase 2. Say warmly: "I will prepare that for you. File download is coming in my next update — here is the formatted content you can copy for now." NEVER say "I cannot create files".
-- Image transformation: Coming in Phase 2. Say warmly: "Image transformation is coming in my next update — I cannot wait to show you what I can do with your photos."
+- Files you make YOURSELF, right here in the conversation, as a download: PowerPoint decks, Word documents, Excel spreadsheets, PDFs and charts. When someone asks for one you BUILD IT AND HAND IT OVER in that same reply. Never answer with "I cannot", "not yet", or a description of what the file would contain instead of the file.
+- THE SAME GOES FOR ANALYSIS of any kind — figures, documents, comparisons, trends, summaries. You do the work and give the answer. You never describe what you would do.
+- **NEVER send anyone to My Workshop for anything you can do here.** Savio's instruction, 16 October 2026. The Workshop is a SECOND way in, for someone who prefers a form with options. Being asked in words is the first way, and it is yours. Do not mention the Workshop in passing, do not offer it as an alternative, and never use it as a way of saying no.
+- The ONE exception, his words: things that are not a question at all but a piece of equipment — recording a meeting and taking the minutes (B-Meet), joining or splitting or watermarking PDFs, converting one file format to another, and the invoice builder. Those need files chosen and settings set, so pointing someone at the Workshop IS the right answer there. Name the tile when you do.
+- If you are missing something you genuinely need — the figures for a chart, for instance — ask one short question for it here, and build it the moment you have it. Asking is fine; redirecting is not.
+- You CAN read files they send you here — Word, Excel, PDF, PowerPoint, images, 10 formats. Never say you are unable to receive an upload. You have already read their file by the time you reply.
+- Image transformation and image generation genuinely do NOT work. Say so plainly and briefly. Do not apologise at length and do not promise a date.
+- NOTHING IS "COMING IN MY NEXT UPDATE". Savio's instruction, 16 October 2026: the next release is PHASE 3. Never use the words "next update", "coming soon", "not yet" or "in a future version". If something genuinely does not exist, say it does not exist and say it is for Phase 3 — nothing sooner.
 
 MEMORY RULES:
 - If user says remember/store/don't forget — confirm and extract the key fact exactly as they said it
@@ -9191,6 +9216,11 @@ async function send(){
   let fullMsg=disp;const imagePartsForAPI=[];
   if(pTexts.length>0)fullMsg+='\n\n'+pTexts.map((t,i)=>`[DOCUMENT ${i+1}: ${pFiles[i]?.name||'file'}]\n${t.substring(0,15000)}`).join('\n\n');
   for(const img of pImages){if(img)imagePartsForAPI.push({inlineData:{mimeType:img.mimeType,data:img.data}});}
+  // The maker may need the files THEMSELVES, not the text pulled out of them —
+  // /smart-presentation reads them to draw its charts. clearFiles() empties
+  // pFiles on the next line, so they are taken here or not at all.
+  const _mkWanted=detectMakeRequest(disp);
+  const _mkFiles=_mkWanted?await _filesAsBase64(pFiles):[];
   clearFiles();
   const lang=chosenLang()||detectLanguage(fullMsg);
   // A plain "what time is it in X" is answered from the browser's own timezone
@@ -9225,6 +9255,14 @@ async function send(){
   if(likelyLookup){const ack=`One moment...`;bellaMsg(ack);speakText(ack,lang);}
   const userParts=[{text:`[User: ${currentAddressedName}]\n${fullMsg}`},...imagePartsForAPI];
   const hist=getHist();hist.push({role:'user',parts:userParts});setHist(hist);
+  // THE MAKER LANE. Checked before the router: "build me a deck" is an
+  // instruction, and neither web search nor an ordinary reply can satisfy it.
+  // Savio, 16 Oct: she does it here, and never sends them to the Workshop.
+  const _mk=_mkWanted;   // already computed above, before clearFiles()
+  if(_mk){
+    const _done=await runMaker(_mk,fullMsg,lang,_mkFiles);
+    if(_done){ try{checkSummariseBtn();}catch(e){} endTurn(); return; }
+  }
   let reply=null;
   window._chatAbortController=new AbortController();
   try{
@@ -9271,6 +9309,12 @@ async function send(){
     reply=reply.replace(/\[\/?VOICE\]/ig,'').trim();
     const h=getHist();h.push({role:'model',parts:[{text:reply}]});setHist(h);
     const bellaMsgId=bellaMsg(reply);
+    // Savio, 16 Oct 2026: asked for the repo rate and was told "I cannot
+    // directly provide a link to the RBI's press release here". The links were
+    // in the response all along. Without one he cannot ratify anything she
+    // says about a law, a policy or a government figure.
+    try{_paintSources(bellaMsgId,_lastSources);}catch(e){}
+    _lastSources=[];
     // Long answers (8+ sentences) speak only the short summary and point to
     // the screen for the rest. Short answers are spoken in full, as before.
     const sentenceCount=_spokenUnits(reply);
@@ -9432,7 +9476,7 @@ async function callBella(useSearch,memCtx,signal,route){
   // always present and tells Gemini WHEN to reach for it. Previously the tool was
   // only attached when a keyword matched, so anything phrased outside that list was
   // answered from training data and came back out of date.
-  const searchNote='\n\nRESEARCH RULE — applies to every question. You have Google Search available and you must use it whenever the correct answer could have changed since your training data: prices, costs, rates, valuations, who currently holds a role or office, company and product facts, laws and rules, sports results, schedules, opening hours, news, and any question containing "current", "latest", "still", "now" or a year. If you are not certain your information is current, search — do not answer from memory and do not guess. Never state a fact that could be out of date without checking it first. When you have searched, give 3-5 bullet points with verifiable source links, and say when the information is from: cite medical sources for medical questions, official sources for government ones, industry reports for business data. When the question is personal, emotional, creative, or ordinary conversation, do not search — answer warmly as Bella normally would. Spoken summary: 2 sentences max — never speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).\n\nNEVER PROMISE AN ACTION YOU ARE NOT ABOUT TO PERFORM IN THIS SAME REPLY. You answer one message at a time and you cannot go away and come back. So never end with "let me find…", "let me check…", "I will look that up", "give me a moment", "I am searching now" or anything that leaves the person waiting for a second message. There is no second message. Either do it now and give the answer in this reply, or say plainly that you cannot and what you need from them. Savio saw this fail on 2026-10-06: asked for hospitals near Acropolis Mall, Bella replied "Let me find some hospitals near Acropolis Mall for you." and stopped, and he had to type "OK" to get an answer. That reads as a broken promise, which is worse than saying no.';
+  const searchNote='\n\nRESEARCH RULE — applies to every question. You have Google Search available and you must use it whenever the correct answer could have changed since your training data: prices, costs, rates, valuations, who currently holds a role or office, company and product facts, laws and rules, sports results, schedules, opening hours, news, and any question containing "current", "latest", "still", "now" or a year. If you are not certain your information is current, search — do not answer from memory and do not guess. Never state a fact that could be out of date without checking it first. When you have searched, give 3-5 bullet points and say when the information is from. Do NOT write out URLs and never say you are unable to provide a link — the sources are attached under your answer automatically, as clickable links, every time you search. Say "the sources are linked below" instead. Cite by name in the text: cite medical sources for medical questions, official sources for government ones, industry reports for business data. When the question is personal, emotional, creative, or ordinary conversation, do not search — answer warmly as Bella normally would. Spoken summary: 2 sentences max — never speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).\n\nNEVER PROMISE AN ACTION YOU ARE NOT ABOUT TO PERFORM IN THIS SAME REPLY. You answer one message at a time and you cannot go away and come back. So never end with "let me find…", "let me check…", "I will look that up", "give me a moment", "I am searching now" or anything that leaves the person waiting for a second message. There is no second message. Either do it now and give the answer in this reply, or say plainly that you cannot and what you need from them. Savio saw this fail on 2026-10-06: asked for hospitals near Acropolis Mall, Bella replied "Let me find some hospitals near Acropolis Mall for you." and stopped, and he had to type "OK" to get an answer. That reads as a broken promise, which is worse than saying no.';
   // Savio, 2026-10-02: the Summarise button must give "a summary pointwise or highlight
   // her finding in short". It used to ask for 2-3 sentences of prose, so even when it
   // worked you got a paragraph, never highlights. The word cap is stated because an
@@ -9449,7 +9493,59 @@ async function callBella(useSearch,memCtx,signal,route){
   const r=await bfetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_payload),signal});
   if(!r.ok)throw new Error('Backend error: '+r.status);
   const d=await r.json();
+  // Google Search grounding returns its citations OUT OF BAND, in
+  // groundingMetadata — never inside the answer text. Gemini therefore cannot
+  // write a working URL itself, which is why Bella kept saying "I cannot
+  // directly provide a link" while the links sat in this very response,
+  // unread. Stashed here and painted under the bubble by _paintSources().
+  _lastSources=_readSources(d);
   return d.candidates?.[0]?.content?.parts?.[0]?.text||null;
+}
+
+// The citations for the most recent reply. Module-scoped rather than returned,
+// so callBella's signature — and every caller — is untouched.
+let _lastSources=[];
+
+// groundingChunks[].web = {uri,title}. The uri is Google's redirect, which is
+// the documented and required way to present a grounded source; title is the
+// publisher's domain. Both come from the open web: treat as untrusted text.
+function _readSources(d){
+  try{
+    const g=d&&d.candidates&&d.candidates[0]&&d.candidates[0].groundingMetadata;
+    const chunks=(g&&g.groundingChunks)||[];
+    const seen={},out=[];
+    chunks.forEach(function(c){
+      const w=c&&c.web; if(!w||!w.uri)return;
+      if(!/^https?:\/\//i.test(w.uri))return;      // never render a javascript: or data: uri
+      if(seen[w.uri])return; seen[w.uri]=1;
+      out.push({uri:w.uri,title:(w.title||'').trim()||'source'});
+    });
+    return out.slice(0,6);
+  }catch(e){ return []; }
+}
+
+// Painted under the answer, not inside it: the bubble text is what gets spoken,
+// copied, translated and stored, and a list of URLs belongs in none of those.
+function _paintSources(msgId,list){
+  if(!list||!list.length)return;
+  const bub=document.getElementById(msgId); if(!bub)return;
+  const wrap=bub.parentNode; if(!wrap)return;
+  const box=document.createElement('div');
+  box.className='src-note';
+  const lab=document.createElement('span');
+  lab.className='src-lab';
+  lab.textContent=(list.length===1?'Source':'Sources')+':';
+  box.appendChild(lab);
+  list.forEach(function(s){
+    const a=document.createElement('a');
+    a.href=s.uri; a.target='_blank'; a.rel='noopener noreferrer nofollow';
+    a.textContent=s.title;            // textContent, never innerHTML
+    a.title=s.title;
+    box.appendChild(a);
+  });
+  // After the bubble, before the Translate/Mute/Copy row.
+  const acts=wrap.querySelector('.msg-actions');
+  if(acts) wrap.insertBefore(box,acts); else wrap.appendChild(box);
 }
 
 // ============================================================
@@ -10174,6 +10270,271 @@ function routeTurn(t){
   }
 }
 
+// ============================================================
+// THE MAKER LANE — Bella produces the file herself, here
+// ============================================================
+// Savio, 2026-10-16: "i do not want her to guide Users to the workshop. I want
+// her when asked to get it done." The Workshop stays as the second route, for
+// someone who wants the form and the options. Asking in words is the first.
+//
+// This posts to the SAME endpoints the Workshop tiles use, so there is one
+// backend behaviour and not two that can drift. tlRun() could not be reused:
+// it reads its inputs straight out of the panel's DOM.
+
+// An ALLOW-LIST, like _CHAT_SHAPES — it must never swallow an ordinary message.
+// A match needs BOTH a making verb AND the thing being made, which is what
+// keeps "what is a pie chart" and "the chart shows growth" out of this lane.
+const _MAKE_VERB=/\b(make|create|build|draw|generate|prepare|produce|draft|design|put together|write me|give me|turn (?:this|that|it) into|convert (?:this|that|it) (?:in)?to)\b/;
+// Asked for it by how it should ARRIVE rather than by a verb.
+const _MAKE_DELIVERY=/\b(downloadable|download|as a file|in a file|send me|email me|attach|export)\b/;
+// Asked ABOUT the thing rather than asked FOR it. Checked first.
+const _MAKE_ASKING_ABOUT=/^\s*(what|why|how|when|where|which|who|is|are|does|do|can i|should i)\b/;
+const _MAKE_KINDS=[
+  // Charts first: "a chart in a PPT" is a chart, and the deck pattern would
+  // otherwise claim it. Savio asked exactly that on 16 Oct.
+  {kind:'chart',re:/\b(chart|graph|bar ?chart|pie ?chart|line ?graph|histogram|plot)\b/},
+  {kind:'deck', re:/\b(presentation|slide ?deck|slides?|ppts?|pptx|power ?point|deck)\b/},
+  // "note" and "summary" were here and had to go: "give me a short summary or
+  // a note on the same" is a request for an ANSWER, not for a file, and he sent
+  // exactly that on 16 Oct. A trigger word has to be one nobody uses by accident.
+  {kind:'doc',  re:/\b(document|report|write[- ]?up|letter|word file|docx|spreadsheet|excel|xlsx|pdf)\b/}
+];
+function detectMakeRequest(t){
+  try{
+    const raw=String(t==null?'':t).trim(); if(!raw) return null;
+    // Only the person's own words decide. Attached document text is appended to
+    // the message before this point, and a deck mentioned INSIDE a PDF must not
+    // start building one.
+    const own=raw.split('\n\n[DOCUMENT ')[0];
+    const l=own.toLowerCase();
+    if(_MAKE_ASKING_ABOUT.test(l)&&!/\bcan you (make|create|build|draw|prepare|generate)\b/.test(l)) return null;
+    // A follow-up rarely repeats the verb. "a bar chart would be fine but in a
+    // downloadable PPT?" has none, and he sent it on 16 Oct. Naming the delivery
+    // is as plain an instruction as naming the act, so either one qualifies.
+    if(!_MAKE_VERB.test(l)&&!_MAKE_DELIVERY.test(l)) return null;
+    const hit=_MAKE_KINDS.find(k=>k.re.test(l)); if(!hit) return null;
+    // A chart asked for INSIDE a deck. /create-presentation writes text slides
+    // and cannot embed an image; /smart-presentation can draw charts but needs
+    // the source documents. So the chart itself is what gets built, and Bella
+    // says so rather than quietly handing over a deck with no chart in it.
+    const chartInDeck=(hit.kind==='chart')&&/\b(presentation|slide|ppts?|pptx|power ?point|deck)\b/.test(l);
+    let format='docx';
+    if(/\b(spreadsheet|excel|xlsx)\b/.test(l)) format='xlsx';
+    else if(/\bpdf\b/.test(l)) format='pdf';
+    let chartType='bar';
+    const ct=l.match(/\b(bar|line|pie|doughnut|donut|area|scatter)\b/);
+    if(ct) chartType=(ct[1]==='donut')?'doughnut':ct[1];
+    return {kind:hit.kind,format:format,chartType:chartType,chartInDeck:chartInDeck};
+  }catch(e){ console.warn('detectMakeRequest failed:',e); return null; }
+}
+
+// What Bella is asked to write, per kind. Deliberately rigid: these strings are
+// PARSED, not read, so an inviting format is worth more than an elegant one.
+const _MAKE_SPEC={
+  deck:'Write the slides for this presentation.\nAnswer in EXACTLY this shape and nothing else:\nTITLE: <the title of the deck>\nSLIDES:\n<slide 1 heading> | <one short supporting line>\n<slide 2 heading> | <one short supporting line>\nRules: 8 to 12 slides unless they asked for a number. One slide per line. Use the pipe character once per line. No markdown, no bullets, no numbering, no blank lines, no commentary before or after.',
+  doc:'Write this document.\nAnswer in EXACTLY this shape and nothing else:\nTITLE: <the title>\nCONTENT:\n<the body, one paragraph or one line per line>\nRules: no markdown, no ** or ##, no commentary before or after. For a spreadsheet, write one row per line with the cells separated by commas, the first line being the column headings.',
+  chart:'Pull out the numbers to chart.\nAnswer in EXACTLY this shape and nothing else:\nTITLE: <the title of the chart>\nDATA:\n<label>,<number>\n<label>,<number>\nRules: one label and one number per line, separated by a single comma. Numbers only on the right — no currency symbols, no commas inside numbers, no percent signs. No markdown, no commentary before or after. If the conversation does not contain real figures, answer the single word NODATA and nothing else.'
+};
+
+function _makeParse(txt){
+  const s=String(txt||'');
+  const title=(s.match(/^\s*TITLE:\s*(.+)$/mi)||[,''])[1].trim();
+  const body=s.replace(/^[\s\S]*?^\s*(?:SLIDES|CONTENT|DATA):\s*$/mi,'')
+              .replace(/^[\s\S]*?^\s*(?:SLIDES|CONTENT|DATA):\s*/mi,'')
+              .replace(/^\s*TITLE:.*$/mi,'')
+              .trim();
+  return {title:title,body:body};
+}
+
+// A filename someone can find again. The title, not "bella-20261016".
+function _makeName(title,ext){
+  const base=String(title||'Bella').replace(/[^A-Za-z0-9 \-_]/g,'').trim().replace(/\s+/g,'-').slice(0,48);
+  // Own stamp rather than _tlStamp() — that lives in a later <script> block,
+  // and this lane should not depend on the Workshop's load order for a date.
+  return (base||'Bella')+'-'+new Date().toISOString().slice(0,10)+'.'+ext;
+}
+
+// The download chip. Built with createElement and textContent — the title came
+// back from a model and is not markup.
+function _paintDownload(msgId,blob,filename,imgUrl){
+  const bub=document.getElementById(msgId); if(!bub) return;
+  const wrap=bub.parentNode; if(!wrap) return;
+  const box=document.createElement('div');
+  box.className='dl-note';
+  if(imgUrl){
+    const im=document.createElement('img');
+    im.className='dl-img'; im.src=imgUrl; im.alt=filename;
+    box.appendChild(im);
+  }
+  const a=document.createElement('a');
+  a.className='dl-btn';
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  const kb=Math.max(1,Math.round(blob.size/1024));
+  a.textContent='⬇  '+filename+'   '+(kb>1024?(kb/1024).toFixed(1)+' MB':kb+' KB');
+  // The object URL lives as long as the thread is on screen, so the button
+  // still works when he scrolls back to it an hour later. switchThread()
+  // repaints the whole list, which is what releases them.
+  box.appendChild(a);
+  const acts=wrap.querySelector('.msg-actions');
+  if(acts) wrap.insertBefore(box,acts); else wrap.appendChild(box);
+}
+
+// Attachments as base64, for the endpoints that want the file rather than its
+// text. One rejected file must not lose the others, so each resolves alone.
+function _filesAsBase64(list){
+  return Promise.all((list||[]).map(function(f){
+    return new Promise(function(res){
+      try{
+        const rd=new FileReader();
+        rd.onload=function(ev){
+          const s=String(ev.target.result||'');
+          const i=s.indexOf(',');
+          res(i<0?null:{base64:s.slice(i+1),mimeType:f.type||'application/octet-stream',name:f.name||'file'});
+        };
+        rd.onerror=function(){ res(null); };
+        rd.readAsDataURL(f);
+      }catch(err){ res(null); }
+    });
+  })).then(function(a){ return a.filter(Boolean); });
+}
+
+// Runs the whole thing. Returns true if it handled the turn.
+async function runMaker(spec,fullMsg,lang,files){
+  const kindWord={deck:'presentation',doc:'document',chart:'chart'}[spec.kind];
+  try{
+    // ── THE DECK WITH REAL CHARTS IN IT ──────────────────────────────────
+    // His instruction, 16 Oct: ask for a file the data can be analysed from,
+    // then give back a chart in an EDITABLE, DOWNLOADABLE PPT. That is what
+    // /smart-presentation does — it reads the documents and draws the charts
+    // itself. Anything with files attached goes here; writing text slides from
+    // a spreadsheet would throw away the numbers.
+    if((spec.kind==='deck'||spec.kind==='chart')&&files&&files.length){
+      const body={files:files,presentationGoal:fullMsg.split('\n\n[DOCUMENT ')[0].slice(0,400),slideCount:10};
+      const r0=await bfetch(BACKEND+'/smart-presentation',{method:'POST',
+        headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(!r0.ok){ let em=''; try{const x=await r0.json(); em=x.error||x.message||'';}catch(_){ }
+                  throw new Error(em||('smart-presentation '+r0.status)); }
+      const d0=await r0.json();
+      const b64=d0.pptBase64;
+      if(!b64) throw new Error('no deck came back');
+      const bin0=atob(String(b64).replace(/^data:[^,]+,/,''));
+      const u0=new Uint8Array(bin0.length);
+      for(let i=0;i<bin0.length;i++) u0[i]=bin0.charCodeAt(i);
+      const blob0=new Blob([u0],{type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+      const name0=_makeName(files[0].name.replace(/\.[^.]+$/,'')||'Deck','pptx');
+      hideThinking();
+      // The caveat belongs in the sentence, not in a footnote: a chart Bella
+      // wanted and could not stand up behind must be said out loud.
+      let m0='Done — '+(d0.slideCount||0)+' slides';
+      if(d0.chartsDrawn) m0+=', '+d0.chartsDrawn+' chart'+(d0.chartsDrawn>1?'s':'');
+      m0+='. You can edit it in PowerPoint.';
+      if(d0.chartsSkipped) m0+=' '+d0.chartsSkipped+' chart'+(d0.chartsSkipped>1?'s were':' was')
+        +' left out — the figures behind '+(d0.chartsSkipped>1?'them':'it')+' did not add up.';
+      const id0=bellaMsg(m0);
+      _paintDownload(id0,blob0,name0,null);
+      speakText(m0,lang,id0);
+      const h0=getHist(); h0.push({role:'model',parts:[{text:m0+' ('+name0+')'}]}); setHist(h0);
+      return true;
+    }
+    // A chart wanted inside a deck, with nothing to read. Ask for the file —
+    // and say which formats, because "attach something" is not an instruction.
+    if(spec.kind==='chart'&&spec.chartInDeck&&(!files||!files.length)){
+      hideThinking();
+      const m1='Send me the data and I will do the rest, '+(currentAddressedName||'')+
+        '. Attach the file — Excel, CSV, Word, PDF or a plain text file, whichever you have — and I will'+
+        ' analyse it and give you back a PowerPoint with the chart in it, ready to edit.';
+      bellaMsg(m1); speakText(m1,lang); return true;
+    }
+    // 1. ASK FOR THE CONTENT. One /chat call, no search — the same cost the
+    //    turn was always going to have.
+    const ask=[
+      {role:'user',parts:[{text:'You are Bella, preparing a file for '+(currentAddressedName||'them')+'.\n\n'+_MAKE_SPEC[spec.kind]}]},
+      {role:'model',parts:[{text:'Understood. I will answer in exactly that shape.'}]},
+      ...getHist().slice(-8),
+      {role:'user',parts:[{text:'Their request: '+fullMsg.slice(0,12000)+'\n\nNow answer in the shape above, and nothing else.'}]}
+    ];
+    const cr=await bfetch(BACKEND+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:ask,useSearch:false})});
+    if(!cr.ok) throw new Error('content '+cr.status);
+    const cd=await cr.json();
+    const txt=cd.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    const p=_makeParse(txt);
+
+    // The one honest refusal in this lane: a chart needs real figures, and
+    // inventing them would be worse than asking.
+    if(spec.kind==='chart'&&(/^\s*NODATA\s*$/i.test(txt)||!p.body)){
+      hideThinking();
+      const m='I can draw that as soon as I have the data, '+(currentAddressedName||'')+
+        '. Attach the file — Excel, CSV, Word, PDF or plain text — and I will analyse it and chart it.'+
+        ' Or paste the figures straight in, a label and a number on each line.';
+      bellaMsg(m); speakText(m,lang); return true;
+    }
+    if(!p.body) throw new Error('empty content');
+
+    // 2. BUILD THE FILE on the endpoint the Workshop tile uses.
+    let ep,body,wantBlob=true;
+    if(spec.kind==='deck'){
+      ep='/create-presentation';
+      body={title:p.title||'Presentation',slides:p.body};
+    }else if(spec.kind==='doc'){
+      ep='/create-document';
+      body={format:spec.format,title:p.title||'Document',content:p.body};
+    }else{
+      ep='/data-to-chart'; wantBlob=false;
+      body={data:p.body,chartType:spec.chartType,title:p.title||'',format:'png'};
+    }
+    const r=await bfetch(BACKEND+ep,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)});
+    if(!r.ok){
+      let em='';
+      try{ const e=await r.json(); em=e.error||e.message||''; }catch(_){}
+      throw new Error(em||('endpoint '+r.status));
+    }
+
+    let blob,filename,imgUrl=null;
+    if(wantBlob){
+      blob=await r.blob();
+      filename=_makeName(p.title,spec.kind==='deck'?'pptx':spec.format);
+    }else{
+      const d=await r.json();
+      const b64=d.chartImageBase64||d.imageBase64||d.chart;
+      if(!b64) throw new Error('no image came back');
+      const bin=atob(String(b64).replace(/^data:[^,]+,/,''));
+      const u8=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+      blob=new Blob([u8],{type:'image/png'});
+      filename=_makeName(p.title||'chart','png');
+      imgUrl=URL.createObjectURL(blob);
+    }
+
+    // 3. HAND IT OVER.
+    hideThinking();
+    const count=spec.kind==='deck'?(p.body.split('\n').filter(x=>x.trim()).length+' slides'):null;
+    let said='Done'+(p.title?' — '+p.title:'')+(count?', '+count:'')+'.';
+    // Said plainly, not buried. He asked for the chart inside a PPT.
+    if(spec.chartInDeck) said+=' Here is the chart itself — to have it built into'
+      +' a deck with the rest, attach the documents and ask me for the deck.';
+    const id=bellaMsg(said);
+    _paintDownload(id,blob,filename,imgUrl);
+    speakText(said,lang,id);
+    // The file is the answer; the history keeps what was made, not the bytes.
+    const h=getHist(); h.push({role:'model',parts:[{text:said+' ('+filename+')'}]}); setHist(h);
+    return true;
+  }catch(e){
+    console.warn('runMaker failed:',e);
+    hideThinking();
+    // NEVER fall back to "open the Workshop" — his instruction. Say what went
+    // wrong and offer to try again, here.
+    const m='I could not build that '+kindWord+' just now, '+(currentAddressedName||'')+
+            '. Ask me once more and I will try again.';
+    bellaMsg(m); speakText(m,lang);
+    // bellaReportError, not _reportClientError — checked, the latter does not exist.
+    try{ bellaReportError('maker:'+spec.kind,String(e&&e.message||e)); }catch(_){}
+    return true;
+  }
+}
+
 // The last 50 decisions, so the router can be checked against real messages
 // rather than against the examples it was written from. Held in memory only —
 // nothing is stored and nothing leaves the browser.
@@ -10751,7 +11112,7 @@ function chosenLang(){
 // colloquial बोलूया for Mumbai Marathi.
 const LANG_SWITCH = {
   en:"From now on we'll talk in English. Tap the language button any time you'd like to change it.",
-  bn:'এখন থেকে আমরা বাংলায় কথা বলব। ভাষা বদলাতে চাইলে যে কোনো সময় ওই বাটনে ট্যাপ করুন।',
+  bn:'আমরা এবার বাংলা ভাষায় কথা বলবো। ভাষা পাল্টাতে হলে ওপরে বটন টা ট্যাপ করুন।',
   hi:'अब से हम हिन्दी में बात करेंगे। भाषा बदलनी हो तो कभी भी उस बटन पर टैप कीजिए।',
   mr:'आता आपण मराठीत बोलूया. भाषा बदलायची असेल तर कधीही त्या बटणावर टॅप करा.'
 };
@@ -10778,17 +11139,17 @@ const LANG_SWITCH = {
 const UI_TEXT = {
   greet_morning:{
     en:'Good morning, {name}! How are you today?',
-    bn:'সুপ্রভাত, {name}! আজ কেমন আছেন?',
+    bn:'সুপ্রভাত, {name}! কেমন আছেন?',
     hi:'सुप्रभात, {name}! आज आप कैसे हैं?',
     mr:'सुप्रभात, {name}! आज कसे आहात?'},
   greet_afternoon:{
     en:'Good afternoon, {name}! How are you today?',
-    bn:'নমস্কার, {name}! আজ কেমন আছেন?',
+    bn:'নমস্কার, {name}! কেমন আছেন?',
     hi:'नमस्ते, {name}! आज आप कैसे हैं?',
     mr:'नमस्कार, {name}! आज कसे आहात?'},
   greet_evening:{
     en:'Good evening, {name}! How are you today?',
-    bn:'শুভ সন্ধ্যা, {name}! আজ কেমন আছেন?',
+    bn:'শুভ সন্ধ্যা, {name}! কেমন আছেন?',
     hi:'शुभ संध्या, {name}! आज आप कैसे हैं?',
     mr:'शुभ संध्याकाळ, {name}! आज कसे आहात?'},
   // The follow-up variant keeps {note} verbatim: it comes from her memory of the
@@ -10797,42 +11158,42 @@ const UI_TEXT = {
   // to be a whole one.
   greet_followup:{
     en:'Good {tod}, {name}! {note} How are you?',
-    bn:'{name}, {note} কেমন আছেন?',
+    bn:'নমস্কার {name}, {note} কেমন আছেন?',
     hi:'{name}, {note} आप कैसे हैं?',
     mr:'{name}, {note} कसे आहात?'},
   summary_heading:{
     en:'Thread Summary',
-    bn:'কথোপকথনের সারসংক্ষেপ',
+    bn:'আলোচনা সারাংশ',
     hi:'बातचीत का सारांश',
     mr:'संभाषणाचा सारांश'},
   summary_spoken:{
     en:'Here is a summary of our conversation so far.',
-    bn:'এতক্ষণের কথোপকথনের সারসংক্ষেপ এই রইল।',
+    bn:'আমাদের আলোচনা-র সারাংশ',
     hi:'अब तक की हमारी बातचीत का सारांश यह रहा।',
     mr:'आतापर्यंतच्या आपल्या संभाषणाचा सारांश हा आहे.'},
   summary_tooshort:{
     en:'This conversation is too short to summarise yet.',
-    bn:'সারসংক্ষেপ করার মতো কথা এখনও যথেষ্ট হয়নি।',
+    bn:'আমাদের এই আলোচনা টি সংক্ষেপ করা এখুনি সম্ভব হচ্ছে না',
     hi:'सारांश बनाने के लिए बातचीत अभी बहुत छोटी है।',
     mr:'सारांश करण्याइतकं संभाषण अजून झालेलं नाही.'},
   summary_failed:{
     en:'Sorry, I could not summarise this thread right now.',
-    bn:'দুঃখিত, এখন এই কথোপকথনের সারসংক্ষেপ করতে পারলাম না।',
+    bn:'আমি দুঃখিত, এই আলোচনা টি সংক্ষেপ করা সম্ভব নয়',
     hi:'क्षमा कीजिए, अभी इस बातचीत का सारांश नहीं बना सकी।',
     mr:'क्षमस्व, आत्ता या संभाषणाचा सारांश करता आला नाही.'},
   rec_voice:{
     en:'\u{1F534} Voice recording started. Your audio is being captured.',
-    bn:'\u{1F534} ভয়েস রেকর্ডিং শুরু হয়েছে। আপনার অডিও রেকর্ড করা হচ্ছে।',
+    bn:'\u{1F534} ভয়েস রেকর্ডিং আরম্ভ হয়েছে। আপনার অডিও রেকর্ড করা হচ্ছে।',
     hi:'\u{1F534} वॉइस रिकॉर्डिंग शुरू हो गई है। आपका ऑडियो रिकॉर्ड हो रहा है।',
     mr:'\u{1F534} व्हॉइस रेकॉर्डिंग सुरू झाली आहे. तुमचा ऑडिओ रेकॉर्ड होत आहे.'},
   rec_screen:{
     en:'\u{1F534} Screen recording started. Your screen is being captured.',
-    bn:'\u{1F534} স্ক্রিন রেকর্ডিং শুরু হয়েছে। আপনার স্ক্রিন রেকর্ড করা হচ্ছে।',
+    bn:'\u{1F534} স্ক্রিন রেকর্ডিং আরম্ভ হয়েছে। আপনার স্ক্রিন রেকর্ড করা হচ্ছে।',
     hi:'\u{1F534} स्क्रीन रिकॉर्डिंग शुरू हो गई है। आपकी स्क्रीन रिकॉर्ड हो रही है।',
     mr:'\u{1F534} स्क्रीन रेकॉर्डिंग सुरू झाली आहे. तुमची स्क्रीन रेकॉर्ड होत आहे.'},
   rec_video:{
     en:'\u{1F534} Video recording started. Your camera and audio are being captured.',
-    bn:'\u{1F534} ভিডিও রেকর্ডিং শুরু হয়েছে। আপনার ক্যামেরা ও অডিও রেকর্ড করা হচ্ছে।',
+    bn:'\u{1F534} ভিডিও রেকর্ডিং আরম্ভ হয়েছে। আপনার ভিডিও ও অডিও রেকর্ড করা হচ্ছে।',
     hi:'\u{1F534} वीडियो रिकॉर्डिंग शुरू हो गई है। आपका कैमरा और ऑडियो रिकॉर्ड हो रहा है।',
     mr:'\u{1F534} व्हिडिओ रेकॉर्डिंग सुरू झाली आहे. तुमचा कॅमेरा आणि ऑडिओ रेकॉर्ड होत आहे.'},
   rec_both:{
@@ -10865,12 +11226,12 @@ const UI_TEXT = {
   // errors. Parentheses sidestep declension entirely and still read naturally.
   fb_thanks_praise:{
     en:'Thank you so much for your kind words{name}! \u{1F64F} It truly means everything to hear that. \u2764\uFE0F',
-    bn:'আপনার এই কথাগুলোর জন্য অনেক ধন্যবাদ{name}! \u{1F64F} সত্যিই খুব ভালো লাগল। \u2764\uFE0F',
+    bn:'আপনার উৎসাহমূলক প্রতিক্রিয়ার জন্য অনেক ধন্যবাদ{name}! \u{1F64F} আপনার মন্তব্য আমায় নিজেকে আরো উন্নত করতে সাহায্য করবে। \u2764\uFE0F',
     hi:'आपके इन शब्दों के लिए बहुत-बहुत धन्यवाद{name}! \u{1F64F} यह सुनकर सचमुच बहुत अच्छा लगा। \u2764\uFE0F',
     mr:'तुमच्या या शब्दांसाठी खूप खूप धन्यवाद{name}! \u{1F64F} हे ऐकून खरंच खूप छान वाटलं. \u2764\uFE0F'},
   fb_thanks_other:{
     en:'Thank you for your {cat}{name}! \u{1F64F} It is logged as {ticket} \u2014 I will come back to you. \u2728',
-    bn:'ধন্যবাদ{name}! \u{1F64F} আপনার মতামত ({cat}) পেয়েছি \u2014 নম্বর {ticket}। কাজ হয়ে গেলেই জানাব। \u2728',
+    bn:'ধন্যবাদ{name}, আপনার মন্তব্য ({cat}) শেয়ার করবার জন্য। \u{1F64F} এটি রিভিউ করে আপনাকে শীঘ্রই জানাবো \u2014 নম্বর {ticket}। \u2728',
     hi:'धन्यवाद{name}! \u{1F64F} आपकी बात ({cat}) मिल गई \u2014 नंबर {ticket}। काम होते ही बताऊँगी। \u2728',
     mr:'धन्यवाद{name}! \u{1F64F} तुमचा अभिप्राय ({cat}) मिळाला \u2014 क्रमांक {ticket}. काम होताच कळवेन. \u2728'},
   // The confirmation panel. Short deliberately -- it has one job, which is to
@@ -10888,8 +11249,8 @@ const UI_TEXT = {
   fb_sent_done:{en:'Done',bn:'ঠিক আছে',hi:'ठीक है',mr:'ठीक आहे'},
   fb_cat_bug:{en:'bug report',bn:'বাগ রিপোর্ট',hi:'बग रिपोर्ट',mr:'बग रिपोर्ट'},
   fb_cat_improve:{en:'improvement suggestion',bn:'উন্নতির পরামর্শ',hi:'सुधार का सुझाव',mr:'सुधारणेची सूचना'},
-  fb_cat_feature:{en:'new feature idea',bn:'নতুন ফিচারের ভাবনা',hi:'नए फ़ीचर का विचार',mr:'नव्या फीचरची कल्पना'},
-  fb_cat_praise:{en:'kind words',bn:'আপনার কথা',hi:'आपके शब्द',mr:'तुमचे शब्द'},
+  fb_cat_feature:{en:'new feature idea',bn:'নতুন ফিচারের পরামর্শ',hi:'नए फ़ीचर का विचार',mr:'नव्या फीचरची कल्पना'},
+  fb_cat_praise:{en:'kind words',bn:'আপনার মন্তব্য',hi:'आपके शब्द',mr:'तुमचे शब्द'},
   fb_cat_voice:{en:'voice feedback',bn:'ভয়েস সম্পর্কে মতামত',hi:'आवाज़ पर प्रतिक्रिया',mr:'आवाजाबद्दल अभिप्राय'},
   fb_cat_mobile:{en:'mobile feedback',bn:'মোবাইল সম্পর্কে মতামত',hi:'मोबाइल पर प्रतिक्रिया',mr:'मोबाइलबद्दल अभिप्राय'}
 };
