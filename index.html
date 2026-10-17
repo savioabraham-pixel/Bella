@@ -9035,13 +9035,19 @@ function renderTbWidgets(){
   box.textContent='';
   const note=document.createElement('div');
   note.style.cssText='font-size:11px;color:var(--muted);padding:2px 18px 8px;line-height:1.5';
-  note.textContent='What flips in the top bar. Your greeting and Food For Thought are always there.';
+  note.textContent='What flips in the top bar. Your greeting and Food For Thought are always there. '
+    + 'Workshop tools you pin here open with one tap instead of two screens.';
   box.appendChild(note);
-  TB_ALL.forEach(function(k){
+  // 25 tools plus the four built-ins is a long list in a menu panel.
+  box.style.maxHeight='46vh'; box.style.overflowY='auto';
+  const rows=TB_BUILTIN.map(function(k){ return {key:k,name:TB_LABELS[k]||k}; })
+    .concat(tbWorkshopTools().map(function(t){ return {key:t.key,name:t.icon+'  '+t.label}; }));
+  rows.forEach(function(r){
+    const k=r.key;
     const row=document.createElement('div');
     row.className='menu-item';
     row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px';
-    const name=document.createElement('span'); name.textContent=TB_LABELS[k]||k;
+    const name=document.createElement('span'); name.textContent=r.name;
     const mark=document.createElement('span');
     const isOn=on.indexOf(k)!==-1;
     mark.textContent=isOn?'\u2713':'';
@@ -9061,7 +9067,8 @@ function renderTbWidgets(){
       }
       if(at===-1) cur.push(k); else cur.splice(at,1);
       // Keep them in the bar's own order rather than the order he tapped.
-      setTbWidgets(TB_ALL.filter(function(x){ return cur.indexOf(x)!==-1; }));
+      const order=TB_ALL_KEYS();
+      setTbWidgets(order.filter(function(x){ return cur.indexOf(x)!==-1; }));
       renderTbWidgets();
     });
     box.appendChild(row);
@@ -9076,7 +9083,34 @@ function renderTbWidgets(){
 // Built lazily from confirmIdentity(), never at parse time: step 9 of the QC
 // is "nothing new may run before Bella is on screen".
 const TB_WIDGETS_KEY='b_tb_widgets';
-const TB_ALL=['place','weather','date','convert'];       // the choosable four
+const TB_BUILTIN=['place','weather','date','convert'];   // the bar's own four
+// ── WORKSHOP TOOLS IN THE TOP BAR ───────────────────────────────────────
+// Savio, 2026-10-17: make the Workshop tiles widgets he can put where he wants.
+// This is the half that costs almost nothing -- the stack already takes a list,
+// so a tile joins it rather than needing a system of its own. A tool that is
+// pinned is one flip away instead of two screens away.
+//
+// Only tiles that actually DO something are offered. Counted live the same day:
+// 40 tiles, 25 with an action, 15 still SOON and every one of those blocked on
+// Google sign-in, Web Push, a scheduler, Phase 3 hardware or BKC room
+// authorisation -- NOT on a screen. Pinning a tile that does nothing would be
+// putting a dead switch where he can reach it faster.
+function tbWorkshopTools(){
+  try{
+    return WORKSHOP.filter(function(r){ return r && r[3]; }).map(function(r){
+      return { key:'ws:'+r[1], icon:r[0], label:r[1], fn:r[3] };
+    });
+  }catch(e){ return []; }
+}
+function tbToolByKey(k){
+  const all=tbWorkshopTools();
+  for(let i=0;i<all.length;i++) if(all[i].key===k) return all[i];
+  return null;
+}
+function TB_ALL_KEYS(){
+  return TB_BUILTIN.concat(tbWorkshopTools().map(function(t){ return t.key; }));
+}
+const TB_ALL=TB_BUILTIN;                                  // kept: older callers
 let _tbAt=0, _tbFlips=0, _tbBound=false;
 
 // Which of the four he wants. Everything, until he says otherwise. An empty
@@ -9085,9 +9119,10 @@ let _tbAt=0, _tbFlips=0, _tbBound=false;
 function tbWidgets(){
   let v=null;
   try{ v=JSON.parse(localStorage.getItem(TB_WIDGETS_KEY)||'null'); }catch(e){}
-  if(!Array.isArray(v)||!v.length) return TB_ALL.slice();
-  const keep=v.filter(function(k){ return TB_ALL.indexOf(k)!==-1; });
-  return keep.length?keep:TB_ALL.slice();
+  if(!Array.isArray(v)||!v.length) return TB_BUILTIN.slice();
+  const valid=TB_ALL_KEYS();
+  const keep=v.filter(function(k){ return valid.indexOf(k)!==-1; });
+  return keep.length?keep:TB_BUILTIN.slice();
 }
 function setTbWidgets(list){
   try{ localStorage.setItem(TB_WIDGETS_KEY,JSON.stringify(list)); }catch(e){}
@@ -9110,9 +9145,44 @@ function _tbPanels(){
   });
   return out;
 }
+// A pinned tool needs a cell to live in. Built on demand and removed when it
+// is unpinned, so the bar never carries panels for things he has turned off.
+function _tbSyncToolCells(){
+  const bar=document.getElementById('chat-topbar');
+  if(!bar) return;
+  const want=tbWidgets().filter(function(k){ return k.indexOf('ws:')===0; });
+  // remove any that are no longer pinned
+  Array.prototype.forEach.call(bar.querySelectorAll('[data-tb^="ws:"]'),function(el){
+    if(want.indexOf(el.getAttribute('data-tb'))===-1) el.remove();
+  });
+  const anchor=document.getElementById('tb-thought-cell');
+  want.forEach(function(k){
+    if(bar.querySelector('[data-tb="'+CSS.escape(k)+'"]')) return;
+    const t=tbToolByKey(k);
+    if(!t) return;
+    const cell=document.createElement('div');
+    cell.className='tb-conv-btn tb-stackable';
+    cell.setAttribute('data-tb',k);
+    cell.setAttribute('title',t.label);
+    const p1=document.createElement('div'); p1.className='tb-primary';
+    p1.textContent=t.icon+' '+t.label;
+    const p2=document.createElement('div'); p2.className='tb-secondary';
+    p2.textContent='Open';
+    cell.appendChild(p1); cell.appendChild(p2);
+    // Runs the tile's own action, exactly as the Workshop does -- some entries
+    // are a bare name and some are already a call.
+    cell.addEventListener('click',function(ev){
+      ev.stopPropagation();
+      try{ (0,eval)(/\)\s*$/.test(t.fn)?t.fn:t.fn+'()'); }
+      catch(e){ bellaReportError('tbTool/'+t.label,e&&e.message?e.message:String(e)); }
+    });
+    if(anchor) bar.insertBefore(cell,anchor); else bar.appendChild(cell);
+  });
+}
 function paintTopbarStack(){
   const bar=document.getElementById('chat-topbar');
   if(!bar) return;
+  _tbSyncToolCells();
   const panels=_tbPanels();
   // Shown only once a panel is really on screen, so a bar that never gets here
   // stays as it was rather than coming up empty. See the `.tb-ready` note.
@@ -9201,6 +9271,7 @@ function initTopbarStack(){
     if(!on) return;
     const k=on.getAttribute('data-tb');
     if(k==='weather'||k==='convert') return;      // these open their own panels
+    if(k&&k.indexOf('ws:')===0) return;           // a pinned tool opens itself
     flipTopbar(1);
   });
   // Swiping is how a phone expects to move between panels.
