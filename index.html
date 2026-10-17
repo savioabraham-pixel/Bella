@@ -2153,6 +2153,7 @@ try{
       <div class="menu-items open" id="sec-data">
         <div class="menu-item" onclick="showMyMemory();closeUserMenu()">My Memory</div>
         <div class="menu-item" onclick="downloadMyData();closeUserMenu()">Download My Data</div>
+        <div class="menu-item" onclick="checkSyncNow();closeUserMenu()">Check Sync</div>
         <div class="menu-item" onclick="clearAllThreads();closeUserMenu()">Clear All Threads</div>
         <div class="menu-item danger" onclick="confirmDeleteAccount();closeUserMenu()">Delete Account</div>
       </div>
@@ -3190,9 +3191,14 @@ function queueThreadSync(id){
 // Additive only — a conversation is never removed because the backend has not
 // heard of it yet, and anything sitting in the recycle bin is skipped so a
 // deleted conversation cannot come back from the dead on the next sync.
-async function syncThreadsFromBackend(){
+// `prefetched` lets a caller that has ALREADY read /threads-read pass the
+// answer in rather than asking for it again. Check Sync does exactly that, so
+// pressing it costs one read of the spreadsheet and not two — the read quota
+// is the scarce thing here, not the network.
+async function syncThreadsFromBackend(prefetched){
   if(!currentProfileKey)return;   // see syncThreadToBackend — no '_guest' tier
   try{
+    if(prefetched){ return _mergeThreadRows(prefetched); }
     const r=await bfetch(BACKEND+'/threads-read',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({profileKey:currentProfileKey})});
     if(!r.ok){
@@ -3203,6 +3209,15 @@ async function syncThreadsFromBackend(){
       return;
     }
     const d=await r.json();
+    return _mergeThreadRows(d);
+  }catch(e){
+    // Offline is normal and not worth mailing about; anything else is a fault.
+    if(navigator.onLine!==false) bellaReportError('syncThreadsFromBackend',e&&e.message?e.message:String(e));
+  }
+}
+// The merge, split out so it can run on a payload somebody else fetched.
+// Returns what it did, so a caller can report it instead of guessing.
+function _mergeThreadRows(d){
     const rows=Array.isArray(d.threads)?d.threads:[];
     _lastPullAt=Date.now();
     const seen={};
@@ -3261,11 +3276,8 @@ async function syncThreadsFromBackend(){
       try{ saveThreadsLocal(); }finally{ _suppressThreadSync=false; }
       renderThreadList();
     }
-    _pushUnsyncedThreads(seen);
-  }catch(e){
-    // Offline is normal and not worth mailing about; anything else is a fault.
-    if(navigator.onLine!==false) bellaReportError('syncThreadsFromBackend',e&&e.message?e.message:String(e));
-  }
+    const swept=_pushUnsyncedThreads(seen);
+    return {arrived:changed, swept:swept, inAccount:rows.length};
 }
 // ── CONVERSATIONS THE BACKEND HAS NEVER BEEN TOLD ABOUT ─────────────────
 // saveThreadsLocal() only ever queued the CURRENT conversation, so a thread
@@ -8707,6 +8719,110 @@ function showMyMemory(){
   } else {
     bellaMsg("I don't have any stored memories for you yet. As we talk, I will remember important things you share with me.");
   }
+}
+
+// ── CHECK SYNC ──────────────────────────────────────────────────────────
+// Savio, 2026-10-17: "Fix this gap please." The gap was that nobody could tell
+// whether the AUTHENTICATED calls actually work from a real signed-in browser
+// -- a headless test cannot hold a Firebase session, so the only proof left
+// was him opening Bella on two devices and squinting at the sidebar.
+//
+// This closes it properly: it asks the question from whatever device he is
+// holding, with his real session, and answers in plain words. Not a one-off
+// test -- a button that tells anyone, on any device, whether their
+// conversations are actually reaching their account.
+//
+// It writes NOTHING unless this device is holding conversations the account
+// has never been told about, and then only the ones that are missing.
+// /threads-delete is deliberately NOT called: destroying something to prove
+// deletion works is absurd, and the account already reports how many
+// conversations have been destroyed, so a real deletion proves itself here
+// the next time this is pressed.
+function _deviceDescription(){
+  const w=window.innerWidth||0;
+  let kind='this device';
+  if(w<=430) kind='a phone';
+  else if(w<=820) kind='a tablet';
+  else kind='a laptop or desktop';
+  return kind+' ('+w+'px wide)';
+}
+async function checkSyncNow(){
+  if(!currentProfileKey){
+    bellaMsg('**I cannot check your sync yet.**\n\nYou are not signed in to an account on '+
+      _deviceDescription()+', so there is nothing to compare against. Sign in and try again.');
+    return;
+  }
+  bellaMsg('Checking whether this device and your account agree — one moment.');
+  const mine=Object.keys(threads||{}).filter(function(id){
+    const t=threads[id];
+    return !!(t&&Array.isArray(t.hist)&&t.hist.length) && !isTombstoned(id) &&
+           !(deletedThreads&&deletedThreads[id]);
+  });
+  let r=null, d=null, err=null;
+  try{
+    r=await bfetch(BACKEND+'/threads-read',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({profileKey:currentProfileKey})});
+    if(r.ok) d=await r.json();
+  }catch(e){ err=e&&e.message?e.message:String(e); }
+
+  // A failure must say WHICH failure. "Sync is not working" with no reason is
+  // what sent us hunting for a week.
+  if(!r||!r.ok||!d){
+    let why='I could not reach your account.';
+    if(err) why='I could not reach your account at all ('+err+'). That is usually no internet.';
+    else if(r&&r.status===401) why='Your session has expired or was not accepted (401). Signing out and back in fixes this.';
+    else if(r&&r.status===403) why='Your account refused the request (403). That means the account this device is signed in to does not own this profile — tell Savio, he can see it in the Users tab.';
+    else if(r&&r.status>=500) why='Your account answered with an error ('+r.status+'). That is Bella\'s server, not you.';
+    else if(r) why='Your account answered unexpectedly ('+r.status+').';
+    bellaMsg('**Sync is NOT working on '+_deviceDescription()+' right now.**\n\n'+why+
+      '\n\n**Nothing has been lost.** This device still holds all '+mine.length+
+      ' of your conversations, and they are safe here. Savio has been told automatically.');
+    return;
+  }
+
+  const rows=Array.isArray(d.threads)?d.threads:[];
+  const tombs=Array.isArray(d.tombstones)?d.tombstones:[];
+  const inAccount={}; rows.forEach(function(x){ if(x&&x.threadId)inAccount[x.threadId]=1; });
+  const notUploaded=mine.filter(function(id){ return !inAccount[id]; });
+  const onlyInAccount=rows.filter(function(x){ return x&&x.threadId&&!threads[x.threadId]; }).length;
+  // Merge BEFORE reporting, on the answer already in hand -- so the message
+  // describes what happened rather than what is about to be attempted, and so
+  // the spreadsheet is read once instead of twice.
+  let merged=null;
+  try{ merged=await syncThreadsFromBackend(d); }catch(e){}
+
+  let msg='**Sync IS working on '+_deviceDescription()+'.**\n\n'+
+    '- Your account holds **'+rows.length+'** conversation'+(rows.length===1?'':'s')+'\n'+
+    '- This device holds **'+mine.length+'**\n';
+  if(tombs.length) msg+='- **'+tombs.length+'** '+(tombs.length===1?'has':'have')+
+    ' been destroyed for ever, and your account agrees '+(tombs.length===1?'it is':'they are')+' gone\n';
+
+  // The honest part: say what does NOT match, and fix it rather than reporting it.
+  if(notUploaded.length){
+    msg+='\n**'+notUploaded.length+' conversation'+(notUploaded.length===1?'':'s')+
+      ' on this device had not reached your account yet.** I am uploading '+
+      (notUploaded.length===1?'it':'them')+' now — they will appear on your other devices '+
+      'within a minute or two.';
+    notUploaded.slice(0,8).forEach(function(id,i){
+      setTimeout(function(){ syncThreadToBackend(id); }, i*2000);
+    });
+    if(notUploaded.length>8) msg+=' (I am doing the first 8 now so the spreadsheet is not overloaded; press this again in a minute for the rest.)';
+  } else if(rows.length===0&&mine.length===0){
+    msg+='\n There is nothing to sync yet — you have no saved conversations on either side.';
+  } else {
+    msg+='\n Everything on this device has reached your account.';
+  }
+  if(onlyInAccount){
+    const got=merged&&typeof merged.arrived==='number'?merged.arrived:0;
+    msg+= got
+      ? '\n\n**'+got+' conversation'+(got===1?'':'s')+' from your other devices '+
+        (got===1?'was':'were')+' missing here, and '+(got===1?'has':'have')+
+        ' just arrived.** Look in the conversation list.'
+      : '\n\n**'+onlyInAccount+' conversation'+(onlyInAccount===1?'':'s')+
+        ' in your account could not be brought in just now.** Nothing is lost — '+
+        (onlyInAccount===1?'it is':'they are')+' still in your account. Tell Savio.';
+  }
+  bellaMsg(msg);
 }
 
 function signOut(){
