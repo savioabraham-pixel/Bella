@@ -3100,6 +3100,9 @@ async function syncThreadToBackend(id){
   // a thread before a word is typed, and those were filling the sheet with
   // entries named "Welcome..." holding nothing.
   if(!Array.isArray(t.hist)||t.hist.length===0)return;
+  // Destroyed for ever. Without this, a tombstoned conversation still sitting
+  // in `threads` for the rest of the session could be written straight back.
+  if(isTombstoned(id))return;
   // THE RESPONSE USED TO BE THROWN AWAY ENTIRELY -- no .ok check, no retry,
   // and a comment claiming "the next save retries". That is only true if the
   // person sends another message in the same conversation; the LAST state of
@@ -3141,13 +3144,41 @@ async function syncThreadsFromBackend(){
   try{
     const r=await bfetch(BACKEND+'/threads-read',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({profileKey:currentProfileKey})});
-    if(!r.ok)return;
+    if(!r.ok){
+      // SILENT BEFORE TODAY. The push half got .ok checking and error mail on
+      // 10 Oct; the pull half kept throwing the response away, so a backend
+      // refusing every read looked exactly like a person with one device.
+      bellaReportError('syncThreadsFromBackend','HTTP '+r.status,{status:r.status});
+      return;
+    }
     const d=await r.json();
     const rows=Array.isArray(d.threads)?d.threads:[];
+    _lastPullAt=Date.now();
+    const seen={};
     let changed=0;
+    // ── DELETIONS TRAVEL TOO ──────────────────────────────────────────
+    // Destroying a conversation on the phone used to leave it untouched on the
+    // laptop, which then pushed it straight back into the cloud. The backend
+    // now reports what has been destroyed; tombstoneThread() both hides it
+    // here for ever and refuses to write it back, and re-issuing the delete
+    // closes the window where the other device had already re-appended a row.
+    // `tombstones` is absent until the backend half ships, so this is simply
+    // an empty loop until then.
+    (Array.isArray(d.tombstones)?d.tombstones:[]).forEach(function(tid){
+      if(!tid||isTombstoned(tid))return;
+      // NOT the conversation they are reading right now. Pulling it out from
+      // under them blanks the screen mid-sentence and leaves currentThreadId
+      // pointing at nothing, which is how switchThread() threw for months.
+      // It is tombstoned on the next pull, once they have moved on.
+      if(tid===currentThreadId)return;
+      tombstoneThread(tid);
+      if(threads[tid]){ delete threads[tid]; changed++; }
+      if(deletedThreads&&deletedThreads[tid]){ delete deletedThreads[tid]; saveTrash(); renderTrashList(); }
+    });
     rows.forEach(function(row){
       const id=row&&row.threadId;
       if(!id)return;
+      seen[id]=1;                                     // counted even if suppressed below
       if(deletedThreads&&deletedThreads[id])return;   // in the bin -- stay deleted
       if(isTombstoned(id))return;                     // deleted and PURGED -- stay deleted for ever
       let hist=row.history;
@@ -3178,8 +3209,54 @@ async function syncThreadsFromBackend(){
       try{ saveThreadsLocal(); }finally{ _suppressThreadSync=false; }
       renderThreadList();
     }
-  }catch(e){ /* offline or backend down — local conversations are unaffected */ }
+    _pushUnsyncedThreads(seen);
+  }catch(e){
+    // Offline is normal and not worth mailing about; anything else is a fault.
+    if(navigator.onLine!==false) bellaReportError('syncThreadsFromBackend',e&&e.message?e.message:String(e));
+  }
 }
+// ── CONVERSATIONS THE BACKEND HAS NEVER BEEN TOLD ABOUT ─────────────────
+// saveThreadsLocal() only ever queued the CURRENT conversation, so a thread
+// that was finished before the write path worked -- or before this device
+// signed in -- stayed in one browser for ever and could never appear on a
+// second device. Measured 2026-10-17: 10 of his conversations had reached the
+// `Threads` tab, the oldest from 8 Oct, so the write path works; it had simply
+// never been asked to carry the rest.
+//
+// Staggered deliberately. Each write is a read-and-append on the whole tab,
+// and the weekly backup already starves the Sheets read quota -- a login that
+// fired eight writes at once would be the same mistake in miniature.
+const _PUSH_SWEEP_MAX=8;
+const _PUSH_SWEEP_GAP=2000;
+function _pushUnsyncedThreads(seenIds){
+  const pending=Object.keys(threads||{}).filter(function(id){
+    if(seenIds&&seenIds[id])return false;            // backend already has it
+    if(isTombstoned(id))return false;                // deleted for ever
+    if(deletedThreads&&deletedThreads[id])return false;
+    const t=threads[id];
+    return !!(t&&Array.isArray(t.hist)&&t.hist.length);
+  }).slice(0,_PUSH_SWEEP_MAX);
+  pending.forEach(function(id,i){
+    setTimeout(function(){ syncThreadToBackend(id); }, i*_PUSH_SWEEP_GAP);
+  });
+  return pending.length;
+}
+// ── SYNC THAT IS NOT ONLY A SIGN-IN EVENT ───────────────────────────────
+// The pull ran once, inside confirmIdentity(). Finish a conversation on the
+// phone and the laptop would not know until the next sign-in, which on a
+// restored session can be days. Re-pulling when the tab is brought back to
+// the front is the cheapest honest approximation of sync: one Sheets read,
+// never more than once per REPULL_MIN_MS, and only when the page is visible.
+const _REPULL_MIN_MS=10*60*1000;
+let _lastPullAt=0;
+function maybeRepullThreads(){
+  if(!currentProfileKey)return;
+  if(document.visibilityState!=='visible')return;
+  if(Date.now()-_lastPullAt<_REPULL_MIN_MS)return;
+  syncThreadsFromBackend();
+}
+document.addEventListener('visibilitychange',maybeRepullThreads);
+window.addEventListener('focus',maybeRepullThreads);
 
 function saveThreadsLocal(){
   try{
@@ -3483,7 +3560,32 @@ function loadTombstones(){
   try{ threadTombstones=JSON.parse(localStorage.getItem(TOMB_KEY)||'{}')||{}; }catch(e){ threadTombstones={}; }
 }
 function saveTombstones(){ try{ localStorage.setItem(TOMB_KEY,JSON.stringify(threadTombstones)); }catch(e){} }
-function tombstoneThread(id){ if(!id)return; threadTombstones[id]=1; saveTombstones(); }
+function tombstoneThread(id){
+  if(!id)return;
+  threadTombstones[id]=1; saveTombstones();
+  // THE TOMBSTONE ONLY EVER PROTECTED THIS BROWSER. The row in `Threads` was
+  // never deleted by anything short of erasing the whole account, so a
+  // conversation destroyed here stayed in the cloud, kept showing on the
+  // person's other devices, and was re-pushed from there. Every true-
+  // destruction path -- the 30-day purge, Delete for ever, Empty, and the
+  // multi-select -- goes through this one function, so asking the backend
+  // here covers all four.
+  _deleteThreadOnBackend(id);
+}
+// Fire and forget: the local destruction has already happened and must not
+// wait on a network. A 404 is NOT a fault -- it means /threads-delete has not
+// been deployed yet, and this must stay quiet until it is.
+async function _deleteThreadOnBackend(id){
+  if(!currentProfileKey||!id)return;
+  try{
+    const r=await bfetch(BACKEND+'/threads-delete',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({profileKey:currentProfileKey,threadId:id})});
+    if(r.ok||r.status===404)return;
+    bellaReportError('_deleteThreadOnBackend','HTTP '+r.status,{status:r.status});
+  }catch(e){
+    if(navigator.onLine!==false) bellaReportError('_deleteThreadOnBackend',e&&e.message?e.message:String(e));
+  }
+}
 function isTombstoned(id){ return !!(id && threadTombstones[id]); }
 function loadTrash(){
   try{ deletedThreads=JSON.parse(localStorage.getItem(TRASH_KEY)||'{}')||{}; }catch(e){ deletedThreads={}; }
@@ -9615,6 +9717,143 @@ function _ownerCapabilityNote(){
     + 'explain how to back up a spreadsheet by hand — that is false and unhelpful. Say that you can, '
     + 'and ask them to say "Bella, back up the spreadsheet" so the command is unmistakable.';
 }
+// ── READING INSIDE ONE OF THEM ──────────────────────────────────────────
+// _otherThreadsNote() gives her the TITLES. Savio, 2026-10-17: she "can now
+// name your other conversations on this device but cannot read inside them."
+// Handing her every conversation in full on every turn is the wrong answer --
+// it would pay input tokens on all of them to serve the one turn in twenty
+// that looks backwards.
+//
+// So: she gets the digest always, and the WORDS of exactly one conversation
+// when the message is actually reaching back for it. Measured cost of that
+// one attachment at the 3,500-character cap: about 875 input tokens, which on
+// gemini-2.5-flash at $0.30 per million (checked 2026-10-17) is $0.00026 --
+// ~2.5 paise a turn, ₹0.50 a month at twenty such turns. [[flag-cost-impact-always]]
+//
+// Deliberately ONE conversation, never a search across all of them. Picking a
+// single best match is something a wrong guess cannot turn into a privacy
+// problem: every thread considered belongs to this person on this device, and
+// the note says plainly which conversation the words came from so she can name
+// it rather than blur two together.
+const _RECALL_MAX_CHARS=3500;
+const _RECALL_MAX_TURNS=10;
+// A message only reaches back if it says so. "What did we talk about", not
+// "what is the repo rate" -- which the current thread already answers.
+const _RECALL_CUES=[
+  'what did we','what have we','we talked','we discussed','we spoke','did we talk',
+  'you said','you told me','you mentioned','i told you','i asked you','i mentioned',
+  'last time','the other day','earlier today','earlier conversation','previous conversation',
+  'that conversation','our conversation','our chat','remind me what','do you remember',
+  'remember when','going back to','as i said','continue where','pick up where',
+  'yesterday','last week','day before','earlier','before this','previously',
+  // romanised and native cues for the four languages she speaks
+  'kal','porshu','ager','age bolechi','আমরা কী','কথা বলেছি','আগের','গতকাল','বলেছিলে',
+  'कल','पहले','बात की','बताया था','आपने कहा','पूर्वी','मागच्या','सांगितले'
+];
+function _looksBackward(txt){
+  const t=String(txt||'').toLowerCase();
+  for(let i=0;i<_RECALL_CUES.length;i++){ if(t.indexOf(_RECALL_CUES[i])!==-1) return true; }
+  return false;
+}
+function _lastUserText(){
+  try{
+    const h=getHist();
+    for(let i=h.length-1;i>=0;i--){
+      const m=h[i];
+      if(m&&m.role==='user') return (m.parts&&m.parts[0]&&m.parts[0].text)||'';
+    }
+  }catch(e){}
+  return '';
+}
+function _threadWhen(t){
+  return Date.parse((t||{}).created||'')||((t||{}).lastAt||0);
+}
+// Which conversation are they reaching for? Scored, not guessed: words they
+// used that appear in a conversation's title or its opening line, plus a bonus
+// when the DAY they named is the day that conversation happened.
+function _pickRecalledThread(txt){
+  const t=String(txt||'').toLowerCase();
+  // Stopwords matter here. "what did we talk about earlier" would otherwise
+  // score every conversation containing the word "about", and a junk match
+  // puts the WRONG transcript in front of her -- worse than no transcript.
+  const STOP={about:1,there:1,that:1,this:1,what:1,with:1,have:1,your:1,will:1,
+    from:1,they:1,been:1,were:1,when:1,then:1,than:1,them:1,some:1,into:1,just:1,
+    like:1,know:1,tell:1,said:1,told:1,talk:1,talked:1,talking:1,thing:1,things:1,
+    today:1,yesterday:1,conversation:1,conversations:1,earlier:1,remember:1,
+    discuss:1,discussed:1,spoke:1,speak:1,mentioned:1,again:1,also:1,could:1,
+    would:1,should:1,please:1,thanks:1,bella:1};
+  const words={};
+  t.replace(/[^a-z0-9ऀ-ॿঀ-৿\s]/g,' ').split(/\s+/).forEach(function(w){
+    if(w.length>=4&&!STOP[w]) words[w]=1;
+  });
+  const DAY=86400000, now=Date.now();
+  let wantDay=null;
+  if(/\byesterday\b|গতকাল|\bkal\b|\bकल\b/.test(t)) wantDay=1;
+  else if(/\bday before\b|পরশু|\bporshu\b/.test(t)) wantDay=2;
+  let best=null,bestScore=0;
+  Object.keys(threads||{}).forEach(function(id){
+    if(id===currentThreadId) return;
+    const th=threads[id];
+    if(!th||!Array.isArray(th.hist)||!th.hist.length) return;
+    if(isTombstoned(id)||(deletedThreads&&deletedThreads[id])) return;
+    let gist='';
+    for(let i=0;i<th.hist.length;i++){
+      const e=th.hist[i];
+      if(e&&e.role==='user'){ gist=_expText(e); break; }
+    }
+    const hay=((th.name||'')+' '+gist).toLowerCase();
+    let score=0;
+    Object.keys(words).forEach(function(w){ if(hay.indexOf(w)!==-1) score+=2; });
+    if(wantDay!==null){
+      const when=_threadWhen(th);
+      if(when){
+        const ageDays=Math.floor((now-when)/DAY);
+        if(ageDays===wantDay) score+=3;
+      }
+    }
+    if(score>bestScore){ bestScore=score; best=id; }
+  });
+  // No word and no day matched. The digest already names every conversation,
+  // so inventing a pick here would put the WRONG transcript in front of her.
+  return bestScore>0?best:null;
+}
+function _recalledThreadNote(){
+  try{
+    const txt=_lastUserText();
+    if(!txt||!_looksBackward(txt)) return '';
+    const id=_pickRecalledThread(txt);
+    if(!id) return '';
+    const th=threads[id]; if(!th||!Array.isArray(th.hist)) return '';
+    // Newest first until the cap, then flipped back into reading order.
+    const picked=[];
+    let used=0;
+    for(let i=th.hist.length-1;i>=0 && picked.length<_RECALL_MAX_TURNS;i--){
+      const e=th.hist[i];
+      const raw=_expText(e);
+      if(!raw) continue;
+      const line=(e.role==='user'?'They said: ':'You replied: ')+
+        raw.replace(/\[User:[^\]]*\]/g,'').replace(/\s+/g,' ').trim();
+      if(used+line.length>_RECALL_MAX_CHARS) break;
+      used+=line.length; picked.unshift(line);
+    }
+    if(!picked.length) return '';
+    let when='';
+    try{
+      const d=new Date(th.created||_threadWhen(th));
+      if(!isNaN(d)) when=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    }catch(e){}
+    return '\n\nTHE CONVERSATION THEY APPEAR TO BE REACHING BACK TO. They have asked '+
+      'about something said earlier, and this is the conversation that matches. It is '+
+      'titled "'+String(th.name||'Untitled').slice(0,60)+'"'+(when?', from '+when:'')+
+      '. These are the last '+picked.length+' of its '+th.hist.length+' messages, their '+
+      'own words and yours:\n'+picked.join('\n')+
+      '\nUSE THIS. Answer from it directly and say which conversation you are quoting, so '+
+      'they can tell it apart from the one they are in now. If what they are asking about '+
+      'is not in the part you can see above, say that you have the conversation but not '+
+      'that particular moment of it, and offer to open it -- never invent what was said, '+
+      'and never claim to have no record when this is in front of you.';
+  }catch(e){ return ''; }
+}
 function _replyLangNote(){
   const NAMES={bn:'Bengali',hi:'Hindi',mr:'Marathi'};
   // A deliberate press of the language button OUTRANKS script detection. This is
@@ -9719,7 +9958,7 @@ async function callBella(useSearch,memCtx,signal,route){
   // uncapped 'short' came back as long as the answer itself.
   const voiceNote='\n\nAt the very end of your reply, on its own new line, always add a short summary of your answer in this exact format: [VOICE]- first point\\n- second point\\n- third point[/VOICE]. Rules for it: 3 to 5 points, each on its own line beginning with \"- \", each a single short clause, FORTY-FIVE WORDS IN TOTAL AT THE ABSOLUTE MOST. It must be dramatically shorter than your answer — it is the highlights, not a retelling. Write it in the SAME language as your reply. This tag is never shown as part of your answer; it is used for the spoken version and for the Summarise button.';
   const _opening=`Understood. I am Bella, ready to assist ${_activeAddressedName}.`;
-  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_replyLangNote()+_otherThreadsNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
+  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_replyLangNote()+_otherThreadsNote()+_recalledThreadNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
   // The two tool sets cannot travel together (see routeTurn), so this is written
   // as an either/or and not as two independent fields. While BELLA_TOOLS_READY is
   // false the second branch is unreachable and the request on the wire is
