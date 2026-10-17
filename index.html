@@ -3077,7 +3077,46 @@ function createThread(name){
 // the recent tail of a long conversation is synced. Bella cross-references
 // older ones from the summary in `Conversations`, not from every word.
 const THREAD_SYNC_CAP=45000;
+// ── WHY A LENGTH IS REMEMBERED ───────────────────────────────────────────
+// MEASURED 2026-10-17, in headless Chrome, on the live build: a conversation
+// of 34 messages is kept in localStorage as its last TWENTY
+// (`saveThreadsLocal`), so after a reload the page holds 20 and the next write
+// REPLACED the 34 in the cloud with those 20. Fourteen messages gone from
+// every other device, silently. It is narrow -- the sign-in pull normally
+// restores the full history first -- but it bites whenever that pull fails,
+// 401s, or has not landed before the person types.
+//
+// So the longest history the cloud is KNOWN to hold is remembered per
+// conversation and survives a reload. A write that would make a conversation
+// SHORTER is refused, and a read is asked for instead: the read brings the
+// full history back, and the write that follows carries all of it.
+//
+// Ids and small integers only -- no names, no words, nothing readable.
+const CLOUDLEN_KEY='b_thread_cloudlen';
+// LOADED LAZILY, NOT AT PARSE TIME. Step 9 of the QC is "nothing new may run
+// before Bella is on screen", and this is read for the first time only when a
+// conversation is actually written or read -- long after she is up.
+let _cloudLen=null;
+function _cloudLens(){
+  if(_cloudLen===null){
+    try{ _cloudLen=JSON.parse(localStorage.getItem(CLOUDLEN_KEY)||'{}')||{}; }catch(e){ _cloudLen={}; }
+  }
+  return _cloudLen;
+}
+function saveCloudLens(){ try{ localStorage.setItem(CLOUDLEN_KEY,JSON.stringify(_cloudLens())); }catch(e){} }
+function noteCloudLen(id,n){
+  if(!id||typeof n!=='number')return;
+  const m=_cloudLens();
+  if((m[id]||0)===n)return;
+  m[id]=n; saveCloudLens();
+}
+// A deliberate shortening -- Clear this conversation, or a deletion -- must
+// clear the floor too, or the write would be refused for ever after.
+function forgetCloudLen(id){ const m=_cloudLens(); if(id&&(id in m)){ delete m[id]; saveCloudLens(); } }
 const _threadSyncTimers={};
+// One repair read per conversation per session. Without the latch a stuck
+// conversation would ask for a read on every single save.
+const _cloudPullAsked={};
 // Set while merging backend rows into `threads`, so the save that follows does
 // not immediately queue a write back out — which would loop.
 let _suppressThreadSync=false;
@@ -3103,6 +3142,17 @@ async function syncThreadToBackend(id){
   // Destroyed for ever. Without this, a tombstoned conversation still sitting
   // in `threads` for the rest of the session could be written straight back.
   if(isTombstoned(id))return;
+  // NEVER MAKE A CONVERSATION SHORTER THAN THE CLOUD ALREADY HOLDS. This is
+  // the reload-truncation guard; see CLOUDLEN_KEY above for the measurement.
+  // Compared on the FULL in-memory history, not the size-trimmed copy, so the
+  // deliberate 45,000-character trim is unaffected.
+  const _known=_cloudLens()[id]||0;
+  if(t.hist.length<_known){
+    // One read, and only one: the floor is not lowered here, so a failed read
+    // leaves the cloud copy intact rather than overwriting it with less.
+    if(!_cloudPullAsked[id]){ _cloudPullAsked[id]=1; syncThreadsFromBackend(); }
+    return;
+  }
   // THE RESPONSE USED TO BE THROWN AWAY ENTIRELY -- no .ok check, no retry,
   // and a comment claiming "the next save retries". That is only true if the
   // person sends another message in the same conversation; the LAST state of
@@ -3113,10 +3163,11 @@ async function syncThreadToBackend(id){
   // local copy is already safe, so this is Savio's problem to see, not theirs.
   for(let attempt=0; attempt<2; attempt++){
     try{
+      const _sending=_trimHistoryForSync(t.hist||[]);
       const r=await bfetch(BACKEND+'/threads-write',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({profileKey:currentProfileKey,threadId:id,
-          threadName:t.name||'',history:_trimHistoryForSync(t.hist||[])})});
-      if(r.ok) return;
+          threadName:t.name||'',history:_sending})});
+      if(r.ok){ noteCloudLen(id,_sending.length); return; }
       if(r.status===401||r.status===403){        // not a glitch; retrying cannot help
         bellaReportError('syncThreadToBackend','HTTP '+r.status,{status:r.status});
         return;
@@ -3189,6 +3240,7 @@ async function syncThreadsFromBackend(){
       // side has skipped empty threads ever since, but the pull side did not, so
       // every login re-imported them into the sidebar.
       if(hist.length===0)return;
+      noteCloudLen(id,hist.length);
       const local=threads[id];
       if(!local){
         // `updated` comes straight from the Threads tab, so conversations that
@@ -3562,7 +3614,7 @@ function loadTombstones(){
 function saveTombstones(){ try{ localStorage.setItem(TOMB_KEY,JSON.stringify(threadTombstones)); }catch(e){} }
 function tombstoneThread(id){
   if(!id)return;
-  threadTombstones[id]=1; saveTombstones();
+  threadTombstones[id]=1; saveTombstones(); forgetCloudLen(id);
   // THE TOMBSTONE ONLY EVER PROTECTED THIS BROWSER. The row in `Threads` was
   // never deleted by anything short of erasing the whole account, so a
   // conversation destroyed here stayed in the cloud, kept showing on the
@@ -3692,6 +3744,8 @@ function clearCurrentThread(){
   if(!currentThreadId)return;
   if(!confirm('Clear this conversation?'))return;
   threads[currentThreadId].hist=[];
+  // Deliberate: this one IS allowed to shorten the cloud copy.
+  forgetCloudLen(currentThreadId);
   document.getElementById('msgs').innerHTML='';
   saveThreadsLocal();renderThreadList();
 }
