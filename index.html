@@ -3891,7 +3891,9 @@ function tombstoneThread(id){
   // person's other devices, and was re-pushed from there. Every true-
   // destruction path -- the 30-day purge, Delete for ever, Empty, and the
   // multi-select -- goes through this one function, so asking the backend
-  // here covers all four.
+  // here covers all four. THE MULTI-SELECT DID NOT, for as long as this
+  // comment claimed it did; fixed 2026-10-17. A COMMENT IS NOT A CALL SITE --
+  // `multiselect-test.mjs` now asks the page instead of believing this.
   _deleteThreadOnBackend(id);
 }
 // Fire and forget: the local destruction has already happened and must not
@@ -3974,7 +3976,15 @@ function trashDestroySelected(){
   /* One confirm for the whole set, naming the count -- confirming ten times
      is what he was trying to get away from. */
   if(!confirm('Permanently delete '+n+' conversation'+(n===1?'':'s')+'?\n\nThis cannot be undone.')) return;
-  ids.forEach(id=>{ delete deletedThreads[id]; });
+  // THIS WAS THE ONE DESTRUCTION PATH THAT NEVER REACHED THE CLOUD, and
+  // tombstoneThread()'s own comment claimed all four did -- a comment that
+  // lied. MEASURED against the live build 2026-10-17: Delete for ever, Empty
+  // and the 30-day purge each asked the backend for every id; the multi-select
+  // asked for NONE and wrote NO tombstone. So ticking several and deleting them
+  // removed them from this browser only, left the `Threads` rows in the sheet,
+  // and -- per the warning in destroyThreadForever -- the next sync pulled them
+  // straight back. The confirm said "This cannot be undone" and it could.
+  ids.forEach(id=>{ tombstoneThread(id); delete deletedThreads[id]; });
   trashSel=new Set(); saveTrash(); renderTrashList();
 }
 function trashRestoreSelected(){
