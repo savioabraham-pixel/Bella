@@ -417,6 +417,91 @@ body.dark .tb-conv-btn{background:#0B2545!important}
    was inherited. An ID outranks the class, which is the only way to undo it
    without touching the Convert rule. */
 #tb-weather-cell{position:static;z-index:auto}
+
+/* ══ THE TOP BAR IS A STACK ═══════════════════════════════════════════
+   Savio, 2026-10-17, after seeing it drawn: ONE cell between his two fixed
+   icons on the phone, flipping through the panels; on the laptop Welcome and
+   Food For Thought stay put and only the middle flips.
+
+   NOTHING IS RE-RENDERED. Every cell stays in the DOM and keeps being updated
+   by the code that already owns it -- the clock, the weather poll, the
+   location lookup, the daily thought. The stack only decides which one is
+   DISPLAYED. That is the whole reason this is safe: there is no second copy of
+   anything to drift out of date.
+
+   CONVERT IS NO LONGER PINNED ANYWHERE. It was pinned on 2026-10-11 because it
+   was getting cut; it is now a panel in the stack, and a panel cannot be cut.
+   His decision, 2026-10-17. */
+#chat-topbar .tb-conv-btn{position:static!important;right:auto!important}
+
+/* ── The phone: one panel at a time, filling the space between the icons ── */
+@media (max-width:680px){
+  #chat-topbar{overflow-x:hidden}
+  #tb-welcome-cell,
+  #chat-topbar > .tb-cell,
+  #chat-topbar > .tb-cell-expand,
+  #chat-topbar > .tb-conv-btn{display:none!important}
+  #chat-topbar > .tb-on{
+    display:flex!important;flex:1 1 auto!important;width:auto!important;
+    min-width:0!important;border-right:0!important;padding-bottom:9px!important;
+  }
+  /* The User ID was switched off on phones because in the old cramped bar that
+     half-line cost more than it was worth. With a panel to itself it costs
+     nothing, and he asked for it back. */
+  #topbar-userid{display:block!important}
+  /* MEASURED 2026-10-17 in Bella's own font: a 50-character Food For Thought --
+     the cap the prompt already enforces -- needs 250-269px on ONE line, and the
+     panel has 205px. At 10px type it still needs 227px, so no font size rescues
+     it. Two lines does, at the size it is now. */
+  #tb-thought-cell.tb-on{min-width:0!important}
+  #tb-thought-cell.tb-on .tb-thought-text{
+    white-space:normal!important;overflow:hidden;text-overflow:clip;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  }
+  #tb-thought-cell.tb-on .tb-thought-row{align-items:flex-start}
+}
+
+/* ── The laptop: Welcome, then the stack, then Food For Thought ──
+   `order` rather than moving anything in the DOM: Convert sits after Food For
+   Thought in the markup, and reordering by hand would break every updater that
+   finds its cell by position. */
+@media (min-width:681px){
+  #tb-menu-btn{order:0}
+  #tb-welcome-cell{order:1}
+  #chat-topbar > .tb-stackable{order:2}
+  #tb-thought-cell{order:3;flex:1 1 auto}
+  .tb-actions{order:4}
+  #chat-topbar > .tb-stackable{display:none!important}
+  #chat-topbar > .tb-stackable.tb-on{display:flex!important}
+}
+
+/* ── How you know it flips ── */
+#tb-pips{display:none}
+@media (max-width:680px){
+  #tb-pips{display:flex;position:absolute;left:46px;right:104px;bottom:4px;height:9px;
+    justify-content:center;align-items:center;gap:5px;pointer-events:none;z-index:5}
+}
+@media (min-width:681px){
+  #tb-pips{display:flex;position:absolute;bottom:4px;height:9px;
+    justify-content:center;align-items:center;gap:4px;pointer-events:none;z-index:5}
+}
+#tb-pips b{width:5px;height:5px;border-radius:50%;background:rgba(27,42,74,.26);
+  transition:background .18s,transform .18s}
+#tb-pips b.on{background:#0B2545;transform:scale(1.3)}
+body.dark #tb-pips b{background:rgba(245,230,200,.28)}
+body.dark #tb-pips b.on{background:#D4AF37}
+/* The arrows teach the gesture, then get out of the way. They are real buttons
+   so a tap on one does not also flip the panel underneath. */
+.tb-arrow{position:absolute;top:50%;margin-top:-14px;width:22px;height:28px;z-index:6;
+  display:none;align-items:center;justify-content:center;border:0;background:transparent;
+  color:rgba(27,42,74,.45);font-size:18px;line-height:1;padding:0;cursor:pointer}
+body.dark .tb-arrow{color:rgba(245,230,200,.5)}
+@media (max-width:680px){ .tb-arrow{display:flex} }
+#tb-prev{left:48px} #tb-next{right:106px}
+.tb-arrow.teach{animation:tbNudge 2.6s ease-in-out infinite}
+@keyframes tbNudge{0%,74%,100%{opacity:.5}82%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.tb-arrow.teach{animation:none}}
+.tb-arrow:focus-visible{outline:2px solid var(--gold);outline-offset:-2px;border-radius:6px}
 /* WHY "Welcome" READ AS "Wel" ON HIS PHONE -- and it is not a space problem.
    MEASURED 2026-10-17 at 412px, his Pixel: the word "Welcome" needs 57px and
    there are 97px free between the menu button and the pinned Convert cell. It
@@ -1577,7 +1662,7 @@ try{
       </button>
 
       <!-- Welcome greeting (left anchor) -->
-      <div id="tb-welcome-cell" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:0 16px;border-right:1px solid var(--border);height:100%;flex-shrink:0;width:var(--tb-col)">
+      <div id="tb-welcome-cell" data-tb="you" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:0 16px;border-right:1px solid var(--border);height:100%;flex-shrink:0;width:var(--tb-col)">
         <div style="min-width:0;overflow:hidden;text-align:center">
           <div id="topbar-welcome" class="tb-primary">Welcome</div>
           <div id="topbar-userid" class="tb-secondary">—</div>
@@ -1585,7 +1670,7 @@ try{
       </div>
 
       <!-- CELL — Location -->
-      <div class="tb-cell">
+      <div class="tb-cell tb-stackable" data-tb="place">
         <div class="tb-primary" id="tb-location">📍 Locating...</div>
       </div>
 
@@ -1596,13 +1681,13 @@ try{
            "📍 Sector III, Bidhannagar, India" measures 190px against the
            118px a 150px cell actually gives — it truncates. Do not fold these
            two together and do not re-litigate the choice. -->
-      <div class="tb-conv-btn" id="tb-weather-cell" onclick="openWeatherPanel()" title="Local weather — now, 3 days and 5 days">
+      <div class="tb-conv-btn tb-stackable" data-tb="weather" id="tb-weather-cell" onclick="openWeatherPanel()" title="Local weather — now, 3 days and 5 days">
         <div class="tb-primary" id="tb-wx-main">🌡 —</div>
         <div class="tb-secondary" id="tb-wx-sub">Weather</div>
       </div>
 
       <!-- CELL — Date & Time -->
-      <div class="tb-cell">
+      <div class="tb-cell tb-stackable" data-tb="date">
         <div class="tb-primary" id="tb-date">📅 —</div>
         <div style="display:flex;align-items:baseline;margin-top:2px">
           <span class="tb-clock-icon" onclick="toggleClockFormat()" title="Toggle 12/24hr" aria-label="Switch between 12 and 24 hour time" role="button" style="display:inline-flex;align-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg></span>
@@ -1612,7 +1697,7 @@ try{
       </div>
 
       <!-- CELL — Bella's Food For Thought (expands to fill remaining space) -->
-      <div class="tb-cell-expand" id="tb-thought-cell">
+      <div class="tb-cell-expand" data-tb="thought" id="tb-thought-cell">
         <div class="tb-thought-title">Bella's Food For Thought<span class="tb-thought-emoji" id="tb-thought-emoji" aria-hidden="true"></span></div>
         <div class="tb-thought-row">
           <div class="tb-thought-text" id="tb-thought">"Loading..."</div>
@@ -1620,7 +1705,7 @@ try{
       </div>
 
       <!-- CELL — Convert -->
-      <div class="tb-conv-btn" onclick="openConverterPanel()" title="Currency, Units & Time Converter">
+      <div class="tb-conv-btn tb-stackable" data-tb="convert" onclick="openConverterPanel()" title="Currency, Units & Time Converter">
         <div class="tb-primary">⇄ Convert</div>
         <div class="tb-secondary">Currency · Units · Time</div>
       </div>
@@ -2178,6 +2263,8 @@ try{
         <div class="menu-item" onclick="openMyProfile();closeUserMenu()">My Profile</div>
         <div class="menu-item" onclick="openNotificationSettings();closeUserMenu()">Notification Settings</div>
         <div class="menu-item" onclick="openVoicePick(event)">Bella's Voice</div>
+        <div class="menu-item" onclick="openTbWidgets(event)">Top Bar Widgets</div>
+        <div id="tb-widget-pick" style="display:none;padding:4px 0 8px"></div>
         <div class="menu-item" onclick="toggleThemePick(event)">Theme<span id="theme-now">&mdash;</span></div>
         <div id="theme-pick">
           <button type="button" class="theme-opt" data-theme-opt="light" onclick="setThemePref('light')"><span class="theme-tick"></span>Light</button>
@@ -7763,6 +7850,9 @@ async function confirmIdentity(profileKey,addressedName){
   // the sidebar renders from localStorage immediately and fills in when the
   // backend answers, exactly like the suggestion chips.
   try{ syncThreadsFromBackend(); }catch(e){}
+  // The top bar's stack. After the gate, so nothing new runs before Bella is
+  // on screen.
+  try{ initTopbarStack(); }catch(e){}
   // Sidebar shows First + Last name (real name)
   const userId = localStorage.getItem('b_userid') || '';
   const savedUser = JSON.parse(localStorage.getItem('b_registered_user') || '{}');
@@ -8904,6 +8994,203 @@ async function checkSyncNow(){
         (onlyInAccount===1?'it is':'they are')+' still in your account. Tell Savio.';
   }
   bellaMsg(msg);
+}
+
+// The chooser. In the menu rather than in the bar, because on a phone there is
+// no room for a control in a 68px strip -- and one list serving both devices is
+// one preference, not two that can disagree.
+const TB_LABELS={place:'Location',weather:'Weather',date:'Date & time',convert:'Convert'};
+function openTbWidgets(e){
+  if(e&&e.stopPropagation)e.stopPropagation();
+  const box=document.getElementById('tb-widget-pick');
+  if(!box) return;
+  if(box.style.display==='block'){ box.style.display='none'; return; }
+  renderTbWidgets();
+  box.style.display='block';
+}
+function renderTbWidgets(){
+  const box=document.getElementById('tb-widget-pick');
+  if(!box) return;
+  const on=tbWidgets();
+  box.textContent='';
+  const note=document.createElement('div');
+  note.style.cssText='font-size:11px;color:var(--muted);padding:2px 18px 8px;line-height:1.5';
+  note.textContent='What flips in the top bar. Your greeting and Food For Thought are always there.';
+  box.appendChild(note);
+  TB_ALL.forEach(function(k){
+    const row=document.createElement('div');
+    row.className='menu-item';
+    row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px';
+    const name=document.createElement('span'); name.textContent=TB_LABELS[k]||k;
+    const mark=document.createElement('span');
+    const isOn=on.indexOf(k)!==-1;
+    mark.textContent=isOn?'\u2713':'';
+    mark.style.cssText='font-weight:700;color:var(--gold);width:14px;text-align:right';
+    row.appendChild(name); row.appendChild(mark);
+    row.setAttribute('role','button');
+    row.setAttribute('aria-pressed',String(isOn));
+    row.addEventListener('click',function(ev){
+      ev.stopPropagation();
+      const cur=tbWidgets();
+      const at=cur.indexOf(k);
+      // The last one standing cannot be removed: a stack with nothing in it
+      // leaves the laptop with a hole and the phone with a blank strip.
+      if(at!==-1 && cur.length===1){
+        bellaMsg('At least one widget has to stay in the top bar.');
+        return;
+      }
+      if(at===-1) cur.push(k); else cur.splice(at,1);
+      // Keep them in the bar's own order rather than the order he tapped.
+      setTbWidgets(TB_ALL.filter(function(x){ return cur.indexOf(x)!==-1; }));
+      renderTbWidgets();
+    });
+    box.appendChild(row);
+  });
+}
+
+// ══ THE TOP BAR STACK ══════════════════════════════════════════════════
+// One panel on show at a time. Every cell stays in the DOM and keeps being
+// updated by whatever already owns it -- the clock, the weather poll, the
+// location lookup, the daily thought. This only moves a class.
+//
+// Built lazily from confirmIdentity(), never at parse time: step 9 of the QC
+// is "nothing new may run before Bella is on screen".
+const TB_WIDGETS_KEY='b_tb_widgets';
+const TB_ALL=['place','weather','date','convert'];       // the choosable four
+let _tbAt=0, _tbFlips=0, _tbBound=false;
+
+// Which of the four he wants. Everything, until he says otherwise. An empty
+// choice is treated as "all" -- a top bar with no panels is not a preference,
+// it is a mistake, and it would leave the phone with a blank strip.
+function tbWidgets(){
+  let v=null;
+  try{ v=JSON.parse(localStorage.getItem(TB_WIDGETS_KEY)||'null'); }catch(e){}
+  if(!Array.isArray(v)||!v.length) return TB_ALL.slice();
+  const keep=v.filter(function(k){ return TB_ALL.indexOf(k)!==-1; });
+  return keep.length?keep:TB_ALL.slice();
+}
+function setTbWidgets(list){
+  try{ localStorage.setItem(TB_WIDGETS_KEY,JSON.stringify(list)); }catch(e){}
+  _tbAt=0; paintTopbarStack();
+}
+function _tbIsPhone(){ return window.innerWidth<=680; }
+// The panels, in the order they sit in the markup. On a phone the greeting and
+// the thought are panels too; on a laptop they are always on screen and only
+// the middle four take turns.
+function _tbPanels(){
+  const bar=document.getElementById('chat-topbar');
+  if(!bar) return [];
+  const want=tbWidgets();
+  const out=[];
+  Array.prototype.forEach.call(bar.children,function(el){
+    const k=el.getAttribute&&el.getAttribute('data-tb');
+    if(!k) return;
+    if(k==='you'||k==='thought'){ if(_tbIsPhone()) out.push(el); return; }
+    if(want.indexOf(k)!==-1) out.push(el);
+  });
+  return out;
+}
+function paintTopbarStack(){
+  const bar=document.getElementById('chat-topbar');
+  if(!bar) return;
+  const panels=_tbPanels();
+  Array.prototype.forEach.call(bar.querySelectorAll('[data-tb]'),function(el){
+    el.classList.remove('tb-on');
+  });
+  if(!panels.length) return;
+  if(_tbAt>=panels.length||_tbAt<0) _tbAt=0;
+  panels[_tbAt].classList.add('tb-on');
+  // On a laptop the greeting and the thought are not in the rotation, so they
+  // must be visible rather than merely not-hidden.
+  if(!_tbIsPhone()){
+    ['you','thought'].forEach(function(k){
+      const el=bar.querySelector('[data-tb="'+k+'"]');
+      if(el) el.classList.remove('tb-on');
+    });
+  }
+  const pips=document.getElementById('tb-pips');
+  if(pips){
+    if(pips.children.length!==panels.length){
+      pips.textContent='';
+      for(let i=0;i<panels.length;i++) pips.appendChild(document.createElement('b'));
+    }
+    for(let i=0;i<pips.children.length;i++)
+      pips.children[i].classList.toggle('on',i===_tbAt);
+    pips.style.visibility = panels.length>1 ? 'visible' : 'hidden';
+    if(!_tbIsPhone()){
+      // centred under the stack slot, not under the whole bar
+      const act=panels[_tbAt].getBoundingClientRect();
+      const b=bar.getBoundingClientRect();
+      pips.style.left=Math.round(act.left-b.left)+'px';
+      pips.style.width=Math.round(act.width)+'px';
+      pips.style.right='auto';
+    }
+  }
+  const teach=_tbFlips<3 && panels.length>1;
+  ['tb-prev','tb-next'].forEach(function(id){
+    const a=document.getElementById(id);
+    if(a){ a.classList.toggle('teach',teach); a.style.visibility=panels.length>1?'visible':'hidden'; }
+  });
+}
+function flipTopbar(step){
+  const n=_tbPanels().length;
+  if(n<2) return;
+  _tbAt=(_tbAt+step+n)%n;
+  _tbFlips++;
+  paintTopbarStack();
+}
+function initTopbarStack(){
+  const bar=document.getElementById('chat-topbar');
+  if(!bar) return;
+  if(!document.getElementById('tb-pips')){
+    const p=document.createElement('div');
+    p.id='tb-pips'; p.setAttribute('aria-hidden','true');
+    bar.appendChild(p);
+    const mk=function(id,txt,label,step){
+      const b=document.createElement('button');
+      b.id=id; b.type='button'; b.className='tb-arrow';
+      b.textContent=txt; b.setAttribute('aria-label',label);
+      b.addEventListener('click',function(e){ e.stopPropagation(); flipTopbar(step); });
+      bar.appendChild(b);
+      return b;
+    };
+    mk('tb-prev','\u2039','Previous panel',-1);
+    mk('tb-next','\u203A','Next panel',1);
+  }
+  paintTopbarStack();
+  if(_tbBound) return;
+  _tbBound=true;
+  // A tap anywhere on the showing panel flips it -- EXCEPT on the panels that
+  // are already buttons. Weather opens its panel and Convert opens the
+  // converter; stealing those taps would break two things he uses.
+  bar.addEventListener('click',function(e){
+    if(!_tbIsPhone()) return;
+    if(e.target.closest('.tb-arrow')) return;
+    if(e.target.closest('#tb-menu-btn,.tb-actions')) return;
+    const on=e.target.closest('.tb-on');
+    if(!on) return;
+    const k=on.getAttribute('data-tb');
+    if(k==='weather'||k==='convert') return;      // these open their own panels
+    flipTopbar(1);
+  });
+  // Swiping is how a phone expects to move between panels.
+  let x0=null,y0=null;
+  bar.addEventListener('touchstart',function(e){
+    if(!e.touches||!e.touches.length) return;
+    x0=e.touches[0].clientX; y0=e.touches[0].clientY;
+  },{passive:true});
+  bar.addEventListener('touchend',function(e){
+    if(x0===null||!e.changedTouches||!e.changedTouches.length) return;
+    const dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0;
+    x0=null;
+    // A horizontal movement, and clearly horizontal -- otherwise a scroll of
+    // the page would flip the bar on the way past.
+    if(Math.abs(dx)>36 && Math.abs(dx)>Math.abs(dy)*1.6) flipTopbar(dx<0?1:-1);
+  },{passive:true});
+  let _rt=0;
+  window.addEventListener('resize',function(){
+    clearTimeout(_rt); _rt=setTimeout(function(){ _tbAt=0; paintTopbarStack(); },150);
+  });
 }
 
 function signOut(){
