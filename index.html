@@ -404,6 +404,49 @@ body.dark .tb-thought-emoji{filter:drop-shadow(0 0 5px rgba(212,175,55,.8))}
    always reachable and the cells you only READ are the ones that scroll. */
 .tb-conv-btn{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 16px;border-right:1px solid var(--border);height:100%;cursor:pointer;flex-shrink:0;width:165px;transition:background .15s;position:sticky;right:104px;z-index:3;background:var(--white)}
 body.dark .tb-conv-btn{background:#0B2545!important}
+/* THE WEATHER CELL WAS INVISIBLE ON EVERY PHONE AND TABLET.
+   It wears .tb-conv-btn for its LOOK -- two lines, 165px, pressable -- and
+   inherited that class's PINNING along with it. So two cells were sticky at
+   the SAME right:104px with the same z-index, and Convert comes later in the
+   DOM, which means Convert painted straight over it.
+   MEASURED 2026-10-17, identical rectangles at 320, 360, 390, 412 and 768px:
+   weather 143..308 and Convert 143..308 on his phone. They only come apart at
+   1024px and above, which is why nobody saw it on a laptop.
+   Convert's pinning is Savio's own decision (2026-10-11, "i cant have convert
+   getting cut") and it STAYS. This cell's pinning was never a decision -- it
+   was inherited. An ID outranks the class, which is the only way to undo it
+   without touching the Convert rule. */
+#tb-weather-cell{position:static;z-index:auto}
+/* WHY "Welcome" READ AS "Wel" ON HIS PHONE -- and it is not a space problem.
+   MEASURED 2026-10-17 at 412px, his Pixel: the word "Welcome" needs 57px and
+   there are 97px free between the menu button and the pinned Convert cell. It
+   fits. It was clipped because the cell is a fixed 150px and CENTRES its text,
+   which put the word at roughly 98..155 -- and the pinned Convert starts at
+   143. The text was centred underneath the pin.
+   So on a phone the cell is sized to its content instead of to a column. At
+   412px it becomes ~73px ending at 125, clear of the pin at 143. At 390px it
+   is clear by 4px. Below ~360px the strip genuinely cannot hold Welcome plus a
+   pinned Convert plus the buttons, and Welcome scrolls under -- but it goes
+   under as a whole word rather than being sliced mid-letter.
+   !important is required and is not laziness: the width is INLINE on the
+   element, so no ordinary rule can reach it.
+   Convert's pinning is untouched -- that is Savio's decision from 2026-10-11. */
+@media (max-width:680px){
+  #tb-welcome-cell{width:auto!important;padding:0 8px!important}
+}
+/* BELOW ~380px THE STRIP CANNOT HOLD IT AT ALL, and that is arithmetic rather
+   than styling: at 360px the menu button ends at 46 and the pinned Convert
+   begins at 91, which is 45px of free space for a word that needs 57px. At
+   320px there are 5px. No padding or font change closes a 12px deficit.
+   So it is hidden there rather than sliced. "i cant have convert getting cut"
+   was Savio's objection on 2026-10-11 and a half-eaten "Wel" is the same
+   fault wearing a different hat. Nothing is lost: Bella greets them by name in
+   the conversation itself, and the name and User ID are both in the sidebar.
+   380px is chosen because it clears the common Android 360 and keeps the word
+   on the 390 and 412 phones, his own included. */
+@media (max-width:379px){
+  #tb-welcome-cell{display:none!important}
+}
 /* Actions is pinned at ALL widths, not only under the breakpoint, because the
    bar can now overflow at any width and Convert sits against this edge. If
    only one of the two were sticky they would come apart when it scrolled. */
@@ -1534,7 +1577,7 @@ try{
       </button>
 
       <!-- Welcome greeting (left anchor) -->
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:0 16px;border-right:1px solid var(--border);height:100%;flex-shrink:0;width:var(--tb-col)">
+      <div id="tb-welcome-cell" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:0 16px;border-right:1px solid var(--border);height:100%;flex-shrink:0;width:var(--tb-col)">
         <div style="min-width:0;overflow:hidden;text-align:center">
           <div id="topbar-welcome" class="tb-primary">Welcome</div>
           <div id="topbar-userid" class="tb-secondary">—</div>
@@ -2340,6 +2383,16 @@ let _errSent = 0;
 const _ERR_MAX_PER_SESSION = 8;   // a loop must never become a mail storm
 async function bellaReportError(where, detail, meta){
   try{
+    // A TEST MUST NEVER REACH HIS INBOX OR HIS ERRORS TAB.
+    // On 2026-10-17 my own headless runs put 28 rows into `Errors` and sent him
+    // five emails about faults that existed only inside a test harness. The tab
+    // then held 31 rows and not one of them was a real user: three deploy
+    // probes and the rest HeadlessChrome. That is precisely how a report stops
+    // being read -- see [[qc-step-that-always-fails]].
+    // Headless Chrome announces itself in the user agent and no real user has
+    // it. Nothing else is filtered: a real browser in a real session is always
+    // reported.
+    if(/HeadlessChrome/i.test(navigator.userAgent||'')) return;
     const sig = String(where) + '|' + String(detail == null ? '' : detail).slice(0, 200);
     if(_ERR_SEEN[sig]){ _ERR_SEEN[sig]++; return; }   // the same fault twice is not news
     _ERR_SEEN[sig] = 1;
@@ -3789,20 +3842,48 @@ function closeSidebar(){document.getElementById('sidebar').classList.remove('mob
 // ============================================================
 // INIT
 // ============================================================
+// THIS FUNCTION IS THE ONLY WAY INTO THE APP, and until today it was the only
+// caller of showRegistrationGate() with nothing guarding the path to it. Three
+// unguarded getElementById('splash') calls sat in front of that call, one of
+// them inside a setTimeout where no caller's try/catch can reach it. Anything
+// that threw on the way -- a missing element, a theme helper, a future edit --
+// left the user on a faded splash with no way in and nothing on screen to say
+// why. That is the shape of the _clockFormat24 fault that once blanked the
+// page for every new user.
+//
+// Found 2026-10-17 because my own headless test threw exactly this and Bella
+// emailed it in. The test was the cause; the single point of failure was real.
+//
+// Nothing in the app removes #splash today, so this was not firing for anyone.
+// It is guarded because the COST of it firing is total -- a person who cannot
+// get past the splash cannot report that they cannot get past the splash.
+let _splashDone=false;
 async function splashTap(){
+  if(_splashDone) return;          // a double tap must not schedule two gates
+  _splashDone=true;
   try{const ctx=new(window.AudioContext||window.webkitAudioContext)();ctx.resume();}catch(e){}
   audioUnlocked=true;
   // The three-way preference, resolved. applyResolvedTheme() also paints the
   // picker and applyLight() is now reachable from here, which matters for
   // "Match my device": the pre-paint bootstrap adds the class, and if the
   // device flipped to light since, this is where it comes back off.
-  applyResolvedTheme();
-  bindSystemThemeWatch();
-  document.getElementById('splash').style.opacity='0';
-  document.getElementById('splash').style.transition='opacity .3s';
+  // Decorative RELATIVE TO GETTING IN: a theme that fails to paint is a bad
+  // look, not a locked door, so it must never stop the gate opening.
+  try{ applyResolvedTheme(); }catch(e){ bellaReportError('splashTap/theme',e&&e.message?e.message:String(e)); }
+  try{ bindSystemThemeWatch(); }catch(e){ bellaReportError('splashTap/themeWatch',e&&e.message?e.message:String(e)); }
+  const _sp=document.getElementById('splash');
+  if(_sp){ _sp.style.opacity='0'; _sp.style.transition='opacity .3s'; }
   setTimeout(()=>{
-    document.getElementById('splash').style.display='none';
-    showRegistrationGate();
+    // The gate is opened FIRST and separately. Hiding the splash is cosmetic;
+    // reaching the gate is the whole point, and it must not depend on it.
+    try{ if(_sp) _sp.style.display='none'; }
+    catch(e){ bellaReportError('splashTap/hide',e&&e.message?e.message:String(e)); }
+    try{ showRegistrationGate(); }
+    catch(e){
+      bellaReportError('splashTap/gate',e&&e.message?e.message:String(e));
+      // Last resort: never leave them staring at a splash that will not lift.
+      try{ if(_sp) _sp.style.display='none'; }catch(e2){}
+    }
   },300);
 }
 // ============================================================
