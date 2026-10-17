@@ -135,6 +135,19 @@ body.dark{
 .src-note a{color:var(--navy);text-decoration:underline;text-underline-offset:2px;
   max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .src-note a:hover{opacity:.75}
+/* The badge is painted as a SURFACE, never as a text colour: body.dark's
+   blanket colour rule repaints text cream and outranks a class, so a coloured
+   label would lose in dark mode. A background and a border are untouched by
+   that rule, so the same markup reads correctly in both themes. */
+.src-off{display:inline-flex;align-items:center;padding:1px 6px;border-radius:999px;
+  border:1px solid #D4AF37;background:rgba(212,175,55,.16);font-size:9.5px;
+  font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+/* LITERAL GOLD, NOT var(--gold). body.dark sets --gold:#0B2545 because the two
+   roles invert in dark mode — gold becomes the button GROUND and navy the text
+   on it. So var(--gold) on a border paints navy on navy and the outline simply
+   disappears. Measured: border was rgb(11,37,69) against a rgb(11,37,69)
+   ground. The same trap is already flagged elsewhere in this file. */
+body.dark .src-off{background:rgba(212,175,55,.22);border-color:#E3C25A}
 @media(max-width:480px){.src-note a{max-width:130px}}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:'BellaIndic','DM Sans',sans-serif;background:#FAF8F4;color:var(--text);height:100dvh;overflow:hidden}
@@ -9699,7 +9712,7 @@ async function callBella(useSearch,memCtx,signal,route){
   // always present and tells Gemini WHEN to reach for it. Previously the tool was
   // only attached when a keyword matched, so anything phrased outside that list was
   // answered from training data and came back out of date.
-  const searchNote='\n\nRESEARCH RULE — applies to every question. You have Google Search available and you must use it whenever the correct answer could have changed since your training data: prices, costs, rates, valuations, who currently holds a role or office, company and product facts, laws and rules, sports results, schedules, opening hours, news, and any question containing "current", "latest", "still", "now" or a year. THIS EXPLICITLY INCLUDES ANY NAMED PLACE, BUSINESS OR INSTITUTION — a hospital, clinic, school, college, hotel, restaurant, shop, office or station — whether the person asks for the nearest ones, for its address, for directions to it, or simply names it. Hospitals and businesses are bought, renamed, merged, relocated and closed constantly, and a name you remember is not evidence it still trades under that name today. Savio hit this on 2026-10-16: asked about a hospital, you answered from memory and called it by a name it has not used since August 2023 — the correct answer was one search away, and when he told you to look it up you got it right immediately. Do not wait to be told. Look it up the first time, every time, and say what the place is called NOW. If you are not certain your information is current, search — do not answer from memory and do not guess. Never state a fact that could be out of date without checking it first. When you have searched, give 3-5 bullet points and say when the information is from. Do NOT write out URLs and never say you are unable to provide a link — the sources are attached under your answer automatically, as clickable links, every time you search. Say "the sources are linked below" instead. Cite by name in the text: cite medical sources for medical questions, official sources for government ones, industry reports for business data. When the question is personal, emotional, creative, or ordinary conversation, do not search — answer warmly as Bella normally would. Spoken summary: 2 sentences max — never speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).\n\nNEVER PROMISE AN ACTION YOU ARE NOT ABOUT TO PERFORM IN THIS SAME REPLY. You answer one message at a time and you cannot go away and come back. So never end with "let me find…", "let me check…", "I will look that up", "give me a moment", "I am searching now" or anything that leaves the person waiting for a second message. There is no second message. Either do it now and give the answer in this reply, or say plainly that you cannot and what you need from them. Savio saw this fail on 2026-10-06: asked for hospitals near Acropolis Mall, Bella replied "Let me find some hospitals near Acropolis Mall for you." and stopped, and he had to type "OK" to get an answer. That reads as a broken promise, which is worse than saying no.';
+  const searchNote='\n\nRESEARCH RULE — applies to every question. You have Google Search available and you must use it whenever the correct answer could have changed since your training data: prices, costs, rates, valuations, who currently holds a role or office, company and product facts, laws and rules, sports results, schedules, opening hours, news, and any question containing "current", "latest", "still", "now" or a year. THIS EXPLICITLY INCLUDES ANY NAMED PLACE, BUSINESS OR INSTITUTION — a hospital, clinic, school, college, hotel, restaurant, shop, office or station — whether the person asks for the nearest ones, for its address, for directions to it, or simply names it. Hospitals and businesses are bought, renamed, merged, relocated and closed constantly, and a name you remember is not evidence it still trades under that name today. Savio hit this on 2026-10-16: asked about a hospital, you answered from memory and called it by a name it has not used since August 2023 — the correct answer was one search away, and when he told you to look it up you got it right immediately. Do not wait to be told. Look it up the first time, every time, and say what the place is called NOW. If you are not certain your information is current, search — do not answer from memory and do not guess. Never state a fact that could be out of date without checking it first. When you have searched, give 3-5 bullet points and say when the information is from. Do NOT write out URLs and never say you are unable to provide a link — the sources are attached under your answer automatically, as clickable links, every time you search. Say "the sources are linked below" instead. Cite by name in the text: cite medical sources for medical questions, official sources for government ones, industry reports for business data. THE OFFICIAL SOURCE IS NOT SOMETHING TO BE ASKED FOR — IT COMES WITH THE ANSWER, EVERY TIME. Savio, 2026-10-17: "the moment i ask anything like this, without me asking, it should always come with a verified govt source." So whenever an answer rests on an official figure, rule or decision — an interest rate, a tax, a duty, a law, a regulation, a government scheme, an official statistic, a licence or a public appointment — NAME THE ISSUING AUTHORITY IN THE ANSWER ITSELF (the Reserve Bank of India, the Income Tax Department, the GST Council, the ministry concerned) and say the official source is linked below. Never leave him to ask a second time for the authority behind a number. If your search turned up no official source and only news coverage, SAY SO PLAINLY — "I could not reach an official RBI page for this, so this is from news reports" — because a number with no authority behind it, presented as though it had one, is the one thing worse than not answering. When the question is personal, emotional, creative, or ordinary conversation, do not search — answer warmly as Bella normally would. Spoken summary: 2 sentences max — never speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).\n\nNEVER PROMISE AN ACTION YOU ARE NOT ABOUT TO PERFORM IN THIS SAME REPLY. You answer one message at a time and you cannot go away and come back. So never end with "let me find…", "let me check…", "I will look that up", "give me a moment", "I am searching now" or anything that leaves the person waiting for a second message. There is no second message. Either do it now and give the answer in this reply, or say plainly that you cannot and what you need from them. Savio saw this fail on 2026-10-06: asked for hospitals near Acropolis Mall, Bella replied "Let me find some hospitals near Acropolis Mall for you." and stopped, and he had to type "OK" to get an answer. That reads as a broken promise, which is worse than saying no.';
   // Savio, 2026-10-02: the Summarise button must give "a summary pointwise or highlight
   // her finding in short". It used to ask for 2-3 sentences of prose, so even when it
   // worked you got a paragraph, never highlights. The word cap is stated because an
@@ -9732,6 +9745,33 @@ let _lastSources=[];
 // groundingChunks[].web = {uri,title}. The uri is Google's redirect, which is
 // the documented and required way to present a grounded source; title is the
 // publisher's domain. Both come from the open web: treat as untrusted text.
+// WHICH SOURCES ARE OFFICIAL. Savio, 2026-10-17: "The moment i ask anything
+// like this without me asking it should always come with a verified govt
+// source." He should never have to ask a second time for the authority behind
+// a number.
+//
+// THE URI CANNOT BE USED FOR THIS. Checked against Google's own grounding
+// behaviour today: EVERY groundingChunks[].web.uri is a redirect through
+// vertexaisearch.cloud.google.com, so the publisher is not in the link at all.
+// The identity lives in `title`, and in a `domain` field that is sometimes
+// absent — so both are read, and absence is treated as "not official" rather
+// than guessed at.
+//
+// This badge asserts exactly one thing: the SOURCE'S DOMAIN is a government or
+// central-bank domain. It does not claim the page was read or its contents
+// checked. Over-claiming here would be worse than no badge at all.
+// rbi.org.in verified against the live site on 2026-10-17 — it is .org.in, not
+// .gov.in, so a pattern alone would have missed India's central bank.
+const _OFFICIAL_EXACT=['rbi.org.in','who.int','un.org','europa.eu','imf.org'];
+const _OFFICIAL_PAT=/(^|[^a-z0-9])(gov|nic)\.[a-z]{2,3}\b|\.gov\b|\.gov\.[a-z]{2,3}\b|\.nic\.in\b|\.gouv\.[a-z]{2,3}\b/i;
+function _officialSource(s){
+  try{
+    const hay=String(((s&&s.domain)||'')+' '+((s&&s.title)||'')).toLowerCase();
+    if(!hay.trim()) return false;
+    if(_OFFICIAL_EXACT.some(function(d){ return hay.indexOf(d)!==-1; })) return true;
+    return _OFFICIAL_PAT.test(hay);
+  }catch(e){ return false; }
+}
 function _readSources(d){
   try{
     const g=d&&d.candidates&&d.candidates[0]&&d.candidates[0].groundingMetadata;
@@ -9741,9 +9781,16 @@ function _readSources(d){
       const w=c&&c.web; if(!w||!w.uri)return;
       if(!/^https?:\/\//i.test(w.uri))return;      // never render a javascript: or data: uri
       if(seen[w.uri])return; seen[w.uri]=1;
-      out.push({uri:w.uri,title:(w.title||'').trim()||'source'});
+      const one={uri:w.uri,title:(w.title||'').trim()||'source',domain:(w.domain||'').trim()};
+      one.official=_officialSource(one);
+      out.push(one);
     });
-    return out.slice(0,6);
+    // OFFICIAL FIRST, and the rest in the order Google returned them. He should
+    // not have to read down a list of news sites to find the authority. A
+    // stable sort keeps Google's own ranking inside each group.
+    const off=out.filter(function(x){return x.official;});
+    const rest=out.filter(function(x){return !x.official;});
+    return off.concat(rest).slice(0,6);
   }catch(e){ return []; }
 }
 
@@ -9764,6 +9811,15 @@ function _paintSources(msgId,list){
     a.href=s.uri; a.target='_blank'; a.rel='noopener noreferrer nofollow';
     a.textContent=s.title;            // textContent, never innerHTML
     a.title=s.title;
+    if(s.official){
+      const b=document.createElement('span');
+      b.className='src-off';
+      b.textContent='Official';
+      // Says what the badge actually means. It is a claim about the DOMAIN,
+      // never about whether the page was read.
+      b.title='Recognised as an official source by its web domain';
+      box.appendChild(b);
+    }
     box.appendChild(a);
   });
   // After the bubble, before the Translate/Mute/Copy row.
