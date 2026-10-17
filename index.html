@@ -8146,19 +8146,52 @@ function _dxStyles(){
 // the file is still built from the device, with a line saying the section is
 // missing rather than empty — somebody pressing this is often somebody
 // leaving, and handing them nothing is the worst of the three outcomes.
-async function _fetchAccountRecord(){
+// WHY THE LAST ATTEMPT FAILED. It used to return a bare null, so the document
+// said the account half was missing without ever saying what went wrong — the
+// silent-failure pattern, in the one place a person is most owed an answer.
+let _acctFailWhy='';
+async function _fetchAccountRecord(email){
+  _acctFailWhy='';
   try{
+    // THE BODY MUST CARRY THE EMAIL. /export-data itself ignores what it is
+    // sent and resolves the caller from the token — but the ownership
+    // middleware IN FRONT of it does not: SELF_EMAIL_PATHS requires
+    // req.body.email and refuses with 403 not_your_data when it is absent.
+    // Shipped on 2026-10-16 sending {} and it 403'd every time; Savio's own
+    // test on the live site is what caught it, because every unit test here
+    // stubbed bfetch and so never met the real gate. /delete-user, the other
+    // self-gated path, has always sent { email } — this now matches it.
+    const who=String(email||'').trim();
+    if(!who){ _acctFailWhy='not signed in'; return null; }
     const ctl=new AbortController();
     const kill=setTimeout(()=>ctl.abort(),30000);   // three sequential tab reads
     const r=await bfetch(BACKEND+'/export-data',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({}),signal:ctl.signal
+      body:JSON.stringify({email:who}),signal:ctl.signal
     });
     clearTimeout(kill);
-    if(!r.ok) return null;
+    if(!r.ok){
+      // r.json() directly, NOT r.clone().json(): nothing reads this body
+      // afterwards, and depending on clone() meant the server's own error code
+      // was silently dropped wherever clone was unavailable.
+      let code='';
+      try{ const e=await r.json(); code=(e&&e.code)||''; }catch(e){}
+      _acctFailWhy='HTTP '+r.status+(code?' '+code:'');
+      try{ bellaReportError('export-data', _acctFailWhy); }catch(e){}
+      return null;
+    }
     const d=await r.json().catch(()=>null);
-    return (d && typeof d==='object' && !d.error) ? d : null;
-  }catch(e){ return null; }
+    if(!(d && typeof d==='object' && !d.error)){
+      _acctFailWhy=(d&&d.error)?String(d.error).slice(0,80):'unreadable reply';
+      try{ bellaReportError('export-data', _acctFailWhy); }catch(e){}
+      return null;
+    }
+    return d;
+  }catch(e){
+    _acctFailWhy=(e&&e.name==='AbortError')?'timed out after 30s':((e&&e.message)||'network error');
+    try{ bellaReportError('export-data', _acctFailWhy); }catch(e2){}
+    return null;
+  }
 }
 // Column positions read out of the DEPLOYED writer, never guessed — the sheet's
 // own row-1 labels have lied before. Users: upsertUserRow()'s `col` map.
@@ -8175,7 +8208,8 @@ function _dxServerRecord(rec){
       + _dxP('Bella could not reach the server while building this file, so this part is '
            + 'MISSING — which is not the same as empty. Everything above came from this device '
            + 'and is complete. Please try the download again, or write to ' + LEGAL_CONTACT
-           + ' and ask for your account record directly.',{italic:true,color:'9E2A3C'});
+           + ' and ask for your account record directly.'
+           + (_acctFailWhy ? '  (Reason: ' + _acctFailWhy + ')' : ''),{italic:true,color:'9E2A3C'});
   }
   const prof=Array.isArray(rec.profile)?rec.profile:[];
   const mem=Array.isArray(rec.memories)?rec.memories:[];
@@ -8244,7 +8278,7 @@ async function _buildMyDataDocx(){
   // hand a person leaving Bella nothing at all. Proven by test 46, which
   // failed here until this existed.
   let srv=null;
-  try{ srv=await _fetchAccountRecord(); }catch(e){ srv=null; }
+  try{ srv=await _fetchAccountRecord(acct.email||cfg.userEmail||''); }catch(e){ srv=null; }
   const nMem=(srv&&Array.isArray(srv.memories))?srv.memories.length:0;
   const nSrvConv=(srv&&Array.isArray(srv.threads))?srv.threads.length:0;
 
@@ -8331,8 +8365,16 @@ async function _buildMyDataDocx(){
   const blob=await zip.generateAsync({type:'blob',
     mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     compression:'DEFLATE'});
+  // THE FILENAME WAS A DAY OUT. toISOString() is UTC, so a file exported at
+  // 05:27 IST on 17 Oct was named 2026-10-16 — the same class of fault as the
+  // backup filenames that were stamped in London time. The date inside the
+  // document was always right; only the name was wrong. Built from the
+  // person's OWN local date, because this file is theirs, not the admin's.
+  const _p2=function(n){ return (n<10?'0':'') + n; };
+  const _localDay = exportedAt.getFullYear() + '-' + _p2(exportedAt.getMonth()+1) + '-' + _p2(exportedAt.getDate());
   return {blob:blob, nConv:nConv, nDel:nDel, server:!!srv, nMem:nMem, nSrvConv:nSrvConv,
-    name:'My-Bella-Data-' + exportedAt.toISOString().slice(0,10) + '.docx'};
+    why:_acctFailWhy,
+    name:'My-Bella-Data-' + _localDay + '.docx'};
 }
 async function downloadMyData(){
   try{
@@ -8347,7 +8389,7 @@ async function downloadMyData(){
       + '**On this device** — your details, all ' + out.nConv + ' conversation' + (out.nConv===1?'':'s') + ', anything in Deleted, and your preferences.\n'
       + (out.server
           ? ('**In your account, on my server** — your account record, ' + out.nMem + ' saved memor' + (out.nMem===1?'y':'ies') + ' and ' + out.nSrvConv + ' conversation' + (out.nSrvConv===1?'':'s') + '. That half is the same wherever you sign in.\n')
-          : ('**In your account, on my server** — I could not reach it just now, so that part is **missing from this file**, which is not the same as it being empty. Please try again in a moment, and if it keeps happening write to ' + LEGAL_CONTACT + '.\n'))
+          : ('**In your account, on my server** — I could not reach it just now, so that part is **missing from this file**, which is not the same as it being empty.' + (out.why ? ' _(' + out.why + ')_' : '') + ' Please try again in a moment, and if it keeps happening write to ' + LEGAL_CONTACT + '.\n'))
       + '\nIt opens in Word, Pages or Google Docs, and you can edit it or save it as a PDF from there.');
   }catch(e){
     bellaMsg('I could not build the export just now. Please try again, and if it keeps happening let Savio know.');
