@@ -489,6 +489,54 @@ body.dark .tb-conv-btn{background:#0B2545!important}
   #chat-topbar.tb-ready > .tb-stackable.tb-on{display:flex!important}
 }
 
+/* ── BREATHING SPACE FOR THE STACK ON THE LAPTOP ──
+   His words, 2026-10-17: it "looks cooped up from the sides, no breathing
+   space", and he asked for about a quarter more. MEASURED rather than guessed,
+   because the cause is not only the width: the arrows are 22px buttons sitting
+   ON the panel's own edges, and three of the four panels had their text UNDER
+   them -- Date overlapped by 6px on the left and 5px on the right, Convert by
+   1px, Location touching at 0px. Only Weather, with 63px of text in a 165px
+   box, had any air. Identical at 1024px and 1440px.
+
+   SIZE IT AGAINST ALL 29 OPTIONS, NOT THE FOUR BUILT-INS -- his catch, and he
+   was right. My Account -> Top Bar Widgets offers the four built-ins AND every
+   Workshop tile with an action, and a pinned tool's cell carries its full
+   label. Measured in Bella's own font at 1440px, all 29: the widest is
+   "Documents & Slides" at 143px, then "Doc Edit & Convert" 137, "Money &
+   Expenses" 135, "Reminders & Tasks" 134. The four built-ins top out at 119.
+   I had sized this at 200px off the built-ins alone and Documents & Slides came
+   out with 4px of air -- cramped all over again, in a case that only appears
+   once he pins that tile.
+
+   So a panel needs 143 + 2 x (22 arrow + air). 210px gives 11px of clear air
+   between the widest label and each arrow, and the content box (210 - 52) is
+   158px, so even that label sits inside its own padding. It is ONE width for
+   every panel, which also stops the arrows jumping 10px sideways on each flip
+   -- the panels were 155px and 165px by turns. And his instinct was almost
+   exactly the measurement: a quarter more than 165px is 206px.
+
+   SCOPED TO 1050px AND UP, AND THE NUMBER IS ARITHMETIC, NOT A ROUND GUESS.
+   The bar must hold Welcome 155 + stack 210 + actions 104 + Food For Thought's
+   own 320px floor = 789px, and the bar is the viewport less the 260px sidebar
+   (measured constant at 768, 1024 and 1440). So 1049px is the first width that
+   fits and 1050 is the first safe one. Above it, nothing overflows at all --
+   measured at 1050, 1280 and 1440.
+
+   I TRIED 1024 AND IT OVERFLOWED BY 15px -- measured, not predicted. Nothing
+   fell off the screen, because .tb-actions is sticky with an opaque
+   background, so instead it would have QUIETLY COVERED the end of the thought
+   -- the exact trap of a pinned cell hiding another. Below 1050 the panels keep
+   their old 155/165px.
+
+   Separately and NOT touched here: at 768px this bar already overflows -- 734px
+   of content in 508px of bar, measured on the unchanged file. Older fault. */
+@media (min-width:1050px){
+  #chat-topbar.tb-ready > .tb-stackable.tb-on{
+    width:210px!important;flex:0 0 210px!important;
+    padding-left:26px!important;padding-right:26px!important;
+  }
+}
+
 /* ── How you know it flips ── */
 #tb-pips{display:none}
 @media (max-width:680px){
@@ -7908,6 +7956,12 @@ async function confirmIdentity(profileKey,addressedName){
   // Show mainframe blurred — location modal sits on top — blur lifts after decision
   const mainEl = document.getElementById('main');
   mainEl.classList.add('show');
+  // THE TOP BAR HAS ONLY NOW BEEN LAID OUT. initTopbarStack() ran above, while
+  // #main was still display:none, so the stack's arrows had no real rect to be
+  // placed from. Paint once more now. Nothing is re-rendered -- it moves one
+  // class and two inline `left` values -- and it is wrapped because a top bar
+  // must never be what stands between him and Bella appearing.
+  try{ paintTopbarStack(); }catch(e){}
   mainEl.style.filter = 'blur(6px)';
   mainEl.style.pointerEvents = 'none';
   // Step 1: Request location permission — blur lifts after user decides
@@ -9210,10 +9264,25 @@ function paintTopbarStack(){
     for(let i=0;i<pips.children.length;i++)
       pips.children[i].classList.toggle('on',i===_tbAt);
     pips.style.visibility = panels.length>1 ? 'visible' : 'hidden';
-    if(!_tbIsPhone()){
+    // NEVER POSITION FROM A BAR THAT IS NOT LAID OUT YET. initTopbarStack()
+    // runs inside confirmIdentity(), and #main only gets `.show` ~35 lines
+    // later -- so at that moment #main{display:none} makes every rect here
+    // 0x0. The arrows are placed from those rects, which put `next` at
+    // left:-24px -- OUTSIDE the bar, invisible -- and `prev` at the bar's far
+    // left instead of the stack slot. The first flip repainted them correctly,
+    // which is exactly the "no arrows until I click it" he saw on the laptop,
+    // on every single refresh. MEASURED 2026-10-17 on the real path: prev
+    // 262..284 and next 236..258 while the bar itself starts at 260.
+    // A zero rect with a non-none display means an ANCESTOR is display:none.
+    // When that is the case, write NOTHING and leave the CSS to it; the repaint
+    // at the end of confirmIdentity, once #main is shown, does the real placing.
+    const _actR=panels[_tbAt].getBoundingClientRect();
+    const _barR=bar.getBoundingClientRect();
+    const _laidOut=_barR.width>0 && _actR.width>0;
+    if(!_tbIsPhone() && _laidOut){
       // centred under the stack slot, not under the whole bar
-      const act=panels[_tbAt].getBoundingClientRect();
-      const b=bar.getBoundingClientRect();
+      const act=_actR;
+      const b=_barR;
       pips.style.left=Math.round(act.left-b.left)+'px';
       pips.style.width=Math.round(act.width)+'px';
       pips.style.right='auto';
