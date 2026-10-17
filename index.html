@@ -537,6 +537,56 @@ body.dark .tb-conv-btn{background:#0B2545!important}
   }
 }
 
+/* ── 681 TO 1049: ONE PANEL AT A TIME, LIKE THE PHONE ──
+   This band is where the bar overflowed. MEASURED on the shipped file: it asked
+   for 734px at every width from 681 to 900 while the bar was 421..640 wide, so
+   it was over by up to 313px -- and `.tb-actions` is sticky and opaque, so
+   rather than anything falling off the edge it SAT ON TOP of Food For Thought.
+   At 681px exactly 7px of that cell was left visible. At 900px, 94px of it was
+   covered. Nobody could have reported that as a bug; it just looked like the
+   thought was a label with nothing after it.
+
+   The fix is not a smaller font or a shorter thought: it is that the wide
+   three-across layout does not FIT here, and pretending otherwise is what
+   covered things. So Welcome and the thought become panels in the rotation, the
+   way they already are on a phone, and the showing panel takes the whole bar
+   less the actions -- 317px at 681px, 636px at 1000px. Nothing is covered and
+   nothing is lost: every panel is one arrow-tap away. `_tbIsNarrow()` is the
+   same 1050px boundary in script, and the two must stay in step.
+
+   `width:auto!important` IS LOAD-BEARING: #tb-welcome-cell carries its width in
+   an INLINE style attribute, which beats any stylesheet rule that is not
+   !important. The same is true of its `display:flex`, which is why the hide
+   rule needs !important too. */
+@media (min-width:681px) and (max-width:1049px){
+  #chat-topbar.tb-ready > #tb-welcome-cell,
+  #chat-topbar.tb-ready > #tb-thought-cell{display:none!important}
+  #chat-topbar.tb-ready > #tb-welcome-cell.tb-on,
+  #chat-topbar.tb-ready > #tb-thought-cell.tb-on,
+  #chat-topbar.tb-ready > .tb-stackable.tb-on{
+    display:flex!important;flex:1 1 auto!important;width:auto!important;
+    min-width:0!important;border-right:0!important;
+  }
+  /* The thought is the one panel whose text can outgrow its slot: a full
+     50-character thought needs 250-269px on ONE line and the slot is 317px at
+     681px, less 40px of padding. Two lines, exactly as the phone does it, so
+     the width stops mattering at all. */
+  #chat-topbar.tb-ready > #tb-thought-cell.tb-on .tb-thought-text{
+    white-space:normal!important;overflow:hidden;text-overflow:clip;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  }
+  #chat-topbar.tb-ready > #tb-thought-cell.tb-on .tb-thought-row{align-items:flex-start}
+  /* AND IT NEEDS ITS OWN GUTTER. The other panels hold short centred labels, so
+     the 22px arrows miss them by 75px or more. The thought fills its box by
+     design, so at 20px of padding its text ran to within 4px of each arrow --
+     the arrow sat on the last letters. 30px leaves 8px of clear air, and
+     anything that no longer fits on one line wraps to the second, which is
+     already allowed above. */
+  #chat-topbar.tb-ready > #tb-thought-cell.tb-on{
+    padding-left:30px!important;padding-right:30px!important;
+  }
+}
+
 /* ── How you know it flips ── */
 #tb-pips{display:none}
 @media (max-width:680px){
@@ -9183,6 +9233,17 @@ function setTbWidgets(list){
   _tbAt=0; paintTopbarStack();
 }
 function _tbIsPhone(){ return window.innerWidth<=680; }
+// THE WIDE LAYOUT NEEDS 1050px AND THE BAR OVERFLOWED BELOW IT FOR WEEKS.
+// Welcome 155 + stack 210 + actions 104 + Food For Thought's own 320px floor =
+// 789px of bar, and the bar is the viewport less the 260px sidebar. MEASURED on
+// the shipped file, every width from 681 to 1440: the bar asked for 734px at
+// every width from 681 to 900 and got 421..640, so it overflowed by up to
+// 313px -- and because `.tb-actions` is sticky with an opaque background,
+// nothing fell off the screen. It COVERED Food For Thought instead: at 681px
+// exactly 7px of that cell was still visible. A fault you cannot see as a
+// fault. Below 1050 the bar therefore behaves as the phone's does -- Welcome
+// and the thought join the rotation instead of fighting for room.
+function _tbIsNarrow(){ return window.innerWidth<1050; }
 // The panels, in the order they sit in the markup. On a phone the greeting and
 // the thought are panels too; on a laptop they are always on screen and only
 // the middle four take turns.
@@ -9194,7 +9255,7 @@ function _tbPanels(){
   Array.prototype.forEach.call(bar.children,function(el){
     const k=el.getAttribute&&el.getAttribute('data-tb');
     if(!k) return;
-    if(k==='you'||k==='thought'){ if(_tbIsPhone()) out.push(el); return; }
+    if(k==='you'||k==='thought'){ if(_tbIsNarrow()) out.push(el); return; }
     if(want.indexOf(k)!==-1) out.push(el);
   });
   return out;
@@ -9247,9 +9308,11 @@ function paintTopbarStack(){
   if(!panels.length) return;
   if(_tbAt>=panels.length||_tbAt<0) _tbAt=0;
   panels[_tbAt].classList.add('tb-on');
-  // On a laptop the greeting and the thought are not in the rotation, so they
-  // must be visible rather than merely not-hidden.
-  if(!_tbIsPhone()){
+  // In the WIDE layout only (1050px and up) the greeting and the thought are not
+  // in the rotation, so they must be visible rather than merely not-hidden.
+  // Below that they ARE panels, and stripping `tb-on` here would blank the bar
+  // whenever the rotation landed on one of them.
+  if(!_tbIsNarrow()){
     ['you','thought'].forEach(function(k){
       const el=bar.querySelector('[data-tb="'+k+'"]');
       if(el) el.classList.remove('tb-on');
@@ -9291,9 +9354,19 @@ function paintTopbarStack(){
       if(pv){ pv.style.left=Math.round(act.left-b.left+2)+'px'; pv.style.right='auto'; }
       if(nx){ nx.style.left=Math.round(act.right-b.left-24)+'px'; nx.style.right='auto'; }
     } else {
+      // CLEAR THE PIPS TOO, NOT JUST THE ARROWS. This branch only ever reset the
+      // arrows, so the inline `left`/`width` the wide layout writes onto the pips
+      // SURVIVED a resize down to a phone width -- 210px of dots parked at the
+      // laptop's stack position, sticking 45px past the right edge of a 320px
+      // bar. MEASURED on the live build, so it predates the stack work: 45px
+      // over at 320px, 5px at 360px. A fresh phone load was always fine, because
+      // the wide branch had never run to leave anything behind; it took crossing
+      // the boundary in one session, which is exactly what a resized laptop
+      // window and every one of my own test harnesses does.
       const pv=document.getElementById('tb-prev'), nx=document.getElementById('tb-next');
       if(pv){ pv.style.left=''; pv.style.right=''; }
       if(nx){ nx.style.left=''; nx.style.right=''; }
+      pips.style.left=''; pips.style.right=''; pips.style.width='';
     }
   }
   const teach=_tbFlips<3 && panels.length>1;
