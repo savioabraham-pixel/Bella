@@ -437,11 +437,25 @@ body.dark .tb-conv-btn{background:#0B2545!important}
 /* ── The phone: one panel at a time, filling the space between the icons ── */
 @media (max-width:680px){
   #chat-topbar{overflow-x:hidden}
-  #tb-welcome-cell,
-  #chat-topbar > .tb-cell,
-  #chat-topbar > .tb-cell-expand,
-  #chat-topbar > .tb-conv-btn{display:none!important}
-  #chat-topbar > .tb-on{
+  /* `.tb-ready` IS THE WHOLE POINT OF THIS SELECTOR. Without it these rules
+     hid every cell and relied on JavaScript to reveal one -- so if the script
+     had not run yet, or threw, or the person never reached the point where it
+     is called, the top bar came up EMPTY. That is failing closed, and a bar is
+     not the place for it. The class is added only after the first panel has
+     actually been painted, so until then the bar looks exactly as it did
+     before: everything visible, nothing clever. */
+  #chat-topbar.tb-ready > #tb-welcome-cell,
+  #chat-topbar.tb-ready > .tb-cell,
+  #chat-topbar.tb-ready > .tb-cell-expand,
+  #chat-topbar.tb-ready > .tb-conv-btn{display:none!important}
+  /* BOTH selectors, and the ID one is not optional. The hide rule above names
+     #tb-welcome-cell, so it carries TWO ids; a reveal rule of one id and two
+     classes LOSES to it however it is written, and `!important` on both sides
+     changes nothing because specificity is settled first. The phone opens on
+     the Welcome panel, so the whole bar came up blank. Measured, not reasoned:
+     the suite reported "exactly one panel shows -- []". */
+  #chat-topbar.tb-ready > #tb-welcome-cell.tb-on,
+  #chat-topbar.tb-ready > .tb-on{
     display:flex!important;flex:1 1 auto!important;width:auto!important;
     min-width:0!important;border-right:0!important;padding-bottom:9px!important;
   }
@@ -471,8 +485,8 @@ body.dark .tb-conv-btn{background:#0B2545!important}
   #chat-topbar > .tb-stackable{order:2}
   #tb-thought-cell{order:3;flex:1 1 auto}
   .tb-actions{order:4}
-  #chat-topbar > .tb-stackable{display:none!important}
-  #chat-topbar > .tb-stackable.tb-on{display:flex!important}
+  #chat-topbar.tb-ready > .tb-stackable{display:none!important}
+  #chat-topbar.tb-ready > .tb-stackable.tb-on{display:flex!important}
 }
 
 /* ── How you know it flips ── */
@@ -492,12 +506,18 @@ body.dark #tb-pips b{background:rgba(245,230,200,.28)}
 body.dark #tb-pips b.on{background:#D4AF37}
 /* The arrows teach the gesture, then get out of the way. They are real buttons
    so a tap on one does not also flip the panel underneath. */
+/* THE ARROWS ARE SHOWN AT EVERY WIDTH NOW. They were phone-only, and the tap
+   handler was phone-only too, so on a laptop the stack displayed ONE widget
+   with no way on earth to reach the other three -- location, weather, date and
+   Convert all vanished behind whichever happened to be first. That is what he
+   saw. On a phone they sit at the edges of the bar; on a laptop they are moved
+   to the edges of the stack slot itself, because the slot is only a part of
+   the bar there. */
 .tb-arrow{position:absolute;top:50%;margin-top:-14px;width:22px;height:28px;z-index:6;
-  display:none;align-items:center;justify-content:center;border:0;background:transparent;
+  display:flex;align-items:center;justify-content:center;border:0;background:transparent;
   color:rgba(27,42,74,.45);font-size:18px;line-height:1;padding:0;cursor:pointer}
 body.dark .tb-arrow{color:rgba(245,230,200,.5)}
-@media (max-width:680px){ .tb-arrow{display:flex} }
-#tb-prev{left:48px} #tb-next{right:106px}
+@media (max-width:680px){ #tb-prev{left:48px} #tb-next{right:106px} }
 .tb-arrow.teach{animation:tbNudge 2.6s ease-in-out infinite}
 @keyframes tbNudge{0%,74%,100%{opacity:.5}82%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.tb-arrow.teach{animation:none}}
@@ -9094,6 +9114,9 @@ function paintTopbarStack(){
   const bar=document.getElementById('chat-topbar');
   if(!bar) return;
   const panels=_tbPanels();
+  // Shown only once a panel is really on screen, so a bar that never gets here
+  // stays as it was rather than coming up empty. See the `.tb-ready` note.
+  if(panels.length) bar.classList.add('tb-ready');
   Array.prototype.forEach.call(bar.querySelectorAll('[data-tb]'),function(el){
     el.classList.remove('tb-on');
   });
@@ -9124,6 +9147,14 @@ function paintTopbarStack(){
       pips.style.left=Math.round(act.left-b.left)+'px';
       pips.style.width=Math.round(act.width)+'px';
       pips.style.right='auto';
+      // and the arrows sit at that slot's own edges, not the bar's
+      const pv=document.getElementById('tb-prev'), nx=document.getElementById('tb-next');
+      if(pv){ pv.style.left=Math.round(act.left-b.left+2)+'px'; pv.style.right='auto'; }
+      if(nx){ nx.style.left=Math.round(act.right-b.left-24)+'px'; nx.style.right='auto'; }
+    } else {
+      const pv=document.getElementById('tb-prev'), nx=document.getElementById('tb-next');
+      if(pv){ pv.style.left=''; pv.style.right=''; }
+      if(nx){ nx.style.left=''; nx.style.right=''; }
     }
   }
   const teach=_tbFlips<3 && panels.length>1;
@@ -9164,7 +9195,6 @@ function initTopbarStack(){
   // are already buttons. Weather opens its panel and Convert opens the
   // converter; stealing those taps would break two things he uses.
   bar.addEventListener('click',function(e){
-    if(!_tbIsPhone()) return;
     if(e.target.closest('.tb-arrow')) return;
     if(e.target.closest('#tb-menu-btn,.tb-actions')) return;
     const on=e.target.closest('.tb-on');
