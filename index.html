@@ -2575,6 +2575,8 @@ IF NEGATIVE (they say they are tired, stressed, unwell, sad, not good, could be 
 - Gently offer help — "Is there anything I can do to make today easier for you?"
 - Use "${addressedName}" naturally and consistently throughout
 
+CRITICAL RULE — THE FAMILY FOLLOW-UP BELONGS TO SMALL TALK AND NOWHERE ELSE. "${fq}" may ONLY appear in a reply whose whole purpose is the opening small-talk exchange. NEVER append it to a reply that answers a question, performs a task, gives directions, lists options, reports a price, explains something or tells a joke — not at the end, not in the middle, not anywhere. Savio hit this on 2026-10-16: he asked how to reach a hospital and the directions ended with "${fq}". It reads as not listening. If you have just helped with something, the reply ENDS when the help ends; ask nothing about family in it. The follow-up is not a debt to be discharged — if the conversation never returns to small talk, it is simply never asked, and that is correct.
+
 CRITICAL RULE — ONE QUESTION PER MESSAGE. The family follow-up "${fq}" should come after the positive small talk exchange, but it must arrive ALONE and the conversation must then follow the user's answer. The pattern is: User says fine -> Bella responds warmly and asks ONE thing -> Bella LISTENS and responds to what they said -> conversation continues from there. Never ask a question while a previous one is still unanswered, and never read out a list of relatives. If the user changes the subject or asks for something, drop the small talk entirely and help them — their agenda always outranks yours.
 
 FACTS AGE — CHECK THEM AGAINST TODAY'S DATE (critical, applies to every personal detail you hold):
@@ -9478,18 +9480,27 @@ async function send(){
     // Note the missing `&& voiceSummary`. It used to be here, and when the model
     // omitted the tag a LONG answer fell through to the else branch and was read
     // aloud WORD FOR WORD, with no offer shown. That was Savio's actual complaint.
-    if(sentenceCount>SPOKEN_FULL_SENTENCES){
+    // THE OFFER IS ABOUT READING ALOUD, SO IT BELONGS ONLY TO VOICE MODE.
+    // Savio, 2026-10-16: it appeared three times in his test while the toggle
+    // read TEXT — "Shall I read it all, or summarise the important points?"
+    // under an answer already printed in full on his screen. There is nothing
+    // to decide: he can see it. In text mode neither branch should speak or
+    // ask; speakText() already returns immediately when voice is off, so the
+    // only thing that had to change is the question.
+    const _mode=_readingOfferMode(sentenceCount);
+    if(_mode==='offer'){
       // Long answer. Speak the short version, then ASK — don't decide for them.
       // Savio's rule: up to 7-8 sentences she just reads it out; beyond that she
       // offers, and proceeds on their answer.
       try{offerFullReading(bellaMsgId,reply,usableSummary,lang);}catch(e){}
-    } else {
+    } else if(_mode==='speak'){
       try{speakText(reply,lang,bellaMsgId);}catch(e){}
     }
+    // _mode==='silent' — text mode. Nothing is spoken and nothing is asked.
     try{checkSummariseBtn();}catch(e){}
     try{
       if(idState==='confirmed'){
-        const sugs=generateSuggestions(reply);
+        const sugs=generateSuggestions(reply, disp);
         addSuggestions(sugs, false, reply);
       }
     }catch(e){}
@@ -9621,6 +9632,64 @@ function _replyLangNote(){
   return '\n\nREPLY LANGUAGE FOR THIS MESSAGE: English.';
 }
 
+// WHAT ELSE THEY HAVE TALKED TO HER ABOUT. Savio, 2026-10-16: "what did we
+// talk about yesterday" and Bella answered "I don't have a record of a specific
+// conversation with you yesterday" — while four conversations sat in the
+// sidebar beside her. The prompt only ever carried the CURRENT thread's
+// history, so every other conversation was invisible to her.
+//
+// This is the DEVICE's own list, which is what this browser holds. It is not
+// cross-device sync — that needs the backend, and `Threads` holds 13 rows — so
+// the note says plainly where the list came from and she must not claim more.
+//
+// Deliberately a DIGEST, not the transcript: name, when it started, how long
+// it ran, and the opening line. Enough to say "we talked about the repo rate
+// on Thursday, shall I open it?" and far too little to be worth the tokens of
+// a full history. Capped hard so a heavy user cannot inflate every /chat call.
+const _THREADS_NOTE_MAX=9;
+const _THREADS_NOTE_GIST=110;
+function _otherThreadsNote(){
+  try{
+    const all=threads||{};
+    const ids=Object.keys(all).filter(function(id){
+      if(id===currentThreadId) return false;
+      const t=all[id]; return !!(t&&Array.isArray(t.hist)&&t.hist.length);
+    });
+    if(!ids.length) return '';
+    ids.sort(function(a,b){
+      const ta=Date.parse((all[a]||{}).created||0)||0;
+      const tb=Date.parse((all[b]||{}).created||0)||0;
+      return tb-ta;
+    });
+    const lines=ids.slice(0,_THREADS_NOTE_MAX).map(function(id){
+      const t=all[id]||{};
+      let when='';
+      try{
+        const d=new Date(t.created);
+        if(!isNaN(d)) when=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+      }catch(e){}
+      let gist='';
+      for(let i=0;i<t.hist.length;i++){
+        const e=t.hist[i];
+        if(e&&e.role==='user'){
+          gist=_expText(e).replace(/\[User:[^\]]*\]/g,'').replace(/\s+/g,' ').trim().slice(0,_THREADS_NOTE_GIST);
+          break;
+        }
+      }
+      return '- "'+String(t.name||'Untitled').slice(0,60)+'"'+(when?' ('+when+')':'')+
+             ', '+t.hist.length+' message'+(t.hist.length===1?'':'s')+
+             (gist?' — opened with: "'+gist+'"':'');
+    });
+    return '\n\nTHEIR OTHER CONVERSATIONS WITH YOU, ON THIS DEVICE (most recently started first). '+
+      'These are real conversations this person has had with you. If they ask what you talked about '+
+      'before, or on a particular day, ANSWER FROM THIS LIST — never say you have no record of '+
+      'talking to them. You hold the title, the date and the opening line of each, which is enough '+
+      'to say which conversation you mean and offer to open it; you do NOT hold the full text, so do '+
+      'not invent details from inside one. This list is what this device holds, so if they ask about '+
+      'something from another phone or computer, say that plainly rather than denying it happened.\n'+
+      lines.join('\n');
+  }catch(e){ return ''; }
+}
 async function callBella(useSearch,memCtx,signal,route){
   // Use test profile if admin test mode is active — nothing saved to real user data
   const _activeProfileKey = (_testMode && _testProfileKey) ? _testProfileKey : currentProfileKey;
@@ -9630,14 +9699,14 @@ async function callBella(useSearch,memCtx,signal,route){
   // always present and tells Gemini WHEN to reach for it. Previously the tool was
   // only attached when a keyword matched, so anything phrased outside that list was
   // answered from training data and came back out of date.
-  const searchNote='\n\nRESEARCH RULE — applies to every question. You have Google Search available and you must use it whenever the correct answer could have changed since your training data: prices, costs, rates, valuations, who currently holds a role or office, company and product facts, laws and rules, sports results, schedules, opening hours, news, and any question containing "current", "latest", "still", "now" or a year. If you are not certain your information is current, search — do not answer from memory and do not guess. Never state a fact that could be out of date without checking it first. When you have searched, give 3-5 bullet points and say when the information is from. Do NOT write out URLs and never say you are unable to provide a link — the sources are attached under your answer automatically, as clickable links, every time you search. Say "the sources are linked below" instead. Cite by name in the text: cite medical sources for medical questions, official sources for government ones, industry reports for business data. When the question is personal, emotional, creative, or ordinary conversation, do not search — answer warmly as Bella normally would. Spoken summary: 2 sentences max — never speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).\n\nNEVER PROMISE AN ACTION YOU ARE NOT ABOUT TO PERFORM IN THIS SAME REPLY. You answer one message at a time and you cannot go away and come back. So never end with "let me find…", "let me check…", "I will look that up", "give me a moment", "I am searching now" or anything that leaves the person waiting for a second message. There is no second message. Either do it now and give the answer in this reply, or say plainly that you cannot and what you need from them. Savio saw this fail on 2026-10-06: asked for hospitals near Acropolis Mall, Bella replied "Let me find some hospitals near Acropolis Mall for you." and stopped, and he had to type "OK" to get an answer. That reads as a broken promise, which is worse than saying no.';
+  const searchNote='\n\nRESEARCH RULE — applies to every question. You have Google Search available and you must use it whenever the correct answer could have changed since your training data: prices, costs, rates, valuations, who currently holds a role or office, company and product facts, laws and rules, sports results, schedules, opening hours, news, and any question containing "current", "latest", "still", "now" or a year. THIS EXPLICITLY INCLUDES ANY NAMED PLACE, BUSINESS OR INSTITUTION — a hospital, clinic, school, college, hotel, restaurant, shop, office or station — whether the person asks for the nearest ones, for its address, for directions to it, or simply names it. Hospitals and businesses are bought, renamed, merged, relocated and closed constantly, and a name you remember is not evidence it still trades under that name today. Savio hit this on 2026-10-16: asked about a hospital, you answered from memory and called it by a name it has not used since August 2023 — the correct answer was one search away, and when he told you to look it up you got it right immediately. Do not wait to be told. Look it up the first time, every time, and say what the place is called NOW. If you are not certain your information is current, search — do not answer from memory and do not guess. Never state a fact that could be out of date without checking it first. When you have searched, give 3-5 bullet points and say when the information is from. Do NOT write out URLs and never say you are unable to provide a link — the sources are attached under your answer automatically, as clickable links, every time you search. Say "the sources are linked below" instead. Cite by name in the text: cite medical sources for medical questions, official sources for government ones, industry reports for business data. When the question is personal, emotional, creative, or ordinary conversation, do not search — answer warmly as Bella normally would. Spoken summary: 2 sentences max — never speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).\n\nNEVER PROMISE AN ACTION YOU ARE NOT ABOUT TO PERFORM IN THIS SAME REPLY. You answer one message at a time and you cannot go away and come back. So never end with "let me find…", "let me check…", "I will look that up", "give me a moment", "I am searching now" or anything that leaves the person waiting for a second message. There is no second message. Either do it now and give the answer in this reply, or say plainly that you cannot and what you need from them. Savio saw this fail on 2026-10-06: asked for hospitals near Acropolis Mall, Bella replied "Let me find some hospitals near Acropolis Mall for you." and stopped, and he had to type "OK" to get an answer. That reads as a broken promise, which is worse than saying no.';
   // Savio, 2026-10-02: the Summarise button must give "a summary pointwise or highlight
   // her finding in short". It used to ask for 2-3 sentences of prose, so even when it
   // worked you got a paragraph, never highlights. The word cap is stated because an
   // uncapped 'short' came back as long as the answer itself.
   const voiceNote='\n\nAt the very end of your reply, on its own new line, always add a short summary of your answer in this exact format: [VOICE]- first point\\n- second point\\n- third point[/VOICE]. Rules for it: 3 to 5 points, each on its own line beginning with \"- \", each a single short clause, FORTY-FIVE WORDS IN TOTAL AT THE ABSOLUTE MOST. It must be dramatically shorter than your answer — it is the highlights, not a retelling. Write it in the SAME language as your reply. This tag is never shown as part of your answer; it is used for the spoken version and for the Summarise button.';
   const _opening=`Understood. I am Bella, ready to assist ${_activeAddressedName}.`;
-  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_replyLangNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
+  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_replyLangNote()+_otherThreadsNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
   // The two tool sets cannot travel together (see routeTurn), so this is written
   // as an either/or and not as two independent fields. While BELLA_TOOLS_READY is
   // false the second branch is unreachable and the request on the wire is
@@ -10138,6 +10207,19 @@ function _asPoints(txt){
   // and a bad regex literal takes the whole script down with it — a blank page for
   // everyone on that device, which is exactly how _clockFormat24 got shipped.
   return (t.match(/[^.!?।]+[.!?।]*/g)||[t]).map(l=>l.trim()).filter(Boolean).map(l=>'- '+l).join('\n');
+}
+// WHICH OF THE THREE THINGS TO DO WITH A FINISHED REPLY. Lifted out of send()
+// so it can be tested: the fault it fixes was invisible to every test because
+// the decision lived inline in a function that needs a backend to reach.
+//   'silent' — text mode. The answer is already on screen; say nothing, ask nothing.
+//   'offer'  — voice mode, long answer. Speak the gist and ask.
+//   'speak'  — voice mode, short answer. Just read it.
+// Savio, 2026-10-16: "Shall I read it all, or summarise the important points?"
+// appeared three times with the toggle on TEXT, under answers he could already
+// read in full. There was nothing to decide.
+function _readingOfferMode(sentences){
+  if(!continuousVoice) return 'silent';
+  return sentences>SPOKEN_FULL_SENTENCES ? 'offer' : 'speak';
 }
 function offerFullReading(msgId, fullText, summary, lang){
   const bub=document.getElementById(msgId);
@@ -10841,9 +10923,25 @@ async function _backupSheetRun(){
   }
 }
 
-function generateSuggestions(text){
+// `asked` is the user's own message. Without it the chips were chosen from
+// single words that merely WANDERED INTO Bella's prose: Savio asked for a
+// government source on the repo rate, her reply happened to end "...will lead
+// you to the primary document", and the word `document` alone summoned
+// "Extract all action items / Download as PDF / What are the key deadlines?".
+// A topic now has to be either what he ASKED about, or something the answer
+// genuinely returns to — one passing mention is not a subject.
+function generateSuggestions(text, asked){
   // Generate contextual follow-up suggestions based on Bella's response
   const t=text.toLowerCase();
+  const q=String(asked==null?'':asked).toLowerCase();
+  const topical=function(words){
+    return words.some(function(w){
+      if(q.indexOf(w)!==-1) return true;
+      let n=0,i=0;
+      while((i=t.indexOf(w,i))!==-1){ n++; i+=w.length; if(n>=2) return true; }
+      return false;
+    });
+  };
   const suggestions=[];
 
   // Greeting/identity context — personalised chips
@@ -10852,23 +10950,23 @@ function generateSuggestions(text){
     return suggestions.slice(0,3);
   }
   // Document/analysis context
-  if(t.includes('document')||t.includes('summary')||t.includes('report')||t.includes('pdf')||t.includes('analysis')){
+  if(topical(['document','summary','report','pdf','analysis'])){
     suggestions.push('Extract all action items','Download as PDF','What are the key deadlines?');
   }
   // Travel context
-  else if(t.includes('flight')||t.includes('hotel')||t.includes('itinerary')||t.includes('travel')||t.includes('trip')){
+  else if(topical(['flight','hotel','itinerary','travel','trip'])){
     suggestions.push('Build the full itinerary','Show hotel options','What is the budget estimate?');
   }
   // Email/calendar context
-  else if(t.includes('email')||t.includes('meeting')||t.includes('calendar')||t.includes('schedule')){
+  else if(topical(['email','meeting','calendar','schedule'])){
     suggestions.push('Draft a reply','Add to my calendar','Show me my week ahead');
   }
   // Health context
-  else if(t.includes('health')||t.includes('doctor')||t.includes('medicine')||t.includes('hospital')){
+  else if(topical(['health','doctor','medicine','hospital'])){
     suggestions.push('Remind me about this','Find nearby hospitals','Summarise for my doctor');
   }
   // Search/research context
-  else if(t.includes('search')||t.includes('found')||t.includes('result')||t.includes('according')){
+  else if(topical(['search','found','result','according'])){
     suggestions.push('Tell me more','Save this as a report','What are the next steps?');
   }
   // Nothing matched. This branch used to pick at RANDOM from three fixed
@@ -10897,7 +10995,10 @@ function generateSuggestions(text){
     const hasList=/(^|\n)\s*(?:[-*\u2022]|\d+[.)])\s/.test(text);
     const hasDate=/\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i.test(text);
     if(hasList||long)      suggestions.push('Summarise this');
-    if(hasNumbers)         suggestions.push('Put this in a spreadsheet');
+    // A spreadsheet needs ROWS. A single rate quoted in a sentence is not
+    // tabular, and "Put this in a spreadsheet" under "the repo rate is 5.50%"
+    // was one of the chips Savio called irrelevant.
+    if(hasNumbers&&hasList)suggestions.push('Put this in a spreadsheet');
     if(hasDate)            suggestions.push('Remind me about this');
     if(long)               suggestions.push('Make this a document');
     suggestions.push('Tell me more','What should I do next?','Save this for me');
