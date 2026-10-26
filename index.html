@@ -13986,6 +13986,51 @@ function _wxTemp(t){ return (t === null || t === undefined) ? '—' : Math.round
 function _wxCap(s){ return String(s || '').replace(/\b\w/g, m => m.toUpperCase()); }
 function _wxDeg(){ return _wxIsImperial() ? 'F' : 'C'; }
 
+// OPENWEATHER'S OWN WORDING WENT STRAIGHT ON SCREEN AND IT IS NOT ENGLISH.
+// "Light Intensity Shower Rain". "Heavy Intensity Rain". "Broken Clouds".
+// "Ragged Thunderstorm". Savio saw the second of those on a day row.
+// Mapped to what a person would actually say. Anything not in the table still
+// gets their two worst habits stripped, so a description nobody has seen yet
+// cannot arrive reading like a manual.
+const WX_PHRASE = {
+  'clear sky':'clear', 'few clouds':'mostly clear', 'scattered clouds':'partly cloudy',
+  'broken clouds':'mostly cloudy', 'overcast clouds':'overcast',
+  'light rain':'light rain', 'moderate rain':'steady rain',
+  'heavy intensity rain':'heavy rain', 'very heavy rain':'very heavy rain',
+  'extreme rain':'torrential rain', 'freezing rain':'freezing rain',
+  'shower rain':'showers', 'light intensity shower rain':'light showers',
+  'heavy intensity shower rain':'heavy showers', 'ragged shower rain':'showers',
+  'light intensity drizzle':'light drizzle', 'drizzle':'drizzle',
+  'heavy intensity drizzle':'heavy drizzle', 'shower drizzle':'drizzly showers',
+  'thunderstorm with light rain':'thunderstorm, light rain',
+  'thunderstorm with rain':'thunderstorm with rain',
+  'thunderstorm with heavy rain':'thunderstorm, heavy rain',
+  'light thunderstorm':'distant thunder', 'thunderstorm':'thunderstorm',
+  'heavy thunderstorm':'heavy thunderstorm', 'ragged thunderstorm':'thunderstorm',
+  'light snow':'light snow', 'heavy snow':'heavy snow', 'sleet':'sleet',
+  'mist':'mist', 'smoke':'smoky air', 'haze':'hazy', 'fog':'fog',
+  'sand':'blowing sand', 'dust':'dusty air', 'sand/dust whirls':'dust whirls',
+  'volcanic ash':'volcanic ash', 'squalls':'squally winds', 'tornado':'tornado'
+};
+function _wxWords(d){
+  const k = String(d == null ? '' : d).trim().toLowerCase();
+  if(!k) return '';
+  if(WX_PHRASE[k]) return WX_PHRASE[k];
+  return k.replace(/\bintensity\b/g, '').replace(/\bragged\b/g, '')
+          .replace(/\s{2,}/g, ' ').trim();
+}
+
+// 1013 hPa is standard sea-level pressure. The bare number tells a reader
+// nothing -- the word beside it is the whole point of showing it at all.
+function _wxPressureWord(p){
+  if(p == null) return '';
+  if(p < 1000)  return 'low';
+  if(p < 1010)  return 'a little low';
+  if(p <= 1020) return 'normal';
+  if(p <= 1030) return 'a little high';
+  return 'high';
+}
+
 // WIND IS THE ONE FIELD WHOSE UNIT CHANGES SHAPE, NOT JUST SCALE. OpenWeather
 // sends metres per second under `metric` and miles per hour under `imperial`,
 // so the x3.6 that turns m/s into km/h must NOT be applied to an imperial
@@ -14020,14 +14065,22 @@ function _wxPop(p){
 // text colour: `body.dark *{color:#F5E6C8!important}` outranks a class however
 // many !importants it carries, so a coloured word would come out cream in dark
 // mode and the whole signal would be lost. A background is untouched by it.
+// "PM2.5 94 · PM10 104 µg/m³" told nobody anything -- Savio's words: normal
+// people will not understand the jargon. What matters is whether to go out.
+// Each band carries plain advice, and the raw figures move to the tooltip for
+// anyone who does want them.
 const WX_AQI = [
   null,
-  { label: 'Good',      dot: '#2E9B5B' },
-  { label: 'Fair',      dot: '#8FBF3F' },
-  { label: 'Moderate',  dot: '#E0A526' },
-  { label: 'Poor',      dot: '#E2703A' },
-  { label: 'Very Poor', dot: '#C64040' }
+  { label: 'Good',      dot: '#2E9B5B', say: 'clean air today' },
+  { label: 'Fair',      dot: '#8FBF3F', say: 'fine for being outdoors' },
+  { label: 'Moderate',  dot: '#E0A526', say: 'sensitive people may feel it' },
+  { label: 'Poor',      dot: '#E2703A', say: 'best to keep outdoor time short' },
+  { label: 'Very Poor', dot: '#C64040', say: 'best not to be out for long' }
 ];
+// WHO 2021 Global Air Quality Guidelines, 24-hour mean, µg/m³ — checked
+// 2026-10-26, not quoted from memory. A multiple of the guideline means
+// something to a reader; a bare 94 does not.
+const WX_WHO_PM25 = 15, WX_WHO_PM10 = 45;
 
 // Honours the topbar's own 12/24h toggle. 24-hour time everywhere is Savio's
 // issue #10, and _clockFormat24 is the single place that preference lives.
@@ -14053,6 +14106,47 @@ function _wxCoords(){
   return null;
 }
 
+// ── THE CITY FALLBACK ──────────────────────────────────────────────────
+// A browser that will not give coordinates used to mean NO WEATHER AT ALL --
+// not a coarser forecast, nothing. The panel dead-ended on "Location off",
+// and most of the family would have no idea what a location permission is.
+// `/weather` has accepted a city name since it was written; the page had
+// simply never passed one, so this needs no backend change and no deploy.
+// localStorage, not sessionStorage: b_location_data dies with the tab, and a
+// city typed once should not have to be typed again tomorrow.
+function _wxCity(){
+  try{
+    const saved = (localStorage.getItem('b_wx_city') || '').trim();
+    if(saved) return saved;
+  }catch(e){}
+  // Nothing typed, but if geolocation worked earlier THIS session we already
+  // know the place name — worth keeping when coordinates stop arriving.
+  try{
+    const d = JSON.parse(sessionStorage.getItem('b_location_data') || '{}');
+    const c = (d.city || d.area || '').trim();
+    if(c) return c;
+  }catch(e){}
+  return '';
+}
+function setWxCity(name){
+  const c = String(name == null ? '' : name).trim();
+  try{
+    if(c) localStorage.setItem('b_wx_city', c);
+    else  localStorage.removeItem('b_wx_city');
+  }catch(e){}
+  _wxData = null; _wxErr = '';
+  renderWxBody();
+  fetchWeather(true);
+}
+// Called from the panel's own input.
+function saveWxCityFromInput(){
+  const el = document.getElementById('wx-city-input');
+  if(!el) return;
+  const v = el.value.trim();
+  if(!v) return;
+  setWxCity(v);
+}
+
 function setWeatherCellState(main, sub){
   const m = document.getElementById('tb-wx-main');
   const s = document.getElementById('tb-wx-sub');
@@ -14070,19 +14164,27 @@ function renderWeatherCell(){
   // on screen all day, and it is the one place where motion is charged to the
   // battery permanently rather than only while somebody is looking.
   setWeatherCellState(_wxIcon(c.icon, true) + ' ' + _wxTemp(c.temp),
-                      _wxCap(c.description) || c.city || 'Weather');
+                      _wxCap(_wxWords(c.description)) || c.city || 'Weather');
 }
 
 async function fetchWeather(force){
   if(_wxBusy) return;
   if(!force && _wxData && (Date.now() - _wxAt) < WX_STALE_MS) return;
+  // COORDINATES FIRST, ALWAYS -- they are the precise answer and the only one
+  // that can place somebody inside a city. The city is the fallback, not a
+  // substitute, so a device that starts answering again silently improves.
   const loc = _wxCoords();
-  if(!loc){ setWeatherCellState('🌡 —', 'Location off'); _wxErr = ''; _wxPaintIfOpen(); return; }
+  const city = loc ? '' : _wxCity();
+  if(!loc && !city){
+    setWeatherCellState('🌡 —', 'Tap to set city');
+    _wxErr = ''; _wxPaintIfOpen(); return;
+  }
   _wxBusy = true;
   try{
     const r = await bfetch(BACKEND + '/weather', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ lat: loc.lat, lon: loc.lon, units: _wxUnits })
+      body: JSON.stringify(loc ? { lat: loc.lat, lon: loc.lon, units: _wxUnits }
+                               : { city: city, units: _wxUnits })
     });
     const d = await r.json();
     if(!r.ok || d.error) throw new Error(d.error || ('HTTP ' + r.status));
@@ -14120,12 +14222,19 @@ function _wxDays(){
   });
   return order.map(d => {
     const temps = d.slots.map(s => s.f.temp).filter(t => typeof t === 'number');
-    // The icon and the words come from the slot nearest 13:00 local. A day is
-    // described by its daytime, not by whatever 03:00 happened to be doing.
-    let pick = d.slots[0], best = Infinity;
+    // THE WORDS AND THE PERCENTAGE MUST DESCRIBE THE SAME HOUR. They used to
+    // disagree: the icon came from the slot nearest 13:00 while the chance of
+    // rain was the day's worst, so a row could read "Scattered Clouds · 100%"
+    // and look like a contradiction. Savio spotted it. The day is now named
+    // after its WETTEST hour, tie-broken by nearest 13:00 -- so a dry day is
+    // still described by its daytime, and a wet one by the rain.
+    let pick = d.slots[0], bestPop = -1, bestGap = Infinity;
     d.slots.forEach(s => {
+      const p = (typeof s.f.pop === 'number') ? s.f.pop : -1;
       const gap = Math.abs(s.when.getHours() - 13);
-      if(gap < best){ best = gap; pick = s; }
+      if(p > bestPop || (p === bestPop && gap < bestGap)){
+        bestPop = p; bestGap = gap; pick = s;
+      }
     });
     // CHANCE OF RAIN FOR A DAY IS THE WORST OF ITS SLOTS, NOT THEIR AVERAGE.
     // A 90% downpour at 15:00 inside an otherwise dry day averages down to
@@ -14194,14 +14303,37 @@ function _wxAirCard(){
   const q = _wxData && _wxData.airQuality;
   if(!q || !q.aqi) return '';
   const band = WX_AQI[q.aqi] || WX_AQI[3];
-  const bits = [];
-  if(q.pm2_5 != null) bits.push('PM2.5 ' + Math.round(q.pm2_5));
-  if(q.pm10  != null) bits.push('PM10 ' + Math.round(q.pm10));
-  return '<div class="wx-aqi">' +
+  // How far past the WHO guideline, using whichever pollutant is worse —
+  // reporting the gentler of the two would understate the day.
+  let times = 0;
+  if(q.pm2_5 != null) times = Math.max(times, q.pm2_5 / WX_WHO_PM25);
+  if(q.pm10  != null) times = Math.max(times, q.pm10  / WX_WHO_PM10);
+  let scale = '';
+  if(times >= 1.5)      scale = Math.round(times) + '\u00D7 the WHO guideline';
+  else if(times > 0)    scale = 'within the WHO guideline';
+  const words = [scale, band.say].filter(Boolean).join(' \u00B7 ');
+  // The raw figures are not deleted, only moved out of the way.
+  const raw = [];
+  if(q.pm2_5 != null) raw.push('PM2.5 ' + Math.round(q.pm2_5));
+  if(q.pm10  != null) raw.push('PM10 ' + Math.round(q.pm10));
+  return '<div class="wx-aqi"' +
+      (raw.length ? ' title="' + _expEsc(raw.join(' · ') + ' µg/m³') + '"' : '') + '>' +
     '<span class="wx-aqi-dot" style="background:' + band.dot + '"></span>' +
     '<span class="wx-aqi-main">Air quality &mdash; ' + _expEsc(band.label) + '</span>' +
-    (bits.length ? '<span class="wx-aqi-sub">' +
-      bits.map(_expEsc).join(' &middot; ') + ' µg/m³</span>' : '') +
+    (words ? '<span class="wx-aqi-sub">' + _expEsc(words) + '</span>' : '') +
+    '</div>';
+}
+
+// The one input in this panel. Kept deliberately plain: a text box and a
+// button, no autocomplete and no place search -- OpenWeather resolves the
+// name itself, and a wrong name comes back as a clear error rather than a
+// silently wrong city.
+function _wxCityForm(current){
+  return '<div id="wx-city-form">' +
+    '<input id="wx-city-input" type="text" autocomplete="address-level2" ' +
+      'placeholder="Your town or city" value="' + _expEsc(current || '') + '" ' +
+      'onkeydown="if(event.key===\'Enter\'){event.preventDefault();saveWxCityFromInput()}">' +
+    '<button onclick="saveWxCityFromInput()">Save</button>' +
     '</div>';
 }
 
@@ -14224,7 +14356,7 @@ function _wxHours(d){
       '</div>';
   }).join('');
   return '<div class="wx-hours">' + rows +
-    '<div class="wx-hours-note">Three-hourly readings. ' +
+    '<div class="wx-hours-note">Readings every three hours. ' +
     (d.rain != null && d.rain > 0 ? _expEsc(_wxRain(d.rain)) + ' expected across the day.' : '') +
     '</div></div>';
 }
@@ -14250,18 +14382,30 @@ function renderWxBody(){
   if(!el) return;
 
   if(!_wxData){
-    const msg = _wxErr
-      ? 'Weather is unavailable right now.<br><span style="font-size:11px">' + _expEsc(_wxErr) + '</span>'
-      : (_wxCoords()
-          ? 'Loading…'
-          : 'Bella needs your location to show the weather. The location cell in the top bar will ask for it.');
-    el.innerHTML = '<div style="font-size:13px;color:var(--tsoft);line-height:1.8">' + msg + '</div>';
+    // A DEAD END IS NOT AN ERROR MESSAGE. This used to say "Bella needs your
+    // location" and stop, which is useless to anyone who does not know what a
+    // browser location permission is -- and that is most of the family.
+    // `/weather` has always taken a city name, so there is a way through.
+    const known = _wxCity();
+    let msg;
+    if(_wxErr){
+      msg = 'Weather is unavailable right now.<br><span style="font-size:11px">'
+          + _expEsc(_wxErr) + '</span>';
+    } else if(_wxCoords() || known){
+      msg = 'Loading…';
+    } else {
+      msg = 'This device will not share its location, so tell Bella where you are '
+          + 'and the weather will work anyway.';
+    }
+    el.innerHTML = '<div style="font-size:13px;color:var(--tsoft);line-height:1.8">' + msg + '</div>'
+      + ((!_wxCoords() && !known && !_wxErr) ? _wxCityForm('') : '');
     if(title) title.textContent = 'Weather';
     if(foot) foot.textContent = '';
     return;
   }
 
   const c = _wxData.current || {};
+  // the panel title keeps the place name; the words go under the temperature
   if(title) title.innerHTML = _wxIcon(c.icon) + ' ' +
     _expEsc([c.city, c.country].filter(Boolean).join(', ') || 'Weather');
 
@@ -14284,7 +14428,7 @@ function renderWxBody(){
         '<div id="wx-now-ico">' + _wxIcon(c.icon) + '</div>' +
         '<div style="min-width:0;flex:1">' +
           '<div id="wx-now-temp">' + _wxTemp(c.temp) + D + '</div>' +
-          '<div id="wx-now-desc">' + _expEsc(_wxCap(c.description)) + '</div>' +
+          '<div id="wx-now-desc">' + _expEsc(_wxCap(_wxWords(c.description))) + '</div>' +
           hilo +
         '</div>' +
         '<div id="wx-units">' +
@@ -14299,7 +14443,8 @@ function renderWxBody(){
         _wxStat('Wind',       windVal, windSub) +
         (c.rain1h != null ? _wxStat('Rain, last hour', _wxRain(c.rain1h)) : '') +
         (c.cloudCover != null ? _wxStat('Cloud cover', c.cloudCover + '%') : '') +
-        (c.pressure   != null ? _wxStat('Pressure', c.pressure + ' hPa') : '') +
+        (c.pressure   != null ? _wxStat('Pressure', c.pressure + ' hPa',
+                                        _wxPressureWord(c.pressure)) : '') +
         _wxStat('Visibility', _wxDist(c.visibility)) +
         _wxStat('Sunrise',    c.sunrise ? _wxClock(new Date(c.sunrise * 1000)) : '—') +
         _wxStat('Sunset',     c.sunset  ? _wxClock(new Date(c.sunset  * 1000)) : '—') +
@@ -14326,7 +14471,7 @@ function renderWxBody(){
               '<div class="wx-day-name">' + _expEsc(_wxDayLabel(d.when)) + '</div>' +
               '<div class="wx-day-break"></div>' +
               '<div class="wx-day-ico">' + _wxIcon(d.icon) + '</div>' +
-              '<div class="wx-day-desc">' + _expEsc(_wxCap(d.description)) + '</div>' +
+              '<div class="wx-day-desc">' + _expEsc(_wxCap(_wxWords(d.description))) + '</div>' +
               popChip +
               '<div class="wx-day-temp">' + _wxTemp(d.max) + ' / ' + _wxTemp(d.min) + '</div>' +
               '<div class="wx-day-chev">' + (open ? '&#9652;' : '&#9662;') + '</div>' +
@@ -14339,8 +14484,14 @@ function renderWxBody(){
 
   if(foot){
     const age = Math.round((Date.now() - _wxAt) / 60000);
-    foot.textContent = 'OpenWeather · updated ' + (age < 1 ? 'just now' : age + ' min ago') +
-      (_wxTab === 'now' ? '' : ' · daily high / low taken from the 3-hourly readings');
+    const byCity = !_wxCoords() && _wxCity();
+    foot.innerHTML = 'OpenWeather · updated ' + (age < 1 ? 'just now' : age + ' min ago') +
+      (_wxTab === 'now' ? '' : ' · daily high / low taken from the 3-hourly readings') +
+      // Said plainly when it applies: a city is a coarser answer than
+      // coordinates, and whoever set it should be able to change it.
+      (byCity ? '<br>Using the city you set, not this device\'s location. '
+              + '<a href="#" onclick="setWxCity(\'\');return false" '
+              + 'style="color:inherit;text-decoration:underline">Change</a>' : '');
   }
 }
 
@@ -14455,8 +14606,15 @@ async function _rvOpen(){
   if(foot) foot.textContent = '';
   const loc = _wxCoords();
   if(!loc){
-    el.innerHTML = '<div class="rv-msg">Bella needs your location to centre the radar. ' +
-      'The location cell in the top bar will ask for it.</div>';
+    // HONEST ABOUT WHAT THE FALLBACK CANNOT DO. A city name is enough for a
+    // forecast but not for a map: the radar has to be centred on a point, and
+    // `/weather` returns the city's conditions, not its coordinates.
+    const known = _wxCity();
+    el.innerHTML = '<div class="rv-msg">' + (known
+      ? 'The radar needs this device\'s exact position, which it is not giving. '
+        + 'Everything else still works from the city you set &mdash; only the map needs a point on it.'
+      : 'Bella needs your location to centre the radar. '
+        + 'The location cell in the top bar will ask for it.') + '</div>';
     return;
   }
   if(!_rvMeta && !_rvLoading){
@@ -16078,6 +16236,27 @@ html body.dark #conv-panel .cv-swap{background:#12233B!important;color:#F5E6C8!i
 #rv-attr{font-size:10px;color:#5A6B8A;margin-top:6px;line-height:1.6}
 #rv-attr a{color:#0B2545;text-decoration:underline;text-underline-offset:2px}
 .rv-msg{font-size:13px;color:var(--tsoft);line-height:1.8;padding:18px 0}
+
+/* The city box. Styled off the converter's inputs so it looks native to the
+   panel, and given a 44px touch target because a phone is exactly where
+   location gets refused. */
+#wx-city-form{display:flex;gap:8px;margin-top:14px}
+#wx-city-input{flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--border);
+  border-radius:10px;font-family:inherit;font-size:13px;color:var(--text);
+  background:#FAF8F4;outline:none}
+#wx-city-input:focus{border-color:#D4AF37}
+#wx-city-form button{padding:10px 16px;border-radius:10px;border:1.5px solid #0B2545;
+  background:#0B2545;color:#D4AF37;font-family:inherit;font-size:12px;
+  font-weight:600;cursor:pointer;flex-shrink:0}
+@media(pointer:coarse){ #wx-city-input,#wx-city-form button{min-height:44px} }
+/* Same ID-keyed dark rules as #wx-tabs and #wx-units: body.dark carries a
+   blanket button{...!important} and a blanket colour rule that a class
+   cannot outrank. */
+html body.dark #wx-city-input{background:#12233B!important;color:#F5E6C8!important;
+  border-color:rgba(245,230,200,.26)!important}
+html body.dark #wx-city-form button{background:#F5E6C8!important;color:#0B2545!important;
+  border-color:#F5E6C8!important}
+#wx-foot a{color:inherit}
 
 #wx-foot{font-size:10px;color:#5A6B8A;margin-top:12px;line-height:1.6}
 
