@@ -1991,6 +1991,51 @@ try{
       </div>
         </div>
 
+    <!-- ══ WEATHER ICONS — Meteocons by Bas Milius, MIT ══════════════════
+         https://bas.dev/work/meteocons · Copyright (c) 2020-2024 Bas Milius.
+         MIT, so unlike the RainViewer radar this survives Bella ever being
+         sold. Inlined rather than linked: no CDN, no SRI, no extra request,
+         and QC step 9 is untouched.
+         DEFINED ONCE AS <symbol>s AND REFERENCED WITH <use>. Every source file
+         declared its gradients as id="a", id="b" and so on, so pasting twelve
+         of them into one document made every gradient resolve to whichever
+         icon parsed last; every id here is namespaced with its icon name.
+         THE CLOUDS ARE NOT THE COLOUR BAS MILIUS DREW THEM. His fill style
+         paints them #f3f7fe / #e6effc / #deeafb, which against this app's
+         cream rows (#FAF8F4) measures 1.01, 1.09 and 1.15 to 1 -- Savio
+         reported he simply could not see them, and he was right. They are
+         remapped to #aec2dc / #a3b9d6 / #98b0d0, keeping the three-tone
+         shading: 1.71-2.09 on cream and 7.1-8.7 on the dark row, so they read
+         in BOTH themes. The yellows are UNTOUCHED -- a saturated yellow is
+         told from cream by hue, and the sun was always plainly visible.
+         A contrast failure that only exists in light mode is exactly what he
+         cannot check for himself, because he uses dark.
+         THE RAIN IS NOT AT THE OPACITY BAS MILIUS SET EITHER. He draws each
+         drop at opacity="0" and animates it `values="0; 1; 0"` over 0.67s,
+         full strength only at the quarter mark -- three drops staggered by
+         .33s, so at most instants NONE of them are showing. At 34px in a list
+         row that made "Light Rain" look identical to "Few Clouds", which is
+         exactly what Savio reported: "it says light rain but no rain can be
+         seen". The floor is raised to .45 on both the attribute and the
+         animation, so the rain is always there and still falls.
+         THE LIGHTNING IS DELIBERATELY UNTOUCHED (`values="1; 1; 0; 1; ..."`):
+         a bolt that never goes out is not lightning.
+         AND THE TIMING REFERENCES HAD TO BE RENAMED WITH THE IDS. SMIL loops
+         itself with begin="0s; x1.end+.33s" -- a reference to an ANIMATION
+         ELEMENT by id. Namespacing the ids without rewriting those left all
+         twelve repeats pointing at elements that no longer existed, so every
+         animation played ONCE and stopped. Savio caught it: "it ran but
+         stopped after 2 secs". Measured on the drops alone: broken = 1
+         distinct frame of 6 after four seconds, fixed = 6 of 6.
+         NOTE FOR ANYONE MEASURING THIS: the SVG clock keeps advancing and the
+         sun keeps turning on repeatCount="indefinite" whatever the rain does,
+         so neither getCurrentTime() nor a whole-page pixel diff can see this.
+         Clip to the drops, or check the references resolve.
+         SMIL animation through <use> was PROVEN by pixel-diffing six captures
+         in real Chrome, 6 distinct frames of 6 — an earlier probe that read
+         the DOM property returned null and proved nothing either way. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="wx-sprite" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="wi-clear-day" viewBox="0 0 512 512"><defs><linearGradient id="clear-day-a" x1="150" x2="234" y1="119.2" y2="264.8" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fbbf24"/><stop offset=".5" stop-color="#fbbf24"/><stop offset="1" stop-color="#f59e0b"/></linearGradient><symbol id="clear-day-b" viewBox="0 0 384 384"><circle cx="192" cy="192" r="84" fill="url(#clear-day-a)" stroke="#f8af18" stroke-miterlimit="10" stroke-width="6"/><path fill="none" stroke="#fbbf24" stroke-linecap="round" stroke-miterlimit="10" stroke-width="24" d="M192 61.7V12m0 360v-49.7m92.2-222.5 35-35M64.8 319.2l35.1-35.1m0-184.4-35-35m254.5 254.5-35.1-35.1M61.7 192H12m360 0h-49.7"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="rotate" values="0 192 192; 45 192 192"/></path></symbol></defs><use xlink:href="#clear-day-b" width="384" height="384" transform="translate(64 64)"/></symbol><symbol id="wi-clear-night" viewBox="0 0 512 512"><defs><linearGradient id="clear-night-a" x1="54.3" x2="187.2" y1="29" y2="259.1" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6ab5d3"/><stop offset=".5" stop-color="#6ab5d3"/><stop offset="1" stop-color="#5eafcf"/></linearGradient><symbol id="clear-night-b" overflow="visible" viewBox="0 0 270 270"><path fill="url(#clear-night-a)" stroke="#72b9d5" stroke-linecap="round" stroke-linejoin="round" stroke-width="6" d="M252.3 168.6A133.4 133.4 0 01118 36.2 130.5 130.5 0 01122.5 3 133 133 0 003 134.6C3 207.7 63 267 137.2 267c62.5 0 114.8-42.2 129.8-99.2a135.6 135.6 0 01-14.8.8Z"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="rotate" values="-15 135 135; 9 135 135; -15 135 135"/></path></symbol></defs><use xlink:href="#clear-night-b" width="270" height="270" transform="translate(121 121)"/></symbol><symbol id="wi-cloudy" viewBox="0 0 512 512"><defs><linearGradient id="cloudy-a" x1="99.5" x2="232.6" y1="30.7" y2="261.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aec2dc"/><stop offset=".5" stop-color="#aec2dc"/><stop offset="1" stop-color="#98b0d0"/></linearGradient><symbol id="cloudy-b" viewBox="0 0 350 222"><path fill="url(#cloudy-a)" stroke="#a3b9d6" stroke-miterlimit="10" stroke-width="6" d="m291 107-2.5.1A83.9 83.9 0 00135.6 43 56 56 0 0051 91a56.6 56.6 0 00.8 9A60 60 0 0063 219l4-.2v.2h224a56 56 0 000-112Z"/></symbol></defs><use xlink:href="#cloudy-b" width="350" height="222" transform="translate(81 145)"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="translate" values="-18 0; 18 0; -18 0"/></use></symbol><symbol id="wi-mist" viewBox="0 0 512 512"><defs><linearGradient id="mist-a" x1="220" x2="292" y1="137.7" y2="262.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b0b6c0"/><stop offset=".5" stop-color="#b0b6c0"/><stop offset="1" stop-color="#a4aab7"/></linearGradient><linearGradient xlink:href="#mist-a" id="mist-b" y1="193.7" y2="318.4"/><linearGradient xlink:href="#mist-a" id="mist-c" y1="249.7" y2="374.4"/></defs><path fill="none" stroke="url(#mist-a)" stroke-linecap="round" stroke-miterlimit="10" stroke-width="24" d="M136 200h240"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="translate" values="-48 0; 48 0; -48 0"/></path><path fill="none" stroke="url(#mist-b)" stroke-linecap="round" stroke-miterlimit="10" stroke-width="24" d="M136 256h240"><animateTransform additive="sum" attributeName="transform" begin="-1.5s" dur="6s" repeatCount="indefinite" type="translate" values="-48 0; 48 0; -48 0"/></path><path fill="none" stroke="url(#mist-c)" stroke-linecap="round" stroke-miterlimit="10" stroke-width="24" d="M136 312h240"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="translate" values="48 0; -48 0; 48 0"/></path></symbol><symbol id="wi-overcast" viewBox="0 0 512 512"><defs><symbol id="overcast-d" viewBox="0 0 200.3 126.1"><path fill="url(#overcast-b)" stroke="#848b98" stroke-miterlimit="10" d="M.5 93.2a32.4 32.4 0 0032.4 32.4h129.8v-.1l2.3.1a34.8 34.8 0 006.5-68.9 32.4 32.4 0 00-48.5-33 48.6 48.6 0 00-88.6 37.1h-1.5A32.4 32.4 0 00.5 93.1Z"/></symbol><symbol id="overcast-e" viewBox="0 0 350 222"><path fill="url(#overcast-a)" stroke="#a3b9d6" stroke-miterlimit="10" stroke-width="6" d="m291 107-2.5.1A83.9 83.9 0 00135.6 43 56 56 0 0051 91a56.6 56.6 0 00.8 9A60 60 0 0063 219l4-.2v.2h224a56 56 0 000-112Z"/></symbol><symbol id="overcast-c" overflow="visible" viewBox="0 0 398 222"><use xlink:href="#overcast-d" width="200.3" height="126.1" transform="translate(198 27)"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="translate" values="-9 0; 9 0; -9 0"/></use><use xlink:href="#overcast-e" width="350" height="222"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="translate" values="-18 0; 18 0; -18 0"/></use></symbol><linearGradient id="overcast-a" x1="99.5" x2="232.6" y1="30.7" y2="261.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aec2dc"/><stop offset=".5" stop-color="#aec2dc"/><stop offset="1" stop-color="#98b0d0"/></linearGradient><linearGradient id="overcast-b" x1="52.7" x2="133.4" y1="9.6" y2="149.3" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9ca3af"/><stop offset=".5" stop-color="#9ca3af"/><stop offset="1" stop-color="#6b7280"/></linearGradient></defs><use xlink:href="#overcast-c" width="398" height="222" transform="translate(68.84 145)"/></symbol><symbol id="wi-partly-cloudy-day-rain" viewBox="0 0 512 512"><defs><linearGradient id="partly-cloudy-day-rain-a" x1="99.5" x2="232.6" y1="30.7" y2="261.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aec2dc"/><stop offset=".5" stop-color="#aec2dc"/><stop offset="1" stop-color="#98b0d0"/></linearGradient><linearGradient id="partly-cloudy-day-rain-b" x1="1381.3" x2="1399.5" y1="-1144.7" y2="-1097.4" gradientTransform="rotate(-9 8002.567 8233.063)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0b65ed"/><stop offset=".5" stop-color="#0a5ad4"/><stop offset="1" stop-color="#0950bc"/></linearGradient><linearGradient xlink:href="#partly-cloudy-day-rain-b" id="partly-cloudy-day-rain-c" x1="1436.7" x2="1454.9" y1="-1137" y2="-1089.7" gradientTransform="rotate(-9 8009.537 8233.037)"/><linearGradient xlink:href="#partly-cloudy-day-rain-b" id="partly-cloudy-day-rain-d" x1="1492.1" x2="1510.3" y1="-1129.3" y2="-1082.1" gradientTransform="rotate(-9 8016.566 8233.078)"/><linearGradient id="partly-cloudy-day-rain-e" x1="78" x2="118" y1="63.4" y2="132.7" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fbbf24"/><stop offset=".5" stop-color="#fbbf24"/><stop offset="1" stop-color="#f59e0b"/></linearGradient><symbol id="partly-cloudy-day-rain-g" viewBox="0 0 196 196"><circle cx="98" cy="98" r="40" fill="url(#partly-cloudy-day-rain-e)" stroke="#f8af18" stroke-miterlimit="10" stroke-width="4"/><path fill="none" stroke="#fbbf24" stroke-linecap="round" stroke-miterlimit="10" stroke-width="12" d="M98 31.4V6m0 184v-25.4M145.1 51l18-17.9M33 163l18-17.9M51 51 33 33m130.1 130.1-18-18M6 98h25.4M190 98h-25.4"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="rotate" values="0 98 98; 45 98 98"/></path></symbol><symbol id="partly-cloudy-day-rain-h" viewBox="0 0 350 222"><path fill="url(#partly-cloudy-day-rain-a)" stroke="#a3b9d6" stroke-miterlimit="10" stroke-width="6" d="m291 107-2.5.1A83.9 83.9 0 00135.6 43 56 56 0 0051 91a56.6 56.6 0 00.8 9A60 60 0 0063 219l4-.2v.2h224a56 56 0 000-112Z"/></symbol><symbol id="partly-cloudy-day-rain-f" viewBox="0 0 363 258"><use xlink:href="#partly-cloudy-day-rain-g" width="196" height="196"/><use xlink:href="#partly-cloudy-day-rain-h" width="350" height="222" transform="translate(13 36)"/></symbol><symbol id="partly-cloudy-day-rain-i" overflow="visible" viewBox="0 0 129 57"><path fill="url(#partly-cloudy-day-rain-b)" stroke="#0a5ad4" stroke-miterlimit="10" d="M8.5 56.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z" opacity=".45"><animateTransform id="partly-cloudy-day-rain-x1" additive="sum" attributeName="transform" begin="0s; partly-cloudy-day-rain-x1.end+.33s" dur=".67s" type="translate" values="0 -60; 0 60"/><animate id="partly-cloudy-day-rain-y1" attributeName="opacity" begin="0s; partly-cloudy-day-rain-y1.end+.33s" dur=".67s" keyTimes="0; .25; 1" values=".45; 1; .45"/></path><path fill="url(#partly-cloudy-day-rain-c)" stroke="#0a5ad4" stroke-miterlimit="10" d="M64.5 56.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z" opacity=".45"><animateTransform id="partly-cloudy-day-rain-x2" additive="sum" attributeName="transform" begin=".33s; partly-cloudy-day-rain-x2.end+.33s" dur=".67s" type="translate" values="0 -60; 0 60"/><animate id="partly-cloudy-day-rain-y2" attributeName="opacity" begin=".33s; partly-cloudy-day-rain-y2.end+.33s" dur=".67s" keyTimes="0; .25; 1" values=".45; 1; .45"/></path><path fill="url(#partly-cloudy-day-rain-d)" stroke="#0a5ad4" stroke-miterlimit="10" d="M120.5 56.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z" opacity=".45"><animateTransform id="partly-cloudy-day-rain-x3" additive="sum" attributeName="transform" begin="-.33s; partly-cloudy-day-rain-x3.end+.33s" dur=".67s" type="translate" values="0 -60; 0 60"/><animate id="partly-cloudy-day-rain-y3" attributeName="opacity" begin="-.33s; partly-cloudy-day-rain-y3.end+.33s" dur=".67s" keyTimes="0; .25; 1" values=".45; 1; .45"/></path></symbol></defs><use xlink:href="#partly-cloudy-day-rain-f" width="363" height="258" transform="translate(68 109)"/><use xlink:href="#partly-cloudy-day-rain-i" width="129" height="57" transform="translate(191.5 343.5)"/></symbol><symbol id="wi-partly-cloudy-day" viewBox="0 0 512 512"><defs><symbol id="partly-cloudy-day-d" viewBox="0 0 196 196"><circle cx="98" cy="98" r="40" fill="url(#partly-cloudy-day-b)" stroke="#f8af18" stroke-miterlimit="10" stroke-width="4"/><path fill="none" stroke="#fbbf24" stroke-linecap="round" stroke-miterlimit="10" stroke-width="12" d="M98 31.4V6m0 184v-25.4M145.1 51l18-17.9M33 163l18-17.9M51 51 33 33m130.1 130.1-18-18M6 98h25.4M190 98h-25.4"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="rotate" values="0 98 98; 45 98 98"/></path></symbol><symbol id="partly-cloudy-day-e" viewBox="0 0 350 222"><path fill="url(#partly-cloudy-day-a)" stroke="#a3b9d6" stroke-miterlimit="10" stroke-width="6" d="m291 107-2.5.1A83.9 83.9 0 00135.6 43 56 56 0 0051 91a56.6 56.6 0 00.8 9A60 60 0 0063 219l4-.2v.2h224a56 56 0 000-112Z"/></symbol><symbol id="partly-cloudy-day-c" viewBox="0 0 363 258"><use xlink:href="#partly-cloudy-day-d" width="196" height="196"/><use xlink:href="#partly-cloudy-day-e" width="350" height="222" transform="translate(13 36)"/></symbol><linearGradient id="partly-cloudy-day-a" x1="99.5" x2="232.6" y1="30.7" y2="261.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aec2dc"/><stop offset=".5" stop-color="#aec2dc"/><stop offset="1" stop-color="#98b0d0"/></linearGradient><linearGradient id="partly-cloudy-day-b" x1="78" x2="118" y1="63.4" y2="132.7" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fbbf24"/><stop offset=".5" stop-color="#fbbf24"/><stop offset="1" stop-color="#f59e0b"/></linearGradient></defs><use xlink:href="#partly-cloudy-day-c" width="363" height="258" transform="translate(68 109)"/></symbol><symbol id="wi-partly-cloudy-night-rain" viewBox="0 0 512 512"><defs><linearGradient id="partly-cloudy-night-rain-a" x1="99.5" x2="232.6" y1="30.7" y2="261.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aec2dc"/><stop offset=".5" stop-color="#aec2dc"/><stop offset="1" stop-color="#98b0d0"/></linearGradient><linearGradient id="partly-cloudy-night-rain-b" x1="34.7" x2="119.2" y1="18.6" y2="165" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6ab5d3"/><stop offset=".5" stop-color="#6ab5d3"/><stop offset="1" stop-color="#5eafcf"/></linearGradient><linearGradient id="partly-cloudy-night-rain-c" x1="1381.3" x2="1399.5" y1="-1144.7" y2="-1097.4" gradientTransform="rotate(-9 8002.567 8233.063)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0b65ed"/><stop offset=".5" stop-color="#0a5ad4"/><stop offset="1" stop-color="#0950bc"/></linearGradient><linearGradient xlink:href="#partly-cloudy-night-rain-c" id="partly-cloudy-night-rain-d" x1="1436.7" x2="1454.9" y1="-1137" y2="-1089.7" gradientTransform="rotate(-9 8009.537 8233.037)"/><linearGradient xlink:href="#partly-cloudy-night-rain-c" id="partly-cloudy-night-rain-e" x1="1492.1" x2="1510.3" y1="-1129.3" y2="-1082.1" gradientTransform="rotate(-9 8016.566 8233.078)"/><symbol id="partly-cloudy-night-rain-g" viewBox="0 0 172 172"><path fill="url(#partly-cloudy-night-rain-b)" stroke="#72b9d5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M160.6 107.4a84.8 84.8 0 01-85.4-84.3A83.3 83.3 0 0178 2 84.7 84.7 0 002 85.7 84.8 84.8 0 0087.4 170a85.2 85.2 0 0082.6-63.1 88 88 0 01-9.4.5Z"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="rotate" values="-15 86 86; 9 86 86; -15 86 86"/></path></symbol><symbol id="partly-cloudy-night-rain-h" viewBox="0 0 350 222"><path fill="url(#partly-cloudy-night-rain-a)" stroke="#a3b9d6" stroke-miterlimit="10" stroke-width="6" d="m291 107-2.5.1A83.9 83.9 0 00135.6 43 56 56 0 0051 91a56.6 56.6 0 00.8 9A60 60 0 0063 219l4-.2v.2h224a56 56 0 000-112Z"/></symbol><symbol id="partly-cloudy-night-rain-f" viewBox="0 0 351 246"><use xlink:href="#partly-cloudy-night-rain-g" width="172" height="172"/><use xlink:href="#partly-cloudy-night-rain-h" width="350" height="222" transform="translate(1 24)"/></symbol><symbol id="partly-cloudy-night-rain-i" overflow="visible" viewBox="0 0 129 57"><path fill="url(#partly-cloudy-night-rain-c)" stroke="#0a5ad4" stroke-miterlimit="10" d="M8.5 56.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z" opacity=".45"><animateTransform id="partly-cloudy-night-rain-x1" additive="sum" attributeName="transform" begin="0s; partly-cloudy-night-rain-x1.end+.33s" dur=".67s" type="translate" values="0 -60; 0 60"/><animate id="partly-cloudy-night-rain-y1" attributeName="opacity" begin="0s; partly-cloudy-night-rain-y1.end+.33s" dur=".67s" keyTimes="0; .25; 1" values=".45; 1; .45"/></path><path fill="url(#partly-cloudy-night-rain-d)" stroke="#0a5ad4" stroke-miterlimit="10" d="M64.5 56.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z" opacity=".45"><animateTransform id="partly-cloudy-night-rain-x2" additive="sum" attributeName="transform" begin=".33s; partly-cloudy-night-rain-x2.end+.33s" dur=".67s" type="translate" values="0 -60; 0 60"/><animate id="partly-cloudy-night-rain-y2" attributeName="opacity" begin=".33s; partly-cloudy-night-rain-y2.end+.33s" dur=".67s" keyTimes="0; .25; 1" values=".45; 1; .45"/></path><path fill="url(#partly-cloudy-night-rain-e)" stroke="#0a5ad4" stroke-miterlimit="10" d="M120.5 56.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z" opacity=".45"><animateTransform id="partly-cloudy-night-rain-x3" additive="sum" attributeName="transform" begin="-.33s; partly-cloudy-night-rain-x3.end+.33s" dur=".67s" type="translate" values="0 -60; 0 60"/><animate id="partly-cloudy-night-rain-y3" attributeName="opacity" begin="-.33s; partly-cloudy-night-rain-y3.end+.33s" dur=".67s" keyTimes="0; .25; 1" values=".45; 1; .45"/></path></symbol></defs><use xlink:href="#partly-cloudy-night-rain-f" width="351" height="246" transform="translate(80 121)"/><use xlink:href="#partly-cloudy-night-rain-i" width="129" height="57" transform="translate(191.5 343.5)"/></symbol><symbol id="wi-partly-cloudy-night" viewBox="0 0 512 512"><defs><symbol id="partly-cloudy-night-d" viewBox="0 0 172 172"><path fill="url(#partly-cloudy-night-b)" stroke="#72b9d5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M160.6 107.4a84.8 84.8 0 01-85.4-84.3A83.3 83.3 0 0178 2 84.7 84.7 0 002 85.7 84.8 84.8 0 0087.4 170a85.2 85.2 0 0082.6-63.1 88 88 0 01-9.4.5Z"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="rotate" values="-15 86 86; 9 86 86; -15 86 86"/></path></symbol><symbol id="partly-cloudy-night-e" viewBox="0 0 350 222"><path fill="url(#partly-cloudy-night-a)" stroke="#a3b9d6" stroke-miterlimit="10" stroke-width="6" d="m291 107-2.5.1A83.9 83.9 0 00135.6 43 56 56 0 0051 91a56.6 56.6 0 00.8 9A60 60 0 0063 219l4-.2v.2h224a56 56 0 000-112Z"/></symbol><symbol id="partly-cloudy-night-c" viewBox="0 0 351 246"><use xlink:href="#partly-cloudy-night-d" width="172" height="172"/><use xlink:href="#partly-cloudy-night-e" width="350" height="222" transform="translate(1 24)"/></symbol><linearGradient id="partly-cloudy-night-a" x1="99.5" x2="232.6" y1="30.7" y2="261.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aec2dc"/><stop offset=".5" stop-color="#aec2dc"/><stop offset="1" stop-color="#98b0d0"/></linearGradient><linearGradient id="partly-cloudy-night-b" x1="34.7" x2="119.2" y1="18.6" y2="165" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6ab5d3"/><stop offset=".5" stop-color="#6ab5d3"/><stop offset="1" stop-color="#5eafcf"/></linearGradient></defs><use xlink:href="#partly-cloudy-night-c" width="351" height="246" transform="translate(80 121)"/></symbol><symbol id="wi-rain" viewBox="0 0 512 512"><defs><linearGradient id="rain-a" x1="99.5" x2="232.6" y1="30.7" y2="261.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aec2dc"/><stop offset=".5" stop-color="#aec2dc"/><stop offset="1" stop-color="#98b0d0"/></linearGradient><linearGradient id="rain-b" x1="1381.3" x2="1399.5" y1="-1144.7" y2="-1097.4" gradientTransform="rotate(-9 8002.567 8233.063)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0b65ed"/><stop offset=".5" stop-color="#0a5ad4"/><stop offset="1" stop-color="#0950bc"/></linearGradient><linearGradient xlink:href="#rain-b" id="rain-c" x1="1436.7" x2="1454.9" y1="-1137" y2="-1089.7" gradientTransform="rotate(-9 8009.537 8233.037)"/><linearGradient xlink:href="#rain-b" id="rain-d" x1="1492.1" x2="1510.3" y1="-1129.3" y2="-1082.1" gradientTransform="rotate(-9 8016.566 8233.078)"/><symbol id="rain-e" viewBox="0 0 350 222"><path fill="url(#rain-a)" stroke="#a3b9d6" stroke-miterlimit="10" stroke-width="6" d="m291 107-2.5.1A83.9 83.9 0 00135.6 43 56 56 0 0051 91a56.6 56.6 0 00.8 9A60 60 0 0063 219l4-.2v.2h224a56 56 0 000-112Z"/></symbol><symbol id="rain-f" overflow="visible" viewBox="0 0 129 57"><path fill="url(#rain-b)" stroke="#0a5ad4" stroke-miterlimit="10" d="M8.5 56.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z" opacity=".45"><animateTransform id="rain-x1" additive="sum" attributeName="transform" begin="0s; rain-x1.end+.33s" dur=".67s" type="translate" values="0 -60; 0 60"/><animate id="rain-y1" attributeName="opacity" begin="0s; rain-y1.end+.33s" dur=".67s" keyTimes="0; .25; 1" values=".45; 1; .45"/></path><path fill="url(#rain-c)" stroke="#0a5ad4" stroke-miterlimit="10" d="M64.5 56.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z" opacity=".45"><animateTransform id="rain-x2" additive="sum" attributeName="transform" begin=".33s; rain-x2.end+.33s" dur=".67s" type="translate" values="0 -60; 0 60"/><animate id="rain-y2" attributeName="opacity" begin=".33s; rain-y2.end+.33s" dur=".67s" keyTimes="0; .25; 1" values=".45; 1; .45"/></path><path fill="url(#rain-d)" stroke="#0a5ad4" stroke-miterlimit="10" d="M120.5 56.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z" opacity=".45"><animateTransform id="rain-x3" additive="sum" attributeName="transform" begin="-.33s; rain-x3.end+.33s" dur=".67s" type="translate" values="0 -60; 0 60"/><animate id="rain-y3" attributeName="opacity" begin="-.33s; rain-y3.end+.33s" dur=".67s" keyTimes="0; .25; 1" values=".45; 1; .45"/></path></symbol></defs><use xlink:href="#rain-e" width="350" height="222" transform="translate(81 145)"/><use xlink:href="#rain-f" width="129" height="57" transform="translate(191.5 343.5)"/></symbol><symbol id="wi-snow" viewBox="0 0 512 512"><defs><linearGradient id="snow-a" x1="99.5" x2="232.6" y1="30.7" y2="261.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aec2dc"/><stop offset=".5" stop-color="#aec2dc"/><stop offset="1" stop-color="#98b0d0"/></linearGradient><linearGradient id="snow-b" x1="11.4" x2="32.8" y1="5.9" y2="43.1" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6ab5d3"/><stop offset=".5" stop-color="#6ab5d3"/><stop offset="1" stop-color="#5eafcf"/></linearGradient><linearGradient xlink:href="#snow-b" id="snow-c" x1="67.4" x2="88.8" y1="5.9" y2="43.1"/><linearGradient xlink:href="#snow-b" id="snow-d" x1="123.4" x2="144.8" y1="5.9" y2="43.1"/><symbol id="snow-e" viewBox="0 0 350 222"><path fill="url(#snow-a)" stroke="#a3b9d6" stroke-miterlimit="10" stroke-width="6" d="m291 107-2.5.1A83.9 83.9 0 00135.6 43 56 56 0 0051 91a56.6 56.6 0 00.8 9A60 60 0 0063 219l4-.2v.2h224a56 56 0 000-112Z"/></symbol><symbol id="snow-f" overflow="visible" viewBox="0 0 156.2 49"><g><path fill="url(#snow-b)" stroke="#6ab5d3" stroke-miterlimit="10" d="m41.7 31-5.8-3.3a13.7 13.7 0 000-6.5l5.8-3.2a4 4 0 001.5-5.5 4 4 0 00-5.6-1.5l-5.8 3.3a13.6 13.6 0 00-2.6-2 13.8 13.8 0 00-3-1.3V4.5a4 4 0 00-8.1 0v6.6a14.3 14.3 0 00-5.7 3.2L6.6 11A4 4 0 001 12.5 4 4 0 002.5 18l5.8 3.3a13.7 13.7 0 000 6.5L2.5 31A4 4 0 001 36.5a4 4 0 003.5 2 4 4 0 002-.5l5.8-3.3a13.6 13.6 0 002.6 2 13.8 13.8 0 003 1.2v6.6a4 4 0 008.2 0v-6.6a14.2 14.2 0 005.6-3.2l6 3.3a4 4 0 002 .5 4 4 0 003.4-2 4 4 0 00-1.4-5.5ZM19 29.7a6 6 0 01-2.3-8.2 6.1 6.1 0 015.3-3 6.2 6.2 0 013 .8 6 6 0 012.2 8.2 6.1 6.1 0 01-8.2 2.2Z" opacity=".45"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="rotate" values="0 24 24; 360 24 24"/><animate id="snow-t1" attributeName="opacity" begin="0s; snow-t1.end+1s" dur="2s" keyTimes="0; .17; .83; 1" values="0; 1; 1; 0"/></path><animateTransform id="snow-s1" additive="sum" attributeName="transform" begin="0s; snow-s1.end+1s" dur="2s" type="translate" values="0 -36; 0 92;"/></g><g><path fill="url(#snow-c)" stroke="#6ab5d3" stroke-miterlimit="10" d="m97.7 31-5.8-3.3a13.7 13.7 0 000-6.5l5.8-3.2a4 4 0 001.5-5.5 4 4 0 00-5.6-1.5l-5.8 3.3a13.6 13.6 0 00-2.6-2 13.8 13.8 0 00-3-1.3V4.5a4 4 0 00-8.1 0v6.6a14.3 14.3 0 00-5.7 3.2L62.6 11a4 4 0 00-5.6 1.5 4 4 0 001.5 5.5l5.8 3.3a13.7 13.7 0 000 6.5L58.5 31a4 4 0 00-1.5 5.5 4 4 0 003.5 2 4 4 0 002-.5l5.8-3.3a13.6 13.6 0 002.7 2 13.8 13.8 0 003 1.2v6.6a4 4 0 008 0v-6.6a14.2 14.2 0 005.7-3.2l6 3.3a4 4 0 002 .5 4 4 0 003.4-2 4 4 0 00-1.4-5.5ZM75 29.7a6 6 0 01-2.3-8.2 6.1 6.1 0 015.3-3 6.2 6.2 0 013 .8 6 6 0 012.2 8.2 6.1 6.1 0 01-8.2 2.2Z" opacity=".45"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="rotate" values="0 80 24; 360 80 24"/><animate id="snow-t2" attributeName="opacity" begin="-.83s; snow-t2.end+1s" dur="2s" keyTimes="0; .17; .83; 1" values="0; 1; 1; 0"/></path><animateTransform id="snow-s2" additive="sum" attributeName="transform" begin="-.83s; snow-s2.end+1s" dur="2s" type="translate" values="0 -36; 0 92;"/></g><g><path fill="url(#snow-d)" stroke="#6ab5d3" stroke-miterlimit="10" d="m153.7 31-5.8-3.3a13.7 13.7 0 000-6.5l5.8-3.2a4 4 0 001.5-5.5 4 4 0 00-5.6-1.5l-5.8 3.3a13.6 13.6 0 00-2.6-2 13.8 13.8 0 00-3-1.3V4.5a4 4 0 00-8.1 0v6.6a14.3 14.3 0 00-5.7 3.2l-5.8-3.3a4 4 0 00-5.6 1.5 4 4 0 001.5 5.5l5.8 3.3a13.7 13.7 0 000 6.5l-5.8 3.2a4 4 0 00-1.5 5.5 4 4 0 003.5 2 4 4 0 002-.5l5.8-3.3a13.6 13.6 0 002.7 2 13.8 13.8 0 003 1.2v6.6a4 4 0 008 0v-6.6a14.2 14.2 0 005.7-3.2l5.8 3.3a4 4 0 002 .5 4 4 0 003.5-2 4 4 0 00-1.3-5.5ZM131 29.7a6 6 0 01-2.3-8.2 6.1 6.1 0 015.3-3 6.2 6.2 0 013 .8 6 6 0 012.2 8.2 6.1 6.1 0 01-8.2 2.2Z" opacity=".45"><animateTransform additive="sum" attributeName="transform" dur="6s" repeatCount="indefinite" type="rotate" values="0 136 24; 360 136 24"/><animate id="snow-t3" attributeName="opacity" begin=".83s; snow-t3.end+1s" dur="2s" keyTimes="0; .17; .83; 1" values="0; 1; 1; 0"/></path><animateTransform id="snow-s3" additive="sum" attributeName="transform" begin=".83s; snow-s3.end+1s" dur="2s" type="translate" values="0 -36; 0 92;"/></g></symbol></defs><use xlink:href="#snow-e" width="350" height="222" transform="translate(81 145)"/><use xlink:href="#snow-f" width="156.2" height="49" transform="translate(177.9 337.5)"/></symbol><symbol id="wi-thunderstorms-rain" viewBox="0 0 512 512"><defs><linearGradient id="thunderstorms-rain-a" x1="99.5" x2="232.6" y1="30.7" y2="261.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#aec2dc"/><stop offset=".5" stop-color="#aec2dc"/><stop offset="1" stop-color="#98b0d0"/></linearGradient><linearGradient id="thunderstorms-rain-b" x1="8.7" x2="80.9" y1="17.1" y2="142.1" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f7b23b"/><stop offset=".5" stop-color="#f7b23b"/><stop offset="1" stop-color="#f59e0b"/></linearGradient><linearGradient id="thunderstorms-rain-c" x1="1381.3" x2="1399.5" y1="-1144.7" y2="-1097.4" gradientTransform="rotate(-9 8002.567 8233.063)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0b65ed"/><stop offset=".5" stop-color="#0a5ad4"/><stop offset="1" stop-color="#0950bc"/></linearGradient><linearGradient xlink:href="#thunderstorms-rain-c" id="thunderstorms-rain-d" x1="1436.7" x2="1454.9" y1="-1137" y2="-1089.7" gradientTransform="rotate(-9 8009.537 8233.037)"/><linearGradient xlink:href="#thunderstorms-rain-c" id="thunderstorms-rain-e" x1="1492.1" x2="1510.3" y1="-1129.3" y2="-1082.1" gradientTransform="rotate(-9 8016.566 8233.078)"/><symbol id="thunderstorms-rain-f" viewBox="0 0 350 222"><path fill="url(#thunderstorms-rain-a)" stroke="#a3b9d6" stroke-miterlimit="10" stroke-width="6" d="m291 107-2.5.1A83.9 83.9 0 00135.6 43 56 56 0 0051 91a56.6 56.6 0 00.8 9A60 60 0 0063 219l4-.2v.2h224a56 56 0 000-112Z"/></symbol><symbol id="thunderstorms-rain-g" overflow="visible" viewBox="0 0 129 57"><path fill="url(#thunderstorms-rain-c)" stroke="#0a5ad4" stroke-miterlimit="10" d="M8.5 56.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z" opacity=".45"><animateTransform id="thunderstorms-rain-x1" additive="sum" attributeName="transform" begin="0s; thunderstorms-rain-x1.end+.33s" dur=".67s" type="translate" values="0 -60; 0 60"/><animate id="thunderstorms-rain-y1" attributeName="opacity" begin="0s; thunderstorms-rain-y1.end+.33s" dur=".67s" keyTimes="0; .25; 1" values=".45; 1; .45"/></path><path fill="url(#thunderstorms-rain-d)" stroke="#0a5ad4" stroke-miterlimit="10" d="M64.5 56.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z" opacity=".45"><animateTransform id="thunderstorms-rain-x2" additive="sum" attributeName="transform" begin=".33s; thunderstorms-rain-x2.end+.33s" dur=".67s" type="translate" values="0 -60; 0 60"/><animate id="thunderstorms-rain-y2" attributeName="opacity" begin=".33s; thunderstorms-rain-y2.end+.33s" dur=".67s" keyTimes="0; .25; 1" values=".45; 1; .45"/></path><path fill="url(#thunderstorms-rain-e)" stroke="#0a5ad4" stroke-miterlimit="10" d="M120.5 56.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z" opacity=".45"><animateTransform id="thunderstorms-rain-x3" additive="sum" attributeName="transform" begin="-.33s; thunderstorms-rain-x3.end+.33s" dur=".67s" type="translate" values="0 -60; 0 60"/><animate id="thunderstorms-rain-y3" attributeName="opacity" begin="-.33s; thunderstorms-rain-y3.end+.33s" dur=".67s" keyTimes="0; .25; 1" values=".45; 1; .45"/></path></symbol><symbol id="thunderstorms-rain-h" viewBox="0 0 102.7 186.8"><path fill="url(#thunderstorms-rain-b)" stroke="#f6a823" stroke-miterlimit="10" stroke-width="4" d="m34.8 2-32 96h32l-16 80 80-112h-48l32-64h-48z"><animate id="thunderstorms-rain-x1__dup2" attributeName="opacity" begin="0s; thunderstorms-rain-x1.end+.67s" dur="1.33s" keyTimes="0; .38; .5; .63; .75; .86; .94; 1" values="1; 1; 0; 1; 0; 1; 0; 1"/></path></symbol></defs><use xlink:href="#thunderstorms-rain-f" width="350" height="222" transform="translate(81 145)"/><use xlink:href="#thunderstorms-rain-g" width="129" height="57" transform="translate(191.5 343.5)"/><use xlink:href="#thunderstorms-rain-h" width="102.7" height="186.7" transform="translate(205.23 291)"/></symbol></svg>
+
     <!-- ══ WEATHER OVERLAY ═══════════════════════════════════════════════ -->
     <!-- Three tabs, and only three, because the free tier gives three.
          SAVIO'S POLICY, restated 2026-10-04: "we only use free tiers available
@@ -2007,8 +2052,15 @@ try{
         <button id="wxtab-now" class="on" onclick="switchWxTab('now')">Now</button>
         <button id="wxtab-d3" onclick="switchWxTab('d3')">3 Days</button>
         <button id="wxtab-d5" onclick="switchWxTab('d5')">5 Days</button>
+        <button id="wxtab-radar" onclick="switchWxTab('radar')">Radar</button>
       </div>
       <div id="wx-body"></div>
+      <!-- The radar lives in its OWN element rather than inside #wx-body,
+           which renderWxBody() rewrites wholesale. A map rebuilt from scratch
+           on every repaint would re-request every tile, lose the pan and
+           restart the animation — and would breach OpenStreetMap's policy on
+           re-fetching rather than caching. Hidden until its tab is chosen. -->
+      <div id="wx-radar" style="display:none"></div>
       <div id="wx-foot"></div>
     </div>
 
@@ -2586,6 +2638,19 @@ async function bfetch(url, opts){
 const _ERR_SEEN = Object.create(null);
 let _errSent = 0;
 const _ERR_MAX_PER_SESSION = 8;   // a loop must never become a mail storm
+// Set the moment the page starts going away, and read by bellaReportError to
+// tell a request the user KILLED from one that genuinely failed. Declared here
+// rather than beside the listener so it exists before the first report can
+// fire -- a `let` read before its declaration throws, and throwing inside the
+// error reporter is the one place a fault would be invisible.
+// `pagehide` is the reliable one on iOS Safari, where `beforeunload` is not;
+// both are harmless to listen for. The existing pagehide handler further down
+// is deliberately empty and is left exactly as it is.
+let _pageLeaving = false;
+try{
+  window.addEventListener('pagehide', function(){ _pageLeaving = true; });
+  window.addEventListener('beforeunload', function(){ _pageLeaving = true; });
+}catch(e){}
 async function bellaReportError(where, detail, meta){
   try{
     // A TEST MUST NEVER REACH HIS INBOX OR HIS ERRORS TAB.
@@ -2598,6 +2663,16 @@ async function bellaReportError(where, detail, meta){
     // it. Nothing else is filtered: a real browser in a real session is always
     // reported.
     if(/HeadlessChrome/i.test(navigator.userAgent||'')) return;
+    // A RELOAD IS NOT A FAULT. Navigating away kills every request in flight,
+    // and each one throws "Failed to fetch" while navigator.onLine is still
+    // true -- so a plain Cmd+Shift+R mid-sync emailed him about a fault that
+    // never happened. Measured 2026-10-26: one refresh during a thread sync,
+    // one email, nothing actually wrong.
+    // ONLY NETWORK-ABORT WORDING IS SUPPRESSED, and only while leaving. A real
+    // error thrown on the way out still goes, which is what `keepalive` below
+    // exists for -- the point is to drop the aborted request, not the report.
+    if(_pageLeaving && /failed to fetch|networkerror|load failed|aborted|the user aborted/i
+        .test(String(detail == null ? '' : detail))) return;
     const sig = String(where) + '|' + String(detail == null ? '' : detail).slice(0, 200);
     if(_ERR_SEEN[sig]){ _ERR_SEEN[sig]++; return; }   // the same fault twice is not news
     _ERR_SEEN[sig] = 1;
@@ -13820,17 +13895,139 @@ function initLocation(){
 // It is also the only real test of the OPENWEATHER_API_KEY rotated on
 // 2026-10-03: /health does not check that key, so a good key and a bad one
 // look identical from outside. A live call through this panel is the proof.
+// OpenWeather's icon code -> Meteocons symbol. Day and night are kept apart
+// wherever Meteocons draws them differently, which is why 01/02/10 have two
+// entries and 03/04/11/13/50 share one.
 const WX_ICON = {
-  '01d':'☀️','01n':'🌙','02d':'🌤','02n':'☁️','03d':'⛅','03n':'☁️',
-  '04d':'☁️','04n':'☁️','09d':'🌧','09n':'🌧','10d':'🌦','10n':'🌧',
-  '11d':'⛈','11n':'⛈','13d':'🌨','13n':'🌨','50d':'🌫','50n':'🌫'
+  '01d':'clear-day',             '01n':'clear-night',
+  '02d':'partly-cloudy-day',     '02n':'partly-cloudy-night',
+  '03d':'cloudy',                '03n':'cloudy',
+  '04d':'overcast',              '04n':'overcast',
+  '09d':'rain',                  '09n':'rain',
+  '10d':'partly-cloudy-day-rain','10n':'partly-cloudy-night-rain',
+  '11d':'thunderstorms-rain',    '11n':'thunderstorms-rain',
+  '13d':'snow',                  '13n':'snow',
+  '50d':'mist',                  '50n':'mist'
 };
+// SOMEBODY WHO HAS ASKED THEIR DEVICE TO STOP MOVING THINGS MEANS IT. SMIL
+// cannot be stopped by CSS, so the animation elements are removed outright --
+// the artwork is unchanged, it simply holds still. Done once, on first use.
+let _wxMotionChecked = false;
+function _wxHonourReducedMotion(){
+  if(_wxMotionChecked) return;
+  _wxMotionChecked = true;
+  try{
+    if(!window.matchMedia || !matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const sp = document.getElementById('wx-sprite');
+    if(!sp) return;
+    sp.querySelectorAll('animate,animateTransform,animateMotion').forEach(n => n.remove());
+  }catch(e){}
+}
 const WX_STALE_MS = 15 * 60 * 1000;   // OpenWeather's own data moves no faster
 let _wxData = null, _wxAt = 0, _wxTab = 'now', _wxBusy = false, _wxErr = '';
+// Which day row is open, as a date key rather than an index: renderWxBody()
+// rebuilds the list on every repaint and an index would silently come to mean
+// a different day once the 5-day window rolls over at midnight.
+let _wxOpenDay = null;
 
-function _wxIcon(c){ return WX_ICON[c] || '🌡'; }
+// ── UNITS ──────────────────────────────────────────────────────────────────
+// `/weather` has ALWAYS accepted a `units` parameter and the page has never
+// passed one, so metric was never a decision — it was the server default
+// showing through. Persisted per device, because the one person who wants
+// Fahrenheit should not flip it for everybody.
+let _wxUnits = 'metric';
+try { if(localStorage.getItem('b_wx_units') === 'imperial') _wxUnits = 'imperial'; } catch(e){}
+function _wxIsImperial(){ return _wxUnits === 'imperial'; }
+
+// A STILL COPY OF ONE ICON, BUILT ONCE, ON DEMAND.
+// Measured 2026-10-26 on a 390px phone viewport: one animated icon in the top
+// bar costs 2.41% of the main thread CONTINUOUSLY, because that cell is on
+// screen all day — while all fourteen icons with the panel open cost only
+// 4.28%. Nearly all of it is the fixed price of running the SVG clock at all.
+// So the panel animates and the top bar does not, and the artwork is identical
+// either way. SMIL cannot be stopped by CSS, so the motion is removed from a
+// clone rather than hidden.
+// The clone's own gradient ids are re-namespaced: leaving them would put two
+// elements with the same id in the document, and every url(#…) in the copy
+// would silently resolve to the original's.
+function _wxStillSymbol(name){
+  const id = 'wi-s-' + name;
+  try{
+    if(document.getElementById(id)) return id;
+    const src = document.getElementById('wi-' + name);
+    const sp  = document.getElementById('wx-sprite');
+    if(!src || !sp) return 'wi-' + name;          // fall back to the animated one
+    const clone = src.cloneNode(true);
+    clone.setAttribute('id', id);
+    clone.querySelectorAll('animate,animateTransform,animateMotion').forEach(n => n.remove());
+    let html = clone.innerHTML;
+    const ids = Array.from(new Set((html.match(/id="([^"]+)"/g) || []).map(m => m.slice(4, -1))));
+    ids.sort((a, b) => b.length - a.length).forEach(i => {
+      html = html.split('id="' + i + '"').join('id="s-' + i + '"')
+                 .split('url(#' + i + ')').join('url(#s-' + i + ')')
+                 .split('href="#' + i + '"').join('href="#s-' + i + '"');
+    });
+    clone.innerHTML = html;
+    sp.appendChild(clone);
+    return id;
+  }catch(e){ return 'wi-' + name; }
+}
+
+// Returns MARKUP now, not a character — so every call site must write it as
+// HTML. The two that used textContent were changed with it.
+// `still` is passed by the top-bar cell only.
+function _wxIcon(c, still){
+  _wxHonourReducedMotion();
+  const n = WX_ICON[c] || 'cloudy';
+  const sym = still ? _wxStillSymbol(n) : ('wi-' + n);
+  return '<svg class="wx-ico" aria-hidden="true" focusable="false"><use href="#' + sym + '"></use></svg>';
+}
 function _wxTemp(t){ return (t === null || t === undefined) ? '—' : Math.round(t) + '°'; }
 function _wxCap(s){ return String(s || '').replace(/\b\w/g, m => m.toUpperCase()); }
+function _wxDeg(){ return _wxIsImperial() ? 'F' : 'C'; }
+
+// WIND IS THE ONE FIELD WHOSE UNIT CHANGES SHAPE, NOT JUST SCALE. OpenWeather
+// sends metres per second under `metric` and miles per hour under `imperial`,
+// so the x3.6 that turns m/s into km/h must NOT be applied to an imperial
+// reading. Getting this wrong reports a gale as a breeze.
+function _wxWind(v){
+  if(v === null || v === undefined) return '—';
+  return _wxIsImperial() ? Math.round(v) + ' mph' : Math.round(v * 3.6) + ' km/h';
+}
+function _wxDist(m){
+  if(m === null || m === undefined) return '—';
+  return _wxIsImperial() ? (m / 1609.344).toFixed(1) + ' mi' : (m / 1000).toFixed(1) + ' km';
+}
+// Rain is millimetres on BOTH unit systems — OpenWeather documents mm as the
+// only option for precipitation volume. So this one deliberately does not branch.
+function _wxRain(mm){
+  if(mm === null || mm === undefined) return '';
+  return (mm < 1 ? mm.toFixed(1) : Math.round(mm)) + ' mm';
+}
+const _WX_COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+function _wxDir(deg){
+  if(deg === null || deg === undefined) return '';
+  return _WX_COMPASS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16];
+}
+// `pop` arrives 0..1 and is deliberately left that way by the backend so this
+// side never has to guess which scale it was handed.
+function _wxPop(p){
+  if(p === null || p === undefined) return null;
+  return Math.round(p * 100);
+}
+
+// OpenWeather's own 1..5 scale. The dot is painted as a BACKGROUND, never as a
+// text colour: `body.dark *{color:#F5E6C8!important}` outranks a class however
+// many !importants it carries, so a coloured word would come out cream in dark
+// mode and the whole signal would be lost. A background is untouched by it.
+const WX_AQI = [
+  null,
+  { label: 'Good',      dot: '#2E9B5B' },
+  { label: 'Fair',      dot: '#8FBF3F' },
+  { label: 'Moderate',  dot: '#E0A526' },
+  { label: 'Poor',      dot: '#E2703A' },
+  { label: 'Very Poor', dot: '#C64040' }
+];
 
 // Honours the topbar's own 12/24h toggle. 24-hour time everywhere is Savio's
 // issue #10, and _clockFormat24 is the single place that preference lives.
@@ -13859,14 +14056,20 @@ function _wxCoords(){
 function setWeatherCellState(main, sub){
   const m = document.getElementById('tb-wx-main');
   const s = document.getElementById('tb-wx-sub');
-  if(m) m.textContent = main;
+  // innerHTML because `main` now carries an <svg> icon. Everything composed
+  // into it is either a number or one of this file's own literals -- the one
+  // caller that passes anything else is the error path, which sends '🌡 —'.
+  if(m) m.innerHTML = main;
   if(s) s.textContent = sub;
 }
 
 function renderWeatherCell(){
   const c = _wxData && _wxData.current;
   if(!c) return;
-  setWeatherCellState(_wxIcon(c.icon) + ' ' + _wxTemp(c.temp),
+  // `true` = the still copy. THE ONLY CALL SITE THAT ASKS FOR IT: this cell is
+  // on screen all day, and it is the one place where motion is charged to the
+  // battery permanently rather than only while somebody is looking.
+  setWeatherCellState(_wxIcon(c.icon, true) + ' ' + _wxTemp(c.temp),
                       _wxCap(c.description) || c.city || 'Weather');
 }
 
@@ -13879,7 +14082,7 @@ async function fetchWeather(force){
   try{
     const r = await bfetch(BACKEND + '/weather', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ lat: loc.lat, lon: loc.lon, units: 'metric' })
+      body: JSON.stringify({ lat: loc.lat, lon: loc.lon, units: _wxUnits })
     });
     const d = await r.json();
     if(!r.ok || d.error) throw new Error(d.error || ('HTTP ' + r.status));
@@ -13924,14 +14127,45 @@ function _wxDays(){
       const gap = Math.abs(s.when.getHours() - 13);
       if(gap < best){ best = gap; pick = s; }
     });
+    // CHANCE OF RAIN FOR A DAY IS THE WORST OF ITS SLOTS, NOT THEIR AVERAGE.
+    // A 90% downpour at 15:00 inside an otherwise dry day averages down to
+    // about 15% — which would tell somebody it is safe to go out on the one
+    // afternoon it is certain to pour. Rainfall VOLUME is a total, because
+    // millimetres genuinely add up over the day.
+    const pops = d.slots.map(s => s.f.pop).filter(p => typeof p === 'number');
+    const rains = d.slots.map(s => s.f.rain3h).filter(r => typeof r === 'number');
+    const winds = d.slots.map(s => s.f.windSpeed).filter(w => typeof w === 'number');
+    const gusts = d.slots.map(s => s.f.windGust).filter(w => typeof w === 'number');
     return {
       when: d.when,
       min: temps.length ? Math.min.apply(null, temps) : null,
       max: temps.length ? Math.max.apply(null, temps) : null,
       icon: pick.f.icon,
-      description: pick.f.description
+      description: pick.f.description,
+      condition: pick.f.condition,
+      // Every one of these is undefined until release 38 is deployed, and each
+      // render site below hides its row when that is so. One frontend build
+      // therefore serves both the current backend and the next one.
+      pop: pops.length ? Math.max.apply(null, pops) : null,
+      rain: rains.length ? rains.reduce((a, b) => a + b, 0) : null,
+      wind: winds.length ? Math.max.apply(null, winds) : null,
+      gust: gusts.length ? Math.max.apply(null, gusts) : null,
+      windDeg: pick.f.windDeg,
+      cloudCover: pick.f.cloudCover,
+      humidity: pick.f.humidity,
+      slots: d.slots           // kept so a day row can open its own hours
     };
   });
+}
+
+// The key a day row is remembered by while open. Date-based, so it survives a
+// repaint and cannot drift onto a different day as the window rolls forward.
+function _wxDayKey(d){
+  return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+}
+function toggleWxDay(key){
+  _wxOpenDay = (_wxOpenDay === key) ? null : key;
+  renderWxBody();
 }
 
 const _WX_DAYS3 = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -13945,9 +14179,68 @@ function _wxDayLabel(d){
   return _WX_DAYS3[d.getDay()] + ' ' + d.getDate();
 }
 
-function _wxStat(lbl, val){
+function _wxStat(lbl, val, sub){
   return '<div class="wx-stat"><div class="wx-stat-lbl">' + lbl + '</div>' +
-         '<div class="wx-stat-val">' + _expEsc(val) + '</div></div>';
+         '<div class="wx-stat-val">' + _expEsc(val) + '</div>' +
+         (sub ? '<div class="wx-stat-sub">' + _expEsc(sub) + '</div>' : '') +
+         '</div>';
+}
+
+// Air quality. A whole free endpoint that nothing had ever called — and in
+// Kolkata it is the number most worth knowing. `airQuality` is null when the
+// leg failed and undefined on any backend before release 38; both mean "say
+// nothing" rather than "say unknown".
+function _wxAirCard(){
+  const q = _wxData && _wxData.airQuality;
+  if(!q || !q.aqi) return '';
+  const band = WX_AQI[q.aqi] || WX_AQI[3];
+  const bits = [];
+  if(q.pm2_5 != null) bits.push('PM2.5 ' + Math.round(q.pm2_5));
+  if(q.pm10  != null) bits.push('PM10 ' + Math.round(q.pm10));
+  return '<div class="wx-aqi">' +
+    '<span class="wx-aqi-dot" style="background:' + band.dot + '"></span>' +
+    '<span class="wx-aqi-main">Air quality &mdash; ' + _expEsc(band.label) + '</span>' +
+    (bits.length ? '<span class="wx-aqi-sub">' +
+      bits.map(_expEsc).join(' &middot; ') + ' µg/m³</span>' : '') +
+    '</div>';
+}
+
+// The hours inside one day. NO NEW REQUEST IS MADE HERE — all 40 three-hourly
+// slots have always arrived with the forecast and the panel was collapsing
+// them to five rows and discarding the rest.
+function _wxHours(d){
+  const D = _wxDeg();
+  const rows = (d.slots || []).map(s => {
+    const f = s.f;
+    const pop = _wxPop(f.pop);
+    const dir = _wxDir(f.windDeg);
+    return '<div class="wx-hr">' +
+      '<span class="wx-hr-t">' + _expEsc(_wxClock(s.when)) + '</span>' +
+      '<span class="wx-hr-i">' + _wxIcon(f.icon) + '</span>' +
+      '<span class="wx-hr-temp">' + _wxTemp(f.temp) + D + '</span>' +
+      '<span class="wx-hr-pop">' + (pop != null ? '<span class="wx-drop">&#128167;</span>' + pop + '%' : '') + '</span>' +
+      '<span class="wx-hr-rain">' + (f.rain3h != null ? _expEsc(_wxRain(f.rain3h)) : '') + '</span>' +
+      '<span class="wx-hr-wind">' + _expEsc((dir ? dir + ' ' : '') + _wxWind(f.windSpeed)) + '</span>' +
+      '</div>';
+  }).join('');
+  return '<div class="wx-hours">' + rows +
+    '<div class="wx-hours-note">Three-hourly readings. ' +
+    (d.rain != null && d.rain > 0 ? _expEsc(_wxRain(d.rain)) + ' expected across the day.' : '') +
+    '</div></div>';
+}
+
+// Changing the unit changes what the SERVER is asked for, not just how the
+// number is printed — OpenWeather does the conversion. So this refetches,
+// and forces it past the 15-minute cache, or the panel would keep showing
+// Celsius figures with an F after them.
+function setWxUnits(u){
+  if(u !== 'metric' && u !== 'imperial') return;
+  if(u === _wxUnits) return;
+  _wxUnits = u;
+  try { localStorage.setItem('b_wx_units', u); } catch(e){}
+  _wxData = null;              // the held copy is in the OLD unit
+  renderWxBody();              // paints "Loading…" immediately
+  fetchWeather(true);
 }
 
 function renderWxBody(){
@@ -13969,36 +14262,78 @@ function renderWxBody(){
   }
 
   const c = _wxData.current || {};
-  if(title) title.textContent = _wxIcon(c.icon) + '  ' +
-    ([c.city, c.country].filter(Boolean).join(', ') || 'Weather');
+  if(title) title.innerHTML = _wxIcon(c.icon) + ' ' +
+    _expEsc([c.city, c.country].filter(Boolean).join(', ') || 'Weather');
 
   if(_wxTab === 'now'){
+    const D = _wxDeg();
+    // Today's high/low under the conditions word. Absent on the current
+    // backend, so the whole line disappears rather than printing "— / —".
+    const hilo = (c.tempMax != null || c.tempMin != null)
+      ? '<div id="wx-now-hilo">High ' + _wxTemp(c.tempMax) + ' · Low ' + _wxTemp(c.tempMin) + '</div>'
+      : '';
+    // Wind reads as one fact, not three boxes: speed, the direction it is
+    // coming FROM, and the gust if there is one worth naming.
+    let windVal = _wxWind(c.windSpeed);
+    const wdir = _wxDir(c.windDeg);
+    if(wdir) windVal = wdir + ' ' + windVal;
+    const windSub = (c.windGust != null) ? 'gusting ' + _wxWind(c.windGust) : '';
+
     el.innerHTML =
       '<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">' +
         '<div id="wx-now-ico">' + _wxIcon(c.icon) + '</div>' +
-        '<div style="min-width:0">' +
-          '<div id="wx-now-temp">' + _wxTemp(c.temp) + 'C</div>' +
+        '<div style="min-width:0;flex:1">' +
+          '<div id="wx-now-temp">' + _wxTemp(c.temp) + D + '</div>' +
           '<div id="wx-now-desc">' + _expEsc(_wxCap(c.description)) + '</div>' +
+          hilo +
+        '</div>' +
+        '<div id="wx-units">' +
+          '<button class="' + (_wxIsImperial() ? '' : 'on') + '" onclick="setWxUnits(\'metric\')">&deg;C</button>' +
+          '<button class="' + (_wxIsImperial() ? 'on' : '') + '" onclick="setWxUnits(\'imperial\')">&deg;F</button>' +
         '</div>' +
       '</div>' +
+      _wxAirCard() +
       '<div class="wx-grid">' +
-        _wxStat('Feels like', _wxTemp(c.feelsLike) + 'C') +
+        _wxStat('Feels like', _wxTemp(c.feelsLike) + D) +
         _wxStat('Humidity',   c.humidity   != null ? c.humidity + '%' : '—') +
-        _wxStat('Wind',       c.windSpeed  != null ? Math.round(c.windSpeed * 3.6) + ' km/h' : '—') +
-        _wxStat('Visibility', c.visibility != null ? (c.visibility / 1000).toFixed(1) + ' km' : '—') +
+        _wxStat('Wind',       windVal, windSub) +
+        (c.rain1h != null ? _wxStat('Rain, last hour', _wxRain(c.rain1h)) : '') +
+        (c.cloudCover != null ? _wxStat('Cloud cover', c.cloudCover + '%') : '') +
+        (c.pressure   != null ? _wxStat('Pressure', c.pressure + ' hPa') : '') +
+        _wxStat('Visibility', _wxDist(c.visibility)) +
         _wxStat('Sunrise',    c.sunrise ? _wxClock(new Date(c.sunrise * 1000)) : '—') +
         _wxStat('Sunset',     c.sunset  ? _wxClock(new Date(c.sunset  * 1000)) : '—') +
       '</div>';
   } else {
     const days = _wxDays().slice(0, _wxTab === 'd3' ? 3 : 5);
     el.innerHTML = days.length
-      ? days.map(d =>
-          '<div class="wx-day">' +
-            '<div class="wx-day-name">' + _expEsc(_wxDayLabel(d.when)) + '</div>' +
-            '<div class="wx-day-ico">' + _wxIcon(d.icon) + '</div>' +
-            '<div class="wx-day-desc">' + _expEsc(_wxCap(d.description)) + '</div>' +
-            '<div class="wx-day-temp">' + _wxTemp(d.max) + ' / ' + _wxTemp(d.min) + '</div>' +
-          '</div>').join('')
+      ? days.map(d => {
+          const key = _wxDayKey(d.when);
+          const open = (_wxOpenDay === key);
+          const pop = _wxPop(d.pop);
+          // The chip is the headline of this whole release, so it is given its
+          // own column rather than being folded into the description — and it
+          // is omitted entirely, not shown empty, while the backend still
+          // drops `pop`.
+          const popChip = (pop != null)
+            ? '<div class="wx-day-pop" title="Chance of rain">' +
+                '<span class="wx-drop">&#128167;</span>' + pop + '%</div>'
+            : '';
+          return '<div class="wx-day' + (open ? ' on' : '') + '">' +
+            '<div class="wx-day-top" role="button" tabindex="0"' +
+              ' onclick="toggleWxDay(\'' + key + '\')"' +
+              ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleWxDay(\'' + key + '\')}">' +
+              '<div class="wx-day-name">' + _expEsc(_wxDayLabel(d.when)) + '</div>' +
+              '<div class="wx-day-break"></div>' +
+              '<div class="wx-day-ico">' + _wxIcon(d.icon) + '</div>' +
+              '<div class="wx-day-desc">' + _expEsc(_wxCap(d.description)) + '</div>' +
+              popChip +
+              '<div class="wx-day-temp">' + _wxTemp(d.max) + ' / ' + _wxTemp(d.min) + '</div>' +
+              '<div class="wx-day-chev">' + (open ? '&#9652;' : '&#9662;') + '</div>' +
+            '</div>' +
+            (open ? _wxHours(d) : '') +
+          '</div>';
+        }).join('')
       : '<div style="font-size:13px;color:var(--tsoft)">No forecast available.</div>';
   }
 
@@ -14011,11 +14346,322 @@ function renderWxBody(){
 
 function switchWxTab(tab){
   _wxTab = tab;
-  ['now','d3','d5'].forEach(t => {
+  ['now','d3','d5','radar'].forEach(t => {
     const b = document.getElementById('wxtab-' + t);
     if(b) b.classList.toggle('on', t === tab);
   });
+  const body = document.getElementById('wx-body');
+  const radar = document.getElementById('wx-radar');
+  const radarOn = (tab === 'radar');
+  if(body)  body.style.display  = radarOn ? 'none' : '';
+  if(radar) radar.style.display = radarOn ? '' : 'none';
+  // STEP 9 OF THE QC IS WHY THIS IS HERE AND NOT AT LOAD. Nothing new may run
+  // before Bella is on screen, and the radar is the heaviest thing in the
+  // panel: a tile grid, an outside JSON feed and up to 13 animation frames.
+  // None of it is touched until somebody actually asks for the radar, and
+  // the animation stays stopped until they press play.
+  if(radarOn){ _rvOpen(); return; }
+  _rvStop();
   renderWxBody();
+}
+
+// ══ RAIN RADAR ═════════════════════════════════════════════════════════════
+// Frontend only, ₹0, no backend change and no API key of any kind.
+//
+// WHY THERE IS NO MAP LIBRARY HERE. Leaflet would be ~42KB of third-party
+// script loaded from a CDN, needing SRI (a Content-Security-Policy is not
+// shippable on GitHub Pages — settled) and running before anybody has asked
+// for a map. Slippy tiles are x/y/z arithmetic and a few absolutely
+// positioned <img>s; the whole renderer below is smaller than the loader
+// would have been, and nothing executes until the Radar tab is pressed.
+//
+// TWO LICENCES ARE BEING RELIED ON AND BOTH REQUIRE VISIBLE ATTRIBUTION,
+// painted below the map and never behind a toggle:
+//  - OpenStreetMap base tiles. Permitted for an app this small; their policy
+//    forbids bulk pre-seeding and requires a real Referer, so DO NOT add
+//    referrerpolicy="no-referrer" to these <img>s the way the CDN <script>
+//    tags at the top of this file do, and do not pre-fetch tiles nobody is
+//    looking at.
+//  - RainViewer radar. Free, no key, refreshed every 5 minutes, and licensed
+//    for personal / educational / small-community use ONLY. If Bella is ever
+//    sold, this layer has to come out.
+//
+// MEASURED 2026-10-26: India IS covered. 13 of 13 frames carried radar returns
+// over Kolkata, Mumbai and Chennai. Also measured: the free feed returned 0
+// `nowcast` frames, so this is a playback of where rain HAS been, not a
+// forecast of where it is going — the label under the map says so plainly
+// rather than letting anyone assume otherwise.
+const RV_META = 'https://api.rainviewer.com/public/weather-maps.json';
+// TWO DIFFERENT CEILINGS, AND CONFLATING THEM WAS A MISTAKE I MADE FIRST TIME.
+// RAINVIEWER'S RADAR STOPS AT z7 — measured 2026-10-26. Above it their server
+// does not 404; it returns a grey PNG reading "Zoom Level Not Supported",
+// byte-identical at z8..z13, so `onerror` can never catch it and the map fills
+// with placeholder boxes. Identical over Kolkata, London and New York, so it
+// is their tile set, not a coverage gap over India.
+// THE BASE MAP HAS NO SUCH LIMIT — OpenStreetMap goes to street level. Capping
+// the map at the radar's ceiling threw that away for nothing. So past z7 the
+// map keeps zooming and the z7 radar is STRETCHED over it: coarse, because
+// that is genuinely all the resolution the data has, but honest and labelled.
+// 16 rather than OSM's 19: past that a rain cell covers the whole screen and
+// there is nothing left to read.
+const RV_TILE = 256, RV_ZMIN = 3, RV_ZMAX = 16, RV_RADAR_ZMAX = 7;
+let _rvMeta = null, _rvFrames = [], _rvIdx = 0, _rvZoom = 6;
+let _rvPan = {x: 0, y: 0}, _rvTimer = null, _rvAnimated = false;
+let _rvLoading = false, _rvErr = '';
+
+function _rvLonToX(lon, z){ return (lon + 180) / 360 * Math.pow(2, z); }
+function _rvLatToY(lat, z){
+  const r = lat * Math.PI / 180;
+  return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z);
+}
+
+// THE SMIL CLOCK TICKS EVEN WHEN NOTHING IS ON SCREEN. Measured 2026-10-26:
+// with the panel shut, the still top bar and the sprite already display:none,
+// the page still burned 1.1-1.5% of the main thread against 0.04% for the
+// emoji build it replaces -- three runs each, and the emoji figure was 0.04%
+// every single time, so that is signal and not noise. 46 animation elements
+// were running their timelines for nobody.
+// pauseAnimations() is the SVG spec's own answer and it stops the whole
+// fragment's clock, <use> instances included. Paused on load, unpaused only
+// while the weather panel is actually open.
+// DO NOT PUT display:none ON THE SPRITE. It looks like the tidier way to hide
+// a <symbol> block and it saves a little work, but it FREEZES every <use>
+// instance: measured 2026-10-26, four captures of the Now icon came back
+// byte-identical. The <use> still PAINTS from a display:none sprite -- 27x20,
+// which is exactly the check that fooled me -- it simply never moves again.
+// width:0;height:0 keeps the clock alive; pauseAnimations() below is what
+// actually buys the battery back, and it is reversible.
+function _wxSetMotion(on){
+  try{
+    const sp = document.getElementById('wx-sprite');
+    if(!sp || !sp.pauseAnimations) return;
+    if(on) sp.unpauseAnimations(); else sp.pauseAnimations();
+  }catch(e){}
+}
+try{
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', function(){ _wxSetMotion(false); });
+  else _wxSetMotion(false);
+}catch(e){}
+
+function _rvStop(){
+  if(_rvTimer){ clearInterval(_rvTimer); _rvTimer = null; }
+}
+
+async function _rvOpen(){
+  const el = document.getElementById('wx-radar');
+  const foot = document.getElementById('wx-foot');
+  if(!el) return;
+  if(foot) foot.textContent = '';
+  const loc = _wxCoords();
+  if(!loc){
+    el.innerHTML = '<div class="rv-msg">Bella needs your location to centre the radar. ' +
+      'The location cell in the top bar will ask for it.</div>';
+    return;
+  }
+  if(!_rvMeta && !_rvLoading){
+    _rvLoading = true;
+    el.innerHTML = '<div class="rv-msg">Loading radar…</div>';
+    try{
+      // A PLAIN fetch, deliberately not bfetch: RainViewer is a third party,
+      // not Bella's backend, and must never be sent Bella's auth headers.
+      const r = await fetch(RV_META, { cache: 'no-store' });
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      _rvMeta = await r.json();
+      const past = (_rvMeta.radar && _rvMeta.radar.past) || [];
+      const soon = (_rvMeta.radar && _rvMeta.radar.nowcast) || [];
+      // nowcast frames are genuinely in the future where they exist at all.
+      _rvFrames = past.map(f => ({ time: f.time, path: f.path, ahead: false }))
+        .concat(soon.map(f => ({ time: f.time, path: f.path, ahead: true })));
+      _rvIdx = Math.max(0, _rvFrames.length - 1);
+      _rvErr = '';
+    }catch(e){
+      _rvErr = (e && e.message) || 'unavailable';
+      _rvMeta = null;
+    }
+    _rvLoading = false;
+  }
+  if(!_rvFrames.length){
+    el.innerHTML = '<div class="rv-msg">The radar is unavailable right now.' +
+      (_rvErr ? '<br><span style="font-size:11px">' + _expEsc(_rvErr) + '</span>' : '') + '</div>';
+    return;
+  }
+  _rvShell(el);
+  _rvPaint();
+}
+
+// The shell is written ONCE. _rvPaint() then only rewrites the tile layers, so
+// panning and zooming never rebuild the controls underneath the finger.
+function _rvShell(el){
+  if(el.querySelector('#rv-map')) return;
+  el.innerHTML =
+    '<div id="rv-map"><div id="rv-layers"></div>' +
+      '<div id="rv-zoom">' +
+        '<button id="rv-in" onclick="_rvZoomBy(1)" aria-label="Zoom in">+</button>' +
+        '<button id="rv-out" onclick="_rvZoomBy(-1)" aria-label="Zoom out">&minus;</button>' +
+      '</div>' +
+    '</div>' +
+    '<div id="rv-bar">' +
+      '<button id="rv-play" onclick="_rvToggle()">&#9654; Play</button>' +
+      '<span id="rv-time"></span>' +
+    '</div>' +
+    // Both links are REQUIRED CREDITS, not navigation — RainViewer's licence
+    // asks for a link to their site and OpenStreetMap's for one to the
+    // copyright page, so neither goes anywhere near this map's location. The
+    // title attributes say so, because the first person to press one expected
+    // their own area and got RainViewer's default US view.
+    '<div id="rv-attr">Radar data from <a href="https://www.rainviewer.com/" target="_blank" rel="noopener noreferrer" title="Who provides the radar. Opens RainViewer\'s own site, not this map.">RainViewer</a>' +
+      ' &middot; map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" title="Map copyright notice. Opens OpenStreetMap\'s licence page, not this map.">OpenStreetMap</a> contributors' +
+      '<br>Shows where rain has been over the last two hours. It is not a forecast, and not a storm warning.</div>';
+  const map = el.querySelector('#rv-map');
+  // Drag to pan. Pointer events cover mouse, touch and pen in one path, and
+  // setPointerCapture keeps the drag alive when the finger leaves the map.
+  let dragging = false, lx = 0, ly = 0, moved = 0;
+  map.addEventListener('pointerdown', e => {
+    // THE ZOOM BUTTONS LIVE INSIDE THE MAP, SO THE PAN USED TO EAT THEIR
+    // CLICKS. setPointerCapture retargets every later pointer event to the
+    // map, so pointerup no longer landed on the button and the browser never
+    // synthesised a click — + and - did nothing at all, while the button was
+    // perfectly reachable and _rvZoomBy worked when called directly. Measured
+    // headless 2026-10-26; the test suite now clicks them for real.
+    if(e.target.closest && e.target.closest('#rv-zoom')) return;
+    dragging = true; moved = 0; lx = e.clientX; ly = e.clientY;
+    try{ map.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  map.addEventListener('pointermove', e => {
+    if(!dragging) return;
+    const dx = e.clientX - lx, dy = e.clientY - ly;
+    lx = e.clientX; ly = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
+    _rvPan.x += dx; _rvPan.y += dy;
+    _rvPaint();
+  });
+  const up = e => {
+    if(!dragging) return;
+    dragging = false;
+    try{ map.releasePointerCapture(e.pointerId); }catch(_){}
+  };
+  map.addEventListener('pointerup', up);
+  map.addEventListener('pointercancel', up);
+}
+
+function _rvZoomBy(d){
+  const z = Math.max(RV_ZMIN, Math.min(RV_ZMAX, _rvZoom + d));
+  if(z === _rvZoom) return;
+  _rvZoom = z;
+  _rvPan = {x: 0, y: 0};        // recentre; a pan measured in pixels means
+  _rvPaint();                   // something different at a different zoom
+}
+
+// A BUTTON THAT SILENTLY DOES NOTHING READS AS A BROKEN BUTTON. At the ceiling
+// there is no more radar to show, so the control says so rather than leaving
+// somebody pressing it — which is exactly how this was first reported.
+function _rvSyncZoom(){
+  const i = document.getElementById('rv-in'), o = document.getElementById('rv-out');
+  if(i){ i.disabled = (_rvZoom >= RV_ZMAX);
+    i.title = i.disabled ? 'This is as close as the map goes'
+      : (_rvZoom >= RV_RADAR_ZMAX ? 'Zoom in — the map sharpens, the rain does not' : 'Zoom in'); }
+  if(o){ o.disabled = (_rvZoom <= RV_ZMIN);
+    o.title = o.disabled ? 'This is as wide as the map goes' : 'Zoom out'; }
+}
+
+function _rvToggle(){
+  if(_rvTimer){ _rvStop(); _rvSyncPlay(); return; }
+  // The frame layers are built on the FIRST press and not before. Until then
+  // the map holds one overlay, which is the light default a phone deserves.
+  _rvAnimated = true;
+  _rvPaint();
+  _rvTimer = setInterval(() => {
+    // Stop rather than animate into a closed panel — a timer left running
+    // behind a hidden panel is exactly the battery drain the no-setInterval
+    // rule above the weather poll exists to prevent.
+    const p = document.getElementById('wx-panel');
+    if(!p || p.style.display !== 'block' || _wxTab !== 'radar'){ _rvStop(); return; }
+    _rvIdx = (_rvIdx + 1) % _rvFrames.length;
+    _rvShowFrame();
+  }, 600);
+  _rvSyncPlay();
+}
+
+function _rvSyncPlay(){
+  const b = document.getElementById('rv-play');
+  if(b) b.innerHTML = _rvTimer ? '&#10073;&#10073; Pause' : '&#9654; Play';
+}
+
+// Only toggles which overlay layer is visible — no tiles are re-requested.
+function _rvShowFrame(){
+  const layers = document.querySelectorAll('#rv-layers .rv-radar');
+  layers.forEach(l => {
+    l.style.opacity = (Number(l.dataset.i) === _rvIdx) ? '1' : '0';
+  });
+  const t = document.getElementById('rv-time');
+  const f = _rvFrames[_rvIdx];
+  if(t && f){
+    t.textContent = _wxClock(new Date(f.time * 1000)) + (f.ahead ? ' (forecast)' : '');
+  }
+}
+
+function _rvPaint(){
+  const host = document.getElementById('rv-layers');
+  const map = document.getElementById('rv-map');
+  const loc = _wxCoords();
+  if(!host || !map || !loc || !_rvFrames.length) return;
+  const cw = map.clientWidth, ch = map.clientHeight;
+  if(!cw || !ch) return;                       // not laid out yet — never
+                                               // position from a 0x0 box
+  const z = _rvZoom, n = Math.pow(2, z);
+  const fx = _rvLonToX(loc.lon, z), fy = _rvLatToY(loc.lat, z);
+  const originX = cw / 2 - fx * RV_TILE + _rvPan.x;
+  const originY = ch / 2 - fy * RV_TILE + _rvPan.y;
+  const i0 = Math.floor(-originX / RV_TILE), i1 = Math.floor((cw - originX) / RV_TILE);
+  const j0 = Math.floor(-originY / RV_TILE), j1 = Math.floor((ch - originY) / RV_TILE);
+
+  const base = [], rad = [];
+  const frames = _rvAnimated ? _rvFrames : [_rvFrames[_rvIdx]];
+  for(let j = j0; j <= j1; j++){
+    // y has no wrap-around: above the north pole and below the south there is
+    // simply no tile. x does wrap, so it is taken modulo n.
+    if(j < 0 || j >= n) continue;
+    for(let i = i0; i <= i1; i++){
+      const x = ((i % n) + n) % n;
+      const left = Math.round(originX + i * RV_TILE), top = Math.round(originY + j * RV_TILE);
+      base.push('<img class="rv-t" src="https://tile.openstreetmap.org/' + z + '/' + x + '/' + j +
+        '.png" alt="" style="left:' + left + 'px;top:' + top + 'px" onerror="this.style.visibility=\'hidden\'">');
+    }
+  }
+
+  // ── THE RADAR LAYER, IN ITS OWN TILE SPACE ─────────────────────────────
+  // Below z8 this is the same grid as the map. Above it the radar is pinned at
+  // z7 and each of its tiles is blown up to cover the 2^(z-7) map tiles it
+  // spans, so the picture stays geographically true and simply goes soft.
+  // Requesting z8+ from RainViewer would return the "not supported" placeholder.
+  const rz = Math.min(z, RV_RADAR_ZMAX);
+  const rn = Math.pow(2, rz), rscale = Math.pow(2, z - rz), rsize = RV_TILE * rscale;
+  const rfx = _rvLonToX(loc.lon, rz), rfy = _rvLatToY(loc.lat, rz);
+  const rOx = cw / 2 - rfx * rsize + _rvPan.x, rOy = ch / 2 - rfy * rsize + _rvPan.y;
+  const ri0 = Math.floor(-rOx / rsize), ri1 = Math.floor((cw - rOx) / rsize);
+  const rj0 = Math.floor(-rOy / rsize), rj1 = Math.floor((ch - rOy) / rsize);
+  for(let j = rj0; j <= rj1; j++){
+    if(j < 0 || j >= rn) continue;
+    for(let i = ri0; i <= ri1; i++){
+      const x = ((i % rn) + rn) % rn;
+      const pos = 'left:' + Math.round(rOx + i * rsize) + 'px;top:' + Math.round(rOy + j * rsize) +
+                  'px;width:' + Math.round(rsize) + 'px;height:' + Math.round(rsize) + 'px';
+      frames.forEach((f, k) => {
+        const idx = _rvAnimated ? k : _rvIdx;
+        rad.push('<img class="rv-t rv-radar" data-i="' + idx + '" src="' + _rvMeta.host + f.path +
+          '/' + RV_TILE + '/' + rz + '/' + x + '/' + j + '/2/1_1.png" alt="" style="' + pos +
+          ';opacity:' + (idx === _rvIdx ? 1 : 0) + '" onerror="this.style.visibility=\'hidden\'">');
+      });
+    }
+  }
+  // Said on the map, not buried in a footnote: somebody zoomed in close enough
+  // to read street names is entitled to know the rain is no sharper than it was.
+  const soft = (z > RV_RADAR_ZMAX)
+    ? '<div id="rv-soft">Rain shown at its full available detail &mdash; the radar does not go closer</div>' : '';
+  host.innerHTML = base.join('') + rad.join('') + soft;
+  _rvShowFrame();
+  _rvSyncPlay();
+  _rvSyncZoom();
 }
 
 // ══ MAPS & PLACES ══════════════════════════════════════════════════════════
@@ -14227,10 +14873,18 @@ function _plFoot(n,cached){
 function openWeatherPanel(){
   document.getElementById('wx-overlay').classList.add('on');
   document.getElementById('wx-panel').style.display = 'block';
-  renderWxBody();
+  _wxSetMotion(true);           // the icons only move while he is looking
+  // switchWxTab, not renderWxBody: reopening on the Radar tab must restore the
+  // radar, and reopening on any other must restore #wx-body's visibility after
+  // the radar hid it. renderWxBody alone would paint into an element still set
+  // to display:none and the panel would look empty.
+  switchWxTab(_wxTab);
   fetchWeather(false);
 }
 function closeWeatherPanel(){
+  _wxSetMotion(false);          // and stop the moment he looks away
+  _rvStop();                    // never leave an animation running behind a
+                                // closed panel — see "light on devices"
   document.getElementById('wx-overlay').classList.remove('on');
   document.getElementById('wx-panel').style.display = 'none';
 }
@@ -15214,7 +15868,10 @@ body.dark #mic-lang button.on{background:#D4AF37!important;color:#0B2545!importa
    therefore cream-on-navy, exactly like #mic-lang button.on — not gold. */
 #tb-weather-cell{cursor:pointer}
 
-#wx-tabs{display:flex;gap:8px;margin-bottom:16px}
+/* flex-wrap, because Radar made it four tabs. At 320px the panel is 94vw and
+   four tabs do not fit on one line; without this they are squeezed past the
+   44px touch minimum instead of dropping to a second row. */
+#wx-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
 #wx-tabs button{padding:7px 14px;border-radius:10px;border:1.5px solid var(--border);
   background:#FAF8F4;color:#4A5A7A;font-size:11px;font-weight:600;cursor:pointer;
   font-family:'BellaIndic','DM Sans',sans-serif;transition:background .15s,color .15s}
@@ -15309,7 +15966,19 @@ html body.dark #conv-panel .cv-swap{background:#12233B!important;color:#F5E6C8!i
 }
 @media(pointer:coarse){#conv-panel .cv-swap{min-height:44px}}
 
-#wx-now-ico{font-size:46px;line-height:1;flex-shrink:0}
+/* ── ANIMATED WEATHER ICONS ──────────────────────────────────────────────
+   One <symbol> each, sized per context. These replaced emoji, so the old
+   font-size rules no longer do anything on their own — an <svg> needs a real
+   width and height or it collapses to nothing. The containers keep their
+   font-size so the "🌡 —" fallback on the error path still renders. */
+.wx-ico{display:inline-block;width:1.15em;height:1.15em;vertical-align:-0.26em;flex-shrink:0}
+#tb-wx-main .wx-ico{width:26px;height:26px;vertical-align:-7px;margin-right:1px}
+#wx-title .wx-ico{width:32px;height:32px;vertical-align:-8px;margin-right:2px}
+#wx-now-ico .wx-ico{width:100%;height:100%;vertical-align:top}
+#wx-panel .wx-day-ico .wx-ico{width:34px;height:34px;vertical-align:-11px}
+#wx-panel .wx-hr-i .wx-ico{width:26px;height:26px;vertical-align:-8px}
+
+#wx-now-ico{font-size:46px;line-height:1;flex-shrink:0;width:46px;height:46px}
 /* lining-nums is not cosmetic. Cormorant Garamond ships OLDSTYLE figures by
    default, so at 44px "31°C" renders as "ʒı°C" and "09" as "o9" — measured
    side by side in real Chrome. One declaration keeps Bella's display face and
@@ -15324,18 +15993,121 @@ html body.dark #conv-panel .cv-swap{background:#12233B!important;color:#F5E6C8!i
 #wx-panel .wx-stat-lbl{font-size:10px;color:#5A6B8A;letter-spacing:.3px;text-transform:uppercase}
 #wx-panel .wx-stat-val{font-size:14px;font-weight:600;color:#0B2545;margin-top:2px;white-space:nowrap}
 
-#wx-panel .wx-day{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;
+/* .wx-day became a BLOCK when day rows gained their own hours. The flex row
+   it used to be is now .wx-day-top, and the padding moved with it — a day that
+   is open has to hold two children, and padding on the outer box would have
+   indented the hours inside it as well. */
+#wx-panel .wx-day{display:block;padding:0;border-radius:12px;overflow:hidden;
   background:#FAF8F4;border:1px solid var(--border);margin-bottom:8px}
+#wx-panel .wx-day-top{display:flex;align-items:center;gap:12px;padding:10px 12px;cursor:pointer}
+@media(pointer:coarse){ #wx-panel .wx-day-top{min-height:44px} }
+#wx-panel .wx-day-top:focus-visible{outline:2px solid #D4AF37;outline-offset:-2px}
 #wx-panel .wx-day-name{font-size:12px;font-weight:600;color:#0B2545;width:82px;flex-shrink:0}
-#wx-panel .wx-day-ico{font-size:20px;flex-shrink:0;width:26px;text-align:center}
+#wx-panel .wx-day-ico{font-size:20px;flex-shrink:0;width:34px;text-align:center;line-height:0}
 #wx-panel .wx-day-desc{font-size:11px;color:#5A6B8A;flex:1;min-width:0;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 #wx-panel .wx-day-temp{font-size:13px;font-weight:600;color:#0B2545;flex-shrink:0;white-space:nowrap}
+#wx-panel .wx-day-chev{font-size:10px;color:#5A6B8A;flex-shrink:0;width:12px;text-align:center}
+/* Nothing at all on a wide row; a forced line break on a narrow one. */
+#wx-panel .wx-day-break{display:none}
+/* Chance of rain. Given its own fixed column so the day rows stay aligned
+   whether or not a particular day carries a figure. */
+#wx-panel .wx-day-pop{font-size:12px;font-weight:600;color:#1B5E8C;flex-shrink:0;
+  white-space:nowrap;display:flex;align-items:center;gap:2px}
+.wx-drop{font-size:10px}
+
+#wx-panel .wx-hours{padding:2px 12px 10px;border-top:1px dashed var(--border)}
+#wx-panel .wx-hr{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:11px;
+  border-bottom:1px solid rgba(0,0,0,.04)}
+#wx-panel .wx-hr:last-of-type{border-bottom:0}
+#wx-panel .wx-hr-t{width:46px;flex-shrink:0;font-weight:600;color:#0B2545;
+  font-variant-numeric:lining-nums}
+#wx-panel .wx-hr-i{width:26px;flex-shrink:0;text-align:center;font-size:14px;line-height:0}
+#wx-panel .wx-hr-temp{width:38px;flex-shrink:0;font-weight:600;color:#0B2545}
+#wx-panel .wx-hr-pop{width:48px;flex-shrink:0;color:#1B5E8C;font-weight:600}
+#wx-panel .wx-hr-rain{width:52px;flex-shrink:0;color:#5A6B8A}
+#wx-panel .wx-hr-wind{flex:1;min-width:0;text-align:right;color:#5A6B8A;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#wx-panel .wx-hours-note{font-size:10px;color:#5A6B8A;margin-top:8px;line-height:1.5}
+
+/* °C / °F. Same ID-keyed shape as #wx-tabs below, and for the same reason:
+   body.dark carries a blanket `button{...!important}` rule that a class
+   cannot outrank. */
+#wx-units{display:flex;flex-shrink:0;border:1.5px solid var(--border);border-radius:9px;overflow:hidden}
+#wx-units button{padding:5px 9px;border:0;background:transparent;color:#5A6B8A;
+  font-family:inherit;font-size:11px;font-weight:600;cursor:pointer}
+#wx-units button.on{background:#0B2545;color:#D4AF37}
+@media(pointer:coarse){ #wx-units button{min-height:40px} }
+#wx-now-hilo{font-size:11px;color:#5A6B8A;margin-top:3px;font-variant-numeric:lining-nums}
+#wx-panel .wx-stat-sub{font-size:10px;color:#5A6B8A;margin-top:1px;white-space:nowrap}
+
+/* Air quality. The band colour is a BACKGROUND on a dot, never a text colour —
+   `body.dark *{color:#F5E6C8!important}` would repaint a coloured word cream
+   and the only signal the row carries would be gone. */
+#wx-panel .wx-aqi{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;
+  padding:9px 11px;border-radius:12px;background:#FAF8F4;border:1px solid var(--border)}
+.wx-aqi-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.wx-aqi-main{font-size:12px;font-weight:600;color:#0B2545}
+.wx-aqi-sub{font-size:10px;color:#5A6B8A}
+
+/* ── RAIN RADAR ──────────────────────────────────────────────────────────
+   touch-action:none is load-bearing, not tidiness: without it a drag on a
+   phone scrolls the panel instead of panning the map, and pointermove never
+   fires. */
+#rv-map{position:relative;width:100%;height:300px;border-radius:12px;overflow:hidden;
+  border:1px solid var(--border);background:#E9E7E2;touch-action:none;cursor:grab}
+#rv-map:active{cursor:grabbing}
+#rv-layers{position:absolute;inset:0}
+.rv-t{position:absolute;width:256px;height:256px;pointer-events:none;
+  user-select:none;-webkit-user-drag:none}
+.rv-radar{mix-blend-mode:multiply}
+#rv-zoom{position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:4px;z-index:2}
+#rv-zoom button{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);
+  background:rgba(255,255,255,.92);color:#0B2545;font-size:16px;font-weight:700;
+  line-height:1;cursor:pointer;font-family:inherit}
+#rv-zoom button:disabled{opacity:.42;cursor:not-allowed}
+/* Sits INSIDE #rv-layers, which renderWxBody never touches, so it is rebuilt
+   with the tiles and disappears on its own the moment you zoom back out. */
+#rv-soft{position:absolute;left:8px;bottom:8px;right:48px;padding:5px 9px;border-radius:8px;
+  background:rgba(11,37,69,.84);color:#F5E6C8;font-size:10px;line-height:1.4;pointer-events:none}
+#rv-bar{display:flex;align-items:center;gap:10px;margin-top:8px}
+#rv-play{padding:7px 14px;border-radius:10px;border:1.5px solid var(--border);
+  background:#0B2545;color:#D4AF37;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer}
+@media(pointer:coarse){ #rv-play{min-height:44px} }
+#rv-time{font-size:12px;font-weight:600;color:#0B2545;font-variant-numeric:lining-nums}
+#rv-attr{font-size:10px;color:#5A6B8A;margin-top:6px;line-height:1.6}
+#rv-attr a{color:#0B2545;text-decoration:underline;text-underline-offset:2px}
+.rv-msg{font-size:13px;color:var(--tsoft);line-height:1.8;padding:18px 0}
+
 #wx-foot{font-size:10px;color:#5A6B8A;margin-top:12px;line-height:1.6}
 
 html body.dark #wx-panel .wx-stat,
+html body.dark #wx-panel .wx-aqi,
 html body.dark #wx-panel .wx-day{background:#12233B!important;
   border-color:rgba(245,230,200,.26)!important}
+/* The hour rows sit INSIDE an already-dark .wx-day, so their separators have
+   to come from the cream side. The light-mode rgba(0,0,0,.04) is invisible
+   against #12233B. */
+html body.dark #wx-panel .wx-hr{border-bottom-color:rgba(245,230,200,.12)!important}
+html body.dark #wx-panel .wx-hours{border-top-color:rgba(245,230,200,.22)!important}
+/* Same ID-keyed shape as #wx-tabs button above: body.dark carries a blanket
+   `button{...!important}` rule, so a class-based override loses on
+   specificity however many !importants it is given. */
+html body.dark #wx-units{border-color:rgba(245,230,200,.26)!important}
+html body.dark #wx-units button{background:#12233B!important;color:#F5E6C8!important}
+html body.dark #wx-units button.on{background:#F5E6C8!important;color:#0B2545!important}
+html body.dark #rv-zoom button{background:rgba(11,37,69,.92)!important;color:#F5E6C8!important;
+  border-color:rgba(245,230,200,.3)!important}
+html body.dark #rv-play{background:#F5E6C8!important;color:#0B2545!important;
+  border-color:#F5E6C8!important}
+html body.dark #rv-map{background:#0E1C2E!important;border-color:rgba(245,230,200,.26)!important}
+/* OpenStreetMap only publishes a LIGHT basemap, so in dark mode it arrives as
+   a bright white rectangle in the middle of a navy panel. Dimmed rather than
+   inverted: inverting turns the land green and the sea orange, and the radar
+   overlay multiplies over it into mud. Measured by eye in both themes. */
+html body.dark .rv-t{filter:brightness(.78) saturate(.85)}
+html body.dark .rv-radar{filter:none;mix-blend-mode:screen}
+html body.dark #rv-attr a{color:#F5E6C8!important}
 
 /* 320px is the floor this has to clear — iPhone SE and the older Androids in
    the family. At that width the panel is 94vw, so a forecast row has about
@@ -15346,13 +16118,53 @@ html body.dark #wx-panel .wx-day{background:#12233B!important;
   #wx-tabs{gap:6px}
   #wx-tabs button{padding:7px 10px;font-size:10px}
   #wx-panel .wx-grid{grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:6px}
-  #wx-panel .wx-day{gap:8px;padding:9px 10px}
-  #wx-panel .wx-day-name{width:64px;font-size:11px}
-  #wx-panel .wx-day-ico{font-size:18px;width:22px}
+  #wx-panel .wx-day-top{gap:8px;padding:9px 10px}
+  #wx-panel .wx-day-ico{font-size:18px;width:28px}
+  #wx-panel .wx-day-ico .wx-ico{width:28px;height:28px;vertical-align:-9px}
+  #wx-panel .wx-hr-i .wx-ico{width:22px;height:22px;vertical-align:-7px}
+  #wx-now-ico{width:38px;height:38px}
   #wx-panel .wx-day-desc{font-size:10px}
   #wx-panel .wx-day-temp{font-size:12px}
+  #wx-panel .wx-day-name{font-size:11px}
+  #wx-panel .wx-day-pop{font-size:11px}
+  /* Rainfall per slot is the first thing to go — the day's total is spelled
+     out in the note under the hours, so nothing is actually lost. */
+  #wx-panel .wx-hr-rain{display:none}
+  #wx-panel .wx-hr{gap:6px}
+  #wx-panel .wx-hours{padding:2px 10px 10px}
+  #wx-panel .wx-hr-t{width:40px}
+  #wx-panel .wx-hr-i{width:18px}
+  #wx-panel .wx-hr-temp{width:34px}
+  #wx-panel .wx-hr-pop{width:42px}
+  #rv-map{height:240px}
+  #wx-units button{padding:5px 8px}
 }
 
+
+/* A day row carries six things since the chance-of-rain chip arrived, and the
+   description is what gets squeezed. MEASURED 2026-10-26 with the longest
+   description OpenWeather actually sends ("thunderstorm with heavy rain"):
+   it is cut off at 412, 420 and 480px and nowhere else. Below 400 the wrap
+   below already rescued it; above ~540 one line genuinely fits. So the whole
+   fault lived in the band between the old 400px breakpoint and the width at
+   which the row stops needing help -- which is why it showed up at 420 and
+   not on any phone size I had been testing.
+   Wrapping is a WIDTH problem and has its own breakpoint; the font and icon
+   shrinking at 400px above is a separate concern and stays there.
+   Explicit `order` because source order puts the icon second, and it belongs
+   on the second line with the words it describes. */
+@media(max-width:560px){
+  #wx-panel .wx-day-top{flex-wrap:wrap}
+  #wx-panel .wx-day-name{order:1;width:auto;flex:1 0 auto}
+  #wx-panel .wx-day-pop{order:2}
+  #wx-panel .wx-day-temp{order:3}
+  #wx-panel .wx-day-chev{order:4}
+  /* order 4.5, in effect: everything before it stays on line one, the icon
+     and the words it describes go together on line two. */
+  #wx-panel .wx-day-break{display:block;order:5;flex:0 0 100%;height:0;margin:0}
+  #wx-panel .wx-day-ico{order:6}
+  #wx-panel .wx-day-desc{order:7;flex:1 1 auto;white-space:normal;text-overflow:clip}
+}
 
 /* Muted state for the per-message speaker button. Keyed through .msg-actions
    and with hardcoded hex in dark, because body.dark carries a blanket
