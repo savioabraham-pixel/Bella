@@ -14350,13 +14350,17 @@ function _wxHours(d){
       '<span class="wx-hr-t">' + _expEsc(_wxClock(s.when)) + '</span>' +
       '<span class="wx-hr-i">' + _wxIcon(f.icon) + '</span>' +
       '<span class="wx-hr-temp">' + _wxTemp(f.temp) + D + '</span>' +
-      '<span class="wx-hr-pop">' + (pop != null ? '<span class="wx-drop">&#128167;</span>' + pop + '%' : '') + '</span>' +
+      '<span class="wx-hr-pop">' + (pop != null ? 'Rain ' + pop + '%' : '') + '</span>' +
       '<span class="wx-hr-rain">' + (f.rain3h != null ? _expEsc(_wxRain(f.rain3h)) : '') + '</span>' +
       '<span class="wx-hr-wind">' + _expEsc((dir ? dir + ' ' : '') + _wxWind(f.windSpeed)) + '</span>' +
       '</div>';
   }).join('');
   return '<div class="wx-hours">' + rows +
     '<div class="wx-hours-note">Readings every three hours. ' +
+    // The two water columns side by side are the confusing part, so they are
+    // named outright rather than left to the reader.
+    (rows.indexOf('Rain ') !== -1 ? 'The percentage is the chance of rain; '
+      + 'the millimetres are how much. ' : '') +
     (d.rain != null && d.rain > 0 ? _expEsc(_wxRain(d.rain)) + ' expected across the day.' : '') +
     '</div></div>';
 }
@@ -14461,8 +14465,8 @@ function renderWxBody(){
           // is omitted entirely, not shown empty, while the backend still
           // drops `pop`.
           const popChip = (pop != null)
-            ? '<div class="wx-day-pop" title="Chance of rain">' +
-                '<span class="wx-drop">&#128167;</span>' + pop + '%</div>'
+            ? '<div class="wx-day-pop" title="The chance of rain at some point that day">' +
+                'Rain ' + pop + '%</div>'
             : '';
           return '<div class="wx-day' + (open ? ' on' : '') + '">' +
             '<div class="wx-day-top" role="button" tabindex="0"' +
@@ -16182,7 +16186,7 @@ html body.dark #conv-panel .cv-swap{background:#12233B!important;color:#F5E6C8!i
   font-variant-numeric:lining-nums}
 #wx-panel .wx-hr-i{width:26px;flex-shrink:0;text-align:center;font-size:14px;line-height:0}
 #wx-panel .wx-hr-temp{width:38px;flex-shrink:0;font-weight:600;color:#0B2545}
-#wx-panel .wx-hr-pop{width:48px;flex-shrink:0;color:#1B5E8C;font-weight:600}
+#wx-panel .wx-hr-pop{width:72px;flex-shrink:0;color:#1B5E8C;font-weight:600}
 #wx-panel .wx-hr-rain{width:52px;flex-shrink:0;color:#5A6B8A}
 #wx-panel .wx-hr-wind{flex:1;min-width:0;text-align:right;color:#5A6B8A;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -16306,15 +16310,12 @@ html body.dark #rv-attr a{color:#F5E6C8!important}
   #wx-panel .wx-day-temp{font-size:12px}
   #wx-panel .wx-day-name{font-size:11px}
   #wx-panel .wx-day-pop{font-size:11px}
-  /* Rainfall per slot is the first thing to go — the day's total is spelled
-     out in the note under the hours, so nothing is actually lost. */
-  #wx-panel .wx-hr-rain{display:none}
   #wx-panel .wx-hr{gap:6px}
   #wx-panel .wx-hours{padding:2px 10px 10px}
   #wx-panel .wx-hr-t{width:40px}
   #wx-panel .wx-hr-i{width:18px}
   #wx-panel .wx-hr-temp{width:34px}
-  #wx-panel .wx-hr-pop{width:42px}
+  #wx-panel .wx-hr-pop{width:64px}
   #rv-map{height:240px}
   #wx-units button{padding:5px 8px}
 }
@@ -16333,6 +16334,11 @@ html body.dark #rv-attr a{color:#F5E6C8!important}
    Explicit `order` because source order puts the icon second, and it belongs
    on the second line with the words it describes. */
 @media(max-width:560px){
+  /* Rainfall per slot is the first thing to go — the day's total is spelled
+     out in the note under the hours, so nothing is lost, and the wind gets
+     its 60px back instead of truncating to "SSW 17 km...". "Rain 42%" is
+     wider than the droplet it replaced, and the wind column paid for it. */
+  #wx-panel .wx-hr-rain{display:none}
   #wx-panel .wx-day-top{flex-wrap:wrap}
   #wx-panel .wx-day-name{order:1;width:auto;flex:1 0 auto}
   #wx-panel .wx-day-pop{order:2}
