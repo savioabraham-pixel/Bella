@@ -14114,6 +14114,52 @@ function _wxCoords(){
 // simply never passed one, so this needs no backend change and no deploy.
 // localStorage, not sessionStorage: b_location_data dies with the tab, and a
 // city typed once should not have to be typed again tomorrow.
+// ── WHY LOCATION FAILED, IN WORDS THAT NAME THE FIX ────────────────────
+// "Position unavailable" is the browser's error code dressed up, and it tells
+// nobody what to do. There are three causes and they need three DIFFERENT
+// actions, and only the browser knows which one applies -- so ask it.
+// The city box stays as the escape hatch, but it is a workaround; this is
+// the actual repair, and it is what brings the radar back, because a city
+// name cannot centre a map.
+let _locPerm = 'unknown';
+function refreshLocPerm(){
+  try{
+    if(!navigator.permissions || !navigator.permissions.query) return;
+    navigator.permissions.query({ name: 'geolocation' }).then(function(r){
+      _locPerm = r.state;                       // granted | denied | prompt
+      // If they fix it in Chrome's settings while the panel is open, the page
+      // should notice rather than keep telling them to fix it.
+      try{ r.onchange = function(){ _locPerm = r.state; _wxPaintIfOpen();
+        if(r.state === 'granted') retryLocationAccess(); }; }catch(e){}
+      _wxPaintIfOpen();
+    }).catch(function(){});
+  }catch(e){}
+}
+try{ refreshLocPerm(); }catch(e){}
+
+// The sentence shown in the panel when there are no coordinates. Each branch
+// names the exact place to go, because "check your settings" is not help.
+function _wxLocHelp(){
+  if(_locPerm === 'denied'){
+    return '<div class="wx-loc-help"><strong>This site is blocked from using your location.</strong>'
+      + ' In Chrome, click the icon at the far left of the address bar, choose'
+      + ' <strong>Site settings</strong>, set <strong>Location</strong> to <strong>Allow</strong>,'
+      + ' then reload the page. The radar needs this — a city name cannot centre a map.</div>';
+  }
+  if(_locPerm === 'granted'){
+    return '<div class="wx-loc-help"><strong>Your device is not giving the browser a position.</strong>'
+      + ' Permission is granted, so this is the computer rather than Bella. On a Mac:'
+      + ' <strong>System Settings &rsaquo; Privacy &amp; Security &rsaquo; Location Services</strong>,'
+      + ' and make sure your browser is switched on.</div>';
+  }
+  if(_locPerm === 'prompt'){
+    return '<div class="wx-loc-help">Bella has not asked for your location yet.'
+      + ' <button class="wx-loc-btn" onclick="retryLocationAccess()">Ask now</button>'
+      + ' — then choose <strong>Allow</strong>.</div>';
+  }
+  return '';
+}
+
 function _wxCity(){
   try{
     const saved = (localStorage.getItem('b_wx_city') || '').trim();
@@ -14379,6 +14425,29 @@ function setWxUnits(u){
   fetchWeather(true);
 }
 
+// ── NAMING THE PLACE THE FORECAST IS ACTUALLY FOR ──────────────────────
+// This said "Dum Dum" while the top bar said "Bidhannagar", from the same
+// coordinates at the same moment. The two names come from different places:
+// the top bar asks OpenStreetMap about the REAL coordinates, while `c.city` is
+// OpenWeather's `name` -- the nearest entry in their fixed list of ~200,000
+// cities, which has Dum Dum in it and does not have Bidhannagar. OpenWeather
+// have themselves deprecated that field: "built-in geocoder functionality has
+// been deprecated... please use our Geocoding API."
+//
+// So the better name was already sitting in b_location_data and simply was not
+// being read. The rule MIRRORS fetchWeather deliberately: it fetches by
+// coordinates whenever it has them, so whenever it did, the label must come
+// from those same coordinates. A city the user typed keeps OpenWeather's
+// answer, because that is the place they asked for.
+function _wxPlaceLabel(c){
+  const loc = _wxCoords();
+  if(loc){
+    const name = (loc.city || loc.area || '').trim();
+    if(name) return [name, (loc.country || '').trim()].filter(Boolean).join(', ');
+  }
+  return [c.city, c.country].filter(Boolean).join(', ') || 'Weather';
+}
+
 function renderWxBody(){
   const el = document.getElementById('wx-body');
   const foot = document.getElementById('wx-foot');
@@ -14398,10 +14467,13 @@ function renderWxBody(){
     } else if(_wxCoords() || known){
       msg = 'Loading…';
     } else {
-      msg = 'This device will not share its location, so tell Bella where you are '
+      msg = 'This device is not sharing its location, so tell Bella where you are '
           + 'and the weather will work anyway.';
     }
     el.innerHTML = '<div style="font-size:13px;color:var(--tsoft);line-height:1.8">' + msg + '</div>'
+      // The REPAIR first, the workaround second. A city gets the forecast
+      // going; only real coordinates bring the radar back.
+      + ((!_wxCoords() && !_wxErr) ? _wxLocHelp() : '')
       + ((!_wxCoords() && !known && !_wxErr) ? _wxCityForm('') : '');
     if(title) title.textContent = 'Weather';
     if(foot) foot.textContent = '';
@@ -14410,8 +14482,7 @@ function renderWxBody(){
 
   const c = _wxData.current || {};
   // the panel title keeps the place name; the words go under the temperature
-  if(title) title.innerHTML = _wxIcon(c.icon) + ' ' +
-    _expEsc([c.city, c.country].filter(Boolean).join(', ') || 'Weather');
+  if(title) title.innerHTML = _wxIcon(c.icon) + ' ' + _expEsc(_wxPlaceLabel(c));
 
   if(_wxTab === 'now'){
     const D = _wxDeg();
@@ -14493,9 +14564,12 @@ function renderWxBody(){
       (_wxTab === 'now' ? '' : ' · daily high / low taken from the 3-hourly readings') +
       // Said plainly when it applies: a city is a coarser answer than
       // coordinates, and whoever set it should be able to change it.
-      (byCity ? '<br>Using the city you set, not this device\'s location. '
+      (byCity ? '<br>Using the city you set, not this device\'s location &mdash; so the radar '
+              + 'cannot work. '
               + '<a href="#" onclick="setWxCity(\'\');return false" '
-              + 'style="color:inherit;text-decoration:underline">Change</a>' : '');
+              + 'style="color:inherit;text-decoration:underline">Change city</a>'
+              + ' &middot; <a href="#" onclick="retryLocationAccess();return false" '
+              + 'style="color:inherit;text-decoration:underline">use my location</a>' : '');
   }
 }
 
@@ -14614,11 +14688,11 @@ async function _rvOpen(){
     // forecast but not for a map: the radar has to be centred on a point, and
     // `/weather` returns the city's conditions, not its coordinates.
     const known = _wxCity();
-    el.innerHTML = '<div class="rv-msg">' + (known
-      ? 'The radar needs this device\'s exact position, which it is not giving. '
-        + 'Everything else still works from the city you set &mdash; only the map needs a point on it.'
-      : 'Bella needs your location to centre the radar. '
-        + 'The location cell in the top bar will ask for it.') + '</div>';
+    el.innerHTML = '<div class="rv-msg">'
+      + '<strong>The radar needs your real position.</strong> A city name is enough for the '
+      + 'forecast but not for a map, which has to be centred on a point.'
+      + (_wxLocHelp() || ' The location cell in the top bar will ask for it.')
+      + '</div>';
     return;
   }
   if(!_rvMeta && !_rvLoading){
@@ -16244,6 +16318,19 @@ html body.dark #conv-panel .cv-swap{background:#12233B!important;color:#F5E6C8!i
 /* The city box. Styled off the converter's inputs so it looks native to the
    panel, and given a 44px touch target because a phone is exactly where
    location gets refused. */
+/* The repair notice. Gold left rule so it reads as guidance rather than an
+   error, and it must be legible on both the cream and the navy row. */
+.wx-loc-help{font-size:12px;line-height:1.65;margin-top:12px;padding:10px 12px;
+  border-left:3px solid #D4AF37;border-radius:0 10px 10px 0;background:#FAF8F4;color:#4A5A7A}
+html body.dark .wx-loc-help{background:#12233B!important}
+.wx-loc-btn{padding:5px 11px;border-radius:8px;border:1.5px solid #0B2545;
+  background:#0B2545;color:#D4AF37;font-family:inherit;font-size:11px;
+  font-weight:600;cursor:pointer;margin:0 2px}
+@media(pointer:coarse){ .wx-loc-btn{min-height:40px;padding:8px 14px} }
+html body.dark .wx-loc-btn{background:#F5E6C8!important;color:#0B2545!important;
+  border-color:#F5E6C8!important}
+#wx-radar .wx-loc-help{margin-top:10px}
+
 #wx-city-form{display:flex;gap:8px;margin-top:14px}
 #wx-city-input{flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--border);
   border-radius:10px;font-family:inherit;font-size:13px;color:var(--text);
