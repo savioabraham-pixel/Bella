@@ -13653,12 +13653,11 @@ function initLocationWithCoords(lat, lon){
         ctl ? { signal: ctl.signal } : undefined)
     .then(r=>{ clearTimeout(killer); if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(d=>{
-      const a = d.address || {};
-      // Line 1: best available area name — locality gives Bidhannagar level
-      const area = a.locality||a.city_district||a.suburb||a.neighbourhood||a.quarter||a.village||'';
-      // Line 2: city + country
-      const city = a.city||a.town||a.county||'';
-      const country = a.country||'';
+      // THROUGH THE SAME FORMATTER AS THE SEARCH BOX -- that shared call is
+      // what guarantees the top bar and the weather panel can never print two
+      // different names for one place. [[improve-the-base-before-adding]]
+      const p = _placeFmt(d.address);
+      const area = p.area, city = p.city, country = p.country;
       const line1 = area || city;
       const line2 = area ? (city ? `${city}, ${country}` : country) : country;
       locEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:1px">
@@ -14219,7 +14218,11 @@ async function fetchWeather(force){
   // COORDINATES FIRST, ALWAYS -- they are the precise answer and the only one
   // that can place somebody inside a city. The city is the fallback, not a
   // substitute, so a device that starts answering again silently improves.
-  const loc = _wxCoords();
+  // ORDER MATTERS AND IT CHANGED 2026-10-27. A place he CHOSE wins over the
+  // device, or picking Birmingham while standing in Kolkata would do nothing.
+  // It carries coordinates, so it is still a lat/lon request and the radar
+  // still works -- a chosen place is not the old "typed city" fallback.
+  const loc = _wxPoint();
   const city = loc ? '' : _wxCity();
   if(!loc && !city){
     setWeatherCellState('🌡 —', 'Tap to set city');
@@ -14375,12 +14378,140 @@ function _wxAirCard(){
 // name itself, and a wrong name comes back as a clear error rather than a
 // silently wrong city.
 function _wxCityForm(current){
-  return '<div id="wx-city-form">' +
-    '<input id="wx-city-input" type="text" autocomplete="address-level2" ' +
-      'placeholder="Your town or city" value="' + _expEsc(current || '') + '" ' +
-      'onkeydown="if(event.key===\'Enter\'){event.preventDefault();saveWxCityFromInput()}">' +
-    '<button onclick="saveWxCityFromInput()">Save</button>' +
+  return _wxPlaceFinder(current);
+}
+
+// ── THE PLACE FINDER ───────────────────────────────────────────────────
+// His ask, 2026-10-27: "ill put Birmingham and it says US or UK, i select UK".
+// So the answer is a LIST, not a guess -- the two Birminghams are a real
+// ambiguity and only he can resolve it. Each row shows the place on top and
+// the region underneath, because "Birmingham" twice tells him nothing and
+// "England" versus "Alabama" tells him everything.
+//
+// SEARCHES ON SUBMIT, NEVER PER KEYSTROKE -- the gazetteer's usage policy
+// forbids client-side autocomplete outright. It is also the kinder design on
+// Indian mobile data.
+function _wxPlaceFinder(current){
+  return '<div id="wx-find">' +
+    '<div id="wx-find-row">' +
+      '<input id="wx-city-input" type="text" autocomplete="off" ' +
+        'placeholder="Start typing a town or city" value="' + _expEsc(current || '') + '" ' +
+        'oninput="onWxTyping()" ' +
+        'onkeydown="if(event.key===\'Enter\'){event.preventDefault();runWxPlaceSearch()}">' +
+      '<button onclick="runWxPlaceSearch()">Search</button>' +
+    '</div>' +
+    '<div id="wx-find-out">' + _wxRecentChips() + '</div>' +
     '</div>';
+}
+
+// The places he has actually used, with the coordinates the gazetteer gave
+// them. No network call, so these appear instantly.
+function _wxRecentChips(){
+  const list = recentPlaces();
+  const here = !chosenPlace();
+  // "My location" is ALWAYS the first chip, present even when the list is
+  // empty. Getting back to his own weather was a sentence in the footer
+  // before, which is not where anybody looks for it.
+  let html = '<div class="wx-recent"><div class="wx-recent-t">' +
+    (list.length ? 'Places' : 'Where') + '</div>' +
+    '<button class="wx-chip wx-chip-home' + (here ? ' on' : '') + '" ' +
+      'onclick="useMyLocation()">&#128205; My location</button>';
+  html += list.map(function(p, i){
+    return '<button class="wx-chip" onclick="pickRecentPlace(' + i + ')" ' +
+      'title="' + _expEsc(_placeSub(p)) + '">' + _expEsc(p.primary) + '</button>';
+  }).join('');
+  // Clear empties the list AND brings him home -- both halves, because
+  // clearing the list while leaving him in Birmingham is the surprising one.
+  if(list.length) html += '<button class="wx-chip wx-chip-clear" ' +
+    'onclick="forgetPlaces()" title="Empty this list and return to my location">Clear</button>';
+  return html + '</div>';
+}
+
+function pickRecentPlace(i){
+  const list = recentPlaces();
+  if(list[i]) setChosenPlace(list[i]);
+}
+
+// Results are held here rather than re-fetched when one is tapped -- the
+// gazetteer's rate limit is one request a second and a second call would add
+// nothing.
+let _wxFound = [];
+
+// Debounced -- a request per keystroke is neither fair to them nor kind to a
+// phone on mobile data. 350ms after he stops, three letters minimum.
+function onWxTyping(){
+  const el = document.getElementById('wx-city-input');
+  const out = document.getElementById('wx-find-out');
+  if(!el || !out) return;
+  const q = el.value.trim();
+  if(_gazSugTimer) clearTimeout(_gazSugTimer);
+  if(q.length < 3){ out.innerHTML = _wxRecentChips(); return; }
+  const seq = ++_gazSugSeq;
+  _gazSugTimer = setTimeout(async function(){
+    try{
+      const rows = await placeSuggest(q);
+      // A slow answer to an OLD query must never overwrite a newer one.
+      if(seq !== _gazSugSeq) return;
+      _wxFound = rows;
+      out.innerHTML = rows.length ? _wxFoundList(rows)
+        : '<div class="wx-find-msg">No town or city matching &ldquo;' + _expEsc(q) +
+          '&rdquo; yet &mdash; keep typing, or press Search.</div>';
+    }catch(e){
+      if(seq !== _gazSugSeq) return;
+      // Suggestions are a convenience; pressing Search still works.
+      out.innerHTML = '<div class="wx-find-msg">Suggestions are unavailable &mdash; ' +
+        'type the name and press Search.</div>';
+    }
+  }, 350);
+}
+
+function _wxFoundList(rows){
+  return '<div class="wx-find-list">' + rows.map(function(p, i){
+    return '<button class="wx-find-row" onclick="pickFoundPlace(' + i + ')">' +
+      '<span class="wx-find-name">' + _expEsc(p.primary) + '</span>' +
+      '<span class="wx-find-sub">' + _expEsc(_placeSub(p)) + '</span>' +
+      '</button>';
+  }).join('') + '</div>';
+}
+
+async function runWxPlaceSearch(){
+  const el = document.getElementById('wx-city-input');
+  const out = document.getElementById('wx-find-out');
+  if(!el || !out) return;
+  const q = el.value.trim();
+  if(q.length < 2){
+    out.innerHTML = '<div class="wx-find-msg">Type at least two letters.</div>' + _wxRecentChips();
+    return;
+  }
+  if(_gazSugTimer) clearTimeout(_gazSugTimer);
+  _gazSugSeq++;
+  out.innerHTML = '<div class="wx-find-msg">Searching…</div>';
+  try{
+    // The typo-tolerant source first, because that is the one that copes with
+    // how people actually type. The original is the fallback for the day they
+    // are down -- they promise no availability. Both are OpenStreetMap, so a
+    // place is named the same whichever answers.
+    let rows = [];
+    try{ rows = await placeSuggest(q); }
+    catch(e){ rows = []; }
+    if(!rows.length) rows = await placeSearch(q);
+    _wxFound = rows;
+    if(!rows.length){
+      out.innerHTML = '<div class="wx-find-msg">Nothing found for &ldquo;' +
+        _expEsc(q) + '&rdquo;. Try the nearest larger town.</div>' + _wxRecentChips();
+      return;
+    }
+    out.innerHTML = _wxFoundList(rows);
+  }catch(e){
+    // The weather is unaffected by a failed name lookup -- say so, rather than
+    // letting it read as Bella being broken.
+    out.innerHTML = '<div class="wx-find-msg">Could not reach the place finder just now. ' +
+      'Your own weather is unaffected.</div>' + _wxRecentChips();
+  }
+}
+
+function pickFoundPlace(i){
+  if(_wxFound[i]) setChosenPlace(_wxFound[i]);
 }
 
 // The hours inside one day. NO NEW REQUEST IS MADE HERE — all 40 three-hourly
@@ -14425,6 +14556,253 @@ function setWxUnits(u){
   fetchWeather(true);
 }
 
+// ══ THE ONE GAZETTEER ══════════════════════════════════════════════════
+// HIS RULE, 2026-10-27: "I do not want Bella to showcase 2 different names for
+// the same location whether in India or abroad so the database has to be the
+// same." The Dum Dum fault was exactly that -- two naming authorities inside
+// one page. So every place name in Bella now comes from ONE source,
+// OpenStreetMap, which answers BOTH questions: what is HERE called, and where
+// is THAT. Same database both directions, so the two can never disagree.
+//
+// CHOOSE THE DATABASE, NOT THE VENDOR. If the serving host ever changes --
+// public Nominatim today, our own instance the day Bella charges money -- the
+// data underneath is the same and not one name moves.
+//
+// THEIR USAGE POLICY, AND WHY THIS IS SHAPED THE WAY IT IS (read 2026-10-27):
+//   * "Auto-complete search ... you must not implement such a service on the
+//     client side using the API." So this searches ON SUBMIT. Never per
+//     keystroke. _wxSearchPlaces is reachable only from Enter or the button.
+//   * Absolute maximum 1 request per second -> _plThrottle.
+//   * Caching is required and encouraged -> _gazCache, for the session.
+// A browser sends a Referer automatically, which satisfies their
+// identification requirement; a browser cannot set User-Agent.
+
+const _gazCache = {};        // query -> results, for this tab only
+let _gazLastAt = 0;          // their 1-req/sec ceiling, honoured here
+
+// THE SINGLE FORMATTER. Both directions go through this, which is the whole
+// point: the name you get searching for a place and the name you get standing
+// in it are produced by the same lines of code.
+function _placeFmt(a){
+  a = a || {};
+  const area = a.locality || a.city_district || a.suburb || a.neighbourhood ||
+               a.quarter  || a.village       || a.hamlet || '';
+  const city = a.city || a.town || a.municipality || a.county || a.state_district || '';
+  return {
+    area: area,
+    city: city,
+    region: a.state || '',
+    country: a.country || '',
+    // What Bella calls the place, in one phrase. The town beats the street.
+    primary: city || area || a.state || a.country || ''
+  };
+}
+
+// "Bidhannagar, India" -- the panel title, the search row, the recent chip.
+function _placeLabel(p){
+  return [p.primary, p.country].filter(Boolean).join(', ');
+}
+// "West Bengal, India" -- the line that tells two Birminghams apart.
+function _placeSub(p){
+  return [p.region, p.country].filter(Boolean).join(', ') ||
+         [p.area].filter(Boolean).join('');
+}
+
+// Forward search. ON SUBMIT ONLY -- see the policy note above.
+async function placeSearch(q){
+  q = String(q || '').trim();
+  if(q.length < 2) return [];
+  const key = q.toLowerCase();
+  if(_gazCache[key]) return _gazCache[key];
+  const wait = 1100 - (Date.now() - _gazLastAt);
+  if(wait > 0) await new Promise(r => setTimeout(r, wait));
+  _gazLastAt = Date.now();
+  const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const killer = setTimeout(function(){ try{ ctl && ctl.abort(); }catch(e){} }, 9000);
+  try{
+    const r = await fetch('https://nominatim.openstreetmap.org/search?q=' +
+      encodeURIComponent(q) + '&format=json&limit=6&addressdetails=1',
+      ctl ? { signal: ctl.signal } : undefined);
+    clearTimeout(killer);
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const rows = await r.json();
+    const out = [];
+    const seen = {};
+    (rows || []).forEach(function(row){
+      const p = _placeFmt(row.address);
+      if(!p.primary) return;
+      // Nominatim returns a town and its own boundary as two rows. One place,
+      // one entry -- a list with Birmingham twice is a worse answer.
+      const k = (p.primary + '|' + p.region + '|' + p.country).toLowerCase();
+      if(seen[k]) return;
+      seen[k] = 1;
+      p.lat = Number(row.lat); p.lon = Number(row.lon);
+      if(!isFinite(p.lat) || !isFinite(p.lon)) return;
+      out.push(p);
+    });
+    _gazCache[key] = out;
+    return out;
+  }catch(e){
+    clearTimeout(killer);
+    console.warn('placeSearch failed:', e && e.message);
+    throw e;
+  }
+}
+
+// ── SUGGESTIONS WHILE HE TYPES ─────────────────────────────────────────
+// HIS FAULT REPORT, 2026-10-27: "it expected me to know the spelling hence if
+// you see i missplet vishakhapatinam and it neve showed any data."
+// Measured: `vishakhapatinam` returns 0 from the search endpoint and
+// `Visakhapatnam, Andhra Pradesh` from this one. `Birmingam`, `kolkta` and
+// `bidhannagar` all resolve too -- the last of which the other gazetteers
+// could not find at all.
+//
+// SAME OPENSTREETMAP DATA, different front door. His rule holds: one
+// database, so a place cannot be called one thing here and another there.
+// And unlike the search endpoint -- whose policy forbids client-side
+// autocomplete outright -- typeahead is this one's stated purpose.
+//
+// THEY GUARANTEE NOTHING ("We do not guarantee for the availability"), so
+// pressing Search still falls back to the other endpoint. And "be fair":
+// three letters minimum, a pause before asking, and everything cached.
+const _gazSug = {};
+let _gazSugTimer = null, _gazSugSeq = 0;
+
+// Into the SAME shape as _placeFmt, so one place reads identically whether it
+// arrived from typing or from pressing Search.
+function _photonFmt(f){
+  const q = (f && f.properties) || {};
+  const g = (f && f.geometry && f.geometry.coordinates) || [];
+  return {
+    area: '',
+    city: q.name || '',
+    region: q.state || q.county || '',
+    country: q.country || '',
+    primary: q.name || '',
+    lat: Number(g[1]), lon: Number(g[0])
+  };
+}
+
+async function placeSuggest(q){
+  q = String(q || '').trim();
+  if(q.length < 3) return [];
+  const key = q.toLowerCase();
+  if(_gazSug[key]) return _gazSug[key];
+  const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const killer = setTimeout(function(){ try{ ctl && ctl.abort(); }catch(e){} }, 7000);
+  try{
+    const r = await fetch('https://photon.komoot.io/api/?limit=8&q=' + encodeURIComponent(q),
+      ctl ? { signal: ctl.signal } : undefined);
+    clearTimeout(killer);
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const out = [], seen = {};
+    (d.features || []).forEach(function(f){
+      const pr = (f.properties || {});
+      // Towns and cities, not roads and shops. "Bidhannagar Road" is not an
+      // answer to "where do you want the weather for".
+      if(pr.osm_key !== 'place') return;
+      const p = _photonFmt(f);
+      if(!p.primary || !isFinite(p.lat) || !isFinite(p.lon)) return;
+      const k = (p.primary + '|' + p.region + '|' + p.country).toLowerCase();
+      if(seen[k]) return;
+      seen[k] = 1;
+      out.push(p);
+    });
+    _gazSug[key] = out;
+    return out;
+  }catch(e){
+    clearTimeout(killer);
+    console.warn('placeSuggest failed:', e && e.message);
+    throw e;
+  }
+}
+
+// ── RECENTLY USED PLACES — HIS IDEA, 2026-10-27 ────────────────────────
+// He asked whether the 75-row TIMEZONES table could carry coordinates and be
+// the search index. The instinct was right -- coordinates are what make a
+// result usable -- but 75 hand-maintained cities would be a second gazetteer
+// that drifts, and Bidhannagar is not among them. This is the same idea
+// without the drift: remember the places he ACTUALLY uses, with the
+// coordinates the one gazetteer gave them. Instant, offline, and it can never
+// disagree with anything because it IS the same data.
+const PLACES_RECENT_MAX = 8;
+function recentPlaces(){
+  try{
+    const v = JSON.parse(localStorage.getItem('b_places_recent') || '[]');
+    return Array.isArray(v) ? v.filter(function(p){
+      return p && p.primary && isFinite(p.lat) && isFinite(p.lon);
+    }) : [];
+  }catch(e){ return []; }
+}
+function rememberPlace(p){
+  if(!p || !p.primary || !isFinite(p.lat) || !isFinite(p.lon)) return;
+  try{
+    const k = (p.primary + '|' + p.region + '|' + p.country).toLowerCase();
+    const list = recentPlaces().filter(function(x){
+      return (x.primary + '|' + x.region + '|' + x.country).toLowerCase() !== k;
+    });
+    list.unshift({ primary:p.primary, area:p.area||'', region:p.region||'',
+                   country:p.country||'', lat:p.lat, lon:p.lon, at:Date.now() });
+    localStorage.setItem('b_places_recent', JSON.stringify(list.slice(0, PLACES_RECENT_MAX)));
+  }catch(e){}
+}
+// HIS WORDS, 2026-10-27: "When i pressed clear it should default to the
+// original one which didnt happen". Clearing the list while leaving him in
+// Birmingham is the surprising half, so Clear now does both.
+function forgetPlaces(){
+  try{ localStorage.removeItem('b_places_recent'); }catch(e){}
+  setChosenPlace(null);
+}
+
+// ── THE PLACE HE CHOSE, WHICH BEATS THE DEVICE ─────────────────────────
+// A city used to be the FALLBACK for a device that would not give
+// coordinates. He asked for the opposite as well: "that location can further
+// be changed... ill put Birmingham". So a place chosen by hand now OVERRIDES
+// the device -- otherwise choosing Birmingham in Kolkata would do nothing.
+// It carries lat/lon, so the radar works for it too, which a typed name could
+// never do.
+// SESSION storage, not local. Looking somewhere up is an ACTION, not a
+// SETTING: pick Birmingham today and tomorrow's top bar must not still be
+// showing Birmingham's 13 degrees while he stands in Kolkata. The RECENT list
+// persists instead, so coming back is one tap. His call, 2026-10-27.
+function chosenPlace(){
+  try{
+    const p = JSON.parse(sessionStorage.getItem('b_wx_place') || 'null');
+    if(p && p.primary && isFinite(p.lat) && isFinite(p.lon)) return p;
+  }catch(e){}
+  return null;
+}
+
+// ── THE POINT BELLA IS SHOWING. ONE ANSWER, ONE CALLER-FACING HELPER ───
+// The radar showed Kolkata while the forecast showed Birmingham, because
+// `_rvOpen` and `_rvPaint` read the DEVICE location directly and never asked
+// what he had chosen. Patching those two lines would have left the next
+// feature free to make the same mistake, so there is now exactly one place
+// that answers "which point are we showing?" and everything goes through it.
+// FOUND BY HIS EYE, 2026-10-27. [[bella-comment-is-not-a-call-site]]
+function _wxPoint(){
+  const p = chosenPlace();
+  if(p) return { lat: p.lat, lon: p.lon, chosen: true };
+  const d = _wxCoords();
+  return d ? { lat: d.lat, lon: d.lon, chosen: false } : null;
+}
+function setChosenPlace(p){
+  try{
+    if(p) sessionStorage.setItem('b_wx_place', JSON.stringify(p));
+    else  sessionStorage.removeItem('b_wx_place');
+  }catch(e){}
+  if(p) rememberPlace(p);
+  try{ localStorage.removeItem('b_wx_city'); }catch(e){}   // the old fallback never competes
+  _wxData = null; _wxErr = '';
+  renderWxBody();
+  fetchWeather(true);
+}
+function useMyLocation(){
+  setChosenPlace(null);
+  if(!_wxCoords()) retryLocationAccess();
+}
+
 // ── NAMING THE PLACE THE FORECAST IS ACTUALLY FOR ──────────────────────
 // This said "Dum Dum" while the top bar said "Bidhannagar", from the same
 // coordinates at the same moment. The two names come from different places:
@@ -14440,6 +14818,10 @@ function setWxUnits(u){
 // from those same coordinates. A city the user typed keeps OpenWeather's
 // answer, because that is the place they asked for.
 function _wxPlaceLabel(c){
+  // A place he chose is named by the gazetteer that found it -- the same
+  // database that names where he is standing. One name, India or abroad.
+  const picked = chosenPlace();
+  if(picked) return _placeLabel(picked);
   const loc = _wxCoords();
   if(loc){
     const name = (loc.city || loc.area || '').trim();
@@ -14465,7 +14847,11 @@ function renderWxBody(){
       msg = 'Weather is unavailable right now.<br><span style="font-size:11px">'
           + _expEsc(_wxErr) + '</span>';
     } else if(_wxCoords() || known){
-      msg = 'Loading…';
+      // NAME THE PLACE WHILE IT LOADS. Tapping Birmingham and being shown a
+      // blank "Weather / Loading…" gives him no way to tell it worked -- and
+      // if the fetch then fails it stays that way for good.
+      const waiting = chosenPlace();
+      msg = waiting ? 'Loading ' + _expEsc(_placeLabel(waiting)) + '…' : 'Loading…';
     } else {
       msg = 'This device is not sharing its location, so tell Bella where you are '
           + 'and the weather will work anyway.';
@@ -14474,9 +14860,16 @@ function renderWxBody(){
       // The REPAIR first, the workaround second. A city gets the forecast
       // going; only real coordinates bring the radar back.
       + ((!_wxCoords() && !_wxErr) ? _wxLocHelp() : '')
-      + ((!_wxCoords() && !known && !_wxErr) ? _wxCityForm('') : '');
-    if(title) title.textContent = 'Weather';
-    if(foot) foot.textContent = '';
+      + ((!_wxCoords() && !known && !_wxErr) ? _wxPlaceFinder('') : '');
+    // The title carries the place even before any weather has arrived, so a
+    // chosen place is never silently lost behind the word "Weather".
+    const pending = chosenPlace();
+    if(title) title.textContent = pending ? _placeLabel(pending) : 'Weather';
+    if(foot) foot.innerHTML = pending
+      ? 'Showing <strong>' + _expEsc(_placeLabel(pending)) + '</strong>. '
+        + '<a href="#" onclick="useMyLocation();return false" '
+        + 'style="color:inherit;text-decoration:underline">Use my location</a>'
+      : '';
     return;
   }
 
@@ -14557,19 +14950,47 @@ function renderWxBody(){
       : '<div style="font-size:13px;color:var(--tsoft)">No forecast available.</div>';
   }
 
+  // Searching for another place must be reachable WHILE the weather is
+  // showing -- he asked to look up Birmingham from Kolkata, and a box that
+  // only appears when location has failed cannot do that. Collapsed by
+  // default so it never crowds the forecast.
+  if(_wxTab === 'now'){
+    el.innerHTML += '<div id="wx-find-wrap">' +
+      (_wxFinderOpen ? _wxPlaceFinder('')
+        : '<button class="wx-find-open" onclick="toggleWxFinder()">Weather somewhere else</button>') +
+      '</div>';
+  }
+
   if(foot){
     const age = Math.round((Date.now() - _wxAt) / 60000);
-    const byCity = !_wxCoords() && _wxCity();
+    const picked = chosenPlace();
+    const byCity = !picked && !_wxCoords() && _wxCity();
     foot.innerHTML = 'OpenWeather · updated ' + (age < 1 ? 'just now' : age + ' min ago') +
       (_wxTab === 'now' ? '' : ' · daily high / low taken from the 3-hourly readings') +
-      // Said plainly when it applies: a city is a coarser answer than
-      // coordinates, and whoever set it should be able to change it.
+      // A place he chose carries coordinates, so unlike the old typed city it
+      // keeps the radar. The sentence has to say which of the two he has.
+      (picked ? '<br>Showing <strong>' + _expEsc(_placeLabel(picked)) + '</strong>, not this '
+              + 'device\'s location. '
+              + '<a href="#" onclick="useMyLocation();return false" '
+              + 'style="color:inherit;text-decoration:underline">Use my location</a>' : '') +
       (byCity ? '<br>Using the city you set, not this device\'s location &mdash; so the radar '
               + 'cannot work. '
               + '<a href="#" onclick="setWxCity(\'\');return false" '
               + 'style="color:inherit;text-decoration:underline">Change city</a>'
-              + ' &middot; <a href="#" onclick="retryLocationAccess();return false" '
-              + 'style="color:inherit;text-decoration:underline">use my location</a>' : '');
+              + ' &middot; <a href="#" onclick="useMyLocation();return false" '
+              + 'style="color:inherit;text-decoration:underline">use my location</a>' : '') +
+      // Attribution is a licence condition of the gazetteer, not decoration.
+      '<br>Place names &copy; OpenStreetMap contributors';
+  }
+}
+
+let _wxFinderOpen = false;
+function toggleWxFinder(){
+  _wxFinderOpen = !_wxFinderOpen;
+  renderWxBody();
+  if(_wxFinderOpen){
+    const el = document.getElementById('wx-city-input');
+    if(el) try{ el.focus(); }catch(e){}
   }
 }
 
@@ -14682,7 +15103,7 @@ async function _rvOpen(){
   const foot = document.getElementById('wx-foot');
   if(!el) return;
   if(foot) foot.textContent = '';
-  const loc = _wxCoords();
+  const loc = _wxPoint();     // the point SHOWN, not the device — see _wxPoint
   if(!loc){
     // HONEST ABOUT WHAT THE FALLBACK CANNOT DO. A city name is enough for a
     // forecast but not for a map: the radar has to be centred on a point, and
@@ -14839,7 +15260,7 @@ function _rvShowFrame(){
 function _rvPaint(){
   const host = document.getElementById('rv-layers');
   const map = document.getElementById('rv-map');
-  const loc = _wxCoords();
+  const loc = _wxPoint();     // must match what _rvOpen centred on
   if(!host || !map || !loc || !_rvFrames.length) return;
   const cw = map.clientWidth, ch = map.clientHeight;
   if(!cw || !ch) return;                       // not laid out yet — never
@@ -16331,22 +16752,75 @@ html body.dark .wx-loc-btn{background:#F5E6C8!important;color:#0B2545!important;
   border-color:#F5E6C8!important}
 #wx-radar .wx-loc-help{margin-top:10px}
 
-#wx-city-form{display:flex;gap:8px;margin-top:14px}
+/* THE PLACE FINDER. Styled off the converter's inputs so it reads as native
+   to the panel. Every interactive thing here gets a 44px touch target on a
+   coarse pointer -- a phone is exactly where someone looks up another city. */
+#wx-find{margin-top:14px}
+#wx-find-row{display:flex;gap:8px}
+#wx-find-wrap{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.wx-find-open{width:100%;padding:10px 14px;border-radius:10px;
+  border:1.5px solid var(--border);background:transparent;color:var(--tsoft);
+  font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;text-align:center}
+.wx-find-open:hover{border-color:#D4AF37;color:var(--text)}
+.wx-find-msg{font-size:12px;color:var(--tsoft);margin-top:10px;line-height:1.6}
+.wx-find-list{margin-top:10px;border:1.5px solid var(--border);border-radius:10px;
+  overflow:hidden}
+button.wx-find-row{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  width:100%;padding:10px 12px;border:0;border-bottom:1px solid var(--border);
+  background:#FAF8F4;font-family:inherit;cursor:pointer;text-align:left}
+button.wx-find-row:last-child{border-bottom:0}
+button.wx-find-row:hover{background:#F2EDE2}
+.wx-find-name{font-size:13px;font-weight:600;color:var(--text)}
+/* The line that tells Birmingham England from Birmingham Alabama. It is the
+   WHOLE point of the list, so it must never be the faintest thing on screen. */
+.wx-find-sub{font-size:11px;color:#5A6B8A}
+.wx-recent{margin-top:12px}
+.wx-recent-t{font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  color:#5A6B8A;margin-bottom:7px}
+.wx-chip{display:inline-block;padding:6px 11px;margin:0 6px 6px 0;border-radius:999px;
+  border:1.5px solid var(--border);background:#FAF8F4;color:var(--text);
+  font-family:inherit;font-size:12px;cursor:pointer}
+.wx-chip:hover{border-color:#D4AF37}
+.wx-chip-clear{color:#5A6B8A}
+/* "My location" is the way home, so it reads as the primary chip and shows
+   when it is the one in use. */
+.wx-chip-home{font-weight:600}
+.wx-chip-home.on{border-color:#D4AF37;background:#FFF8E6}
+html body.dark .wx-chip-home.on{background:#2A2414!important;border-color:#D4AF37!important}
+@media(pointer:coarse){
+  .wx-find-open,button.wx-find-row{min-height:44px}
+  .wx-chip{min-height:40px;padding:9px 14px}
+}
+html body.dark button.wx-find-row{background:#12233B!important;color:#F5E6C8!important;
+  border-bottom-color:rgba(245,230,200,.26)!important}
+html body.dark button.wx-find-row:hover{background:#17304f!important}
+html body.dark .wx-find-name{color:#F5E6C8!important}
+html body.dark .wx-find-sub{color:#C9D4E8!important}
+html body.dark .wx-find-list{border-color:rgba(245,230,200,.26)!important}
+html body.dark .wx-chip{background:#12233B!important;color:#F5E6C8!important;
+  border-color:rgba(245,230,200,.26)!important}
+html body.dark .wx-chip-clear{color:#C9D4E8!important}
+html body.dark .wx-find-open{background:transparent!important;color:#C9D4E8!important;
+  border-color:rgba(245,230,200,.26)!important}
+html body.dark .wx-recent-t,html body.dark .wx-find-msg{color:#C9D4E8!important}
+html body.dark #wx-find-wrap{border-top-color:rgba(245,230,200,.26)!important}
+
+#wx-city-form,#wx-find-row{display:flex;gap:8px;margin-top:14px}
 #wx-city-input{flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--border);
   border-radius:10px;font-family:inherit;font-size:13px;color:var(--text);
   background:#FAF8F4;outline:none}
 #wx-city-input:focus{border-color:#D4AF37}
-#wx-city-form button{padding:10px 16px;border-radius:10px;border:1.5px solid #0B2545;
+#wx-city-form button,#wx-find-row button{padding:10px 16px;border-radius:10px;border:1.5px solid #0B2545;
   background:#0B2545;color:#D4AF37;font-family:inherit;font-size:12px;
   font-weight:600;cursor:pointer;flex-shrink:0}
-@media(pointer:coarse){ #wx-city-input,#wx-city-form button{min-height:44px} }
+@media(pointer:coarse){ #wx-city-input,#wx-city-form button,#wx-find-row button{min-height:44px} }
 /* Same ID-keyed dark rules as #wx-tabs and #wx-units: body.dark carries a
    blanket button{...!important} and a blanket colour rule that a class
    cannot outrank. */
 html body.dark #wx-city-input{background:#12233B!important;color:#F5E6C8!important;
   border-color:rgba(245,230,200,.26)!important}
-html body.dark #wx-city-form button{background:#F5E6C8!important;color:#0B2545!important;
-  border-color:#F5E6C8!important}
+html body.dark #wx-city-form button,html body.dark #wx-find-row button{
+  background:#F5E6C8!important;color:#0B2545!important;border-color:#F5E6C8!important}
 #wx-foot a{color:inherit}
 
 #wx-foot{font-size:10px;color:#5A6B8A;margin-top:12px;line-height:1.6}
