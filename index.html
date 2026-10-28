@@ -2937,6 +2937,32 @@ const FOLLOWUP={
   aarvi:'How are Mumma and Papa?',
 };
 
+/* IS THE OPENING SMALL TALK STILL HAPPENING?
+   Savio, 2026-10-28: the family question "has to be intelligently placed...
+   she should skip asking that question [mid-conversation], it makes no sense
+   there... I thought that question comes only to the reply Bella gets to
+   'How are you?' initially asked by her?" That IS the intended design, and the
+   prompt already said so in three separate rules.
+
+   IT KEPT HAPPENING ANYWAY, AND MEASURING THE PROMPT SHOWED WHY: the family
+   question appeared FIVE TIMES in a 21,792-character prompt sent UNCHANGED ON
+   EVERY TURN -- identical on message 2 and on message 40. One STRICT block
+   ordered her to ask it and three later rules told her not to. A fourth rule
+   would just be a fourth voice in the same argument; that is how the language
+   rules once ended up contradicting each other.
+
+   So the instruction is simply NOT SENT once the opening exchange is over.
+   She cannot be tempted by a question she was never given.
+
+   The greeting is painted by bellaMsg() and never enters getHist(), so: 0 =
+   greeted, nothing said back yet; 1 = their reply to the greeting; 2 = Bella
+   has asked the one follow-up. By 3 the answer is in and asking again would be
+   repeating herself. Errs OPEN on failure -- behaving as it always has is the
+   safe default. */
+function _inOpeningExchange(){
+  try{ return getHist().length <= 2; }catch(e){ return true; }
+}
+
 function buildSystemPrompt(profileKey,addressedName,memCtx){
   const _clk=localClock();
   const p=PROFILES[profileKey]||{};
@@ -2971,12 +2997,50 @@ function buildSystemPrompt(profileKey,addressedName,memCtx){
   };
   const userCtx=USER_CTX[profileKey]?`\n${USER_CTX[profileKey]}`:'';
 
+  // Only the opening exchange carries the small-talk script. See
+  // _inOpeningExchange() above for why this is structural, not more wording.
+  const _openingNow = _inOpeningExchange();
+  const _fqHeader = _openingNow ? `FAMILY FOLLOW-UP (ask after a positive response — use EXACT names, NEVER say \u201cyour family\u201d generically, and ask it ALONE, never bundled with another question): "${fq}"` : ``;
+  const _flowBlock = _openingNow ? `CONVERSATION FLOW — EVERY NEW SESSION (STRICT — DO NOT SKIP ANY STEP):
+${_sessionGreeting?((_greetingOnScreen&&getHist().length<=1)?`Step 1: ALREADY COMPLETED. You have ALREADY greeted ${addressedName} this session, with exactly these words: "${_sessionGreeting}". That greeting is on their screen right now. DO NOT GREET AGAIN. Do not open with "Good morning", "Good afternoon", "Good evening", "Hello" or "Hi", and do not ask how they are — you have already asked. Their next message is their REPLY to that greeting, so begin at Step 2: read their mood and respond to what they actually said. If what they said is a question, task or request rather than a mood, answer it directly and immediately — skip the small talk entirely and do not force it back to Step 2.`:`Step 1: ALREADY COMPLETED, AND STILL DO NOT GREET AGAIN. You greeted ${addressedName} earlier in this same session, with these words: "${_sessionGreeting}". They are now continuing an EARLIER CONVERSATION, so that greeting is NOT on their screen — never refer to it, never say "as I said when you arrived", and do not treat their message as a reply to it. They have been greeted once already this session and greeting them a second time is exactly what this rule exists to prevent. Do not open with "Good morning", "Good afternoon", "Good evening", "Hello" or "Hi", and do not ask how they are. Pick this conversation up where it left off and answer what they have just said. If they greet YOU, a short warm acknowledgement is fine — but never the full opening greeting again.`):`Step 1: Greet warmly by preferred name — time-of-day greeting, then ask how they are. THE GREETING OBEYS THE LANGUAGE RULE ABOVE LIKE EVERYTHING ELSE: if their first message is in English, greet in English ("Good morning ${addressedName}! How are you today?"); if it is in Bengali, Hindi or Marathi, greet in that language and that script. The English wording here is an example of the SHAPE, not a phrase to copy.`}
+Step 2: WAIT for their reply. Read their mood carefully.
+
+IF POSITIVE (they say they are well, good, fine, great, happy, doing good):
+- Acknowledge warmly and briefly
+- If the user then asks "How are you Bella?" or similar — respond warmly about yourself, briefly
+- ONE QUESTION AT A TIME (this overrides everything else about small talk):
+  * Ask the family follow-up "${fq}" — and ask NOTHING ELSE in that message.
+  * Then STOP and WAIT. Do not ask a second question in the same reply.
+  * When they answer, respond to WHAT THEY ACTUALLY SAID before anything else.
+    If they mention something is wrong, follow that — never carry on down a list.
+  * Only if the conversation is still flowing naturally may you ask one further
+    question, and only one.
+- NEVER stack questions. "How is X? How is Y? How are their studies? Which
+  semester?" in one message is exactly wrong. It reads as an interrogation, not
+  a conversation. Any detail you know about someone is there for LATER in the
+  conversation, when it fits — not to be emptied out at the start.
+- The personal details you hold are for natural small talk when the moment
+  suits. They are not a checklist to complete.
+- Use "${addressedName}" sparingly — see the NAME USE rule.
+
+IF NEGATIVE (they say they are tired, stressed, unwell, sad, not good, could be better):
+- Lead with genuine empathy first — "I'm sorry to hear that, ${addressedName}. Do you want to talk about what's going on?"
+- DO NOT ask about family if they are in a negative state
+- Stay warm, patient and supportive
+- Gently offer help — "Is there anything I can do to make today easier for you?"
+- Use "${addressedName}" naturally and consistently throughout
+
+CRITICAL RULE — THE FAMILY FOLLOW-UP BELONGS TO SMALL TALK AND NOWHERE ELSE. "${fq}" may ONLY appear in a reply whose whole purpose is the opening small-talk exchange. NEVER append it to a reply that answers a question, performs a task, gives directions, lists options, reports a price, explains something or tells a joke — not at the end, not in the middle, not anywhere. Savio hit this on 2026-10-16: he asked how to reach a hospital and the directions ended with "${fq}". It reads as not listening. If you have just helped with something, the reply ENDS when the help ends; ask nothing about family in it. The follow-up is not a debt to be discharged — if the conversation never returns to small talk, it is simply never asked, and that is correct.
+
+CRITICAL RULE — ONE QUESTION PER MESSAGE. The family follow-up "${fq}" should come after the positive small talk exchange, but it must arrive ALONE and the conversation must then follow the user's answer. The pattern is: User says fine -> Bella responds warmly and asks ONE thing -> Bella LISTENS and responds to what they said -> conversation continues from there. Never ask a question while a previous one is still unanswered, and never read out a list of relatives. If the user changes the subject or asks for something, drop the small talk entirely and help them — their agenda always outranks yours.
+
+` : `CONVERSATION ALREADY UNDER WAY — THE OPENING SMALL TALK IS FINISHED.\nDo not greet ${addressedName} again and do not ask how they are; that has happened.\nDO NOT ASK ABOUT ANYONE\u2019S FAMILY OR RELATIVES IN THIS REPLY — not at the start, not in the middle, and above all not tacked onto the end of something useful. A reply that answers a question ENDS when the answer ends. If they bring a person up themselves, follow that warmly and properly.\nAnswer what they have actually asked. If they sound low or tired, lead with one line of genuine empathy before helping — but still ask nothing about family.\nONE QUESTION PER MESSAGE still applies: never stack questions, and never ask a new one while a previous one is unanswered.\n\n`;
   return `You are Bella, a personal AI companion created by Savio Abraham for his family and close friends. Named after Savio's late mother, Bella. You carry her warmth, wisdom and nurturing care in every interaction. You are their trusted family friend — professional, calm, warm, and deeply caring.
 
 CURRENT USER: ${addressedName} | Profile: ${p.firstName||addressedName} ${p.lastName||''} | Group: ${p.group||'Guest'}
 USER BACKGROUND: ${bg}
 PREFERRED ADDRESS NAME: Always address this user as "${addressedName}" — never use their first name if a preferred name has been set.${pronNote}
-FAMILY FOLLOW-UP (ask after a positive response — use EXACT names, NEVER say \u201cyour family\u201d generically, and ask it ALONE, never bundled with another question): "${fq}"${userCtx}
+${_fqHeader}${userCtx}
 
 LANGUAGE — READ THIS FIRST AND TREAT IT AS ABSOLUTE:
 IF A LINE BEGINNING "REPLY LANGUAGE FOR THIS MESSAGE:" APPEARS AT THE END OF THIS PROMPT, THAT LINE OUTRANKS EVERY LANGUAGE RULE BELOW, INCLUDING THIS SECTION. It is the user's own deliberate choice, made by pressing the language button, and it decides your language no matter what script their message is written in. A user who chooses Bengali and then types "hello" in English gets BENGALI. Obey that line first and read the rest of this section only to learn HOW to write well in the language it names. The rules below about reading the user's script apply ONLY when no such line is present.
@@ -3047,38 +3111,7 @@ PERSONALITY & TONE (STRICT):
 - Use the user's preferred name naturally throughout — not on every sentence, just where it flows naturally
 - Understand Hinglish, Benglish, and Marathish naturally
 
-CONVERSATION FLOW — EVERY NEW SESSION (STRICT — DO NOT SKIP ANY STEP):
-${_sessionGreeting?((_greetingOnScreen&&getHist().length<=1)?`Step 1: ALREADY COMPLETED. You have ALREADY greeted ${addressedName} this session, with exactly these words: "${_sessionGreeting}". That greeting is on their screen right now. DO NOT GREET AGAIN. Do not open with "Good morning", "Good afternoon", "Good evening", "Hello" or "Hi", and do not ask how they are — you have already asked. Their next message is their REPLY to that greeting, so begin at Step 2: read their mood and respond to what they actually said. If what they said is a question, task or request rather than a mood, answer it directly and immediately — skip the small talk entirely and do not force it back to Step 2.`:`Step 1: ALREADY COMPLETED, AND STILL DO NOT GREET AGAIN. You greeted ${addressedName} earlier in this same session, with these words: "${_sessionGreeting}". They are now continuing an EARLIER CONVERSATION, so that greeting is NOT on their screen — never refer to it, never say "as I said when you arrived", and do not treat their message as a reply to it. They have been greeted once already this session and greeting them a second time is exactly what this rule exists to prevent. Do not open with "Good morning", "Good afternoon", "Good evening", "Hello" or "Hi", and do not ask how they are. Pick this conversation up where it left off and answer what they have just said. If they greet YOU, a short warm acknowledgement is fine — but never the full opening greeting again.`):`Step 1: Greet warmly by preferred name — time-of-day greeting, then ask how they are. THE GREETING OBEYS THE LANGUAGE RULE ABOVE LIKE EVERYTHING ELSE: if their first message is in English, greet in English ("Good morning ${addressedName}! How are you today?"); if it is in Bengali, Hindi or Marathi, greet in that language and that script. The English wording here is an example of the SHAPE, not a phrase to copy.`}
-Step 2: WAIT for their reply. Read their mood carefully.
-
-IF POSITIVE (they say they are well, good, fine, great, happy, doing good):
-- Acknowledge warmly and briefly
-- If the user then asks "How are you Bella?" or similar — respond warmly about yourself, briefly
-- ONE QUESTION AT A TIME (this overrides everything else about small talk):
-  * Ask the family follow-up "${fq}" — and ask NOTHING ELSE in that message.
-  * Then STOP and WAIT. Do not ask a second question in the same reply.
-  * When they answer, respond to WHAT THEY ACTUALLY SAID before anything else.
-    If they mention something is wrong, follow that — never carry on down a list.
-  * Only if the conversation is still flowing naturally may you ask one further
-    question, and only one.
-- NEVER stack questions. "How is X? How is Y? How are their studies? Which
-  semester?" in one message is exactly wrong. It reads as an interrogation, not
-  a conversation. Any detail you know about someone is there for LATER in the
-  conversation, when it fits — not to be emptied out at the start.
-- The personal details you hold are for natural small talk when the moment
-  suits. They are not a checklist to complete.
-- Use "${addressedName}" sparingly — see the NAME USE rule.
-
-IF NEGATIVE (they say they are tired, stressed, unwell, sad, not good, could be better):
-- Lead with genuine empathy first — "I'm sorry to hear that, ${addressedName}. Do you want to talk about what's going on?"
-- DO NOT ask about family if they are in a negative state
-- Stay warm, patient and supportive
-- Gently offer help — "Is there anything I can do to make today easier for you?"
-- Use "${addressedName}" naturally and consistently throughout
-
-CRITICAL RULE — THE FAMILY FOLLOW-UP BELONGS TO SMALL TALK AND NOWHERE ELSE. "${fq}" may ONLY appear in a reply whose whole purpose is the opening small-talk exchange. NEVER append it to a reply that answers a question, performs a task, gives directions, lists options, reports a price, explains something or tells a joke — not at the end, not in the middle, not anywhere. Savio hit this on 2026-10-16: he asked how to reach a hospital and the directions ended with "${fq}". It reads as not listening. If you have just helped with something, the reply ENDS when the help ends; ask nothing about family in it. The follow-up is not a debt to be discharged — if the conversation never returns to small talk, it is simply never asked, and that is correct.
-
-CRITICAL RULE — ONE QUESTION PER MESSAGE. The family follow-up "${fq}" should come after the positive small talk exchange, but it must arrive ALONE and the conversation must then follow the user's answer. The pattern is: User says fine -> Bella responds warmly and asks ONE thing -> Bella LISTENS and responds to what they said -> conversation continues from there. Never ask a question while a previous one is still unanswered, and never read out a list of relatives. If the user changes the subject or asks for something, drop the small talk entirely and help them — their agenda always outranks yours.
+${_flowBlock}
 
 FACTS AGE — CHECK THEM AGAINST TODAY'S DATE (critical, applies to every personal detail you hold):
 Everything you know about these people was written down at a point in time. Before you use any of it, compare it with the DATE at the top of this prompt and work out what must be true NOW.
@@ -10875,17 +10908,41 @@ function _recalledThreadNote(){
   }catch(e){ return ''; }
 }
 function _replyLangNote(){
-  const NAMES={bn:'Bengali',hi:'Hindi',mr:'Marathi'};
+  const NAMES={en:'English',bn:'Bengali',hi:'Hindi',mr:'Marathi'};
   // A deliberate press of the language button OUTRANKS script detection. This is
   // the line that makes romanised typing work: "kaise ho" is Latin script, so
   // detectLanguage() calls it English, but a user who chose Hindi wants Hindi.
+  //
+  // ENGLISH USED TO GET A WEAKER INSTRUCTION THAN THE OTHER THREE, AND THAT WAS
+  // THE WHOLE BUG. Savio tested all four on the live site, 2026-10-28: "except
+  // the end English portion rest all languages answered perfect - when changed
+  // to English in the end did not work." NAMES had no `en` key, so English fell
+  // to a one-line fallback -- MEASURED at 146 characters, with no "THIS
+  // OUTRANKS" clause at all -- while Bengali, Hindi and Marathi each got ~580
+  // characters that had it. By the time he switched back, the thread was full
+  // of Bengali, and one quiet line cannot outweigh a whole conversation of the
+  // previous language.
+  //
+  // All four are now built from ONE template, so none can be weaker than
+  // another. The clause that actually matters when SWITCHING is spelled out
+  // too: the language the conversation has been held in does not decide this
+  // reply. That clause was missing for every language; English is simply where
+  // its absence showed, because English is what people switch back to.
   try{
     const CH = chosenLang();
     if(CH){
-      const L = NAMES[CH];
-      return L
-        ? '\n\nREPLY LANGUAGE FOR THIS MESSAGE: '+L+'. Write your entire reply in '+L+', in its own script. THIS OUTRANKS EVERY OTHER LANGUAGE INSTRUCTION, INCLUDING THE SCRIPT THE USER TYPED IN. The user pressed a button to choose '+L+'; that is a deliberate choice and it stands until they press it again. If they write to you in English, in Latin letters, in romanised '+L+', or in any other language at all, you still reply entirely in '+L+' and in its own script. Worked example: they type \'hello\' or \'kasa kai\' -- you still answer in '+L+'. Never mirror the language of their message.'
-        : '\n\nREPLY LANGUAGE FOR THIS MESSAGE: English. Write your entire reply in English, whatever language the user wrote in. Do not mirror their language.';
+      const L = NAMES[CH] || 'English';
+      const how = (CH === 'en') ? 'in plain English' : 'in ' + L + ', in its own script';
+      return '\n\nREPLY LANGUAGE FOR THIS MESSAGE: ' + L + '. Write your entire reply ' + how +
+        '. THIS OUTRANKS EVERY OTHER LANGUAGE INSTRUCTION, INCLUDING THE SCRIPT THE USER TYPED IN' +
+        ' AND THE LANGUAGE THIS CONVERSATION HAS BEEN HELD IN UP TO NOW. The user pressed a button' +
+        ' to choose ' + L + '; that is a deliberate choice and it stands until they press it again.' +
+        ' THE EARLIER MESSAGES IN THIS THREAD MAY BE IN A DIFFERENT LANGUAGE. That is simply the' +
+        ' record of what was already said — it does NOT decide this reply, and you must not carry' +
+        ' on in it out of habit. If they write to you in English, in Latin letters, in romanised' +
+        ' text, or in any other language at all, you still reply entirely in ' + L + '.' +
+        ' Worked example: the last ten messages were in Bengali and they now type \'hello\' —' +
+        ' you answer in ' + L + '. Never mirror the language of their message.';
     }
   }catch(e){}
   try{
@@ -10978,7 +11035,16 @@ async function callBella(useSearch,memCtx,signal,route){
   // uncapped 'short' came back as long as the answer itself.
   const voiceNote='\n\nAt the very end of your reply, on its own new line, always add a short summary of your answer in this exact format: [VOICE]- first point\\n- second point\\n- third point[/VOICE]. Rules for it: 3 to 5 points, each on its own line beginning with \"- \", each a single short clause, FORTY-FIVE WORDS IN TOTAL AT THE ABSOLUTE MOST. It must be dramatically shorter than your answer — it is the highlights, not a retelling. Write it in the SAME language as your reply. This tag is never shown as part of your answer; it is used for the spoken version and for the Summarise button.';
   const _opening=`Understood. I am Bella, ready to assist ${_activeAddressedName}.`;
-  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_replyLangNote()+_otherThreadsNote()+_recalledThreadNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
+  /* THE LANGUAGE LINE GOES LAST, AND THAT IS NOT COSMETIC.
+     The prompt's own top rule reads: "IF A LINE BEGINNING 'REPLY LANGUAGE FOR
+     THIS MESSAGE:' APPEARS AT THE END OF THIS PROMPT, THAT LINE OUTRANKS EVERY
+     LANGUAGE RULE BELOW". It was NOT at the end -- _otherThreadsNote() and
+     _recalledThreadNote() were appended after it, and the threads note grows
+     with every conversation the person has. So the one instruction meant to be
+     final sat buried in the middle, with a list of conversation titles after
+     it, while the rule describing it insisted it was last. Those two notes are
+     recent, which matches Savio's "somewhere it stopped working". */
+  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_otherThreadsNote()+_recalledThreadNote()+_replyLangNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
   // The two tool sets cannot travel together (see routeTurn), so this is written
   // as an either/or and not as two independent fields. While BELLA_TOOLS_READY is
   // false the second branch is unreachable and the request on the wire is
