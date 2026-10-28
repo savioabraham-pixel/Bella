@@ -127,6 +127,160 @@ body.dark{
   text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dl-btn:hover{border-color:var(--navy)}
 @media(max-width:480px){.dl-btn{font-size:11px;padding:10px 12px}}
+
+/* ── THE LIVE CHART IN THE CHAT ──────────────────────────────────────────
+   /data-to-chart has always returned `labels`, `datasets`, `insights`,
+   `trend`, `anomalies` and `recommendation` ALONGSIDE the PNG -- the
+   handler ends `res.json({ok:true, ...chart, chartImageBase64})`, so one
+   call carries all of it. The page read one field and binned the rest.
+   This draws the real thing from the numbers, with the picture kept as
+   the download.
+
+   DRAWN HERE IN SVG, with no charting library, deliberately: QC step 9
+   counts nine external requests and nothing new may run before Bella is
+   on screen. A CDN chart library breaks both.
+
+   COLOUR. The eight-slot categorical palette, each theme stepped for its
+   own surface and both validated against Bella's REAL surfaces
+   (#FFFFFF light, #162030 dark) -- lightness band, chroma floor, CVD
+   separation and normal-vision floor all pass. These are real hex, not
+   theme tokens, because a series colour is IDENTITY: it must not follow
+   the navy/gold inversion or the same series would change colour between
+   themes. The ink and surface DO use tokens, so they invert for free.
+
+   TWO DARK-MODE TRAPS, both measured before writing a line:
+   1. `body.dark *{color:#F5E6C8!important}` scores (0,7,3) and repaints
+      any text cream. SVG text here therefore sets `fill`, NEVER
+      `currentColor` -- `fill` is outside that rule's reach. HTML text
+      inside the block is left to go cream; it sits on a dark surface and
+      reads fine, so hierarchy is carried by WEIGHT AND SIZE instead of
+      colour, which no blanket rule can take away.
+   2. `body.dark button{background:#E8D9B8!important;color:#0B2545
+      !important}` scores (0,1,1) and would flatten every pivot control
+      to the same gold pill, so the pressed one could not be told from
+      the rest. The rules below are `body.dark .bchart-piv button`
+      (0,2,1) and `...button[aria-pressed="true"]` (0,3,1): both carry
+      `!important` AND outscore it, which is what it takes to win.
+   The tooltip is one shared `#bchart-tip` keyed off an ID (1,0,0),
+   because nothing built from classes can outscore that (0,7,3) blanket. */
+.bchart{
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;
+  --s5:#e87ba4;--s6:#008300;--s7:#4a3aa7;--s8:#e34948;
+  --cink:var(--text);--cink2:var(--tmid);
+  --csurf:var(--white);--cgrid:var(--bordermid);
+  width:100%;margin:8px 0 0}
+body.dark .bchart{
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;
+  --s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767}
+/* A THIRD DARK TRAP, found by LOOKING at the rendered chart and by nothing
+   else -- every check still passed while this was wrong.
+   `html body.dark svg{stroke:#F5E6C8!important}` at the bottom of this file
+   is an ICON rule, and `stroke` INHERITS: it gave every bar, every slice and
+   every invisible hit rectangle a cream outline, so the chart read as a
+   spreadsheet grid. Light mode was perfect throughout, which is the whole
+   reason the rule about dark exists -- and dark is the one he uses.
+   That rule scores (0,1,3); this scores (0,2,3) and so wins. Children then
+   inherit `none` and the strokes this file sets deliberately -- the line, the
+   2px surface rings and gaps, the gridlines -- still apply, because an
+   element's own declaration always beats an inherited value. */
+html body.dark .bchart svg{stroke:none!important}
+
+.bchart-plot{position:relative;background:var(--csurf);border:1px solid var(--border);
+  border-radius:10px;padding:10px 12px;overflow-x:auto}
+.bchart-plot svg{display:block;width:100%;height:auto}
+
+/* The pivot row -- his "pivot icons". Four forms, each a different job:
+   magnitude, change over time, part-to-whole, and the numbers themselves. */
+.bchart-piv{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.bchart-piv button{font-family:inherit;font-size:11px;font-weight:600;
+  padding:7px 12px;border-radius:999px;border:1px solid var(--bordermid);
+  background:transparent;color:var(--tmid);cursor:pointer;line-height:1}
+.bchart-piv button[aria-pressed="true"]{background:var(--goldpale);
+  color:var(--text);border-color:var(--navy)}
+body.dark .bchart-piv button{background:transparent!important;
+  color:var(--tmid)!important;border:1px solid var(--bordermid)!important}
+body.dark .bchart-piv button[aria-pressed="true"]{background:var(--goldpale)!important;
+  color:var(--text)!important;border-color:var(--navy)!important}
+
+/* The legend. Present whenever there are two or more series, so identity
+   is never carried by colour alone. One series gets none -- the title
+   already says what is plotted. */
+.bchart-leg{display:flex;flex-wrap:wrap;gap:4px 14px;margin:8px 0 0;
+  font-size:11.5px;color:var(--tmid)}
+.bchart-leg span{display:inline-flex;align-items:center;gap:6px}
+.bchart-leg i{width:11px;height:11px;border-radius:3px;flex:none}
+
+/* The table view. Carries every value without a hover, which is what
+   makes the three lower-contrast light-mode hues legal, and is the
+   honest answer to "just show me the numbers". */
+.bchart-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.bchart-tbl th,.bchart-tbl td{padding:7px 10px;text-align:right;
+  border-bottom:1px solid var(--border);white-space:nowrap}
+.bchart-tbl th:first-child,.bchart-tbl td:first-child{text-align:left}
+.bchart-tbl thead th{font-weight:700;color:var(--tmid);
+  border-bottom:1px solid var(--bordermid)}
+.bchart-tbl tbody td{font-variant-numeric:tabular-nums}
+
+/* "What does this mean?" -- the four fields that were being thrown away. */
+.bchart-why{margin:8px 0 0}
+.bchart-whybtn{font-family:inherit;font-size:11.5px;font-weight:600;
+  padding:8px 13px;border-radius:999px;border:1px solid var(--bordermid);
+  background:var(--goldpale);color:var(--text);cursor:pointer;line-height:1}
+body.dark .bchart-whybtn{background:var(--goldpale)!important;
+  color:var(--text)!important;border:1px solid var(--bordermid)!important}
+.bchart-panel{margin:8px 0 0;background:var(--goldpale);
+  border:1px solid var(--border);border-radius:10px;padding:12px 14px;
+  font-size:12.5px;line-height:1.55;color:var(--text)}
+.bchart-panel h5{font-size:10.5px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;margin:0 0 3px}
+.bchart-panel section+section{margin-top:11px}
+.bchart-panel ul{margin:0;padding-left:18px}
+.bchart-panel li+li{margin-top:4px}
+.bchart-panel p{margin:0}
+
+/* One tooltip for the whole page, positioned fixed, so no chart has to
+   own one and the ID can outscore the blanket colour rule. */
+#bchart-tip{position:fixed;z-index:9000;pointer-events:none;opacity:0;
+  transition:opacity .12s;background:var(--navy);color:var(--cream)!important;
+  font-size:11.5px;font-weight:600;padding:7px 10px;border-radius:7px;
+  white-space:nowrap;box-shadow:var(--shadow-lg);
+  transform:translate(-50%,calc(-100% - 10px))}
+#bchart-tip b{font-weight:700}
+#bchart-tip em{font-style:normal;font-weight:400;opacity:.85}
+
+@media(max-width:480px){
+  .bchart-piv button{font-size:10.5px;padding:7px 10px}
+  .bchart-plot{padding:8px 9px}
+  .bchart-tbl th,.bchart-tbl td{padding:6px 7px}
+}
+
+/* The pie and its legend. Flex-wrap does the responsive work: side by
+   side where there is room, stacked where there is not, with no width
+   branch in JavaScript to get wrong. */
+.bchart-pie{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.bchart-pie svg{flex:none;width:auto;max-width:100%}
+.bchart-pielg{flex:1 1 170px;min-width:0}
+.bchart-pietitle{font-size:12.5px;font-weight:700;color:var(--text);margin:0 0 6px}
+.bchart-pierow{display:flex;align-items:center;gap:8px;font-size:12px;
+  padding:3px 0;color:var(--text)}
+.bchart-pierow i{width:11px;height:11px;border-radius:3px;flex:none}
+.bchart-pienm{flex:1 1 auto;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;color:var(--tmid)}
+.bchart-pierow b{font-weight:700;font-variant-numeric:tabular-nums}
+.bchart-pierow em{font-style:normal;font-size:11px;color:var(--tmid);
+  min-width:34px;text-align:right}
+
+/* One number is not a chart. A one-bar bar chart is the most common way
+   a chart misses its own point, so a lone value is shown as the figure
+   it is. Hierarchy by SIZE AND WEIGHT, which survives dark mode's
+   blanket colour rule. */
+.bchart-stat{padding:6px 2px}
+.bchart-stat .bchart-statlb{font-size:11px;font-weight:600;color:var(--tmid);
+  letter-spacing:.03em;margin:0 0 4px}
+.bchart-stat .bchart-statvl{font-size:30px;font-weight:700;line-height:1.1;
+  color:var(--text);font-variant-numeric:tabular-nums}
+.bchart-stat .bchart-statsb{font-size:11.5px;color:var(--tmid);margin:4px 0 0}
+@media(max-width:480px){.bchart-stat .bchart-statvl{font-size:26px}}
 /* Grounded-search citations, under the answer. Both themes come free: --tmid
    and --navy are redefined in body.dark, so no second rule is needed. */
 .src-note{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 0;
@@ -11777,6 +11931,706 @@ function _paintDownload(msgId,blob,filename,imgUrl){
   if(acts) wrap.insertBefore(box,acts); else wrap.appendChild(box);
 }
 
+// ============================================================
+// THE LIVE CHART — drawn from the numbers, not pasted as a picture
+// ============================================================
+// /data-to-chart has ALWAYS returned labels, datasets, insights, trend,
+// anomalies and recommendation in the same response as the PNG — the
+// handler ends `res.json({ok:true, ...chart, chartImageBase64})`. The page
+// read ONE field, chartImageBase64, and binned the other six. Nothing here
+// costs a call: it reads what was already arriving.
+//
+// NO CHARTING LIBRARY, deliberately. QC step 9 counts nine external
+// requests and nothing new may run before Bella is on screen; a CDN chart
+// library breaks both. Everything below is SVG built by hand.
+//
+// Four forms, each doing a different job — magnitude, change over time,
+// part-to-whole, and the numbers themselves. Switching between them is
+// pure client-side redraw: ₹0 and instant, no second request.
+//
+// EVERY LABEL AND VALUE COMES FROM A LANGUAGE MODEL, so it is untrusted:
+// textContent and createTextNode throughout, never innerHTML.
+
+const _BC_SLOT=['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
+
+function _bcN(tag,at){
+  const e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  if(at) for(const k in at) e.setAttribute(k,at[k]);
+  return e;
+}
+// Presentation attributes do NOT accept var(), so a series colour must be
+// set through style. Measured, not assumed: fill="var(--s1)" paints black.
+// The win is that the theme then swaps the colour with no redraw at all.
+function _bcPaint(el,prop,v){ try{ el.style[prop]=v; }catch(e){} }
+function _bcVar(i){ return 'var('+_BC_SLOT[i%_BC_SLOT.length]+')'; }
+
+// He is in India, so 1,20,000 — not 120,000.
+function _bcFmt(v){
+  if(v==null||!isFinite(v)) return '—';
+  const a=Math.abs(v);
+  const d=(Number.isInteger(v)||a>=100)?0:(a>=1?1:2);
+  try{ return v.toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+  catch(e){ return String(Math.round(v*100)/100); }
+}
+function _bcNum(v){
+  if(typeof v==='number') return isFinite(v)?v:null;
+  if(v==null) return null;
+  // "₹1,200" and "45%" are both numbers wearing a costume.
+  const n=parseFloat(String(v).replace(/[^0-9.eE+-]/g,''));
+  return isFinite(n)?n:null;
+}
+
+// Text width is MEASURED, never estimated from character count — a label
+// that does not fit must be shortened on purpose, not clipped by accident.
+let _bcCtx=null,_bcFam='';
+function _bcTextW(s,px,wt){
+  try{
+    if(!_bcCtx){
+      _bcCtx=document.createElement('canvas').getContext('2d');
+      _bcFam=getComputedStyle(document.body).fontFamily||'sans-serif';
+    }
+    _bcCtx.font=(wt||400)+' '+px+'px '+_bcFam;
+    return _bcCtx.measureText(String(s)).width;
+  }catch(e){ return String(s).length*px*0.55; }
+}
+function _bcClip(s,px,wt,max){
+  s=String(s==null?'':s);
+  if(_bcTextW(s,px,wt)<=max) return s;
+  let lo=0,hi=s.length;
+  while(lo<hi){ const m=(lo+hi+1)>>1;
+    if(_bcTextW(s.slice(0,m)+'…',px,wt)<=max) lo=m; else hi=m-1; }
+  return lo>0?(s.slice(0,lo)+'…'):'';
+}
+
+// Round ticks — 0 / 1,000 / 2,000, never 0 / 833 / 1,666.
+function _bcTicks(min,max,want){
+  if(!isFinite(min)||!isFinite(max)) return [0,1];
+  if(min===max){ if(min===0) return [0,1]; min=Math.min(0,min); max=Math.max(0,max); }
+  const raw=(max-min)/Math.max(1,want||4);
+  const mag=Math.pow(10,Math.floor(Math.log(raw)/Math.LN10));
+  const nm=raw/mag, step=(nm<=1?1:nm<=2?2:nm<=5?5:10)*mag;
+  const lo=Math.floor(min/step)*step, hi=Math.ceil(max/step)*step, out=[];
+  for(let v=lo;v<=hi+step*1e-9;v+=step) out.push(Math.abs(v)<step*1e-9?0:v);
+  return out.length>1?out:[lo,lo+step];
+}
+
+// ── One tooltip for the page ───────────────────────────────────────────
+// Keyed off an ID because `body.dark *{color:#F5E6C8!important}` scores
+// (0,7,3) and nothing built from classes can outscore it.
+function _bcTipEl(){
+  let t=document.getElementById('bchart-tip');
+  if(!t){ t=document.createElement('div'); t.id='bchart-tip';
+    t.setAttribute('role','status'); document.body.appendChild(t); }
+  return t;
+}
+function _bcTipShow(ev,rows){
+  const t=_bcTipEl();
+  t.textContent='';
+  rows.forEach(function(r,i){
+    const line=document.createElement('div');
+    if(r.color){
+      const k=document.createElement('span');
+      k.textContent='▬ ';
+      _bcPaint(k,'color',r.color);
+      line.appendChild(k);
+    }
+    const b=document.createElement('b'); b.textContent=r.value;
+    line.appendChild(b);
+    if(r.label){
+      const e=document.createElement('em');
+      e.textContent='  '+r.label;
+      line.appendChild(e);
+    }
+    t.appendChild(line);
+  });
+  const x=Math.max(70,Math.min(window.innerWidth-70,ev.clientX));
+  const y=Math.max(44,ev.clientY);
+  t.style.left=x+'px'; t.style.top=y+'px'; t.style.opacity='1';
+}
+function _bcTipHide(){ const t=document.getElementById('bchart-tip');
+  if(t) t.style.opacity='0'; }
+// A hit target carries the value on hover AND on keyboard focus — the
+// tooltip enhances, it never gates: the table view has every value too.
+function _bcHit(el,rows){
+  el.addEventListener('pointermove',function(e){ _bcTipShow(e,rows); });
+  el.addEventListener('pointerenter',function(e){ _bcTipShow(e,rows); });
+  el.addEventListener('pointerleave',_bcTipHide);
+  el.addEventListener('focus',function(){
+    const r=el.getBoundingClientRect();
+    _bcTipShow({clientX:r.left+r.width/2,clientY:r.top},rows);
+  });
+  el.addEventListener('blur',_bcTipHide);
+}
+
+// ── Normalise whatever the model sent ─────────────────────────────────
+function _bcNorm(c){
+  c=c||{};
+  const rawL=Array.isArray(c.labels)?c.labels:[];
+  const dsIn=Array.isArray(c.datasets)?c.datasets:[];
+  const series=[];
+  for(let i=0;i<dsIn.length;i++){
+    const d=dsIn[i]; if(!d) continue;
+    const raw=Array.isArray(d)?d:(Array.isArray(d.data)?d.data:null);
+    if(!raw||!raw.length) continue;
+    const vals=raw.map(_bcNum);
+    let any=false; for(let j=0;j<vals.length;j++) if(vals[j]!==null){ any=true; break; }
+    if(!any) continue;                       // a series of nothing is not a series
+    series.push({label:String((d&&d.label!=null)?d.label:'').trim(),values:vals});
+    if(series.length>=8) break;              // never a 9th categorical hue
+  }
+  if(!series.length) return null;
+  let n=rawL.length;
+  for(let i=0;i<series.length;i++) n=Math.max(n,series[i].values.length);
+  if(!n) return null;
+  const labels=[];
+  for(let i=0;i<n;i++){
+    const l=(rawL[i]==null)?'':String(rawL[i]).trim();
+    labels.push(l||('#'+(i+1)));
+  }
+  for(let i=0;i<series.length;i++){
+    const s=series[i];
+    while(s.values.length<n) s.values.push(null);
+    s.values.length=n;
+  }
+  // A lone series is named by the title; a legend box with one swatch
+  // restates it and costs space. Names only matter once there are two.
+  if(series.length>1) for(let i=0;i<series.length;i++)
+    if(!series[i].label) series[i].label='Series '+(i+1);
+
+  let lo=Infinity,hi=-Infinity,pos=false;
+  for(let i=0;i<series.length;i++) for(let j=0;j<n;j++){
+    const v=series[i].values[j]; if(v===null) continue;
+    if(v<lo) lo=v; if(v>hi) hi=v; if(v>0) pos=true;
+  }
+  if(!isFinite(lo)){ lo=0; hi=1; }
+
+  const M={title:String(c.title==null?'':c.title).trim(),
+           labels:labels,series:series,n:n,lo:lo,hi:hi,neg:lo<0,
+           ins:[],anom:[],trend:'',rec:''};
+
+  const str=function(x){ return String(x==null?'':x).trim(); };
+  M.ins =(Array.isArray(c.insights)?c.insights:[]).map(str).filter(Boolean).slice(0,6);
+  M.anom=(Array.isArray(c.anomalies)?c.anomalies:[]).map(str).filter(Boolean).slice(0,5);
+  M.trend=str(c.trend); M.rec=str(c.recommendation);
+
+  // One number is not a chart — it is a number. A one-bar bar chart is the
+  // most common way a chart misses its own point.
+  if(n===1&&series.length===1){ M.kind='stat'; M.forms=[]; M.form=''; return M; }
+
+  const t=String(c.chartType||'').toLowerCase();
+  // Part-to-whole only when it genuinely is one: a single positive series,
+  // and few enough slices to read at a glance.
+  const pieOk=(series.length===1&&!M.neg&&n>=3&&n<=6&&pos);
+  M.forms=['bar'];
+  if(n>=2) M.forms.push('line');
+  if(pieOk) M.forms.push('pie');
+  M.forms.push('table');
+  M.area=/area/.test(t);
+  M.form='bar';
+  if(/line|area|spline|scatter/.test(t)&&M.forms.indexOf('line')>=0) M.form='line';
+  else if(/pie|doughnut|donut/.test(t)&&pieOk) M.form='pie';
+  return M;
+}
+
+// ── Horizontal bars ───────────────────────────────────────────────────
+// Horizontal, not vertical columns, for one measured reason: at 320px a
+// column chart cannot fit its own category names, and his SOP starts at
+// 320. Rotating them to read sideways is not a fix. Change over time is
+// what the Line form is for.
+//
+// EVERY BAR IS DIRECTLY LABELLED, so there is no value axis and no
+// gridlines at all — direct labels before gridlines. That is also what
+// makes the three lower-contrast light-mode hues legal: the relief rule
+// wants visible labels or a table view, and this ships both.
+function _bcBarPath(x,y,len,h,dir){
+  const r=Math.min(4,h/2,Math.abs(len));
+  if(Math.abs(len)<1) return 'M'+x+','+y+'h0';
+  if(dir>0){
+    const e=x+len;
+    return 'M'+x+','+y+'H'+(e-r)+'Q'+e+','+y+' '+e+','+(y+r)
+      +'V'+(y+h-r)+'Q'+e+','+(y+h)+' '+(e-r)+','+(y+h)+'H'+x+'Z';
+  }
+  const e=x-len;
+  return 'M'+x+','+y+'H'+(e+r)+'Q'+e+','+y+' '+e+','+(y+r)
+    +'V'+(y+h-r)+'Q'+e+','+(y+h)+' '+(e+r)+','+(y+h)+'H'+x+'Z';
+}
+function _bcBar(M,W){
+  const FS=11.5, VS=11, PT=M.title?24:6, PB=6;
+  const per=M.series.length;
+  const barH=per===1?22:Math.max(8,Math.min(16,Math.round(40/per)));
+  const band=per*barH+(per-1)*2+16;
+  const H=PT+M.n*band+PB;
+
+  // The gutter and the value column are both measured, so nothing is ever
+  // clipped and a value never has to sit on top of its own bar.
+  let gw=0;
+  for(let i=0;i<M.n;i++) gw=Math.max(gw,_bcTextW(M.labels[i],FS,600));
+  const gut=Math.min(Math.max(Math.ceil(gw)+10,48),Math.floor(W*0.42));
+  let vw=0;
+  for(let i=0;i<M.series.length;i++) for(let j=0;j<M.n;j++)
+    vw=Math.max(vw,_bcTextW(_bcFmt(M.series[i].values[j]),VS,700));
+  const vgut=Math.ceil(vw)+8;
+
+  const x0=gut+(M.neg?vgut:0);
+  const plotW=Math.max(30,W-x0-vgut-2);
+  const lo=Math.min(0,M.lo), hi=Math.max(0,M.hi);
+  const span=(hi-lo)||1;
+  const zero=x0+(0-lo)/span*plotW;
+
+  const svg=_bcN('svg',{viewBox:'0 0 '+W+' '+H,role:'img',
+    'aria-label':(M.title||'Chart')+', '+M.n+' categories'});
+  svg.setAttribute('height',H);
+
+  if(M.title){
+    const t=_bcN('text',{x:0,y:14,'font-size':12.5,'font-weight':700});
+    _bcPaint(t,'fill','var(--cink)'); t.textContent=M.title; svg.appendChild(t);
+  }
+  // One baseline. Recessive, hairline, solid — never dashed.
+  const base=_bcN('line',{x1:zero,y1:PT,x2:zero,y2:PT+M.n*band-16+6,
+    'stroke-width':1,'shape-rendering':'crispEdges'});
+  _bcPaint(base,'stroke','var(--cgrid)'); svg.appendChild(base);
+
+  for(let i=0;i<M.n;i++){
+    const by=PT+i*band;
+    const lb=_bcN('text',{x:gut-8,y:by+(per*barH+(per-1)*2)/2+4,
+      'text-anchor':'end','font-size':FS,'font-weight':600});
+    _bcPaint(lb,'fill','var(--cink)');
+    lb.textContent=_bcClip(M.labels[i],FS,600,gut-10);
+    svg.appendChild(lb);
+
+    for(let s=0;s<per;s++){
+      const v=M.series[s].values[i];
+      const y=by+s*(barH+2);
+      if(v===null) continue;
+      const len=(v-0)/span*plotW;
+      const p=_bcN('path',{d:_bcBarPath(zero,y,Math.abs(len),barH,len<0?-1:1)});
+      _bcPaint(p,'fill',_bcVar(s));
+      svg.appendChild(p);
+
+      const vt=_bcN('text',{x:len<0?(zero-Math.abs(len)-6):(zero+Math.abs(len)+6),
+        y:y+barH/2+4,'text-anchor':len<0?'end':'start',
+        'font-size':VS,'font-weight':700});
+      _bcPaint(vt,'fill','var(--cink)'); vt.textContent=_bcFmt(v);
+      svg.appendChild(vt);
+    }
+    // The hit target is the whole band — wider than any bar in it.
+    const hit=_bcN('rect',{x:0,y:by-7,width:W,height:band,tabindex:0,
+      'aria-label':M.labels[i]});
+    _bcPaint(hit,'fill','transparent');
+    const rows=[];
+    for(let s=0;s<per;s++) if(M.series[s].values[i]!==null)
+      rows.push({value:_bcFmt(M.series[s].values[i]),
+                 label:per>1?M.series[s].label:M.labels[i],
+                 color:per>1?_bcVar(s):''});
+    if(per>1) rows.unshift({value:M.labels[i],label:'',color:''});
+    if(rows.length) _bcHit(hit,rows);
+    svg.appendChild(hit);
+  }
+  return svg;
+}
+
+// ── Line ──────────────────────────────────────────────────────────────
+function _bcLine(M,W){
+  const FS=10.5, PT=M.title?26:10;
+  const ticks=_bcTicks(M.neg?M.lo:Math.min(0,M.lo),M.hi,4);
+  let yw=0;
+  for(let i=0;i<ticks.length;i++) yw=Math.max(yw,_bcTextW(_bcFmt(ticks[i]),FS,400));
+  const PL=Math.ceil(yw)+9, PR=10, PB=26;
+  const H=Math.max(170,Math.min(290,Math.round(W*0.52)));
+  const pw=Math.max(30,W-PL-PR), ph=Math.max(60,H-PT-PB);
+  const lo=ticks[0], hi=ticks[ticks.length-1], span=(hi-lo)||1;
+  const X=function(i){ return PL+(M.n===1?pw/2:i/(M.n-1)*pw); };
+  const Y=function(v){ return PT+ph-(v-lo)/span*ph; };
+
+  const svg=_bcN('svg',{viewBox:'0 0 '+W+' '+H,role:'img',
+    'aria-label':(M.title||'Chart')+', '+M.n+' points'});
+  svg.setAttribute('height',H);
+  if(M.title){
+    const t=_bcN('text',{x:0,y:14,'font-size':12.5,'font-weight':700});
+    _bcPaint(t,'fill','var(--cink)'); t.textContent=M.title; svg.appendChild(t);
+  }
+  for(let i=0;i<ticks.length;i++){
+    const y=Y(ticks[i]);
+    const g=_bcN('line',{x1:PL,y1:y,x2:PL+pw,y2:y,'stroke-width':1,
+      'shape-rendering':'crispEdges'});
+    _bcPaint(g,'stroke','var(--cgrid)'); svg.appendChild(g);
+    const tl=_bcN('text',{x:PL-6,y:y+3.5,'text-anchor':'end','font-size':FS});
+    _bcPaint(tl,'fill','var(--cink2)'); tl.textContent=_bcFmt(ticks[i]);
+    svg.appendChild(tl);
+  }
+  // Show only as many x labels as actually fit — a collided axis is
+  // unreadable, and nudging them apart just moves the problem.
+  let widest=0;
+  for(let i=0;i<M.n;i++) widest=Math.max(widest,_bcTextW(M.labels[i],FS,400));
+  const step=Math.max(1,Math.ceil((widest+12)/Math.max(1,pw/Math.max(1,M.n-1||1))));
+  for(let i=0;i<M.n;i++){
+    if(i%step!==0&&i!==M.n-1) continue;
+    const xl=_bcN('text',{x:X(i),y:PT+ph+16,'text-anchor':'middle','font-size':FS});
+    _bcPaint(xl,'fill','var(--cink2)');
+    xl.textContent=_bcClip(M.labels[i],FS,400,Math.max(30,pw/Math.max(1,M.n/step)));
+    svg.appendChild(xl);
+  }
+
+  for(let s=0;s<M.series.length;s++){
+    const vals=M.series[s].values, col=_bcVar(s);
+    // A gap in the data is a gap in the line, not a straight line across it.
+    const runs=[]; let cur=[];
+    for(let i=0;i<M.n;i++){
+      if(vals[i]===null){ if(cur.length)runs.push(cur); cur=[]; }
+      else cur.push(i);
+    }
+    if(cur.length) runs.push(cur);
+    for(let r=0;r<runs.length;r++){
+      const run=runs[r];
+      if(M.area&&run.length>1){
+        let d='M'+X(run[0])+','+Y(vals[run[0]]);
+        for(let k=1;k<run.length;k++) d+='L'+X(run[k])+','+Y(vals[run[k]]);
+        d+='L'+X(run[run.length-1])+','+Y(Math.max(lo,0))
+          +'L'+X(run[0])+','+Y(Math.max(lo,0))+'Z';
+        const a=_bcN('path',{d:d});
+        _bcPaint(a,'fill',col); _bcPaint(a,'opacity','0.10');
+        svg.appendChild(a);
+      }
+      if(run.length>1){
+        let d='M'+X(run[0])+','+Y(vals[run[0]]);
+        for(let k=1;k<run.length;k++) d+='L'+X(run[k])+','+Y(vals[run[k]]);
+        const p=_bcN('path',{d:d,'stroke-width':2,'stroke-linejoin':'round',
+          'stroke-linecap':'round'});
+        _bcPaint(p,'fill','none'); _bcPaint(p,'stroke',col);
+        svg.appendChild(p);
+      }
+      if(M.n<=14||run.length===1) for(let k=0;k<run.length;k++){
+        const c=_bcN('circle',{cx:X(run[k]),cy:Y(vals[run[k]]),r:4,'stroke-width':2});
+        _bcPaint(c,'fill',col); _bcPaint(c,'stroke','var(--csurf)');
+        svg.appendChild(c);
+      }
+    }
+  }
+  // The crosshair finds the X: readers aim at a category, never at a 2px
+  // line, and one readout lists every series at that position.
+  const cross=_bcN('line',{x1:PL,y1:PT,x2:PL,y2:PT+ph,'stroke-width':1,
+    'shape-rendering':'crispEdges'});
+  _bcPaint(cross,'stroke','var(--cgrid)'); _bcPaint(cross,'opacity','0');
+  svg.appendChild(cross);
+  const over=_bcN('rect',{x:PL,y:PT,width:pw,height:ph});
+  _bcPaint(over,'fill','transparent');
+  const near=function(cx){
+    if(M.n<=1) return 0;
+    let b=0,bd=Infinity;
+    for(let i=0;i<M.n;i++){ const d=Math.abs(X(i)-cx); if(d<bd){bd=d;b=i;} }
+    return b;
+  };
+  over.addEventListener('pointermove',function(e){
+    const r=svg.getBoundingClientRect();
+    const sc=r.width?(W/r.width):1;
+    const i=near((e.clientX-r.left)*sc);
+    _bcPaint(cross,'opacity','1');
+    cross.setAttribute('x1',X(i)); cross.setAttribute('x2',X(i));
+    const rows=[{value:M.labels[i],label:'',color:''}];
+    for(let s=0;s<M.series.length;s++) if(M.series[s].values[i]!==null)
+      rows.push({value:_bcFmt(M.series[s].values[i]),
+        label:M.series.length>1?M.series[s].label:'',color:_bcVar(s)});
+    _bcTipShow(e,rows);
+  });
+  over.addEventListener('pointerleave',function(){
+    _bcPaint(cross,'opacity','0'); _bcTipHide();
+  });
+  svg.appendChild(over);
+  return svg;
+}
+
+// ── Pie ───────────────────────────────────────────────────────────────
+// Offered only for a single positive series of three to six slices. Fewer
+// than three is a stat tile; more than six cannot be read at a glance;
+// a negative share of a whole is not a thing.
+function _bcPie(M,W){
+  const wrap=document.createElement('div'); wrap.className='bchart-pie';
+  const D=Math.max(140,Math.min(200,Math.round(W*0.42)));
+  const R=D/2-2, cx=D/2, cy=D/2;
+  const vals=M.series[0].values.map(function(v){ return v===null?0:Math.max(0,v); });
+  let total=0; for(let i=0;i<vals.length;i++) total+=vals[i];
+  const svg=_bcN('svg',{viewBox:'0 0 '+D+' '+D,role:'img',
+    'aria-label':(M.title||'Chart')+', share of total'});
+  svg.setAttribute('width',D); svg.setAttribute('height',D);
+  let a0=-Math.PI/2;
+  for(let i=0;i<vals.length;i++){
+    if(!total) break;
+    const frac=vals[i]/total;
+    if(frac<=0) continue;
+    const a1=a0+frac*Math.PI*2;
+    const x1=cx+R*Math.cos(a0), y1=cy+R*Math.sin(a0);
+    const x2=cx+R*Math.cos(a1), y2=cy+R*Math.sin(a1);
+    const big=(a1-a0)>Math.PI?1:0;
+    // A near-whole slice still needs a path, not a circle, or the 2px
+    // surface gap has nowhere to sit.
+    const d='M'+cx+','+cy+'L'+x1+','+y1+'A'+R+','+R+' 0 '+big+' 1 '+x2+','+y2+'Z';
+    const p=_bcN('path',{d:d,'stroke-width':2,tabindex:0,
+      'aria-label':M.labels[i]+': '+_bcFmt(M.series[0].values[i])});
+    _bcPaint(p,'fill',_bcVar(i));
+    // The 2px separator is the SURFACE colour — white doing the dividing,
+    // never a drawn border adding ink that is not data.
+    _bcPaint(p,'stroke','var(--csurf)');
+    _bcHit(p,[{value:M.labels[i],label:'',color:''},
+      {value:_bcFmt(M.series[0].values[i]),
+       label:(frac*100).toFixed(frac<0.1?1:0)+'%',color:_bcVar(i)}]);
+    svg.appendChild(p);
+    a0=a1;
+  }
+  wrap.appendChild(svg);
+  // The legend carries name, value AND share for every slice, so the pie
+  // never has to be hovered to be read.
+  const lg=document.createElement('div'); lg.className='bchart-pielg';
+  if(M.title){ const h=document.createElement('div');
+    h.className='bchart-pietitle'; h.textContent=M.title; lg.appendChild(h); }
+  const ul=document.createElement('div');
+  for(let i=0;i<M.labels.length;i++){
+    const row=document.createElement('div'); row.className='bchart-pierow';
+    const sw=document.createElement('i'); _bcPaint(sw,'background',_bcVar(i));
+    const nm=document.createElement('span'); nm.className='bchart-pienm';
+    nm.textContent=M.labels[i];
+    const vl=document.createElement('b');
+    vl.textContent=_bcFmt(M.series[0].values[i]);
+    const pc=document.createElement('em');
+    pc.textContent=total?((vals[i]/total*100).toFixed(vals[i]/total<0.1?1:0)+'%'):'—';
+    row.appendChild(sw); row.appendChild(nm); row.appendChild(vl); row.appendChild(pc);
+    ul.appendChild(row);
+  }
+  lg.appendChild(ul); wrap.appendChild(lg);
+  return wrap;
+}
+
+// ── Table ─────────────────────────────────────────────────────────────
+function _bcTable(M){
+  const t=document.createElement('table'); t.className='bchart-tbl';
+  const hd=document.createElement('thead'), hr=document.createElement('tr');
+  const h0=document.createElement('th'); h0.textContent='Item'; hr.appendChild(h0);
+  for(let s=0;s<M.series.length;s++){
+    const th=document.createElement('th');
+    th.textContent=M.series[s].label||'Value';
+    hr.appendChild(th);
+  }
+  hd.appendChild(hr); t.appendChild(hd);
+  const tb=document.createElement('tbody');
+  for(let i=0;i<M.n;i++){
+    const tr=document.createElement('tr');
+    const td=document.createElement('td'); td.textContent=M.labels[i];
+    tr.appendChild(td);
+    for(let s=0;s<M.series.length;s++){
+      const c=document.createElement('td');
+      c.textContent=_bcFmt(M.series[s].values[i]);
+      tr.appendChild(c);
+    }
+    tb.appendChild(tr);
+  }
+  t.appendChild(tb);
+  return t;
+}
+
+// ── One number ────────────────────────────────────────────────────────
+function _bcStat(M){
+  const w=document.createElement('div'); w.className='bchart-stat';
+  const l=document.createElement('div'); l.className='bchart-statlb';
+  l.textContent=M.title||M.labels[0];
+  const v=document.createElement('div'); v.className='bchart-statvl';
+  v.textContent=_bcFmt(M.series[0].values[0]);
+  w.appendChild(l); w.appendChild(v);
+  if(M.title&&M.labels[0]&&M.title!==M.labels[0]){
+    const s=document.createElement('div'); s.className='bchart-statsb';
+    s.textContent=M.labels[0]; w.appendChild(s);
+  }
+  return w;
+}
+
+// ── The legend, for two or more series ────────────────────────────────
+function _bcLegend(M){
+  if(M.series.length<2) return null;
+  const d=document.createElement('div'); d.className='bchart-leg';
+  for(let s=0;s<M.series.length;s++){
+    const sp=document.createElement('span');
+    const i=document.createElement('i'); _bcPaint(i,'background',_bcVar(s));
+    const tx=document.createTextNode(M.series[s].label);
+    sp.appendChild(i); sp.appendChild(tx); d.appendChild(sp);
+  }
+  return d;
+}
+
+// ── "What does this mean?" ────────────────────────────────────────────
+// The four fields the page has been throwing away since /data-to-chart
+// was written. Headings are separated by WEIGHT AND SIZE, not colour,
+// because `body.dark *{color:...!important}` would flatten a colour
+// hierarchy and leave nothing behind. A caution is marked with a glyph
+// and a word, never by colour alone.
+function _bcWhy(M){
+  if(!M.trend&&!M.ins.length&&!M.anom.length&&!M.rec) return null;
+  const box=document.createElement('div'); box.className='bchart-panel';
+  box.hidden=true;
+  const sec=function(head,body,list){
+    const s=document.createElement('section');
+    const h=document.createElement('h5'); h.textContent=head; s.appendChild(h);
+    if(list&&list.length){
+      const ul=document.createElement('ul');
+      for(let i=0;i<list.length;i++){
+        const li=document.createElement('li'); li.textContent=list[i]; ul.appendChild(li);
+      }
+      s.appendChild(ul);
+    }else if(body){
+      const p=document.createElement('p'); p.textContent=body; s.appendChild(p);
+    }else return null;
+    return s;
+  };
+  const add=function(s){ if(s) box.appendChild(s); };
+  add(sec('The pattern',M.trend,null));
+  add(sec('What stands out',null,M.ins));
+  add(sec('⚠ Worth a second look',null,M.anom));
+  add(sec('What I would do',M.rec,null));
+  if(!box.childNodes.length) return null;
+  return box;
+}
+
+// ── Draw / redraw ─────────────────────────────────────────────────────
+function _bcDraw(root){
+  const M=root._bcM, plot=root.querySelector('.bchart-plot');
+  if(!M||!plot) return;
+  let W=0;
+  try{
+    const cs=getComputedStyle(plot);
+    W=Math.floor(plot.clientWidth-(parseFloat(cs.paddingLeft)||0)
+                                -(parseFloat(cs.paddingRight)||0));
+  }catch(e){}
+  // Not laid out yet. Measuring a detached or zero-width node is how every
+  // icon once measured 0x0 — wait for a frame rather than guess.
+  //
+  // BUT THE WAIT IS CAPPED. A chart can be built into something that is not
+  // on screen at all: #main carries display:none behind the splash, and a
+  // thread that is not the open one is hidden too. An uncapped rAF chain
+  // would then spin for as long as the chart stayed hidden, which is exactly
+  // the kind of loop that flattens a phone battery. After ~90 frames this
+  // gives up and leaves it to the ResizeObserver in _chartBlock, which fires
+  // the moment the element gains a width — so nothing is lost by stopping.
+  if(!(W>20)){
+    root._bcTry=(root._bcTry||0)+1;
+    if(root._bcTry<=90) requestAnimationFrame(function(){ _bcDraw(root); });
+    return;
+  }
+  root._bcTry=0;
+  root._bcW=Math.round(plot.clientWidth);
+  plot.textContent='';
+  try{
+    if(M.kind==='stat'){ plot.appendChild(_bcStat(M)); return; }
+    if(M.form==='table'){ plot.appendChild(_bcTable(M)); return; }
+    if(M.form==='pie'){ plot.appendChild(_bcPie(M,W)); return; }
+    if(M.form==='line'){ plot.appendChild(_bcLine(M,W)); }
+    else plot.appendChild(_bcBar(M,W));
+    const lg=_bcLegend(M); if(lg) plot.appendChild(lg);
+  }catch(e){
+    // A chart that cannot be drawn must not take the answer down with it.
+    console.warn('chart draw failed:',e);
+    plot.textContent='';
+    plot.appendChild(_bcTable(M));
+  }
+}
+
+// ── Assemble ──────────────────────────────────────────────────────────
+function _chartBlock(chart){
+  const M=_bcNorm(chart);
+  if(!M) return null;
+  const root=document.createElement('div'); root.className='bchart';
+  root._bcM=M;
+
+  if(M.forms.length>1){
+    const piv=document.createElement('div'); piv.className='bchart-piv';
+    piv.setAttribute('role','group');
+    piv.setAttribute('aria-label','How to show this');
+    const NAME={bar:'Bar',line:'Line',pie:'Pie',table:'Table'};
+    M.forms.forEach(function(f){
+      const b=document.createElement('button');
+      b.type='button'; b.textContent=NAME[f]||f;
+      b.setAttribute('aria-pressed',f===M.form?'true':'false');
+      b.addEventListener('click',function(){
+        M.form=f;
+        piv.querySelectorAll('button').forEach(function(o){
+          o.setAttribute('aria-pressed',o===b?'true':'false'); });
+        _bcTipHide();
+        _bcDraw(root);
+      });
+      piv.appendChild(b);
+    });
+    root.appendChild(piv);
+  }
+
+  const plot=document.createElement('div'); plot.className='bchart-plot';
+  root.appendChild(plot);
+
+  const why=_bcWhy(M);
+  if(why){
+    const wrap=document.createElement('div'); wrap.className='bchart-why';
+    const btn=document.createElement('button');
+    btn.type='button'; btn.className='bchart-whybtn';
+    btn.textContent='What does this mean?';
+    btn.setAttribute('aria-expanded','false');
+    btn.addEventListener('click',function(){
+      const open=why.hidden;
+      why.hidden=!open;
+      btn.setAttribute('aria-expanded',open?'true':'false');
+      btn.textContent=open?'Hide what this means':'What does this mean?';
+    });
+    wrap.appendChild(btn); wrap.appendChild(why);
+    root.appendChild(wrap);
+  }
+
+  _bcDraw(root);
+  // Rotation, a sidebar opening, a window resize — all one signal. Guarded
+  // on the integer width so the height change a redraw causes cannot loop.
+  try{
+    if(typeof ResizeObserver==='function'){
+      const ro=new ResizeObserver(function(){
+        const w=Math.round(plot.clientWidth);
+        if(w&&w!==root._bcW) _bcDraw(root);
+      });
+      ro.observe(plot);
+    }
+  }catch(e){}
+  return root;
+}
+
+// Put a live chart into any host element. Returns false if the data will
+// not make one, so every caller can fall back to the picture.
+function _bcMount(host,chart){
+  try{
+    const b=_chartBlock(chart);
+    if(!b) return false;
+    host.textContent='';
+    host.appendChild(b);
+    return true;
+  }catch(e){ console.warn('_bcMount failed:',e); return false; }
+}
+
+// The chart where it was asked for: the live thing on top, the picture
+// kept underneath as the download. ONE response feeds both -- labels and
+// datasets arrive in the same JSON as chartImageBase64.
+function _paintChart(msgId,chart,blob,filename){
+  const bub=document.getElementById(msgId); if(!bub) return false;
+  const wrap=bub.parentNode; if(!wrap) return false;
+  let block=null;
+  try{ block=_chartBlock(chart); }catch(e){ console.warn('_paintChart:',e); }
+  if(!block) return false;
+  const box=document.createElement('div');
+  box.className='dl-note';
+  box.appendChild(block);
+  if(blob&&filename){
+    const a=document.createElement('a');
+    a.className='dl-btn';
+    a.href=URL.createObjectURL(blob);
+    a.download=filename;
+    const kb=Math.max(1,Math.round(blob.size/1024));
+    a.textContent='\u2b07  '+filename+'   '+(kb>1024?(kb/1024).toFixed(1)+' MB':kb+' KB');
+    box.appendChild(a);
+  }
+  const acts=wrap.querySelector('.msg-actions');
+  if(acts) wrap.insertBefore(box,acts); else wrap.appendChild(box);
+  return true;
+}
+
 // Attachments as base64, for the endpoints that want the file rather than its
 // text. One rejected file must not lose the others, so each resolves alone.
 function _filesAsBase64(list){
@@ -11889,12 +12743,16 @@ async function runMaker(spec,fullMsg,lang,files){
       throw new Error(em||('endpoint '+r.status));
     }
 
-    let blob,filename,imgUrl=null;
+    let blob,filename,chartData=null;
     if(wantBlob){
       blob=await r.blob();
       filename=_makeName(p.title,spec.kind==='deck'?'pptx':spec.format);
     }else{
       const d=await r.json();
+      // KEPT, not binned. This is the whole point: `labels`, `datasets`,
+      // `insights`, `trend`, `anomalies` and `recommendation` were already
+      // in this response and the page read one field out of seven.
+      chartData=d;
       const b64=d.chartImageBase64||d.imageBase64||d.chart;
       if(!b64) throw new Error('no image came back');
       const bin=atob(String(b64).replace(/^data:[^,]+,/,''));
@@ -11902,7 +12760,6 @@ async function runMaker(spec,fullMsg,lang,files){
       for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
       blob=new Blob([u8],{type:'image/png'});
       filename=_makeName(p.title||'chart','png');
-      imgUrl=URL.createObjectURL(blob);
     }
 
     // 3. HAND IT OVER.
@@ -11912,8 +12769,18 @@ async function runMaker(spec,fullMsg,lang,files){
     // Said plainly, not buried. He asked for the chart inside a PPT.
     if(spec.chartInDeck) said+=' Here is the chart itself — to have it built into'
       +' a deck with the rest, attach the documents and ask me for the deck.';
+    // The reading comes WITH the chart rather than as a footnote. `trend` has
+    // always been in the response; nothing in the page ever said it. Kept
+    // short so the spoken summary stays a summary.
+    if(chartData&&chartData.trend){
+      const tr=String(chartData.trend).replace(/\s+/g,' ').trim();
+      if(tr&&tr.length<=220) said+=' '+tr+(/[.!?]$/.test(tr)?'':'.');
+    }
     const id=bellaMsg(said);
-    _paintDownload(id,blob,filename,imgUrl);
+    // The live chart when the numbers came through, the flat picture when
+    // they did not. Either way the PNG stays the download.
+    if(!chartData||!_paintChart(id,chartData,blob,filename))
+      _paintDownload(id,blob,filename,chartData?URL.createObjectURL(blob):null);
     speakText(said,lang,id);
     // The file is the answer; the history keeps what was made, not the bytes.
     const h=getHist(); h.push({role:'model',parts:[{text:said+' ('+filename+')'}]}); setHist(h);
@@ -19340,8 +20207,13 @@ async function tlRun(){
     if(t.out==='img'){
       const b64=d[t.pick];
       if(!b64){ _tlMsg('Bella did not return a picture this time.','err'); return; }
-      out.innerHTML='<img alt="'+_tlEsc(t.label||'result')+'" src="data:'
-        +(d.mimeType||'image/png')+';base64,'+b64+'">';
+      /* The live chart when the response carried the numbers -- the same
+         JSON that carries the PNG, so there is no second call and no extra
+         cost. _bcMount returns false for the picture tools, which have no
+         labels or datasets, so they keep the flat image they always had. */
+      if(!_bcMount(out,d))
+        out.innerHTML='<img alt="'+_tlEsc(t.label||'result')+'" src="data:'
+          +(d.mimeType||'image/png')+';base64,'+b64+'">';
       TL.result={kind:'img',b64:b64,mime:d.mimeType||'image/png',
                  base:t.fileBase||'bella-chart',
                  ext:(d.format||String(d.mimeType||'image/png').split('/')[1]||'png')};
