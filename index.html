@@ -2482,7 +2482,7 @@ try{
       <div id="wx-tabs">
         <button id="wxtab-now" class="on" onclick="switchWxTab('now')">Now</button>
         <button id="wxtab-d3" onclick="switchWxTab('d3')">3 Days</button>
-        <button id="wxtab-d5" onclick="switchWxTab('d5')">5 Days</button>
+        <button id="wxtab-d5" onclick="switchWxTab('d5')">The week</button>
         <button id="wxtab-radar" onclick="switchWxTab('radar')">Radar</button>
       </div>
       <div id="wx-body"></div>
@@ -17644,6 +17644,76 @@ function _wxClock(d){
 // the WRONG CALENDAR DAY. Appending 'Z' is what makes the day buckets right.
 function _wxWhen(dtTxt){ return new Date(String(dtTxt).replace(' ','T') + 'Z'); }
 
+/* ── THE HOURLY GRID, RELEASE 40 ───────────────────────────────────────
+   Savio, 28 October: "i will wait for the release 40 so i can see hourly 24
+   hour slots for each day of the week." The backend has served them since
+   29 October and the panel was still drawing the old 3-hourly feed, because
+   nothing here had been told they existed -- he opened it and counted eight.
+
+   OPEN-METEO SENDS A LOCAL WALL-CLOCK STRING, "2026-11-04T14:00", with no
+   zone on it, already in the time of the PLACE being asked about. So it is
+   parsed as a naive local Date and never shifted. That is not a shortcut: it
+   is why asking about Birmingham now shows Birmingham's hours rather than
+   Kolkata's, which the old `+ 'Z'` parser could not do.
+   An hour string that will not parse is DROPPED, never guessed at. */
+function _wxWhenLocal(t){
+  const m = String(t).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if(!m) return new Date(NaN);
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], 0, 0);
+}
+
+/* WIND DIRECTION IS THE ONE FIELD OPEN-METEO WAS NOT ASKED FOR, and the hour
+   rows have shown it since the panel was built -- "ENE 4", "NNE 6". Dropping
+   a column he already has would be a regression, so each hour borrows the
+   direction from the 3-hourly OpenWeather reading that COVERS it: the same
+   payload, the same provider, the correct value for that period. Nothing is
+   invented and nothing is interpolated. Adding wind_direction_10m to the
+   backend request would remove this entirely, and costs a deploy -- worth
+   folding into the next one rather than spending an image on by itself. */
+function _wxDirAt(when){
+  try{
+    const list = (_wxData && _wxData.forecast) || [];
+    let best = null, gap = Infinity;
+    for(let i = 0; i < list.length; i++){
+      const w = _wxWhen(list[i].datetime);
+      if(isNaN(w.getTime())) continue;
+      const g = Math.abs(w.getTime() - when.getTime());
+      if(g < gap){ gap = g; best = list[i]; }
+    }
+    // Beyond three hours away it is a different weather system, not a
+    // neighbouring reading, so it is left blank rather than stretched.
+    return (best && gap <= 3 * 3600 * 1000) ? best.windDeg : null;
+  }catch(e){ return null; }
+}
+
+/* Is the 24-hour grid available at all? Release 39 and earlier say no, and
+   every render site below falls back to the 3-hourly feed when it does --
+   one frontend build serving both backends, exactly as release 38 was done. */
+function _wxHasHourly(){
+  return !!(_wxData && Array.isArray(_wxData.hourly) && _wxData.hourly.length);
+}
+
+/* The hourly readings reshaped into the {when, f} slots the rest of the panel
+   already understands, so the day summary, the icon-picking, the rain totals
+   and the row renderer all work UNCHANGED. `precip` is carried as `rain3h`
+   because that is the field the row prints; over one hour it is simply the
+   millimetres in that hour, and the heading only ever says "mm". */
+function _wxHourlySlots(){
+  const out = [];
+  const list = (_wxData && _wxData.hourly) || [];
+  for(let i = 0; i < list.length; i++){
+    const h = list[i];
+    const when = _wxWhenLocal(h.time);
+    if(isNaN(when.getTime())) continue;
+    out.push({ when: when, f: {
+      temp: h.temp, feelsLike: h.feelsLike, pop: h.pop, rain3h: h.precip,
+      humidity: h.humidity, windSpeed: h.windSpeed, windDeg: _wxDirAt(when),
+      icon: h.icon, condition: h.condition, description: h.condition
+    }});
+  }
+  return out;
+}
+
 function _wxCoords(){
   try{
     const d = JSON.parse(sessionStorage.getItem('b_location_data') || '{}');
@@ -17808,13 +17878,22 @@ function _wxPaintIfOpen(){
 // usually a partial day; it is still today's remaining weather, so it stays.
 function _wxDays(){
   const order = [], byKey = {};
-  const list = (_wxData && _wxData.forecast) || [];
-  list.forEach(f => {
-    const when = _wxWhen(f.datetime);
+  /* RELEASE 40: the hourly grid when the backend has it, the old 3-hourly
+     feed when it has not. Reshaped into the SAME {when,f} slots either way,
+     so everything below -- the day's high and low, the wettest-hour icon,
+     the rain total, the row renderer -- is untouched by this change.
+     That is deliberate: the day summary he has already approved must not
+     start reading differently because the readings underneath got finer. */
+  const hourly = _wxHasHourly() ? _wxHourlySlots() : null;
+  const pairs = hourly || ((_wxData && _wxData.forecast) || []).map(f => {
+    return { when: _wxWhen(f.datetime), f: f };
+  });
+  pairs.forEach(s => {
+    const when = s.when;
     if(isNaN(when.getTime())) return;
     const key = when.getFullYear() + '-' + when.getMonth() + '-' + when.getDate();
     if(!byKey[key]){ byKey[key] = { when: when, slots: [] }; order.push(byKey[key]); }
-    byKey[key].slots.push({ when: when, f: f });
+    byKey[key].slots.push({ when: when, f: s.f });
   });
   return order.map(d => {
     const temps = d.slots.map(s => s.f.temp).filter(t => typeof t === 'number');
@@ -18091,7 +18170,9 @@ function _wxHours(d){
     '<span>Rain</span><span class="wx-hrh-mm">mm</span>' +
     '<span>Wind ' + _expEsc(_wxWindUnit()) + '</span></div>';
   return '<div class="wx-hours">' + head + rows +
-    '<div class="wx-hours-note">Readings every three hours. ' +
+    '<div class="wx-hours-note">' +
+    (_wxHasHourly() ? 'Readings every hour, on the hour. '
+                    : 'Readings every three hours. ') +
     // The two water columns side by side are the confusing part, so they are
     // named outright rather than left to the reader.
     /* A REGRESSION THE OLD WEATHER SUITE CAUGHT, 2026-10-28, and nothing
@@ -18488,7 +18569,13 @@ function renderWxBody(){
         _wxStat('Sunset',     c.sunset  ? _wxClock(new Date(c.sunset  * 1000)) : '—') +
       '</div>';
   } else {
-    const days = _wxDays().slice(0, _wxTab === 'd3' ? 3 : 5);
+    /* RELEASE 40: the long tab shows everything that arrived rather than a
+       hard 5. Open-Meteo sends seven days, which is what he asked for --
+       "24 hour slots for each day of the week". On a release-39 backend the
+       3-hourly feed still gives five and the tab quietly shows five, so this
+       one build serves both. Capped at 7 so a longer feed later cannot turn
+       the panel into an endless list without someone deciding to. */
+    const days = _wxDays().slice(0, _wxTab === 'd3' ? 3 : 7);
     el.innerHTML = days.length
       ? days.map(d => {
           const key = _wxDayKey(d.when);
@@ -18536,7 +18623,9 @@ function renderWxBody(){
     const picked = chosenPlace();
     const byCity = !picked && !_wxCoords() && _wxCity();
     foot.innerHTML = 'OpenWeather · updated ' + (age < 1 ? 'just now' : age + ' min ago') +
-      (_wxTab === 'now' ? '' : ' · daily high / low taken from the 3-hourly readings') +
+      (_wxTab === 'now' ? '' : (_wxHasHourly()
+        ? ' · daily high / low taken from the hourly readings'
+        : ' · daily high / low taken from the 3-hourly readings')) +
       // A place he chose carries coordinates, so unlike the old typed city it
       // keeps the radar. The sentence has to say which of the two he has.
       (picked ? '<br>Showing <strong>' + _expEsc(_placeLabel(picked)) + '</strong>, not this '
@@ -18549,7 +18638,16 @@ function renderWxBody(){
               + 'style="color:inherit;text-decoration:underline">Change city</a>'
               + ' &middot; <a href="#" onclick="useMyLocation();return false" '
               + 'style="color:inherit;text-decoration:underline">use my location</a>' : '') +
-      // Attribution is a licence condition of the gazetteer, not decoration.
+      /* ATTRIBUTION IS A LICENCE CONDITION, NOT DECORATION -- for the
+         gazetteer, and from release 40 for the hourly readings too:
+         Open-Meteo's data is CC BY 4.0 and crediting it is an obligation we
+         took on the moment the panel started showing it. Shown only when the
+         hourly grid is actually in use, so the page never credits a source
+         it did not read. */
+      (_wxHasHourly() ? '<br>Hourly forecast by '
+        + '<a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" '
+        + 'style="color:inherit;text-decoration:underline">Open-Meteo</a>'
+        + ' (CC BY 4.0)' : '') +
       '<br>Place names &copy; OpenStreetMap contributors';
   }
 }
