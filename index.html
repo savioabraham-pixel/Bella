@@ -185,6 +185,44 @@ body.dark .bchart{
    element's own declaration always beats an inherited value. */
 html body.dark .bchart svg{stroke:none!important}
 
+/* ── SHOPPING OPTIONS, the cards under a "what should I buy" answer ──
+   Savio, 2026-10-29, on Gemini's product cards: "Can Bella also do that when
+   required, when asked for options with visuals & links from where to buy?"
+   Measured that day: Amazon.in serves a captcha to any server-side fetch and
+   the official doors are shut (PA-API retired 15 May 2026; the Creators API
+   wants 10 affiliate sales in 30 days; Google Custom Search is closed to new
+   customers). So the PICTURE is a later, partial thing -- Flipkart, Myntra,
+   JioMart, Reliance Digital and Tata Cliq publish one, the rest refuse.
+   THE LINK IS THE PART THAT MATTERS AND IT IS FREE. His own screenshot gave
+   five products with five prices and NOT ONE CLICKABLE LINK, and his tab bar
+   showed him opening Amazon by hand -- the workaround IS the evidence.
+   Built photo-less FIRST and deliberately: a card that only looks finished
+   once an image arrives would look broken on four shops out of nine.
+   THE PRICE COLUMN IS FIXED-WIDTH, not content-width, so prices sit on one
+   straight vertical line down the list -- his standing rule, asked twice. */
+.bopts{margin:10px 0 0}
+.bopts-title{font-weight:600;color:var(--text);margin:0 0 8px;font-size:.95rem}
+.bopts-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.bopt{display:grid;grid-template-columns:1fr 140px;gap:12px;align-items:start;
+  background:var(--white);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.bopt-name{font-weight:600;color:var(--text);line-height:1.35}
+.bopt-why{color:var(--tmid);font-size:.88rem;line-height:1.45;margin-top:3px}
+/* Fixed width + tabular figures = one straight column of prices. */
+.bopt-meta{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:140px}
+.bopt-price{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+.bopt-shop{color:var(--tmid);font-size:.82rem}
+.bopt-go{display:inline-block;margin-top:2px;padding:4px 10px;border-radius:7px;
+  border:1px solid var(--border);color:var(--text);text-decoration:none;font-size:.82rem}
+.bopt-go:hover{border-color:var(--tmid)}
+.bopts-note{color:var(--tmid);font-size:.8rem;margin:8px 0 0;line-height:1.45}
+body.dark .bopt{background:var(--white);border-color:var(--border)}
+/* Below 520px the meta block turns into a row, and the fixed width goes with
+   it -- a 140px column inside a 320px phone leaves no room for the name. */
+@media (max-width:520px){
+  .bopt{grid-template-columns:1fr;gap:8px}
+  .bopt-meta{flex-direction:row;align-items:center;gap:10px;width:auto;flex-wrap:wrap}
+  .bopt-go{margin-top:0}
+}
 .bchart-plot{position:relative;background:var(--csurf);border:1px solid var(--border);
   border-radius:10px;padding:10px 12px;overflow-x:auto}
 .bchart-plot svg{display:block;width:100%;height:auto}
@@ -254,6 +292,215 @@ body.dark .bchart-whybtn{background:var(--goldpale)!important;
   .bchart-tbl th,.bchart-tbl td{padding:6px 7px}
 }
 
+/* ── A COLUMN OF TIMES MUST BE A STRAIGHT LINE ─────────────────────────
+   Savio, 2026-10-29, twice: "no time should move either too much to the
+   left or right."
+   MEASURED, after padding the hours to two digits did not finish the job:
+   in Bella's own face, "11:11" renders 29.11px wide and "00:00" renders
+   56.63px — the same five characters, nearly double the width, because its
+   `1` is a half-width glyph. `font-variant-numeric:tabular-nums` changes
+   NOTHING, because DM Sans carries no tabular figures for it to switch on.
+   So the figures cannot line up in that face at any setting.
+     DM Sans + tnum ....... 27.52px apart
+     Helvetica + tnum ......  2.08px apart
+     system-ui + tnum ......  0.00px apart
+   system-ui is SF Pro here, whose tabular figures are exact, and it sits
+   beside DM Sans far more quietly than a monospace would. Applied ONLY to
+   displayed times — never to prose — so the page's voice is unchanged. */
+.b-tnum,#tb-time,#clk-panel .clk-row-t,#clk-panel .clk-here-t,
+#wx-panel .wx-hr-t,#conv-panel .cv-big{
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:'tnum' 1}
+
+/* ── THE CLOCK AND CALENDAR PANELS ──────────────────────────────────────
+   Savio, 2026-10-28: the Date & Time cell had no action of its own, and the
+   12/24 switch was a 13px icon. Both get a real panel now.
+   Every button rule below is `#clk-panel button` / `#cal-panel button` — an
+   ID, scoring (1,0,1). That is the only thing that reliably beats the
+   blanket `body.dark button{...!important}` at (0,1,1) AND the blanket
+   `body.dark *{color:...!important}` at (0,7,3), which no number of classes
+   can outscore. Learned the hard way on the language picker. */
+#clk-panel button,#cal-panel button{font-family:inherit;cursor:pointer}
+.tb-tap{cursor:pointer;border-radius:6px}
+.tb-tap:hover{opacity:.82}
+
+#clk-body{padding:4px 2px 10px}
+#clk-panel .clk-lb{display:block;font-size:10.5px;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--tmid);margin-bottom:6px}
+#clk-panel .clk-seg{display:flex;gap:8px}
+#clk-panel .clk-seg button{flex:1;display:flex;flex-direction:column;gap:3px;
+  align-items:flex-start;padding:10px 12px;border-radius:11px;
+  border:1px solid var(--bordermid)!important;background:transparent!important;
+  color:var(--tmid)!important}
+#clk-panel .clk-seg button b{font-size:12.5px;font-weight:700}
+#clk-panel .clk-seg button em{font-style:normal;font-size:11px;opacity:.8}
+#clk-panel .clk-seg button[aria-pressed="true"]{background:var(--goldpale)!important;
+  border-color:var(--navy)!important;color:var(--text)!important}
+#clk-panel .clk-note{font-size:11px;color:var(--tmid);margin-top:7px;line-height:1.5}
+#clk-panel .clk-here{margin:16px 0 4px;padding:14px;border-radius:12px;
+  background:var(--goldpale);border:1px solid var(--border)}
+#clk-panel .clk-here-lb{font-size:10.5px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--tmid)}
+#clk-panel .clk-here-t{font-size:34px;font-weight:700;line-height:1.1;
+  color:var(--text);font-variant-numeric:tabular-nums;margin:3px 0}
+#clk-panel .clk-here-d{font-size:12px;color:var(--tmid)}
+#clk-panel .clk-sec{margin-top:16px}
+#clk-panel .clk-sec h5{font-size:10.5px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--tmid);margin:0 0 6px}
+/* EXPLICIT COLUMNS, NOT CONTENT WIDTH. Savio, 2026-10-29, and the second
+   time he has had to say it: "the timings for amsterdam in the 24hr & 12hr
+   timezones are not aligned with the ones mentioned above... follow one
+   straight vertical line."
+   MEASURED BEFORE THE FIX: the left edges of the times varied by 9px in both
+   formats, because the cell was a flex child sized by its own text and
+   "12:52 AM" is wider than "6:52 PM". The right edges lined up, which is
+   what made it look almost-right and therefore worse.
+   A grid with a fixed time track makes BOTH edges straight whatever the
+   format, and tabular numerals keep the digits in line within it. */
+#clk-panel .clk-row{display:grid;
+  grid-template-columns:minmax(0,1fr) 104px 26px;
+  align-items:center;gap:10px;padding:9px 0;
+  border-bottom:1px solid var(--border)}
+#clk-panel .clk-row:last-of-type{border-bottom:0}
+#clk-panel .clk-row-l{min-width:0}
+#clk-panel .clk-row-city{font-size:12.5px;font-weight:600;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#clk-panel .clk-row-day{font-size:11px;color:var(--tmid)}
+/* Savio, 2026-10-29: "make the font style unbold for the times of the other
+   states... As long as the top one is bold below ones are just for
+   comparing." He is right -- one hero, and a quiet list beneath it. Weight
+   is the only thing that changes; size and the tabular face stay, so the
+   column still reads as one straight line. */
+#clk-panel .clk-row-t{font-size:19px;font-weight:400;color:var(--text);
+  font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+#clk-panel .clk-x{width:26px;height:26px;border-radius:50%;
+  border:1px solid var(--bordermid)!important;background:transparent!important;
+  color:var(--tmid)!important;font-size:11px;line-height:1}
+#clk-panel .clk-add-row{margin-top:14px}
+#clk-panel .clk-add-row{position:relative}
+#clk-panel input{width:100%;padding:11px 13px;border-radius:11px;
+  border:1px solid var(--bordermid);background:var(--white);color:var(--text);
+  font-family:inherit;font-size:12.5px;outline:none;box-sizing:border-box}
+#clk-panel input:focus{border-color:var(--navy)}
+/* The matches sit OVER the panel rather than pushing it longer, so the list
+   never shoves the clocks off a phone screen while he is reading them. */
+#clk-panel .clk-res{display:none;position:absolute;left:0;right:0;top:calc(100% + 5px);
+  z-index:20;max-height:230px;overflow-y:auto;border-radius:11px;
+  border:1px solid var(--bordermid);background:var(--white);
+  box-shadow:var(--shadow-lg);-webkit-overflow-scrolling:touch}
+#clk-panel .clk-res.on{display:block}
+#clk-panel .clk-res-row{display:flex;align-items:center;gap:8px;width:100%;
+  text-align:left;padding:10px 13px;border:0!important;border-radius:0;
+  background:transparent!important;color:var(--text)!important;font-size:12.5px;
+  border-bottom:1px solid var(--border)!important}
+#clk-panel .clk-res-row:last-child{border-bottom:0!important}
+#clk-panel .clk-res-row:hover{background:var(--goldpale)!important}
+#clk-panel .clk-res-c{flex:1 1 auto;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+#clk-panel .clk-res-row em{font-style:normal;font-size:10.5px;color:var(--tmid);flex:none}
+#clk-panel .clk-none{font-size:12px;color:var(--tmid);padding:11px 13px}
+
+#cal-head{padding:2px 0 8px}
+#cal-panel .cal-nav{display:flex;align-items:center;gap:10px}
+#cal-panel .cal-label{flex:1;text-align:center;font-size:14px;font-weight:700;color:var(--text)}
+#cal-panel .cal-arrow{width:32px;height:32px;border-radius:9px;
+  border:1px solid var(--bordermid)!important;background:transparent!important;
+  color:var(--text)!important;font-size:17px;line-height:1;flex:none}
+#cal-panel .cal-label-btn{border:0!important;background:transparent!important;
+  color:var(--text)!important;font-size:14px;font-weight:700;padding:6px 10px;
+  border-radius:9px}
+#cal-panel .cal-label-btn:hover{background:var(--goldpale)!important}
+#cal-panel .cal-ycell.is-today{border-color:var(--navy)!important}
+#cal-panel .cal-ycell[aria-pressed="true"]{background:var(--goldpale)!important;
+  border-color:var(--navy)!important}
+#cal-panel .cal-tabs{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+#cal-panel .cal-tabs button{font-size:11px;font-weight:600;padding:7px 13px;
+  border-radius:999px;border:1px solid var(--bordermid)!important;
+  background:transparent!important;color:var(--tmid)!important;line-height:1}
+#cal-panel .cal-tabs button[aria-pressed="true"]{background:var(--goldpale)!important;
+  border-color:var(--navy)!important;color:var(--text)!important}
+#cal-panel .cal-today{margin-left:auto}
+#cal-panel .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+#cal-panel .cal-dow{font-size:9.5px;font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--tmid);text-align:center;padding:4px 0}
+#cal-panel .cal-pad{height:38px}
+#cal-panel .cal-cell{position:relative;height:38px;border-radius:9px;
+  border:1px solid transparent!important;background:transparent!important;
+  color:var(--text)!important;font-size:12.5px;display:flex;
+  align-items:center;justify-content:center}
+#cal-panel .cal-cell:hover{background:var(--goldpale)!important}
+#cal-panel .cal-cell.is-today{border-color:var(--navy)!important;font-weight:700}
+#cal-panel .cal-cell[aria-pressed="true"]{background:var(--goldpale)!important;
+  border-color:var(--navy)!important;font-weight:700}
+#cal-panel .cal-dot{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);
+  width:5px;height:5px;border-radius:50%;background:#2a78d6}
+body.dark #cal-panel .cal-dot{background:#3987e5}
+#cal-panel .cal-year{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#cal-panel .cal-ycell{padding:14px 8px;border-radius:11px;
+  border:1px solid var(--bordermid)!important;background:transparent!important;
+  color:var(--text)!important;display:flex;flex-direction:column;gap:3px}
+#cal-panel .cal-ycell b{font-size:13px;font-weight:700}
+#cal-panel .cal-ycell em{font-style:normal;font-size:10.5px;color:var(--tmid)}
+#cal-panel .cal-day{margin-top:16px;border-top:1px solid var(--border);padding-top:12px}
+#cal-panel .cal-day h5{font-size:10.5px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--tmid);margin:0 0 8px}
+#cal-panel .cal-none{font-size:12px;color:var(--tmid);padding:4px 0 2px}
+#cal-panel .cal-ev{display:flex;align-items:center;gap:8px;padding:9px 0;
+  border-bottom:1px solid var(--border);flex-wrap:wrap}
+#cal-panel .cal-ev-l{flex:1 1 150px;min-width:0}
+#cal-panel .cal-ev-t{font-size:12.5px;font-weight:600;color:var(--text)}
+#cal-panel .cal-ev-m{font-size:11px;color:var(--tmid);margin-top:2px}
+#cal-panel .cal-ics{font-size:10.5px;font-weight:600;padding:6px 10px;
+  border-radius:999px;border:1px solid var(--bordermid)!important;
+  background:var(--goldpale)!important;color:var(--text)!important;line-height:1;flex:none}
+#cal-panel .cal-del{width:26px;height:26px;border-radius:50%;flex:none;
+  border:1px solid var(--bordermid)!important;background:transparent!important;
+  color:var(--tmid)!important;font-size:11px;line-height:1}
+#cal-panel .cal-form{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+#cal-panel .cal-form input{padding:9px 11px;border-radius:10px;
+  border:1px solid var(--bordermid);background:var(--white);color:var(--text);
+  font-family:inherit;font-size:12.5px;outline:none;min-width:0}
+#cal-panel #cal-new-title{flex:1 1 150px}
+#cal-panel #cal-new-time{flex:0 0 108px}
+#cal-panel #cal-new-note{flex:1 1 130px}
+#cal-panel .cal-add{padding:9px 16px;border-radius:10px;font-size:12px;font-weight:600;
+  border:1px solid var(--navy)!important;background:var(--goldpale)!important;
+  color:var(--text)!important;flex:none}
+@media(max-width:480px){
+  #clk-panel .clk-here-t{font-size:28px}
+  #clk-panel .clk-row-t{font-size:17px}
+  #clk-panel .clk-row{grid-template-columns:minmax(0,1fr) 92px 26px;gap:8px}
+  #cal-panel .cal-cell,#cal-panel .cal-pad{height:34px}
+  #cal-panel .cal-ics{font-size:10px;padding:6px 8px}
+}
+
+/* Taking the chart away. Same shape as the pivot row, and the same dark
+   trap: `body.dark button{...!important}` is (0,1,1), so these rules carry
+   `!important` AND outscore it at (0,2,1). */
+/* A CHART LEAVING FOR A DOCUMENT IS ALWAYS LIGHT.
+   He uses dark mode, so without this every picture he downloads arrives as a
+   navy block on a white Word page. A document is printed and read on white
+   whatever the app's theme is. Applied only for the instant the picture is
+   taken, then removed. (0,3,1) so it outscores `body.dark .bchart` at
+   (0,2,1) -- the same specificity arithmetic as everything else here. */
+body.dark .bchart.bchart-forlight,.bchart.bchart-forlight{
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;
+  --s5:#e87ba4;--s6:#008300;--s7:#4a3aa7;--s8:#e34948;
+  --cink:#0B2545;--cink2:#4A5A7A;--csurf:#FFFFFF;--cgrid:rgba(27,42,74,0.18)}
+
+.bchart-dl{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 0}
+.bchart-dl-lb{font-size:10px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--tmid);margin-right:2px}
+.bchart-dl button{font-family:inherit;font-size:11px;font-weight:600;
+  padding:6px 11px;border-radius:999px;border:1px solid var(--bordermid);
+  background:transparent;color:var(--tmid);cursor:pointer;line-height:1}
+.bchart-dl button:hover{border-color:var(--navy);color:var(--text)}
+.bchart-dl button[disabled]{opacity:.55;cursor:default}
+body.dark .bchart-dl button{background:transparent!important;
+  color:var(--tmid)!important;border:1px solid var(--bordermid)!important}
+@media(max-width:480px){.bchart-dl button{font-size:10.5px;padding:6px 9px}}
+
 /* The pie and its legend. Flex-wrap does the responsive work: side by
    side where there is room, stacked where there is not, with no width
    branch in JavaScript to get wrong. */
@@ -261,14 +508,22 @@ body.dark .bchart-whybtn{background:var(--goldpale)!important;
 .bchart-pie svg{flex:none;width:auto;max-width:100%}
 .bchart-pielg{flex:1 1 170px;min-width:0}
 .bchart-pietitle{font-size:12.5px;font-weight:700;color:var(--text);margin:0 0 6px}
-.bchart-pierow{display:flex;align-items:center;gap:8px;font-size:12px;
+/* Explicit tracks here too — the same rule as the Clock and the weather
+   hours. Measured as a flex row: the VALUE column's left edge drifted 29px
+   across five rows because the name grew and the value was content-width.
+   One edge lined up, which is what makes that kind of fault read as
+   almost-right rather than wrong. */
+.bchart-pierow{display:grid;
+  grid-template-columns:11px minmax(0,1fr) 92px 46px;
+  align-items:center;gap:8px;font-size:12px;
   padding:3px 0;color:var(--text)}
-.bchart-pierow i{width:11px;height:11px;border-radius:3px;flex:none}
-.bchart-pienm{flex:1 1 auto;min-width:0;overflow:hidden;
+.bchart-pierow i{width:11px;height:11px;border-radius:3px}
+.bchart-pienm{min-width:0;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;color:var(--tmid)}
-.bchart-pierow b{font-weight:700;font-variant-numeric:tabular-nums}
+.bchart-pierow b{font-weight:700;font-variant-numeric:tabular-nums;
+  text-align:right;white-space:nowrap}
 .bchart-pierow em{font-style:normal;font-size:11px;color:var(--tmid);
-  min-width:34px;text-align:right}
+  text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 /* One number is not a chart. A one-bar bar chart is the most common way
    a chart misses its own point, so a lone value is shown as the figure
@@ -1960,9 +2215,18 @@ try{
 
       <!-- CELL — Date & Time -->
       <div class="tb-cell tb-stackable" data-tb="date">
-        <div class="tb-primary" id="tb-date">📅 —</div>
-        <div style="display:flex;align-items:baseline;margin-top:2px">
-          <span class="tb-clock-icon" onclick="toggleClockFormat()" title="Toggle 12/24hr" aria-label="Switch between 12 and 24 hour time" role="button" style="display:inline-flex;align-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg></span>
+        <!-- Savio, 2026-10-28: the Calendar and the Clock each get their own
+             service. The date opens the calendar, the time opens the clock,
+             and both stop the click so the stack does not flip underneath
+             them — tapping anywhere ELSE on the cell still flips, which is
+             how he moves between panels on a phone. -->
+        <div class="tb-primary tb-tap" id="tb-date" role="button" tabindex="0"
+             title="Open the calendar"
+             onclick="event.stopPropagation();openCalendarPanel()">📅 —</div>
+        <div class="tb-tap" style="display:flex;align-items:baseline;margin-top:2px"
+             role="button" tabindex="0" title="Open the clock"
+             onclick="event.stopPropagation();openClockPanel()">
+          <span class="tb-clock-icon" onclick="event.stopPropagation();openClockPanel()" title="Open the clock" aria-label="Switch between 12 and 24 hour time" role="button" style="display:inline-flex;align-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg></span>
           <span class="tb-secondary" id="tb-time" style="margin-left:4px">—</span>
           <span class="tb-tz-label" id="tb-tz"></span>
         </div>
@@ -2119,11 +2383,24 @@ try{
           <div class="cv-big-unit" id="tz-result-sub"></div>
           <div class="cv-sub" id="tz-diff"></div>
         </div>
-        <div class="cv-ctl">
+        <!-- Savio, 2026-10-29: "in the converter for the time i am missing the
+             date segment... i would need time for any particular date, time,
+             zone on the LHS and RHS what country timezone i need it converted
+             to". A time zone converter without a date can only answer about
+             today, and the one case people actually need it for -- a call that
+             lands on a different DAY at the other end -- is the case it could
+             not express. -->
+        <div class="cv-when">
+          <div class="cv-field">
+            <div class="cv-lbl">Date</div>
+            <input id="tz-date-in" type="date" class="cv-input" oninput="doTZConvert()">
+          </div>
           <div class="cv-field">
             <div class="cv-lbl">Time</div>
             <input id="tz-time-in" type="time" class="cv-input" oninput="doTZConvert()">
           </div>
+        </div>
+        <div class="cv-zones">
           <div class="cv-field">
             <div class="cv-lbl">From</div>
             <div class="cv-pos">
@@ -2216,6 +2493,23 @@ try{
            re-fetching rather than caching. Hidden until its tab is chosen. -->
       <div id="wx-radar" style="display:none"></div>
       <div id="wx-foot"></div>
+    </div>
+
+    <!-- ══ CLOCK ══════════════════════════════════════ -->
+    <div class="tb-overlay" id="clk-overlay" onclick="closeClockPanel()"></div>
+    <div class="tb-panel" id="clk-panel" style="display:none">
+      <div class="tb-panel-title">Clock</div>
+      <button class="tb-close" onclick="closeClockPanel()">✕</button>
+      <div id="clk-body"></div>
+    </div>
+
+    <!-- ══ CALENDAR ═══════════════════════════════════ -->
+    <div class="tb-overlay" id="cal-overlay" onclick="closeCalendarPanel()"></div>
+    <div class="tb-panel" id="cal-panel" style="display:none">
+      <div class="tb-panel-title">Calendar</div>
+      <button class="tb-close" onclick="closeCalendarPanel()">✕</button>
+      <div id="cal-head"></div>
+      <div id="cal-body"></div>
     </div>
 
     <!-- ══ MAPS & PLACES ══════════════════════════════ -->
@@ -2959,6 +3253,91 @@ const FOLLOWUP={
    has asked the one follow-up. By 3 the answer is in and asking again would be
    repeating herself. Errs OPEN on failure -- behaving as it always has is the
    safe default. */
+/* SHE ASKED YESTERDAY. SHE SHOULD NOT ASK AGAIN TODAY.
+   Savio, 2026-10-29: "if im on a new thread the first time asking at the
+   start is OK but when i have opened several threads... every new thread
+   should not throw the Sanju & Jish question... Asking everytime about
+   Sanjukta & Jishnu is very monotone for Bella who is supposed to be
+   proactive, can remember from memory of all threads."
+   Scoping the question to the opening exchange fixed it WITHIN a thread, but
+   every new thread is an opening exchange, so across threads nothing had
+   changed. This remembers the asking itself, not the thread.
+   Twenty hours rather than twenty-four: a day that starts a little earlier
+   than the last should not be caught out by the clock. */
+const FAMILY_ASKED_KEY='b_family_asked';
+const FAMILY_ASK_GAP=20*60*60*1000;
+function _familyAskedRecently(){
+  try{
+    const t=Number(localStorage.getItem(FAMILY_ASKED_KEY)||0);
+    return isFinite(t)&&t>0&&(Date.now()-t)<FAMILY_ASK_GAP;
+  }catch(e){ return false; }
+}
+/* Recorded from what she ACTUALLY SAID, not from having had the chance.
+   She rarely uses the exact wording -- "How are Sanjukta and Jishnu doing?"
+   for "How are Sanjukta and Jishnu?" -- so this looks for the NAMES out of
+   the follow-up together with a question mark. A false positive only costs
+   one skipped asking; a false negative would bring the monotony back. */
+function _noteFamilyAsked(reply,fq){
+  try{
+    if(!reply||!fq||reply.indexOf('?')<0) return;
+    /* SKIP THE FIRST WORD. "How are Sanjukta and Jishnu?" begins with a
+       capital, so a plain capitalised-word match returns ["How","Sanjukta",
+       "Jishnu"] -- and then ANY reply containing "How ...?" counted as her
+       having asked after the family. Measured: "How can I help you today?"
+       matched. The names are the capitalised words that are NOT sentence
+       initial. */
+    const names=(String(fq).replace(/^\s*\S+\s*/,'').match(/[A-Z][a-z]{2,}/g))||[];
+    for(let i=0;i<names.length;i++){
+      if(reply.indexOf(names[i])>=0){
+        localStorage.setItem(FAMILY_ASKED_KEY,String(Date.now()));
+        return;
+      }
+    }
+  }catch(e){}
+}
+/* IS THIS TURN ACTUALLY SMALL TALK?
+   Savio, 29 October 2026: he asked live Bella for silicone drip catchers and
+   she ended the shopping answer with "How are Sanjukta and Jishnu?".
+   MY OWN GATE WAS THE WRONG SHAPE. _inOpeningExchange() asks "is this early",
+   and his shopping question WAS the second message of the day -- so the gate
+   was open and would have stayed open even with this morning's fix in place.
+   Early is not the same as chatty. The family question belongs to one moment
+   only: she asked how they are, and they answered. A request for a task, at
+   any depth, is not that moment.
+
+   ERRS CLOSED, unlike _inOpeningExchange() which errs open. Both failure
+   modes are wrong, but only one of them is a complaint he has now made three
+   times -- so when this cannot tell, she says nothing. A missed asking costs
+   a day; the monotony costs his patience.
+
+   All four languages, because he uses Bella in them and a Bengali "ভালো আছি"
+   is the same moment as an English "I'm good". */
+var _SMALLTALK_RE=/\b(good|fine|great|well|ok|okay|alright|all right|not bad|happy|excellent|wonderful|hello|hi|hey|morning|afternoon|evening|thanks|thank you|doing well)\b|ভাল|আছি|কেমন|নমস্কার|সুপ্রভাত|ठीक|अच्छा|बढ़िया|नमस्ते|नमस्कार|कैसे|छान|बरा|कसे/i;
+/* A task hiding behind a polite word still a task. "Good morning, make me a
+   deck" is work. Checked FIRST, so a greeting prefix cannot smuggle one in. */
+var _TASK_RE=/\b(suggest|recommend|make|build|create|draft|write|prepare|compare|find|search|look up|show|list|give me|send|explain|calculate|convert|translate|summari[sz]e|book|buy|order|price|cost|cheapest|best|which|what|where|when|why|who|how much|how many|how do|how can|can you|could you|would you|please|need|want|help me)\b|\?/i;
+function _turnIsSmallTalk(){
+  try{
+    const h=getHist();
+    let last='';
+    for(let i=h.length-1;i>=0;i--){
+      if(h[i]&&h[i].role==='user'){
+        last=String((h[i].parts&&h[i].parts[0]&&h[i].parts[0].text)||'');
+        break;
+      }
+    }
+    // Strip the "[User: Name]" header the history prepends, and any document
+    // text pasted in after it -- an attached PDF is never small talk.
+    last=last.replace(/^\[User:[^\]]*\]\s*/,'').split('\n\n[DOCUMENT ')[0].trim();
+    if(!last) return false;
+    if(last.length>80) return false;          // a long message is not "I'm good"
+    /* "How are you Bella?" is the one question that IS small talk, and
+       _TASK_RE would veto it on the question mark alone. Cleared first. */
+    const _politeAsk=/\bhow\s+(are|r)\s+(you|u)\b|\bhow'?s\s+it\s+going\b|কেমন আছ|आप कैसे|तुम कैसे|कसे आहा/i.test(last);
+    if(!_politeAsk && _TASK_RE.test(last)) return false;
+    return _SMALLTALK_RE.test(last);
+  }catch(e){ return false; }   // cannot tell, so do not ask
+}
 function _inOpeningExchange(){
   try{ return getHist().length <= 2; }catch(e){ return true; }
 }
@@ -2995,13 +3374,35 @@ function buildSystemPrompt(profileKey,addressedName,memCtx){
     shayani:"SHAYANI'S WORLD: FIRST SESSION — ask warmly if she prefers Ria or Shayani. Store and use always. Moved Kolkata to Hyderabad for Healthcare career. NEVER ask about her father, and never raise him yourself — not once, not ever, in any language. Do not ask about any family member she has not named herself. If SHE brings up her father, respond with real warmth and stay with whatever she wants to say; do not change the subject and do not offer platitudes. Asking about her mother in Kolkata is safe and welcome. Husband Debashish Bose at Deloitte Hyderabad. When positive — ask about Debashish and her Mother in Kolkata.",
     debashish:"DEBASHISH'S WORLD: Deloitte Hyderabad. Originally Kolkata. Married to Shayani (Ria). When positive — ask about Shayani.",
   };
-  const userCtx=USER_CTX[profileKey]?`\n${USER_CTX[profileKey]}`:'';
-
   // Only the opening exchange carries the small-talk script. See
   // _inOpeningExchange() above for why this is structural, not more wording.
+  // DECLARED HERE, ABOVE ITS FIRST USE: a `const` read before its line is a
+  // ReferenceError, which is exactly what blanked the page for every new
+  // user when _clockFormat24 was ordered wrong.
   const _openingNow = _inOpeningExchange();
-  const _fqHeader = _openingNow ? `FAMILY FOLLOW-UP (ask after a positive response — use EXACT names, NEVER say \u201cyour family\u201d generically, and ask it ALONE, never bundled with another question): "${fq}"` : ``;
-  const _flowBlock = _openingNow ? `CONVERSATION FLOW — EVERY NEW SESSION (STRICT — DO NOT SKIP ANY STEP):
+  // Opening exchange AND she has not asked after them in the last day.
+  // Early AND chatty AND not already asked today. All three, every time.
+  const _askFamilyNow = _openingNow && _turnIsSmallTalk() && !_familyAskedRecently();
+  /* THE FIFTH PLACE, AND THE ONE THAT WAS STILL FIRING.
+     Savio caught this on the test link, 2026-10-28: deep in a long analysis
+     he asked "So how are you Bella?" and she came back with "How are
+     Sanjukta and Jishnu doing?". I had withheld the four `${fq}` instructions
+     and declared it fixed -- but EVERY world-context string ends with its own
+     "When positive - ask about X", in different words, and that one is sent
+     on every turn regardless of depth.
+     MY TEST COUNTED ONE PHRASING. It searched for the literal question "How
+     are Sanjukta and Jishnu?" and found none, so it passed while a second
+     instruction to do exactly the same thing sat two lines away. A search
+     finding nothing is not evidence of absence -- my own note, walked into.
+     Who the person is stays, always; only the ASK is small talk, so only the
+     ASK is withheld once the opening exchange is over. */
+  const _ctxRaw=USER_CTX[profileKey]||'';
+  const _ctx=_askFamilyNow?_ctxRaw
+    :_ctxRaw.replace(/\s*(?:When positive|Can open with)[^.]*\.?/gi,'').trim();
+  const userCtx=_ctx?`\n${_ctx}`:'';
+
+  const _fqHeader = _askFamilyNow ? `FAMILY FOLLOW-UP (ask after a positive response — use EXACT names, NEVER say \u201cyour family\u201d generically, and ask it ALONE, never bundled with another question): "${fq}"` : ``;
+  const _flowBlock = _askFamilyNow ? `CONVERSATION FLOW — EVERY NEW SESSION (STRICT — DO NOT SKIP ANY STEP):
 ${_sessionGreeting?((_greetingOnScreen&&getHist().length<=1)?`Step 1: ALREADY COMPLETED. You have ALREADY greeted ${addressedName} this session, with exactly these words: "${_sessionGreeting}". That greeting is on their screen right now. DO NOT GREET AGAIN. Do not open with "Good morning", "Good afternoon", "Good evening", "Hello" or "Hi", and do not ask how they are — you have already asked. Their next message is their REPLY to that greeting, so begin at Step 2: read their mood and respond to what they actually said. If what they said is a question, task or request rather than a mood, answer it directly and immediately — skip the small talk entirely and do not force it back to Step 2.`:`Step 1: ALREADY COMPLETED, AND STILL DO NOT GREET AGAIN. You greeted ${addressedName} earlier in this same session, with these words: "${_sessionGreeting}". They are now continuing an EARLIER CONVERSATION, so that greeting is NOT on their screen — never refer to it, never say "as I said when you arrived", and do not treat their message as a reply to it. They have been greeted once already this session and greeting them a second time is exactly what this rule exists to prevent. Do not open with "Good morning", "Good afternoon", "Good evening", "Hello" or "Hi", and do not ask how they are. Pick this conversation up where it left off and answer what they have just said. If they greet YOU, a short warm acknowledgement is fine — but never the full opening greeting again.`):`Step 1: Greet warmly by preferred name — time-of-day greeting, then ask how they are. THE GREETING OBEYS THE LANGUAGE RULE ABOVE LIKE EVERYTHING ELSE: if their first message is in English, greet in English ("Good morning ${addressedName}! How are you today?"); if it is in Bengali, Hindi or Marathi, greet in that language and that script. The English wording here is an example of the SHAPE, not a phrase to copy.`}
 Step 2: WAIT for their reply. Read their mood carefully.
 
@@ -3034,7 +3435,17 @@ CRITICAL RULE — THE FAMILY FOLLOW-UP BELONGS TO SMALL TALK AND NOWHERE ELSE. "
 
 CRITICAL RULE — ONE QUESTION PER MESSAGE. The family follow-up "${fq}" should come after the positive small talk exchange, but it must arrive ALONE and the conversation must then follow the user's answer. The pattern is: User says fine -> Bella responds warmly and asks ONE thing -> Bella LISTENS and responds to what they said -> conversation continues from there. Never ask a question while a previous one is still unanswered, and never read out a list of relatives. If the user changes the subject or asks for something, drop the small talk entirely and help them — their agenda always outranks yours.
 
-` : `CONVERSATION ALREADY UNDER WAY — THE OPENING SMALL TALK IS FINISHED.\nDo not greet ${addressedName} again and do not ask how they are; that has happened.\nDO NOT ASK ABOUT ANYONE\u2019S FAMILY OR RELATIVES IN THIS REPLY — not at the start, not in the middle, and above all not tacked onto the end of something useful. A reply that answers a question ENDS when the answer ends. If they bring a person up themselves, follow that warmly and properly.\nAnswer what they have actually asked. If they sound low or tired, lead with one line of genuine empathy before helping — but still ask nothing about family.\nONE QUESTION PER MESSAGE still applies: never stack questions, and never ask a new one while a previous one is unanswered.\n\n`;
+` : (_openingNow ? `YOU HAVE ALREADY ASKED AFTER HIS FAMILY RECENTLY — DO NOT ASK AGAIN.
+Savio, 29 October 2026: "every new thread should not throw the Sanju & Jish question... asking everytime is very monotone for Bella who is supposed to be proactive, can remember from memory of all threads."
+Greet ${addressedName} warmly and briefly, and then open from something you ACTUALLY HOLD rather than from a stock question:
+- something left unfinished in another conversation, or a thing you made for them and could ask whether it was any use;
+- something they said they were going to do;
+- anything in MEMORY FROM PREVIOUS SESSIONS worth returning to.
+THEIR OTHER CONVERSATIONS, listed further down, are real: their titles and opening lines are what you had with this person, so draw on those.
+NEVER INVENT A THREAD TO PULL. Do not imagine a task, a plan or a promise that is not in front of you — a warm opening about something that never happened is far worse than a plain one. If you are holding nothing worth raising, simply answer what they have said and let the conversation start there. Silence is not a failure; a fabricated memory is.
+ONE QUESTION PER MESSAGE still applies.
+
+` : `CONVERSATION ALREADY UNDER WAY — THE OPENING SMALL TALK IS FINISHED.\nDo not greet ${addressedName} again and do not ask how they are; that has happened.\nDO NOT ASK ABOUT ANYONE\u2019S FAMILY OR RELATIVES IN THIS REPLY — not at the start, not in the middle, and above all not tacked onto the end of something useful. A reply that answers a question ENDS when the answer ends. If they bring a person up themselves, follow that warmly and properly.\nAnswer what they have actually asked. If they sound low or tired, lead with one line of genuine empathy before helping — but still ask nothing about family.\nONE QUESTION PER MESSAGE still applies: never stack questions, and never ask a new one while a previous one is unanswered.\n\n`);
   return `You are Bella, a personal AI companion created by Savio Abraham for his family and close friends. Named after Savio's late mother, Bella. You carry her warmth, wisdom and nurturing care in every interaction. You are their trusted family friend — professional, calm, warm, and deeply caring.
 
 CURRENT USER: ${addressedName} | Profile: ${p.firstName||addressedName} ${p.lastName||''} | Group: ${p.group||'Guest'}
@@ -3143,7 +3554,47 @@ RESPONSE FORMAT:
 - **NEVER send anyone to My Workshop for anything you can do here.** Savio's instruction, 16 October 2026. The Workshop is a SECOND way in, for someone who prefers a form with options. Being asked in words is the first way, and it is yours. Do not mention the Workshop in passing, do not offer it as an alternative, and never use it as a way of saying no.
 - The ONE exception, his words: things that are not a question at all but a piece of equipment — recording a meeting and taking the minutes (B-Meet), joining or splitting or watermarking PDFs, converting one file format to another, and the invoice builder. Those need files chosen and settings set, so pointing someone at the Workshop IS the right answer there. Name the tile when you do.
 - If you are missing something you genuinely need — the figures for a chart, for instance — ask one short question for it here, and build it the moment you have it. Asking is fine; redirecting is not.
+- TAKING A BRIEF BEFORE YOU BUILD. Savio, 29 October 2026: "Bella has to intelligently ask for basic details which would need to prepare any presentation if those details are not in the User's request... imagine a User chatting with a friend, that friend is Bella." He is right. "Make me a presentation comparing two schools for Josh" cannot be answered well without knowing the board, the city, whether it is to class 10 or 12, and the medium of instruction. A deck built without those is a guess wearing a title slide.
+- THIS IS THE ONE EXCEPTION TO ONE QUESTION PER MESSAGE, and it is his decision. That rule is about CONVERSATION — it exists because you once asked after the whole family in a single breath. Taking a brief is a different act. So when someone asks you to BUILD something — a presentation, a comparison, a document — and you genuinely lack what you need, you may ask up to FOUR short questions in ONE message, each on its own line. Everywhere else, one question at a time, unchanged.
+- WORK OUT WHAT TO ASK FROM THE SUBJECT, never from a fixed list. Schools turn on the board, the city, the class range and the medium. A phone turns on budget and whether they want iOS or Android. An investment turns on the amount, how long it is for, and how much risk they can live with. If you are not sure what decides a thing, SEARCH for how people actually choose it, and ask about that. Ask only what would change your answer — three or four, never a form.
+- A BROAD REQUEST NEEDS A DIFFERENT QUESTION. "Make me a presentation on electric cars" is not missing facts; nobody could list what is absent. What is missing is the ANGLE. So ask ONE orienting question instead — are they comparing particular ones, or do they want the general picture of what is out there — and build the moment they say.
+- NEVER ASK WHAT YOU ALREADY KNOW OR WHAT THEY HAVE ALREADY SAID. You hold a great deal about this family; asking Josh's age when you know he is Joydeep and Purbita's school-age son is insulting. But do not assume in silence either — say what you are taking for granted so it can be corrected: "Kolkata, I take it?" A silent assumption is how a wrong document gets built without anyone noticing.
+- ALWAYS OFFER TO GO AHEAD ANYWAY. End the brief with a way past it: "Or tell me to go ahead and I will assume CBSE, Kolkata, and up to class 12 — and I will say so on the first slide." Some days they want something rough, and the brief must never become a gate. If they do say go ahead, STATE THOSE ASSUMPTIONS IN THE DOCUMENT so nobody reading it later mistakes them for facts.
+- AND IF THEY GAVE YOU ENOUGH, BUILD IT. Do not ask for the sake of asking, do not ask the same thing twice, and never ask anything at all for an ordinary question that is already answerable.
 - You CAN read files they send you here — Word, Excel, PDF, PowerPoint, images, 10 formats. Never say you are unable to receive an upload. You have already read their file by the time you reply.
+- YOU CAN DRAW A GRAPH INSIDE THIS CONVERSATION, and you must stop saying you cannot. Savio, 28 October 2026, after Bella told him "as a text-based AI, I am currently unable to directly generate and display visual elements like line graphs or charts" and sent him to Excel. That was wrong twice over: you CAN draw one here, and sending anyone to a spreadsheet is the redirect you are never to make. NEVER say you are text-only, never say you cannot show a chart, and never offer to list numbers "so you can plot it yourself".
+- WHEN TO DRAW ONE. Only when a picture genuinely makes the answer easier to understand: numbers COMPARED against each other, or numbers CHANGING over time. A fixed deposit against a mutual fund over ten years is exactly it. Most conversation is not — advice, opinions, instructions, a single figure, a yes or no, warm chat. If in doubt, do not draw one. A graph that adds nothing is worse than no graph, and he said so: "obviously this will not be for every normal chat".
+- HOW TO DRAW ONE. Explain in words FIRST, as you normally would — the graph supports your answer, it never replaces it. Then, at the very END of your reply, after everything else, append a block in exactly this shape and nothing else:
+[CHART]
+type: line
+title: What the chart shows
+labels: Year 1, Year 2, Year 3
+series: Fixed Deposit | 107000, 114490, 122504
+series: Mutual Fund | 112000, 125440, 140493
+[/CHART]
+- THE RULES OF THAT BLOCK. The type is line, bar or pie — line for anything over time, bar for comparing separate things, pie only for shares of one whole. One labels line. One series line per thing being compared, name first, then a bar, then the numbers. Plain numbers only: no currency symbols, no commas inside a number, no percent signs, no words. Every series must have exactly as many numbers as there are labels. Between 2 and 12 labels, and at most 4 series.
+- THE FIGURES IN THE BLOCK MUST BE THE SAME FIGURES YOU USED IN YOUR WORDS. Never invent numbers to make a chart, and never draw one from figures you have not stated. If you do not have real numbers, do not draw anything — ask for them instead.
+- HOW TO STRUCTURE AN ANALYSIS, because your headings BECOME the document. Savio, 28 October 2026: "Bella has to intelligently decipher the heading... Some PPTs may use a slide called Competitors or Competitive Benchmarks." When he downloads your answer as a Word document or a PowerPoint, every heading you write becomes a section: its own line in the Contents page and its own numbered separator slide. So write headings the way you would name slides.
+- NAME A SECTION FOR WHAT IS IN IT, never with a generic label. "Competitors", "Competitive benchmarks", "What it costs", "The risks", "Market outlook", "How the two compare", "What changed this year" — these tell a reader where they are. "Analysis", "Details", "More information", "Points" do not. Never title a section with the same word as the document itself, and never repeat a heading.
+- OPEN WITH "In brief" — two or three lines that answer the question on their own, for someone who reads nothing else. CLOSE WITH "My recommendation" — your actual view, not a summary. Everything specific goes between them, under headings of your own choosing. Three to six sections suits most answers; one long undivided wall suits none.
+- USE THE WEB WHEN THE ANSWER DEPENDS ON WHAT IS TRUE NOW — interest rates, prices, who the competitors are, market figures, anything that has changed since you were trained. Search first, then write, and name the source in the sentence. The links are attached under your answer automatically. An analysis built on remembered numbers is worse than no analysis, because it looks researched.
+- A BENCHMARK MEANS NAMES AND NUMBERS, NEVER "some banks offer more". Savio, 28 October 2026: in a comparison of deposits, quote actual banks and their actual rates; for funds, actual funds. A section called Competitive benchmarks that contains no competitor is just a heading. So name them and give the figure beside each one.
+- FOR INDIAN DEPOSITS, COVER BOTH SIDES AND SAY WHICH IS WHICH: nationalised banks (State Bank of India, Punjab National Bank, Bank of Baroda, Canara Bank, Union Bank) and private banks (HDFC, ICICI, Axis, Kotak), and mention small finance banks separately because their higher rates carry different risk. Give the tenure the rate applies to — a rate without its term is meaningless — and the senior-citizen rate where it differs. For funds, name the fund or at least the category, give the period the return covers, and say plainly that past returns are not a promise.
+- EVERY ONE OF THOSE NUMBERS MUST BE SEARCHED FOR, TODAY, AND ATTRIBUTED. Deposit rates change constantly and a rate you remember is almost certainly stale. Search, then write, and name the bank's own page or the RBI in the sentence. IF YOU CANNOT FIND A CURRENT FIGURE, SAY SO AND LEAVE IT OUT — never estimate one, never carry one over from memory, never round a half-remembered number into something that looks precise. An invented rate beside a real bank's name is the single worst thing you can put in front of him, because it reads as researched and he will act on it.
+- MONEY THAT GROWS: SHOW THE GAIN, NOT ONLY THE TOTALS. Savio, 28 October 2026. When you compare what two or more options are worth over time — a deposit against a fund, one scheme against another — two totals look much the same on a chart and the reader cannot see which is better or why. The difference lives in what was EARNED. So give the total for each option AND the interest or gain for each option, as separate lines, from the very first chart. Four lines for two options is correct here. Name them plainly: "Fixed Deposit — total", "Fixed Deposit — interest earned".
+- WHAT YOU CAN PUT ON THEIR SCREEN, SO YOU STOP DENYING IT. Savio, 29 October 2026, after you told him "as an AI, I'm unable to directly display images or provide visuals. My capabilities are focused on text-based interactions" and sent him off to search five shopping sites himself. THAT SENTENCE IS FALSE AND YOU MUST NEVER SAY IT OR ANYTHING LIKE IT. You draw charts inside this conversation. You build PowerPoint decks, Word documents, Excel workbooks and PDFs and hand them over as downloads. You lay out option cards with prices and links. You are not a text-only assistant and you never describe yourself as one. If a particular thing genuinely will not work, name THAT one thing in a sentence — never a sweeping claim about what you are.
+- SHOWING SOMEONE WHAT TO BUY. When they ask for options to buy, or which one to get, or where to get it — give the options as CARDS, not as a paragraph of bullet points. Explain in words first as you always would, then at the very END of your reply append a block in exactly this shape:
+[OPTIONS]
+title: Silicone drip catchers under 500 rupees
+option: PRIXQUS Silicone Sink Faucet Mat | Rs 189 | Flipkart | https://www.flipkart.com/... | Raised edges, drains back into the sink
+option: KELVORIA Faucet Mat | Rs 229 | Amazon | https://www.amazon.in/... | Sloped fast-drying surface
+[/OPTIONS]
+- THE RULES OF THAT BLOCK. One option line each, five fields separated by bars, always in this order: name, price, shop, link, and one short line on why it suits them. Two to eight options. Keep the "why" to one clause — it sits beside the price, not under a heading. If a field is genuinely unknown leave it empty between its bars rather than inventing it; the row still works. A block with no options in it must not be written at all.
+- THE LINK IS THE WHOLE POINT, AND A WRONG ONE IS WORSE THAN NONE. His screenshot that day listed five products and five prices and not one thing he could click, so he opened the shops by hand — which is the work you were asked to save him. So: ONLY put a link in that you actually saw in your search results. NEVER assemble a product URL yourself, never guess an Amazon product code, and never reuse a link from one product for another. If your search gave you the shop but not the page, leave the link empty and name the shop — honest and empty beats confident and broken.
+- WHERE SOMEONE CAN ACTUALLY BUY ONE. Offer shops where a person can buy a single item and check out: Amazon, Flipkart, Myntra, Ajio, Nykaa, JioMart, Reliance Digital, Croma, Tata Cliq, Meesho, Blinkit, Zepto, a brand's own site. IndiaMART, TradeIndia, Alibaba and the like are ENQUIRY marketplaces — you ask a supplier for a quote and usually buy in bulk. Never list one of those as a place to buy. If a price you found is a wholesale or bulk rate, either leave it out or say plainly that it is wholesale.
+- SEARCH FIRST, ALWAYS, FOR ANYTHING BEING BOUGHT. Prices move weekly. Never price something from memory, and say in your words that these are the prices you found today. If you could not find a current price for an option, leave the price empty rather than estimating one.
+- PICTURES OF PRODUCTS ARE NOT YOURS TO INVENT. You cannot generate an image of a real product and must never try — an invented photograph of something he might actually buy is a lie, not an illustration. Say the card has no photograph if it comes up, and leave it there.
+- START TOGETHER, SPLIT ONLY IF ASKED. His instruction: show the options against each other first, one line each. If he then asks to see it broken down — principal against interest, for instance — send a NEW reply with a new block showing those parts separately. Do not open with four lines when two answer the question.
 - Image transformation and image generation genuinely do NOT work. Say so plainly and briefly. Do not apologise at length and do not promise a date.
 - NOTHING IS "COMING IN MY NEXT UPDATE". Savio's instruction, 16 October 2026: the next release is PHASE 3. Never use the words "next update", "coming soon", "not yet" or "in a future version". If something genuinely does not exist, say it does not exist and say it is for Phase 3 — nothing sooner.
 
@@ -4076,10 +4527,17 @@ function newThread(){
   const id=createThread('New Conversation');
   switchThread(id);
   if(window.innerWidth<=680)closeSidebar();
-  // Bella greets on new thread — warm and ready to help
-  const tod=timeOfDay();
-  const greet=`Good ${tod}, ${currentAddressedName||'there'}! How may I help you today? 😊`;
-  setTimeout(()=>{ bellaMsg(greet); speakText(greet,'en'); }, 300);
+  /* A NEW THREAD IS NOT A NEW DAY. This line used to build its own greeting
+     -- "Good ${tod}, ${name}! How may I help you today?" -- hardcoded in
+     English and SPOKEN with the voice forced to English, which is the exact
+     fault that kept dragging a Bengali session back into English. It also
+     wished him good morning on every thread he opened.
+     It goes through the one chooser now, in his chosen language, and the
+     voice follows that language too. */
+  const _gl=chosenLang()||'en';
+  const greet=greetingText(currentAddressedName||'there');
+  _noteGreeted();
+  setTimeout(()=>{ bellaMsg(greet); speakText(greet,_gl); }, 300);
 }
 function switchThread(id){
   if(!threads[id])return;
@@ -9560,6 +10018,8 @@ function _tbSyncToolCells(){
     // are a bare name and some are already a call.
     cell.addEventListener('click',function(ev){
       ev.stopPropagation();
+      // A pinned tool is a top-bar press like any other, so it shuts the rest.
+      try{ if(typeof closeOtherPanels==='function') closeOtherPanels('tools'); }catch(e){}
       try{ (0,eval)(/\)\s*$/.test(t.fn)?t.fn:t.fn+'()'); }
       catch(e){ bellaReportError('tbTool/'+t.label,e&&e.message?e.message:String(e)); }
     });
@@ -9647,12 +10107,47 @@ function paintTopbarStack(){
     if(a){ a.classList.toggle('teach',teach); a.style.visibility=panels.length>1?'visible':'hidden'; }
   });
 }
+/* WHICH PANELS BELONG TO WHICH CELL. The Date cell owns two -- the date
+   opens the calendar and the time opens the clock -- so this returns a list,
+   not a single key. */
+function _tbPanelsFor(k){
+  if(k==='weather') return ['weather'];
+  if(k==='convert') return ['convert'];
+  if(k==='place')   return ['places'];
+  if(k==='date')    return ['clock','calendar'];
+  if(k&&k.indexOf('ws:')===0) return ['tools'];
+  return [];
+}
+/* Savio, 2026-10-28: "when i swipe right the screen below disappears unless
+   it is related to the section above". A SECOND way to clear the screen,
+   alongside pressing another top-bar item -- on a phone the swipe is the
+   natural gesture and leaving yesterday's panel open under a different
+   heading reads as a bug.
+   Swiping from Weather to Calendar closes Weather, because Weather is no
+   longer what he is looking at. Swiping from the DATE cell between the clock
+   and the calendar closes neither, because both belong to it. */
+function _tbCloseUnrelated(){
+  try{
+    const bar=document.getElementById('chat-topbar');
+    if(!bar) return;
+    const on=bar.querySelector('.tb-on');
+    const keep=_tbPanelsFor(on?on.getAttribute('data-tb'):null);
+    for(let i=0;i<_PANELS.length;i++){
+      const p=_PANELS[i];
+      if(keep.indexOf(p.k)!==-1) continue;
+      if(p.is()) p.close();
+    }
+  }catch(e){ console.warn('_tbCloseUnrelated:',e); }
+}
 function flipTopbar(step){
   const n=_tbPanels().length;
   if(n<2) return;
   _tbAt=(_tbAt+step+n)%n;
   _tbFlips++;
   paintTopbarStack();
+  // Both the arrows and the swipe come through here, so one call covers
+  // every way of moving between sections.
+  _tbCloseUnrelated();
 }
 function initTopbarStack(){
   const bar=document.getElementById('chat-topbar');
@@ -10631,12 +11126,69 @@ async function send(){
     // Belt and braces: a stray tag must never reach the screen, whatever shape
     // the model produced.
     reply=reply.replace(/\[\/?VOICE\]/ig,'').trim();
-    const h=getHist();h.push({role:'model',parts:[{text:reply}]});setHist(h);
+    // A graph she decided to draw. Taken out BEFORE the text is stored or
+    // shown, exactly as [VOICE] is, so the block can never appear on screen
+    // or be read aloud.
+    let _inlineChart=null;
+    try{
+      const _cp=_parseChartBlock(reply);
+      reply=_cp.text; _inlineChart=_cp.chart;
+    }catch(e){ console.warn('inline chart:',e); }
+    // The shopping cards travel the same road: lifted off her reply BEFORE
+    // the text is shown or stored, so no raw tag ever reaches the screen or
+    // the history.
+    let _inlineOptions=null;
+    try{
+      const _op=_parseOptionsBlock(reply);
+      reply=_op.text; _inlineOptions=_op.options;
+    }catch(e){ console.warn('inline options:',e); }
+    // History keeps her words and a one-line note that a picture was drawn --
+    // not the block. The figures are already in her prose, so she can still
+    // break them down if he asks, without the raw block cluttering every
+    // later turn.
+    // Did she just ask after them? Then not again today.
+    try{ _noteFamilyAsked(reply,(typeof FOLLOWUP!=='undefined'&&FOLLOWUP[currentProfileKey])||''); }
+    catch(e){}
+    const _histText=reply+(_inlineChart?'\n\n(A chart was drawn for them'+
+      (_inlineChart.title?': '+_inlineChart.title:'')+'.)':'')+
+      (_inlineOptions?'\n\n(Buying options were shown as cards: '+
+        _inlineOptions.items.map(function(o){ return o.name; }).join('; ')+'.)':'');
+    const h=getHist();h.push({role:'model',parts:[{text:_histText}]});setHist(h);
     const bellaMsgId=bellaMsg(reply);
+    // Under her words, where the explanation is. No download: nothing was
+    // built as a file here, and offering one that does not exist would be a
+    // promise she cannot keep.
+    // His own words, so a document can state the question it answers. Only
+    // what HE typed -- attached document text is stripped, or the heading
+    // would be a wall of somebody's PDF.
+    const _ask=(function(){
+      try{ return String(fullMsg||'').split('\n\n[DOCUMENT ')[0].trim(); }
+      catch(e){ return ''; }
+    })();
+    if(_inlineChart){
+      // `reply` is her analysis, already stripped of the chart block.
+      try{ _paintChart(bellaMsgId,_inlineChart,null,null,reply,_ask,_lastSources); }
+      catch(e){ console.warn('inline chart paint:',e); }
+    }else{
+      /* NO CHART, BUT STILL A DOCUMENT. When she has structured an answer
+         into sections it is worth having as a Word file or a deck even with
+         no numbers in it -- and asking her for a presentation now arrives
+         here rather than at the thin lane.
+         The test is her OWN headings: two or more real sections means she
+         wrote something with shape. An ordinary reply has none and must not
+         grow download buttons under it. */
+      try{
+        const _probe=document.createElement('div');
+        _probe._bcNote=reply; _probe._bcAsk=_ask;
+        const _blocks=_bcAnalysis(_probe,null).filter(function(b){ return !b.first; });
+        if(_blocks.length>=2) _paintChart(bellaMsgId,null,null,null,reply,_ask,_lastSources);
+      }catch(e){ console.warn('analysis download row:',e); }
+    }
     // Savio, 16 Oct 2026: asked for the repo rate and was told "I cannot
     // directly provide a link to the RBI's press release here". The links were
     // in the response all along. Without one he cannot ratify anything she
     // says about a law, a policy or a government figure.
+    try{_paintOptions(bellaMsgId,_inlineOptions);}catch(e){}
     try{_paintSources(bellaMsgId,_lastSources);}catch(e){}
     _lastSources=[];
     // Long answers (8+ sentences) speak only the short summary and point to
@@ -11121,6 +11673,17 @@ function _readSources(d){
 
 // Painted under the answer, not inside it: the bubble text is what gets spoken,
 // copied, translated and stored, and a list of URLs belongs in none of those.
+/* The cards go INSIDE the bubble, under her words -- they are part of the
+   answer, not an attachment like the sources row. Appended to the bubble
+   itself so a Copy of the message still copies her prose, unchanged. */
+function _paintOptions(msgId,pack){
+  try{
+    if(!pack) return;
+    const bub=document.getElementById(msgId); if(!bub) return;
+    const el=_optionsBlock(pack); if(!el) return;
+    bub.appendChild(el);
+  }catch(e){ console.warn('_paintOptions failed:',e); }
+}
 function _paintSources(msgId,list){
   if(!list||!list.length)return;
   const bub=document.getElementById(msgId); if(!bub)return;
@@ -12221,7 +12784,12 @@ function _bcBarPath(x,y,len,h,dir){
     +'V'+(y+h-r)+'Q'+e+','+(y+h)+' '+(e+r)+','+(y+h)+'H'+x+'Z';
 }
 function _bcBar(M,W){
-  const FS=11.5, VS=11, PT=M.title?24:6, PB=6;
+  /* PT and the title baseline both allow for INDIC ASCENDERS. Bengali and
+     Devanagari carry matras well above the Latin cap height, so a title set
+     at a Latin baseline has its top row of marks sliced off by the edge of
+     the viewBox. Caught by exporting a Bengali chart and looking at it --
+     every measurement passed while the title was clipped. */
+  const FS=11.5, VS=11, PT=M.title?30:6, PB=6;
   const per=M.series.length;
   const barH=per===1?22:Math.max(8,Math.min(16,Math.round(40/per)));
   const band=per*barH+(per-1)*2+16;
@@ -12248,7 +12816,7 @@ function _bcBar(M,W){
   svg.setAttribute('height',H);
 
   if(M.title){
-    const t=_bcN('text',{x:0,y:14,'font-size':12.5,'font-weight':700});
+    const t=_bcN('text',{x:0,y:18,'font-size':12.5,'font-weight':700});
     _bcPaint(t,'fill','var(--cink)'); t.textContent=M.title; svg.appendChild(t);
   }
   // One baseline. Recessive, hairline, solid — never dashed.
@@ -12297,7 +12865,8 @@ function _bcBar(M,W){
 
 // ── Line ──────────────────────────────────────────────────────────────
 function _bcLine(M,W){
-  const FS=10.5, PT=M.title?26:10;
+  // Headroom for Indic ascenders — see the note in _bcBar.
+  const FS=10.5, PT=M.title?32:10;
   const ticks=_bcTicks(M.neg?M.lo:Math.min(0,M.lo),M.hi,4);
   let yw=0;
   for(let i=0;i<ticks.length;i++) yw=Math.max(yw,_bcTextW(_bcFmt(ticks[i]),FS,400));
@@ -12312,7 +12881,7 @@ function _bcLine(M,W){
     'aria-label':(M.title||'Chart')+', '+M.n+' points'});
   svg.setAttribute('height',H);
   if(M.title){
-    const t=_bcN('text',{x:0,y:14,'font-size':12.5,'font-weight':700});
+    const t=_bcN('text',{x:0,y:18,'font-size':12.5,'font-weight':700});
     _bcPaint(t,'fill','var(--cink)'); t.textContent=M.title; svg.appendChild(t);
   }
   for(let i=0;i<ticks.length;i++){
@@ -12597,11 +13166,25 @@ function _bcDraw(root){
 }
 
 // ── Assemble ──────────────────────────────────────────────────────────
+/* A BLOCK WITH NO CHART IN IT.
+   Savio, 2026-10-29: he asked Bella to make a PPT and got twelve slides of
+   one-line headings with no research in them, because asking for a deck went
+   down the old /create-presentation lane -- a different, thinner path from
+   the one that produces the sectioned, researched document.
+   Not every good answer has numbers in it, so the download row must not
+   depend on a chart existing. When `chart` is null this builds the same
+   block with no plot and no pivots: just her analysis, and the buttons that
+   turn it into a Word file or a deck. */
 function _chartBlock(chart){
-  const M=_bcNorm(chart);
-  if(!M) return null;
+  const M=chart?_bcNorm(chart):null;
+  if(chart&&!M) return null;
   const root=document.createElement('div'); root.className='bchart';
   root._bcM=M;
+  if(!M){
+    try{ root.appendChild(_bcDownloadRow(root)); }
+    catch(e){ console.warn('download row:',e); }
+    return root;
+  }
 
   if(M.forms.length>1){
     const piv=document.createElement('div'); piv.className='bchart-piv';
@@ -12644,6 +13227,10 @@ function _chartBlock(chart){
     root.appendChild(wrap);
   }
 
+  // Taking it away, in whatever format he wants. Built on the press, never
+  // before -- see _bcExport.
+  try{ root.appendChild(_bcDownloadRow(root)); }catch(e){ console.warn('download row:',e); }
+
   _bcDraw(root);
   // Rotation, a sidebar opening, a window resize — all one signal. Guarded
   // on the integer width so the height change a redraw causes cannot loop.
@@ -12659,6 +13246,214 @@ function _chartBlock(chart){
   return root;
 }
 
+// ── A CHART INSIDE BELLA'S OWN ANSWER ──────────────────────────────────
+// Savio, 2026-10-28, after showing me Gemini comparing an FD against a mutual
+// fund over ten years: "whenever user ask comparative question where Bella
+// intelligently feels that a line graph or other graphical representation will
+// make the user understand better she should use it in the chat. Obviously
+// this will not be for every normal chat."
+//
+// So SHE decides, while writing. She appends a small block of figures to her
+// reply; this lifts it out, draws it under her words, and the block itself
+// never reaches the screen. The numbers are hers, so the picture and the
+// sentences can never disagree -- and it costs NOTHING extra: no second
+// request, no second model call. The figures ride in the answer she was
+// already sending.
+//
+// SHAPED ON THE [VOICE] TAG ABOVE, INCLUDING ITS SCAR: a model will not always
+// close a tag it opened. When [VOICE] was only handled closed, an unclosed one
+// put the raw tag on Savio's screen. So an unclosed [CHART] runs to the end of
+// the reply here too, and a stray tag is scrubbed either way.
+function _parseChartBlock(txt){
+  const out={text:String(txt==null?'':txt),chart:null};
+  if(!out.text) return out;
+  let body=null;
+  const closed=out.text.match(/\[CHART\]([\s\S]*?)\[\/CHART\]/i);
+  if(closed){
+    body=closed[1];
+    out.text=out.text.replace(/\n*\[CHART\][\s\S]*?\[\/CHART\]\n*/i,'\n').trim();
+  }else{
+    const open=out.text.match(/\n*\[CHART\]([\s\S]*)$/i);
+    if(open){
+      body=open[1];
+      out.text=out.text.slice(0,open.index).trim();
+    }
+  }
+  // Belt and braces: a stray tag must never reach the screen, whatever shape
+  // the model produced.
+  out.text=out.text.replace(/\[\/?CHART\]/ig,'').trim();
+  if(body==null) return out;
+
+  try{
+    const chart={chartType:'line',title:'',labels:[],datasets:[]};
+    // NOT `raw` -- the loop below already binds `raw` to each trimmed line,
+    // and the inner const shadowed this array, so raw.push() ran on a string
+    // and threw straight into the catch. Every block silently produced no
+    // chart at all. A shadowed name fails quietly, which is the worst way.
+    const rawSeries=[];
+    const lines=String(body).split('\n');
+    for(let i=0;i<lines.length;i++){
+      const raw=lines[i].trim();
+      if(!raw) continue;
+      const c=raw.indexOf(':');
+      if(c<0) continue;
+      const key=raw.slice(0,c).trim().toLowerCase();
+      const val=raw.slice(c+1).trim();
+      if(key==='type') chart.chartType=val.toLowerCase();
+      else if(key==='title') chart.title=val;
+      else if(key==='labels'){
+        chart.labels=val.split(',').map(function(x){return x.trim();})
+                        .filter(function(x){return x.length;});
+      }else if(key==='series'){
+        // "Fixed Deposit | 107000, 114490, 122504". A series with no name
+        // before the bar is still a series -- do not lose it. Held raw and
+        // resolved below, because splitting it needs the label count.
+        const bar=val.indexOf('|');
+        rawSeries.push({name:bar>=0?val.slice(0,bar).trim():'',
+                        body:bar>=0?val.slice(bar+1):val});
+      }
+    }
+
+    /* THOUSANDS SEPARATORS COLLIDE WITH THE DELIMITER, and a model will not
+       always obey a format rule -- that is the [VOICE] lesson, learned the
+       hard way. "Rs 1,200, 980" split on commas gives 1 / 200 / 980: three
+       numbers where there were two, silently, with no error anywhere.
+       The label count settles it. Split the plain way; if that does not give
+       one number per label, strip the separators and try again, and keep
+       whichever actually fits. Never strip blindly -- "100,200,300" written
+       without spaces is three values, and blind stripping would fuse it into
+       one. Only a reading that matches the labels is accepted. */
+    const nLab=chart.labels.length;
+    const cut=function(t){ return String(t).split(',').map(function(x){ return _bcNum(x); }); };
+    for(let i=0;i<rawSeries.length;i++){
+      let nums=cut(rawSeries[i].body);
+      if(nLab&&nums.length!==nLab){
+        let t=String(rawSeries[i].body), prev=null;
+        while(t!==prev){ prev=t; t=t.replace(/(\d)[,](\d\d\d)(?!\d)/g,'$1$2'); }
+        const alt=cut(t);
+        if(alt.length===nLab) nums=alt;
+      }
+      if(nums.length) chart.datasets.push({label:rawSeries[i].name,data:nums});
+    }
+    // _bcNorm is the single gate: it decides whether these figures can be a
+    // chart at all, caps the series, and refuses garbage. If it says no, the
+    // answer simply has no picture under it -- which is never a failure.
+    if(!chart.labels.length||!chart.datasets.length) return out;
+    if(!_bcNorm(chart)) return out;
+    out.chart=chart;
+  }catch(e){ console.warn('_parseChartBlock failed:',e); }
+  return out;
+}
+
+/* ── "WHERE CAN I BUY ONE" ─────────────────────────────────────────────
+   Lifts an [OPTIONS] block out of her reply, exactly the way the chart block
+   is lifted, and for the same reasons: the model will sometimes forget the
+   closing tag, and a stray tag must never reach the screen.
+   EVERY FIELD IS OPTIONAL EXCEPT THE NAME. A shop that has no price showing,
+   or an option she found without a link, still deserves its row -- dropping
+   it would silently shorten her answer. */
+function _parseOptionsBlock(txt){
+  const out={text:String(txt==null?'':txt),options:null};
+  if(!out.text) return out;
+  let body=null;
+  const closed=out.text.match(/\[OPTIONS\]([\s\S]*?)\[\/OPTIONS\]/i);
+  if(closed){
+    body=closed[1];
+    out.text=out.text.replace(/\n*\[OPTIONS\][\s\S]*?\[\/OPTIONS\]\n*/i,'\n').trim();
+  }else{
+    const open=out.text.match(/\n*\[OPTIONS\]([\s\S]*)$/i);
+    if(open){ body=open[1]; out.text=out.text.slice(0,open.index).trim(); }
+  }
+  out.text=out.text.replace(/\[\/?OPTIONS\]/ig,'').trim();
+  if(body==null) return out;
+  try{
+    const pack={title:'',items:[]};
+    const lines=String(body).split('\n');
+    for(let i=0;i<lines.length;i++){
+      const raw=lines[i].trim();
+      if(!raw) continue;
+      const c=raw.indexOf(':');
+      if(c<0) continue;
+      const key=raw.slice(0,c).trim().toLowerCase();
+      const val=raw.slice(c+1).trim();
+      if(key==='title'){ pack.title=val; continue; }
+      if(key!=='option') continue;
+      // name | price | shop | url | why -- trailing fields may simply be absent
+      const f=val.split('|').map(function(x){ return x.trim(); });
+      const name=f[0]||'';
+      if(!name) continue;
+      /* THE LINK IS THE ONE FIELD THAT CAN DO HARM. It arrives from a model
+         that has just read the open web, so it is untrusted input: anything
+         that is not plainly http or https is dropped rather than rendered.
+         The row survives without it. */
+      let url=f[3]||'';
+      if(!/^https?:\/\//i.test(url)) url='';
+      pack.items.push({name:name,price:f[1]||'',shop:f[2]||'',url:url,why:f[4]||''});
+      if(pack.items.length>=8) break;   // a list nobody will read is not an answer
+    }
+    if(!pack.items.length) return out;
+    out.options=pack;
+  }catch(e){ console.warn('_parseOptionsBlock failed:',e); }
+  return out;
+}
+
+/* Builds the card list. textContent throughout and never innerHTML: every
+   string here was written by a model quoting a shopping site, so it is data,
+   not markup. rel="noopener noreferrer nofollow" because these are outbound
+   links to shops we have not vetted. */
+function _optionsBlock(pack){
+  try{
+    if(!pack||!pack.items||!pack.items.length) return null;
+    const wrap=document.createElement('div'); wrap.className='bopts';
+    if(pack.title){
+      const t=document.createElement('div'); t.className='bopts-title';
+      t.textContent=pack.title; wrap.appendChild(t);
+    }
+    const list=document.createElement('ol'); list.className='bopts-list';
+    let anyLink=false;
+    pack.items.forEach(function(it){
+      const li=document.createElement('li'); li.className='bopt';
+      const main=document.createElement('div');
+      const nm=document.createElement('div'); nm.className='bopt-name';
+      nm.textContent=it.name; main.appendChild(nm);
+      if(it.why){
+        const w=document.createElement('div'); w.className='bopt-why';
+        w.textContent=it.why; main.appendChild(w);
+      }
+      li.appendChild(main);
+      const meta=document.createElement('div'); meta.className='bopt-meta';
+      if(it.price){
+        const pr=document.createElement('div'); pr.className='bopt-price';
+        pr.textContent=it.price; meta.appendChild(pr);
+      }
+      if(it.shop){
+        const sh=document.createElement('div'); sh.className='bopt-shop';
+        sh.textContent=it.shop; meta.appendChild(sh);
+      }
+      if(it.url){
+        anyLink=true;
+        const a=document.createElement('a'); a.className='bopt-go';
+        a.href=it.url; a.target='_blank'; a.rel='noopener noreferrer nofollow';
+        a.textContent='View'; meta.appendChild(a);
+      }
+      li.appendChild(meta);
+      list.appendChild(li);
+    });
+    wrap.appendChild(list);
+    /* SAY WHERE THE PRICE CAME FROM AND WHEN. Savio reads a figure and acts on
+       it; a price with no date behind it is the kind of number he cannot
+       sanity-check. Only shown when there is actually something to click. */
+    if(anyLink){
+      const n=document.createElement('div'); n.className='bopts-note';
+      n.textContent='Prices as listed by each shop when I looked, '+
+        new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})+
+        '. They change, so check on the page before you buy.';
+      wrap.appendChild(n);
+    }
+    return wrap;
+  }catch(e){ console.warn('_optionsBlock failed:',e); return null; }
+}
+
 // Put a live chart into any host element. Returns false if the data will
 // not make one, so every caller can fall back to the picture.
 function _bcMount(host,chart){
@@ -12671,15 +13466,1076 @@ function _bcMount(host,chart){
   }catch(e){ console.warn('_bcMount failed:',e); return false; }
 }
 
+// ── TAKING THE CHART AWAY, IN THE FORMAT HE ASKS FOR ───────────────────
+// Savio, 2026-10-28: "you can do this again like all in various formats
+// requested. SO if a PPT is downloaded a PPT is made before downloading."
+// He is right that "she cannot" was a limit accepted rather than removed.
+//
+// EVERY FILE IS BUILT HERE, IN THE BROWSER, AT THE MOMENT THE BUTTON IS
+// PRESSED. Nothing is prepared in advance and nothing is promised that does
+// not then exist. JSZip and SheetJS are ALREADY loaded by the page, so this
+// adds no network request, no Gemini call and no cost at all -- which also
+// means it still passes QC step 9's count of nine external requests.
+//
+// Real Office files, never CSV or HTML with a misleading extension --
+// [[downloads-in-ms-office-formats]].
+
+function _bcSaveBlob(blob,name){
+  const a=document.createElement('a');
+  const u=URL.createObjectURL(blob);
+  a.href=u; a.download=name;
+  document.body.appendChild(a); a.click();
+  // Revoked on a timer, not immediately: Safari has not finished reading the
+  // blob when click() returns and a revoked URL downloads an empty file.
+  setTimeout(function(){ try{ URL.revokeObjectURL(u); a.remove(); }catch(e){} },4000);
+}
+
+/* A document still needs a name when there is no chart to take one from.
+   His own question makes the best title there is: it is what the document is
+   about, in his words, and it is already carried for "The question". */
+function _bcDocTitle(root){
+  const a=(root&&root._bcAsk)?String(root._bcAsk).replace(/\s+/g,' ').trim():'';
+  if(!a) return '';
+  const first=a.split(/[?.!]/)[0].trim();
+  const t=(first||a).slice(0,70);
+  return t.charAt(0).toUpperCase()+t.slice(1);
+}
+function _bcFileName(M,ext){
+  const base=String((M&&M.title)||'Bella analysis')
+    .replace(/[^A-Za-z0-9 \-_]/g,'').trim().replace(/\s+/g,'-').slice(0,48);
+  return (base||'Bella-chart')+'-'+new Date().toISOString().slice(0,10)+'.'+ext;
+}
+
+/* THE SVG ON SCREEN CANNOT BE EXPORTED AS IT STANDS.
+   Every colour in it is a CSS custom property -- style="fill:var(--s1)" --
+   and a var() resolves against the DOCUMENT. The moment the markup is
+   serialised and handed to an <img>, it is no longer in the document: every
+   var() resolves to nothing and the whole chart rasterises black or blank.
+   So the computed value of each paint property is copied onto the clone
+   before serialising. Measured, not assumed -- an earlier version of this
+   produced an all-black PNG.
+   Webfonts are unavailable inside an <img>-loaded SVG for the same reason, so
+   a plain system stack is set deliberately rather than letting it fall back
+   to whatever the renderer picks. */
+/* The stack an exported chart is drawn with. Latin first, then the system
+   faces macOS and iOS carry for Devanagari and Bengali, so a chart labelled
+   in Hindi, Marathi or Bengali comes out readable rather than as boxes.
+   Savio's SOP: everything Bella makes works in all four languages. */
+const _BC_FONT="Helvetica,Arial,'Kohinoor Devanagari','Noto Sans Devanagari',"+
+  "'Devanagari Sangam MN','Kohinoor Bengali','Noto Sans Bengali',"+
+  "'Bangla Sangam MN','Bangla MN',sans-serif";
+const _BC_PAINT=['fill','stroke','stroke-width','stroke-linecap','stroke-linejoin',
+                 'opacity','fill-opacity','stroke-opacity','font-size','font-weight',
+                 'text-anchor','shape-rendering'];
+function _bcFlattenSvg(src){
+  const clone=src.cloneNode(true);
+  const a=src.querySelectorAll('*'), b=clone.querySelectorAll('*');
+  for(let i=0;i<a.length&&i<b.length;i++){
+    const cs=getComputedStyle(a[i]);
+    let css='';
+    for(let k=0;k<_BC_PAINT.length;k++){
+      const p=_BC_PAINT[k], v=cs.getPropertyValue(p);
+      if(v&&v!=='none'||p==='fill'||p==='stroke') css+=p+':'+v+';';
+    }
+    // HELVETICA AND ARIAL HOLD NO BENGALI AND NO DEVANAGARI GLYPH. A chart
+    // Bella labels in Bengali would have rasterised as empty boxes in the
+    // PNG, and therefore in the Word and PowerPoint files built around it --
+    // silently, because the page itself shows the text perfectly.
+    // The page's own 'BellaIndic' face cannot help here: a webfont declared
+    // in the document is unavailable inside an SVG loaded as an image. But
+    // BellaIndic is only an alias for INSTALLED fonts (it uses local()), so
+    // naming those system fonts directly works where the alias would not.
+    css+='font-family:'+_BC_FONT+';';
+    b[i].setAttribute('style',css);
+  }
+  clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  clone.setAttribute('xmlns:xlink','http://www.w3.org/1999/xlink');
+  return clone;
+}
+
+// The chart as a picture. Drawn at 2x so it is not soft in a document.
+// The resolved value of one palette slot, read off the element rather than
+// guessed -- which is what makes the export follow the SAME palette the
+// screen is using, light or dark.
+function _bcSlotHex(root,i){
+  try{
+    const v=getComputedStyle(root).getPropertyValue(_BC_SLOT[i%_BC_SLOT.length]);
+    return (v&&v.trim())||'#2a78d6';
+  }catch(e){ return '#2a78d6'; }
+}
+function _bcChartPng(root){
+  return new Promise(function(resolve,reject){
+    try{
+      const src=root.querySelector('.bchart-plot svg');
+      if(!src) return reject(new Error('there is no chart drawn to export'));
+      const M=root._bcM;
+      // Light for the duration of the shot only. The class is removed in the
+      // finally-equivalent below so the screen never flickers out of theme.
+      root.classList.add('bchart-forlight');
+      // Reading a computed style forces the restyle, so the flatten below
+      // sees the light values rather than the ones still on screen.
+      void getComputedStyle(root).getPropertyValue('--s1');
+      const vb=src.viewBox.baseVal;
+      const W=Math.max(1,Math.round(vb&&vb.width?vb.width:src.getBoundingClientRect().width));
+      const H=Math.max(1,Math.round(vb&&vb.height?vb.height:src.getBoundingClientRect().height));
+      const clone=_bcFlattenSvg(src);
+      /* THE LEGEND LIVES IN HTML, NOT IN THE SVG, so every exported picture
+         came out with two unexplained lines on it and no way to tell which
+         was which. Caught by looking at the PowerPoint, not by any check.
+         It is drawn into the clone here and the canvas is made taller to
+         hold it. */
+      let Hx=H;
+      if(M&&M.series&&M.series.length>1){
+        const NS='http://www.w3.org/2000/svg';
+        const rowY=H+6, pad=10;
+        let cx=pad;
+        const mk=function(tag,at){ const e=document.createElementNS(NS,tag);
+          for(const k in at) e.setAttribute(k,at[k]); return e; };
+        for(let i=0;i<M.series.length;i++){
+          const name=M.series[i].label||('Series '+(i+1));
+          const sw=mk('rect',{x:cx,y:rowY+2,width:11,height:11,rx:3});
+          sw.setAttribute('style','fill:'+_bcSlotHex(root,i)+';');
+          clone.appendChild(sw);
+          const tx=mk('text',{x:cx+16,y:rowY+12,'font-size':11.5});
+          tx.setAttribute('style','fill:#0B2545;font-family:'+_BC_FONT+';');
+          tx.textContent=name;
+          clone.appendChild(tx);
+          cx+=16+_bcTextW(name,11.5,400)+20;
+        }
+        Hx=H+30;
+        clone.setAttribute('viewBox','0 0 '+W+' '+Hx);
+      }
+      clone.setAttribute('width',W); clone.setAttribute('height',Hx);
+      const surface='#FFFFFF';   // a document is read on white, always
+      const xml=new XMLSerializer().serializeToString(clone);
+      root.classList.remove('bchart-forlight');      // back to his theme at once
+      const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(xml);
+      const img=new Image();
+      img.onload=function(){
+        try{
+          const S=2;
+          const c=document.createElement('canvas');
+          c.width=W*S; c.height=Hx*S;
+          const x=c.getContext('2d');
+          // A transparent PNG dropped into a white Word page loses every dark
+          // label, so the surface is painted in first.
+          x.fillStyle=surface; x.fillRect(0,0,c.width,c.height);
+          x.drawImage(img,0,0,c.width,c.height);
+          c.toBlob(function(b){ b?resolve({blob:b,w:c.width,h:c.height})
+                                 :reject(new Error('the picture could not be encoded')); },'image/png');
+        }catch(e){ reject(e); }
+      };
+      img.onerror=function(){
+        root.classList.remove('bchart-forlight');
+        reject(new Error('the chart could not be rasterised'));
+      };
+      img.src=url;
+    }catch(e){
+      try{ root.classList.remove('bchart-forlight'); }catch(_){}
+      reject(e);
+    }
+  });
+}
+
+/* WHAT A DOWNLOAD IS FOR.
+   Savio, 2026-10-28, after opening all four files: "what needs to be
+   downloaded is the full analysis not just an image or excel sheet, or ppt
+   slide or word document with table & chart... where is the complete analysis
+   where the User can understand which is better & why. Normally a lot of
+   people need some written content to co-relate with statistical drawings."
+
+   He is right, and it is the SAME fault twice in one day: this morning
+   /data-to-chart was sending insights, trend, anomalies and a recommendation
+   and the page binned all four. I fixed that on screen and then repeated it
+   one layer up -- Bella writes a full explanation, and the exporter took the
+   picture and threw her words away.
+
+   ONE STRUCTURE, read by all four formats, so Word, PowerPoint and Excel can
+   never disagree about what the analysis says. Two sources feed it: Bella's
+   own prose when the chart came from a conversation, and the structured
+   fields when it came from the Workshop. */
+function _bcAnalysis(root,M){
+  const out=[];
+  /* A DOCUMENT SHOULD STATE THE QUESTION IT ANSWERS. Without this it opens
+     on an answer to something never asked, which is no use to anyone he
+     forwards it to. His own words, trimmed -- never a paraphrase. */
+  const ask=(root&&root._bcAsk)?String(root._bcAsk).replace(/\s+/g,' ').trim():'';
+  if(ask) out.push({head:'The question',paras:['\u201c'+ask.slice(0,400)+'\u201d'],first:true});
+  const txt=(root&&root._bcNote)?String(root._bcNote).trim():'';
+  if(txt){
+    /* HER PROSE CARRIES ITS OWN HEADINGS, IN MARKDOWN, and they were going
+       into Word raw. Savio, 2026-10-28: "the fields like The analysis, ###
+       Mutual Funds, ### Comparison and Analysis, My recommendation have to be
+       bold, same style, same font, one shouldnt have ### & the other without
+       any ###."
+       So the markdown is PARSED rather than printed: a #-heading or a line
+       that is nothing but bold text becomes a real heading, and every heading
+       in the finished document is then styled identically by the writer
+       below. Nothing arrives wearing its own formatting. */
+    const lines=txt.split('\n');
+    /* THE OPENING IS NOT "THE ANALYSIS". Savio, 2026-10-28: "the word 'The
+       Analysis' on the top need not be there as there is a repetition below."
+       It was a label I invented for her opening paragraph, and it collided
+       with her own "Comparison and Analysis" four lines later. It is the
+       short answer before the detail, so that is what it is called. */
+    let cur={head:'In brief',paras:[],bullets:[]};
+    const push=function(){
+      if(cur&&(cur.paras.length||cur.bullets.length)){
+        const b={head:cur.head};
+        if(cur.bullets.length) b.bullets=cur.bullets;
+        if(cur.paras.length) b.paras=cur.paras;
+        out.push(b);
+      }
+    };
+    /* A COLON WRITTEN INSIDE THE BOLD MARKERS SURVIVED. "**Analysis:**" put
+       the colon inside the captured group, so the section tile read
+       "Analysis:" and "Way Forward:" in his own deck. Stripped here, after
+       the markers come off, so it does not matter which side it was on. */
+    const clean=function(t){
+      return String(t).replace(/\*\*/g,'').replace(/\*/g,'')
+        // \u0060 is a backtick. Written as an escape ON PURPOSE: a literal one
+        // here makes the file's backtick count ODD, and QC step 6 pairs them
+        // naively to find template literals -- one stray backtick made it
+        // swallow half the file and report an arrow that had been there all
+        // along. The code is identical; only the spelling is safe.
+        .replace(/^#+\s*/,'').replace(/\u0060/g,'')
+        .replace(/\s*[:：]\s*$/,'').trim();
+    };
+    for(let i=0;i<lines.length;i++){
+      const raw=lines[i];
+      const t=raw.trim();
+      if(!t) continue;
+      const h=t.match(/^#{1,6}\s+(.+?)\s*:?\s*$/);
+      const bold=t.match(/^\*\*(.+?)\*\*\s*:?\s*$/);
+      if(h||bold){
+        push();
+        cur={head:clean((h?h[1]:bold[1])),paras:[],bullets:[]};
+        continue;
+      }
+      const bl=t.match(/^[*\-•]\s+(.+)$/);
+      if(bl){ cur.bullets.push(clean(bl[1])); continue; }
+      cur.paras.push(clean(t));
+    }
+    push();
+  }
+  /* Bella's own house vocabulary -- /smart-presentation already returns
+     `executiveSummary` and `keyInsights`, so these are her words, not a
+     second set invented here. */
+  if(M&&M.trend) out.push({head:'The trend',paras:[M.trend]});
+  if(M&&M.ins&&M.ins.length) out.push({head:'Key insights',bullets:M.ins});
+  if(M&&M.anom&&M.anom.length) out.push({head:'Points to watch',bullets:M.anom});
+  if(M&&M.rec) out.push({head:'My recommendation',paras:[M.rec],last:true});
+  /* THE RECOMMENDATION GOES LAST, AFTER THE CHART AND THE TABLE. His
+     instruction: "the My Recommendations section has to come last after the
+     graphs & tables not before that." A reader should meet the evidence
+     before the verdict. Any heading of hers that IS a recommendation is
+     moved too, wherever she happened to put it. */
+  out.forEach(function(b){
+    if(/recommend|what i would do|suggestion|my advice/i.test(b.head)) b.last=true;
+    if(/^in brief$|^summary$|^executive summary$|^overview$/i.test(b.head)) b.first=true;
+  });
+  return out;
+}
+/* ONE READER, SO THE DECK AND THE DOCUMENT CAN NEVER DISAGREE about what she
+   looked at -- the same mistake as the Contents page, avoided in advance.
+   Deduplicated on the publisher name: grounding often returns one site many
+   times and twelve lines of "flipkart.com" is not a bibliography. */
+function _bcSources(root){
+  try{
+    const raw=(root&&root._bcSrcs)||[];
+    const seen={},out=[];
+    raw.forEach(function(x){
+      const name=String((x&&(x.domain||x.title))||'').trim();
+      if(!name||seen[name.toLowerCase()])return;
+      seen[name.toLowerCase()]=1;
+      out.push({name:name,uri:String((x&&x.uri)||''),official:!!(x&&x.official)});
+    });
+    return out.slice(0,10);
+  }catch(e){ return []; }
+}
+function _bcBody(root,M){ return _bcAnalysis(root,M).filter(function(b){ return !b.last; }); }
+function _bcLastBlocks(root,M){ return _bcAnalysis(root,M).filter(function(b){ return b.last; }); }
+function _bcHasAnalysis(root,M){ return _bcAnalysis(root,M).length>0; }
+
+/* PowerPoint wants short lines, not paragraphs. A long sentence is split on
+   its own clause boundaries rather than chopped at a character count, so a
+   bullet never ends mid-word. */
+function _bcBullets(block,cap){
+  const lim=cap||190;
+  const out=[];
+  // BOTH, in reading order. It used to take bullets OR paragraphs, so a
+  // section that had an opening line and then a list lost the opening line
+  // from the slide entirely.
+  const src=(block.paras||[]).concat(block.bullets||[]);
+  src.forEach(function(t){
+    let s=String(t).trim();
+    if(!s) return;
+    if(s.length<=lim){ out.push(s); return; }
+    const bits=s.split(/(?<=[.;])\s+/);
+    let cur='';
+    bits.forEach(function(x){
+      if((cur+' '+x).trim().length>lim&&cur){ out.push(cur.trim()); cur=x; }
+      else cur=(cur+' '+x).trim();
+    });
+    if(cur) out.push(cur.trim());
+  });
+  return out;
+}
+
+// ── The shared Office plumbing ──────────────────────────────────────────
+function _bcXmlEsc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+function _bcCore(title){
+  const now=new Date().toISOString().replace(/\.\d+Z$/,'Z');
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"'+
+    ' xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/"'+
+    ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'+
+    '<dc:title>'+_bcXmlEsc(title)+'</dc:title><dc:creator>Bella</dc:creator>'+
+    '<cp:lastModifiedBy>Bella</cp:lastModifiedBy>'+
+    '<dcterms:created xsi:type="dcterms:W3CDTF">'+now+'</dcterms:created>'+
+    '<dcterms:modified xsi:type="dcterms:W3CDTF">'+now+'</dcterms:modified>'+
+    '</cp:coreProperties>';
+}
+// EMU is the unit both Word and PowerPoint measure in: 914,400 to the inch.
+function _bcEmu(px){ return Math.round(px*914400/96); }
+
+// ── Excel: the numbers, the analysis, and the chart ────────────────────
+// Three things he asked for after opening the first version: every series
+// including the interest, the chart itself, and the written analysis.
+//
+// THE CHART IS AN EMBEDDED PICTURE, NOT A NATIVE EXCEL CHART, and that is a
+// limit rather than a choice: the SheetJS build this page loads cannot write
+// chart parts. I recommended a library once before without checking that, so
+// it is said out loud here instead of being discovered later. Every figure is
+// a real cell, so a native chart is two clicks away for anyone who wants one.
+async function _bcXlsx(M,root,png,w,h){
+  // No figures means no figures sheet. The analysis alone still makes a
+  // perfectly good workbook; an empty grid would not.
+  if(!M){
+    const wb0=XLSX.utils.book_new();
+    const a0=[['Analysis'],['']];
+    _bcAnalysis(root,null).forEach(function(b){
+      a0.push([b.head]);
+      (b.paras||[]).forEach(function(t){ a0.push(['  '+t]); });
+      (b.bullets||[]).forEach(function(t){ a0.push(['  \u2022 '+t]); });
+      a0.push(['']);
+    });
+    const ws0=XLSX.utils.aoa_to_sheet(a0); ws0['!cols']=[{wch:110}];
+    XLSX.utils.book_append_sheet(wb0,ws0,'Analysis');
+    return new Blob([XLSX.write(wb0,{bookType:'xlsx',type:'array'})],
+      {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  }
+  const head=['']; for(let s=0;s<M.series.length;s++) head.push(M.series[s].label||('Series '+(s+1)));
+  const rows=[head];
+  for(let i=0;i<M.n;i++){
+    const r=[M.labels[i]];
+    for(let s=0;s<M.series.length;s++){
+      const v=M.series[s].values[i];
+      r.push(v===null?'':v);          // a real empty cell, not the text "null"
+    }
+    rows.push(r);
+  }
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:Math.min(34,Math.max(12,
+    M.labels.reduce(function(a,b){return Math.max(a,String(b).length);},6)+2))}]
+    .concat(M.series.map(function(s){ return {wch:Math.max(14,String(s.label||'').length+2)}; }));
+  const wb=XLSX.utils.book_new();
+  const sheet=String(M.title||'Chart data').replace(/[:\\\/?*\[\]]/g,' ').slice(0,31)||'Chart data';
+  XLSX.utils.book_append_sheet(wb,ws,sheet);
+
+  // The written analysis, on its own sheet so the figures stay clean.
+  const blocks=_bcAnalysis(root,M);
+  if(blocks.length){
+    const a=[[M.title||'Analysis'],['']];
+    blocks.forEach(function(b){
+      a.push([b.head]);
+      (b.bullets||b.paras||[]).forEach(function(t){ a.push(['  '+t]); });
+      a.push(['']);
+    });
+    const aws=XLSX.utils.aoa_to_sheet(a);
+    aws['!cols']=[{wch:110}];
+    XLSX.utils.book_append_sheet(wb,aws,'Analysis');
+  }
+
+  const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  if(!png) return new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+
+  /* SheetJS has no way to put a picture in, so the package it produced is
+     reopened and the drawing parts are added by hand -- media, a drawing,
+     two relationship files, a <drawing> reference inside the sheet and two
+     content-type entries. Anything less and Excel calls the file corrupt. */
+  try{
+    const zip=await JSZip.loadAsync(out);
+    const col=M.series.length+2;                     // clear of the figures
+    const emu=function(px){ return Math.round(px*914400/96); };
+    const sc=Math.min(1,(7.2*96)/w);
+    zip.file('xl/media/image1.png',png);
+    zip.file('xl/drawings/drawing1.xml',
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+      '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"'+
+      ' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'+
+      '<xdr:oneCellAnchor>'+
+      '<xdr:from><xdr:col>'+col+'</xdr:col><xdr:colOff>0</xdr:colOff>'+
+      '<xdr:row>1</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>'+
+      '<xdr:ext cx="'+emu(w*sc)+'" cy="'+emu(h*sc)+'"/>'+
+      '<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="2" name="Chart"/><xdr:cNvPicPr/></xdr:nvPicPr>'+
+      '<xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'+
+      ' r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>'+
+      '<xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr>'+
+      '</xdr:pic><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>');
+    zip.file('xl/drawings/_rels/drawing1.xml.rels',
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>'+
+      '</Relationships>');
+    zip.file('xl/worksheets/_rels/sheet1.xml.rels',
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+      '<Relationship Id="rIdDr1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>'+
+      '</Relationships>');
+    let sh=await zip.file('xl/worksheets/sheet1.xml').async('string');
+    // <drawing> must be the LAST child of <worksheet>, after sheetData and
+    // anything else; Excel rejects it anywhere earlier.
+    sh=sh.replace('</worksheet>','<drawing r:id="rIdDr1"/></worksheet>');
+    if(sh.indexOf('xmlns:r=')===-1)
+      sh=sh.replace('<worksheet ','<worksheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ');
+    zip.file('xl/worksheets/sheet1.xml',sh);
+    let ct=await zip.file('[Content_Types].xml').async('string');
+    if(ct.indexOf('Extension="png"')===-1)
+      ct=ct.replace('<Types ','<Types ').replace('>','>'+'<Default Extension="png" ContentType="image/png"/>',1);
+    if(ct.indexOf('drawing1.xml')===-1)
+      ct=ct.replace('</Types>','<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');
+    zip.file('[Content_Types].xml',ct);
+    return await zip.generateAsync({type:'blob',
+      mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  }catch(e){
+    // A picture that will not go in must not cost him the numbers.
+    console.warn('xlsx image embed failed, returning the figures alone:',e);
+    return new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  }
+}
+
+// ── Word: a single pager somebody could actually read ──────────────────
+// His words: "word should have a single pager giving highlights of the
+// analysis and guiding the user properly". Title, what it means, the chart,
+// then the figures -- in that order, because the words are the point and the
+// table is the evidence.
+async function _bcDocx(M,root,png,w,h){
+  const zip=new JSZip();
+  const maxW=6.0*96;
+  const sc=Math.min(1,maxW/w);
+  const cx=_bcEmu(w*sc), cy=_bcEmu(h*sc);
+  zip.file('[Content_Types].xml',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+    '<Default Extension="xml" ContentType="application/xml"/>'+
+    '<Default Extension="png" ContentType="image/png"/>'+
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
+    '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'+
+    '</Types>');
+  zip.file('_rels/.rels',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'+
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'+
+    '</Relationships>');
+  zip.file('docProps/core.xml',_bcCore((M&&M.title)||'Bella analysis'));
+  zip.file('word/_rels/document.xml.rels',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rIdImg" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/chart.png"/>'+
+    '</Relationships>');
+  if(png) zip.file('word/media/chart.png',png);
+
+  const P=function(txt,bold,size,colour,space){
+    return '<w:p><w:pPr><w:spacing w:after="'+(space==null?140:space)+'"/></w:pPr>'+
+      '<w:r><w:rPr>'+(bold?'<w:b/>':'')+(size?'<w:sz w:val="'+size+'"/>':'')+
+      (colour?'<w:color w:val="'+colour+'"/>':'')+
+      '</w:rPr><w:t xml:space="preserve">'+_bcXmlEsc(txt)+'</w:t></w:r></w:p>';
+  };
+  const BULLET=function(txt){
+    return '<w:p><w:pPr><w:ind w:left="340" w:hanging="200"/>'+
+      '<w:spacing w:after="80"/></w:pPr><w:r><w:t xml:space="preserve">'+
+      '•   '+_bcXmlEsc(txt)+'</w:t></w:r></w:p>';
+  };
+  /* THE FIGURES WERE ALL LEFT-ALIGNED IN WORD -- measured on the file he
+     downloaded: zero alignment tags across sixty cells, so every number sat
+     against the left of its column and the table read as ragged. His
+     standing rule covers documents too, not just the screen.
+     Numbers right-aligned so the digits line up; labels left. Column widths
+     are FIXED PERCENTAGES rather than `auto`, or Word sizes each column to
+     its content and the table drifts across the page. */
+  // Null-safe: these are evaluated before the no-table guard below, so a
+  // chart-less document must not trip over them on its way past.
+  const SER=(M&&M.series)?M.series.length:0;
+  const COLS=1+SER;
+  const FIRSTW=Math.round(5000*0.34);
+  const RESTW=Math.round((5000-FIRSTW)/Math.max(1,SER));
+  const CELL=function(txt,bold,right,width){
+    return '<w:tc><w:tcPr><w:tcW w:w="'+width+'" w:type="pct"/>'+
+      '<w:vAlign w:val="center"/></w:tcPr>'+
+      '<w:p><w:pPr>'+(right?'<w:jc w:val="right"/>':'')+'</w:pPr>'+
+      '<w:r><w:rPr>'+(bold?'<w:b/>':'')+'</w:rPr>'+
+      '<w:t xml:space="preserve">'+_bcXmlEsc(txt)+'</w:t></w:r></w:p></w:tc>';
+  };
+
+  let body=P((M&&M.title)||_bcDocTitle(root)||'Analysis',true,34,'0B2545',200);
+  const when=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  body+=P('Prepared by Bella · '+when,false,18,'5A6B8A',240);
+
+  /* THE WORDS COME FIRST -- but the RECOMMENDATION comes last, after the
+     chart and the table, so a reader meets the evidence before the verdict.
+     Every heading is written through this one call, so they cannot differ in
+     weight, size or colour however Bella happened to mark them up. */
+  const HEAD=function(t){ return P(t,true,24,'0B2545',100); };
+  const BLOCK=function(b){
+    // Paragraphs BEFORE bullets: she writes a line that introduces a list and
+    // then the list. Printing the list first reads back to front.
+    let x=HEAD(b.head);
+    if(b.paras) b.paras.forEach(function(t){ x+=P(t,false,22,null,120); });
+    if(b.bullets) b.bullets.forEach(function(t){ x+=BULLET(t); });
+    return x;
+  };
+  _bcBody(root,M).forEach(function(b){ body+=BLOCK(b); });
+
+  if(png){
+    body+=P('The chart',true,24,'0B2545',100);
+    body+='<w:p><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">'+
+      '<wp:extent cx="'+cx+'" cy="'+cy+'"/><wp:docPr id="1" name="Chart"/>'+
+      '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'+
+      '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'+
+      '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'+
+      '<pic:nvPicPr><pic:cNvPr id="1" name="Chart"/><pic:cNvPicPr/></pic:nvPicPr>'+
+      '<pic:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rIdImg"/>'+
+      '<a:stretch><a:fillRect/></a:stretch></pic:blipFill>'+
+      '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm>'+
+      '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'+
+      '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+  }
+
+  /* NO FIGURES, NO TABLE. Placed HERE, after `body` exists and the chart (if
+     any) has been added: an earlier version sat above `let body` and threw
+     "Cannot access 'body' before initialization" the moment a chart-less
+     document was asked for. */
+  if(!M){
+    _bcLastBlocks(root,null).forEach(function(b){ body+=BLOCK(b); });
+  // The same closing section the deck gets, from the same reader, so the two
+  // documents can never disagree about what she looked at.
+  {
+    const _srcs=_bcSources(root);
+    if(_srcs.length){
+      body+=P('Where these figures came from',true,24,'0B2545',100);
+      _srcs.forEach(function(x){
+        body+=P('\u2022   '+x.name+(x.official?'   (official source)':''),false,22,null,40);
+      });
+      body+=P('Researched on '+when+'. Figures move, so check the source before acting on one.',
+              false,18,'5A6B8A',120);
+    }
+  }
+    zip.file('word/document.xml',
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'+
+      ' xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'+
+      '<w:body>'+body+
+      '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>'+
+      '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr>'+
+      '</w:body></w:document>');
+    return zip.generateAsync({type:'blob',
+      mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  }
+
+  let hd=CELL('Item',true,false,FIRSTW);
+  for(let s=0;s<M.series.length;s++)
+    hd+=CELL(M.series[s].label||('Series '+(s+1)),true,true,RESTW);
+  let rows='';
+  for(let i=0;i<M.n;i++){
+    let row=CELL(M.labels[i],false,false,FIRSTW);
+    for(let s=0;s<M.series.length;s++)
+      row+=CELL(_bcFmt(M.series[s].values[i]),false,true,RESTW);
+    rows+='<w:tr>'+row+'</w:tr>';
+  }
+  body+=P('The figures',true,24,'0B2545',100);
+  body+='<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/>'+
+    '<w:tblW w:w="5000" w:type="pct"/><w:tblLayout w:type="fixed"/>'+
+    '<w:tblBorders>'+
+    ['top','left','bottom','right','insideH','insideV'].map(function(e){
+      return '<w:'+e+' w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>';}).join('')+
+    '</w:tblBorders></w:tblPr><w:tr>'+hd+'</w:tr>'+rows+'</w:tbl>';
+
+  // ...and only now the verdict.
+  _bcLastBlocks(root,M).forEach(function(b){ body+=BLOCK(b); });
+  // The same closing section the deck gets, from the same reader, so the two
+  // documents can never disagree about what she looked at.
+  {
+    const _srcs=_bcSources(root);
+    if(_srcs.length){
+      body+=P('Where these figures came from',true,24,'0B2545',100);
+      _srcs.forEach(function(x){
+        body+=P('\u2022   '+x.name+(x.official?'   (official source)':''),false,22,null,40);
+      });
+      body+=P('Researched on '+when+'. Figures move, so check the source before acting on one.',
+              false,18,'5A6B8A',120);
+    }
+  }
+
+  zip.file('word/document.xml',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'+
+    ' xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'+
+    '<w:body>'+body+
+    '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>'+
+    '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr>'+
+    '</w:body></w:document>');
+  return zip.generateAsync({type:'blob',
+    mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+}
+
+/* ── PowerPoint, in Bella's own house style ────────────────────────────
+   Savio, 2026-10-28: "Why does the PPT look plane jane, we already have a
+   PPT format made for Bella right let all PPT's unless specifically requested
+   follow that style, colour combo with seperator tiles wherever required.
+   Lets use formats which are already prepared for Bella."
+
+   He is right, and the format already exists -- /smart-presentation on the
+   backend builds exactly this: a full-bleed opening slide, a Contents page
+   with a brand header bar, numbered separator tiles before each section, and
+   content slides under a header bar. Rather than invent a second look, the
+   measurements and the colours are taken from that code so a deck made here
+   and a deck made there are the same deck.
+     opening   navy bleed, title 40pt bold cream, gold rule, date italic
+     contents  navy bar h1.1, "Contents" 24pt, gold strip at the foot
+     separator navy bleed, "01" 18pt gold, section 34pt cream, gold rule
+     content   navy bar h1.1, title 22pt cream, body on white
+   And the figures are a REAL TABLE now. They were bullet lines joined with
+   middots, which is what he meant by "the table has gone all wonky". */
+const _DECK = {
+  W: 13.333, H: 7.5,
+  NAVY: '0B2545', GOLD: 'D4AF37', CREAM: 'F5E6C8',
+  INK: '1B2A4A', MUTED: '5A6B8A', WHITE: 'FFFFFF'
+};
+function _dEmu(inches){ return Math.round(inches*914400); }
+
+async function _bcPptx(M,root,png,w,h){
+  const D=_DECK, zip=new JSZip();
+  let uid=1;
+  const id=function(){ return ++uid; };
+
+  const esc=_bcXmlEsc;
+  const rect=function(x,y,cx,cy,colour){
+    return '<p:sp><p:nvSpPr><p:cNvPr id="'+id()+'" name="r"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>'+
+      '<p:spPr><a:xfrm><a:off x="'+_dEmu(x)+'" y="'+_dEmu(y)+'"/>'+
+      '<a:ext cx="'+_dEmu(cx)+'" cy="'+_dEmu(cy)+'"/></a:xfrm>'+
+      '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'+
+      '<a:solidFill><a:srgbClr val="'+colour+'"/></a:solidFill>'+
+      '<a:ln><a:noFill/></a:ln></p:spPr>'+
+      '<p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody></p:sp>';
+  };
+  const text=function(t,x,y,cx,cy,sz,bold,colour,align,italic){
+    return '<p:sp><p:nvSpPr><p:cNvPr id="'+id()+'" name="t"/><p:cNvSpPr txBox="1"/>'+
+      '<p:nvPr/></p:nvSpPr>'+
+      '<p:spPr><a:xfrm><a:off x="'+_dEmu(x)+'" y="'+_dEmu(y)+'"/>'+
+      '<a:ext cx="'+_dEmu(cx)+'" cy="'+_dEmu(cy)+'"/></a:xfrm>'+
+      '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>'+
+      '<p:txBody><a:bodyPr wrap="square" anchor="ctr"><a:normAutofit/></a:bodyPr><a:lstStyle/>'+
+      '<a:p'+(align?' algn="'+align+'"':'')+'><a:r><a:rPr lang="en-IN" sz="'+sz+'"'+
+      (bold?' b="1"':'')+(italic?' i="1"':'')+
+      '><a:solidFill><a:srgbClr val="'+colour+'"/></a:solidFill></a:rPr>'+
+      '<a:t>'+esc(t)+'</a:t></a:r></a:p></p:txBody></p:sp>';
+  };
+  const bullets=function(lines,x,y,cx,cy,sz){
+    let ps='';
+    lines.forEach(function(t){
+      ps+='<a:p><a:pPr marL="228600" indent="-228600"><a:buClr><a:srgbClr val="'+D.GOLD+'"/></a:buClr>'+
+        '<a:buChar char="▪"/></a:pPr><a:r><a:rPr lang="en-IN" sz="'+sz+'">'+
+        '<a:solidFill><a:srgbClr val="'+D.INK+'"/></a:solidFill></a:rPr>'+
+        '<a:t>'+esc(t)+'</a:t></a:r></a:p>';
+    });
+    if(!ps) ps='<a:p/>';
+    return '<p:sp><p:nvSpPr><p:cNvPr id="'+id()+'" name="b"/><p:cNvSpPr txBox="1"/>'+
+      '<p:nvPr/></p:nvSpPr>'+
+      '<p:spPr><a:xfrm><a:off x="'+_dEmu(x)+'" y="'+_dEmu(y)+'"/>'+
+      '<a:ext cx="'+_dEmu(cx)+'" cy="'+_dEmu(cy)+'"/></a:xfrm>'+
+      '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>'+
+      '<p:txBody><a:bodyPr wrap="square"><a:normAutofit/></a:bodyPr><a:lstStyle/>'+ps+
+      '</p:txBody></p:sp>';
+  };
+  // A REAL table. Every cell carries its own fill and ink, so it looks the
+  // same whether or not PowerPoint resolves a table style.
+  const table=function(rows,x,y,cx,colW){
+    const rh=0.42;
+    let grid='';
+    colW.forEach(function(c){ grid+='<a:gridCol w="'+_dEmu(c)+'"/>'; });
+    let trs='';
+    rows.forEach(function(r,ri){
+      const head=(ri===0);
+      let tcs='';
+      r.forEach(function(c,ci){
+        tcs+='<a:tc><a:txBody><a:bodyPr/><a:lstStyle/>'+
+          '<a:p'+(ci===0?'':' algn="r"')+'><a:r><a:rPr lang="en-IN" sz="'+(head?1200:1200)+'"'+
+          (head?' b="1"':'')+'><a:solidFill><a:srgbClr val="'+
+          (head?D.CREAM:D.INK)+'"/></a:solidFill></a:rPr>'+
+          '<a:t>'+esc(c)+'</a:t></a:r></a:p></a:txBody>'+
+          '<a:tcPr marL="91440" marR="91440" anchor="ctr"><a:solidFill><a:srgbClr val="'+
+          (head?D.NAVY:(ri%2?'F7F4EC':D.WHITE))+'"/></a:solidFill></a:tcPr></a:tc>';
+      });
+      trs+='<a:tr h="'+_dEmu(rh)+'">'+tcs+'</a:tr>';
+    });
+    return '<p:graphicFrame><p:nvGraphicFramePr>'+
+      '<p:cNvPr id="'+id()+'" name="Figures"/><p:cNvGraphicFramePr/><p:nvPr/>'+
+      '</p:nvGraphicFramePr>'+
+      '<p:xfrm><a:off x="'+_dEmu(x)+'" y="'+_dEmu(y)+'"/>'+
+      '<a:ext cx="'+_dEmu(cx)+'" cy="'+_dEmu(rh*rows.length)+'"/></p:xfrm>'+
+      '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">'+
+      '<a:tbl><a:tblPr firstRow="1"/><a:tblGrid>'+grid+'</a:tblGrid>'+trs+'</a:tbl>'+
+      '</a:graphicData></a:graphic></p:graphicFrame>';
+  };
+  const SLIDE=function(inner,bg){
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+      '<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'+
+      ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'+
+      ' xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld>'+
+      (bg?'<p:bg><p:bgPr><a:solidFill><a:srgbClr val="'+bg+'"/></a:solidFill>'+
+          '<a:effectLst/></p:bgPr></p:bg>':'')+
+      '<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>'+
+      '<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>'+
+      '<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>'+
+      inner+'</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>';
+  };
+  // A content slide: brand bar, title on it, body beneath.
+  const contentSlide=function(title,inner){
+    return SLIDE(rect(0,0,D.W,1.1,D.NAVY)+
+      text(title,0.4,0.15,D.W-0.8,0.8,2200,true,D.CREAM)+inner);
+  };
+  const separator=function(no,name){
+    return SLIDE(
+      text(String(no).padStart(2,'0'),0.7,2.3,D.W-1.4,0.8,1800,true,D.GOLD,'ctr')+
+      text(name,0.7,3.1,D.W-1.4,1.3,3400,true,D.CREAM,'ctr')+
+      rect((D.W-4.3)/2,4.55,4.3,0.02,D.GOLD), D.NAVY);
+  };
+
+  const title=(M&&M.title)||_bcDocTitle(root)||'Analysis';
+  const when=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  const body=_bcBody(root,M), tail=_bcLastBlocks(root,M), srcs=_bcSources(root);
+  /* HER SECTIONS, NOT MINE. Savio, 2026-10-28: "Bella has to intelligently
+     decipher the heading... Some PPTs may use a slide called Competitors or
+     Competitive Benchmarks."
+     So the deck's sections are whatever SHE named them. A section called
+     "Competitors" gets its own numbered separator tile and its own line in
+     the Contents, exactly as "The trend" does -- nothing here is a fixed
+     skeleton with her writing poured into it.
+     The opening pair -- the question and the short answer -- share one slide
+     with no tile in front of them: a separator before a two-line summary is
+     furniture, not navigation. */
+  const slides=[];
+  const opening=body.filter(function(b){ return b.first; });
+  const mid=body.filter(function(b){ return !b.first; });
+  /* THE CONTENTS MUST LIST WHAT THE DECK ACTUALLY SHOWS. Savio, 29 October
+     2026: "your PPT started index with competitive benchmarks but the flow
+     showed In Brief?" He was reading the deck and the index disagreed with
+     it. The opening slide carries "The question" and "In brief" and both were
+     missing from the Contents, because this list began at the first section
+     that happened to own a separator tile.
+     So the list is built from the slides, in slide order, and the separator
+     numbering starts after the opening rather than at 01 -- which makes a
+     tile number and its Contents line the same number, always. */
+  const sections=[];
+  opening.forEach(function(b){ sections.push(b.head); });
+  mid.forEach(function(b){ sections.push(b.head); });
+  if(png) sections.push('The chart');
+  if(M) sections.push('The figures');
+  tail.forEach(function(b){ sections.push(b.head); });
+  if(srcs.length) sections.push('Where these figures came from');
+
+  // 1 — opening
+  slides.push({xml:SLIDE(
+    text(title,0.7,2.3,D.W-1.4,1.5,4000,true,D.CREAM,'ctr')+
+    rect(3,3.95,D.W-6,0.02,D.GOLD)+
+    text('Prepared by Bella',0.7,4.15,D.W-1.4,0.6,2000,false,D.CREAM,'ctr')+
+    text(when,0.7,6.5,D.W-1.4,0.4,1200,false,D.CREAM,'ctr',true), D.NAVY)});
+
+  // 2 — contents, only when there is something to navigate
+  if(sections.length>1){
+    slides.push({xml:SLIDE(rect(0,0,D.W,1.1,D.NAVY)+
+      text('Contents',0.4,0.15,D.W-0.8,0.8,2400,true,D.CREAM)+
+      bullets(sections.map(function(nm,i){ return String(i+1).padStart(2,'0')+'   '+nm; }),
+              0.9,1.7,D.W-1.8,4.6,1800)+
+      rect(0,D.H-0.2,D.W,0.2,D.GOLD))});
+  }
+
+  // Continues the Contents numbering rather than restarting at 01.
+  let no=opening.length;
+  // 3 — the opening: the question and the short answer, together
+  if(opening.length){
+    let inner='', y=1.5;
+    opening.forEach(function(b,i){
+      // Numbered to match its Contents line, so nothing in the index points
+      // at a heading the reader cannot find.
+      inner+=text(String(i+1).padStart(2,'0')+'   '+b.head,0.9,y,D.W-1.8,0.45,1400,true,D.GOLD)+
+             bullets(_bcBullets(b,200).slice(0,4),0.9,y+0.5,D.W-1.8,1.9,1600);
+      y+=2.5;
+    });
+    slides.push({xml:contentSlide(title,inner)});
+  }
+  // 4 — every section she named, each with its own tile
+  mid.forEach(function(b){
+    slides.push({xml:separator(++no,b.head)});
+    slides.push({xml:contentSlide(b.head,
+      bullets(_bcBullets(b,170).slice(0,7),0.9,1.6,D.W-1.8,5.0,1600))});
+  });
+  // 4 — the chart
+  if(png){
+    slides.push({xml:separator(++no,'The chart')});
+    const sc=Math.min((10.6*96)/w,(4.6*96)/h,1);
+    const cx=_dEmu(w*sc/96), cy=_dEmu(h*sc/96);
+    slides.push({usesImage:true,xml:SLIDE(rect(0,0,D.W,1.1,D.NAVY)+
+      text(title,0.4,0.15,D.W-0.8,0.8,2200,true,D.CREAM)+
+      '<p:pic><p:nvPicPr><p:cNvPr id="'+id()+'" name="Chart"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>'+
+      '<p:blipFill><a:blip r:embed="rIdImg"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>'+
+      '<p:spPr><a:xfrm><a:off x="'+Math.round((_dEmu(D.W)-cx)/2)+'" y="'+_dEmu(1.55)+'"/>'+
+      '<a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm>'+
+      '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>')});
+  }
+  // 5 — the figures, as a real table. Only when there ARE figures.
+  if(M){
+  slides.push({xml:separator(++no,'The figures')});
+  const cols=1+M.series.length;
+  const first=Math.min(3.6,Math.max(2.2,(D.W-1.4)/cols*1.3));
+  const rest=(D.W-1.4-first)/Math.max(1,M.series.length);
+  const colW=[first].concat(M.series.map(function(){ return rest; }));
+  const MAXR=11;
+  const rows=[['Item'].concat(M.series.map(function(sx,i){ return sx.label||('Series '+(i+1)); }))];
+  for(let i=0;i<Math.min(M.n,MAXR);i++){
+    rows.push([M.labels[i]].concat(M.series.map(function(sx){ return _bcFmt(sx.values[i]); })));
+  }
+  let figInner=table(rows,0.7,1.5,D.W-1.4,colW);
+  if(M.n>MAXR) figInner+=text('… and '+(M.n-MAXR)+' more rows, in the Excel file',
+                              0.7,D.H-0.85,D.W-1.4,0.4,1200,false,D.MUTED);
+  slides.push({xml:contentSlide('The figures',figInner)});
+  }
+  // 6 — the verdict, last
+  if(tail.length){
+    slides.push({xml:separator(++no,tail[0].head||'My recommendation')});
+    tail.forEach(function(b){
+      slides.push({xml:contentSlide(b.head,
+        bullets(_bcBullets(b,170).slice(0,7),0.9,1.6,D.W-1.8,5.0,1800))});
+    });
+  }
+  // 7 — closing
+  /* WHERE THE FIGURES CAME FROM. The last thing before the sign-off, the way
+     a research deck ends. An "Official" mark only ever claims the DOMAIN is a
+     government or central-bank one -- never that the page was read. */
+  if(srcs.length){
+    slides.push({xml:separator(++no,'Where these figures came from')});
+    slides.push({xml:contentSlide('Where these figures came from',
+      bullets(srcs.map(function(x){ return x.name+(x.official?'   (official source)':''); }),
+              0.9,1.6,D.W-1.8,5.0,1600)+
+      text('Researched on '+when+'. Figures move, so check the source before acting on one.',
+           0.9,6.3,D.W-1.8,0.5,1100,false,D.GOLD))});
+  }
+  slides.push({xml:SLIDE(
+    text('Prepared by Bella',0.7,3.0,D.W-1.4,0.9,2800,true,D.CREAM,'ctr')+
+    rect((D.W-4.3)/2,4.05,4.3,0.02,D.GOLD)+
+    text(when,0.7,4.25,D.W-1.4,0.5,1400,false,D.CREAM,'ctr',true), D.NAVY)});
+
+  // ── package ──
+  const n=slides.length;
+  const ov=slides.map(function(_,i){
+    return '<Override PartName="/ppt/slides/slide'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>';
+  }).join('');
+  zip.file('[Content_Types].xml',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+    '<Default Extension="xml" ContentType="application/xml"/>'+
+    '<Default Extension="png" ContentType="image/png"/>'+
+    '<Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>'+
+    '<Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>'+
+    '<Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>'+
+    ov+
+    '<Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>'+
+    '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'+
+    '</Types>');
+  zip.file('_rels/.rels',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>'+
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'+
+    '</Relationships>');
+  zip.file('docProps/core.xml',_bcCore(title));
+  let sldIds='', presRels=
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>';
+  for(let i=0;i<n;i++){
+    const rid='rIdS'+(i+1);
+    sldIds+='<p:sldId id="'+(256+i)+'" r:id="'+rid+'"/>';
+    presRels+='<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+(i+1)+'.xml"/>';
+  }
+  presRels+='<Relationship Id="rIdTh" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>';
+  zip.file('ppt/presentation.xml',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'+
+    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'+
+    ' xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">'+
+    '<p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>'+
+    '<p:sldIdLst>'+sldIds+'</p:sldIdLst>'+
+    '<p:sldSz cx="'+_dEmu(D.W)+'" cy="'+_dEmu(D.H)+'"/>'+
+    '<p:notesSz cx="'+_dEmu(D.H)+'" cy="'+_dEmu(D.W)+'"/>'+
+    '</p:presentation>');
+  zip.file('ppt/_rels/presentation.xml.rels',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    presRels+'</Relationships>');
+  const scheme=['dk1','lt1','dk2','lt2','accent1','accent2','accent3','accent4','accent5','accent6','hlink','folHlink'];
+  const vals=['000000','FFFFFF',D.NAVY,D.CREAM,'2a78d6','eb6834','1baf7a','eda100','e87ba4','4a3aa7','0563C1','954F72'];
+  zip.file('ppt/theme/theme1.xml',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Bella">'+
+    '<a:themeElements><a:clrScheme name="Bella">'+
+    scheme.map(function(k,i){ return '<a:'+k+'><a:srgbClr val="'+vals[i]+'"/></a:'+k+'>'; }).join('')+
+    '</a:clrScheme>'+
+    '<a:fontScheme name="Bella"><a:majorFont><a:latin typeface="Helvetica"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont>'+
+    '<a:minorFont><a:latin typeface="Helvetica"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont></a:fontScheme>'+
+    '<a:fmtScheme name="Bella">'+
+    '<a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill>'+
+    '<a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst>'+
+    '<a:lnStyleLst><a:ln><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln>'+
+    '<a:ln><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln>'+
+    '<a:ln><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln></a:lnStyleLst>'+
+    '<a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle>'+
+    '<a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst>'+
+    '<a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill>'+
+    '<a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst>'+
+    '</a:fmtScheme></a:themeElements></a:theme>');
+  const emptySp='<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>'+
+    '<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>'+
+    '<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr></p:spTree>';
+  zip.file('ppt/slideMasters/slideMaster1.xml',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'+
+    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'+
+    ' xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">'+
+    '<p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>'+
+    emptySp+'</p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1"'+
+    ' accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6"'+
+    ' hlink="hlink" folHlink="folHlink"/>'+
+    '<p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst>'+
+    '</p:sldMaster>');
+  zip.file('ppt/slideMasters/_rels/slideMaster1.xml.rels',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>'+
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>'+
+    '</Relationships>');
+  zip.file('ppt/slideLayouts/slideLayout1.xml',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'+
+    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'+
+    ' xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" type="blank" preserve="1">'+
+    '<p:cSld name="Blank">'+emptySp+'</p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>');
+  zip.file('ppt/slideLayouts/_rels/slideLayout1.xml.rels',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>'+
+    '</Relationships>');
+  if(png) zip.file('ppt/media/image1.png',png);
+  slides.forEach(function(sl,i){
+    zip.file('ppt/slides/slide'+(i+1)+'.xml',sl.xml);
+    let rels='<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>';
+    if(sl.usesImage) rels+='<Relationship Id="rIdImg" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>';
+    zip.file('ppt/slides/_rels/slide'+(i+1)+'.xml.rels',
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+      rels+'</Relationships>');
+  });
+  return zip.generateAsync({type:'blob',
+    mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+}
+
+// ── The button row ──────────────────────────────────────────────────────
+const _BC_FORMATS=[
+  {k:'png', label:'Picture', ext:'png'},
+  {k:'xlsx',label:'Excel',   ext:'xlsx'},
+  {k:'docx',label:'Word',    ext:'docx'},
+  {k:'pptx',label:'PowerPoint',ext:'pptx'}
+];
+async function _bcExport(root,kind,btn){
+  const M=root._bcM;
+  if(!M) return;
+  const was=btn?btn.textContent:'';
+  if(btn){ btn.disabled=true; btn.textContent='Making it…'; }
+  try{
+    // The picture is made FIRST, once, from whatever form is on screen right
+    // now -- switch to Bar and download and you get the bar chart you were
+    // looking at. Excel wants it too now, so every format shares the one shot.
+    // When there is no chart there is simply no picture, and the documents
+    // carry the words alone.
+    let buf=null,sw=0,sh=0;
+    if(M){
+      const shot=await _bcChartPng(root);
+      if(kind==='png'){ _bcSaveBlob(shot.blob,_bcFileName(M,'png')); }
+      else{ buf=await shot.blob.arrayBuffer(); sw=shot.w; sh=shot.h; }
+    }
+    if(kind!=='png'||!M){
+      const blob=(kind==='xlsx') ? await _bcXlsx(M,root,buf,sw,sh)
+               : (kind==='docx') ? await _bcDocx(M,root,buf,sw,sh)
+               :                   await _bcPptx(M,root,buf,sw,sh);
+      _bcSaveBlob(blob,_bcFileName(M,kind==='png'?'docx':kind));
+    }
+  }catch(e){
+    console.warn('chart export failed:',e);
+    // Say so on the button itself. A download that silently does nothing is
+    // the worst outcome -- he would not know whether to wait or press again.
+    if(btn){ btn.textContent='Could not make it'; setTimeout(function(){ btn.textContent=was; },2600); return; }
+  }
+  if(btn){ btn.disabled=false; btn.textContent=was; }
+}
+function _bcDownloadRow(root){
+  const wrap=document.createElement('div');
+  wrap.className='bchart-dl';
+  const lb=document.createElement('span');
+  lb.className='bchart-dl-lb'; lb.textContent='Download';
+  wrap.appendChild(lb);
+  // No chart means no picture to save and no table to put in a spreadsheet.
+  // Offering either would be a button that produces an empty file.
+  const formats=root._bcM?_BC_FORMATS
+    :_BC_FORMATS.filter(function(f){ return f.k==='docx'||f.k==='pptx'; });
+  formats.forEach(function(f){
+    const b=document.createElement('button');
+    b.type='button'; b.textContent=f.label;
+    b.setAttribute('aria-label','Download as '+f.label);
+    b.addEventListener('click',function(){ _bcExport(root,f.k,b); });
+    wrap.appendChild(b);
+  });
+  return wrap;
+}
+
 // The chart where it was asked for: the live thing on top, the picture
 // kept underneath as the download. ONE response feeds both -- labels and
 // datasets arrive in the same JSON as chartImageBase64.
-function _paintChart(msgId,chart,blob,filename){
+function _paintChart(msgId,chart,blob,filename,note,ask,srcs){
   const bub=document.getElementById(msgId); if(!bub) return false;
   const wrap=bub.parentNode; if(!wrap) return false;
   let block=null;
   try{ block=_chartBlock(chart); }catch(e){ console.warn('_paintChart:',e); }
   if(!block) return false;
+  /* HER WORDS TRAVEL WITH THE PICTURE. Savio, 2026-10-28: "where is the
+     complete analysis where the User can understand which is better & why".
+     The explanation is already on screen above the chart; carrying it here
+     is what lets the Word, PowerPoint and Excel files be an analysis rather
+     than a picture with a table under it. */
+  if(note) block._bcNote=String(note);
+  if(ask) block._bcAsk=String(ask);
+  /* AND SO DOES HER RESEARCH. Savio, 29 October 2026: "its the content im
+     trying to have Bella intelligently live research and create." She DOES
+     search before writing these answers -- the sources row under her reply
+     proves it -- but the deck and the document arrived with no trace of it,
+     so a reader could not tell a researched figure from a remembered one.
+     Stashed here because the file is not built until a button is pressed,
+     by which time _lastSources has already been cleared for the next turn. */
+  if(srcs&&srcs.length) block._bcSrcs=srcs.slice(0,12);
   const box=document.createElement('div');
   box.className='dl-note';
   box.appendChild(block);
@@ -12719,6 +14575,19 @@ function _filesAsBase64(list){
 // Runs the whole thing. Returns true if it handled the turn.
 async function runMaker(spec,fullMsg,lang,files){
   const kindWord={deck:'presentation',doc:'document',chart:'chart'}[spec.kind];
+  /* A PRESENTATION WITH NOTHING ATTACHED IS A QUESTION, NOT A FILE JOB.
+     Savio, 2026-10-29: he asked Bella to make a PPT and got twelve slides of
+     one-line headings with no research in them. Measured on the file he
+     downloaded, and it was working exactly as built: /create-presentation is
+     told to return "<slide heading> | <one short supporting line>", so one
+     thin line per slide is all it can ever produce -- no search, no sections,
+     no chart, no separator tiles. The SAME question asked plainly produced a
+     researched, sectioned document carrying live FD rates.
+     Two paths to one outcome is one path too many. With files attached,
+     /smart-presentation still does the work below -- it reads the documents.
+     With nothing attached this steps aside and lets her simply ANSWER, and
+     the page turns that answer into the deck. */
+  if(spec.kind==='deck'&&(!files||!files.length)) return false;
   try{
     // ── THE DECK WITH REAL CHARTS IN IT ──────────────────────────────────
     // His instruction, 16 Oct: ask for a file the data can be analysed from,
@@ -13520,6 +15389,61 @@ const UI_TEXT = {
     bn:'শুভ সন্ধ্যা, {name}! কেমন আছেন?',
     hi:'शुभ संध्या, {name}! आज आप कैसे हैं?',
     mr:'शुभ संध्याकाळ, {name}! आज कसे आहात?'},
+  /* THE SECOND AND THIRD TIMES OF THE DAY. Savio, 2026-10-29: "How many good
+     mornings will Bella wish? It should have just been Hello Savio, how can i
+     help you... If its in the afternoon the same day when i have already
+     chatted with her then again Good Afternoon Savio, is there anything i can
+     help you with?"
+     So the time-of-day greeting is spent ONCE PER PERIOD, and "how are you"
+     belongs only to the first contact of the day -- asked twice it is not a
+     question, it is a tic. These are the lighter forms. */
+  greet_morning_help:{
+    en:'Good morning, {name}! Is there anything I can help you with?',
+    bn:'সুপ্রভাত, {name}! কিছু সাহায্য লাগবে?',
+    hi:'सुप्रभात, {name}! क्या मैं आपकी कोई मदद कर सकती हूँ?',
+    mr:'सुप्रभात, {name}! मी तुमची काही मदत करू शकते का?'},
+  greet_afternoon_help:{
+    en:'Good afternoon, {name}! Is there anything I can help you with?',
+    bn:'নমস্কার, {name}! কিছু সাহায্য লাগবে?',
+    hi:'नमस्ते, {name}! क्या मैं आपकी कोई मदद कर सकती हूँ?',
+    mr:'नमस्कार, {name}! मी तुमची काही मदत करू शकते का?'},
+  greet_evening_help:{
+    en:'Good evening, {name}! Is there anything I can help you with?',
+    bn:'শুভ সন্ধ্যা, {name}! কিছু সাহায্য লাগবে?',
+    hi:'शुभ संध्या, {name}! क्या मैं आपकी कोई मदद कर सकती हूँ?',
+    mr:'शुभ संध्याकाळ, {name}! मी तुमची काही मदत करू शकते का?'},
+  /* SHE KNOWS HIM. Savio, 2026-10-29: "Go ahead, Savio. What's on your mind?
+     Nice statements like this can also be used when Bella's memory says that
+     she has interacted with the same User already."
+     One line used every time becomes its own tic, which is the complaint
+     that started this. So there are several, and they rotate -- none ever
+     follows itself. These are for someone she has already spoken to today;
+     the first contact of the day still gets the proper greeting above. */
+  greet_known_1:{
+    en:"Go ahead, {name}. What's on your mind?",
+    bn:'বলুন, {name}। কী ভাবছেন?',
+    hi:'बताइए, {name}। क्या सोच रहे हैं?',
+    mr:'सांगा, {name}। काय विचार करताय?'},
+  greet_known_2:{
+    en:'Hello, {name}. What can I do for you?',
+    bn:'নমস্কার, {name}। আপনার জন্য কী করতে পারি?',
+    hi:'नमस्ते, {name}। मैं आपके लिए क्या कर सकती हूँ?',
+    mr:'नमस्कार, {name}। मी तुमच्यासाठी काय करू शकते?'},
+  greet_known_3:{
+    en:'Hello again, {name}. Where shall we start?',
+    bn:'আবার দেখা হল, {name}। কোথা থেকে শুরু করব?',
+    hi:'फिर मुलाकात हुई, {name}। कहाँ से शुरू करें?',
+    mr:'पुन्हा भेटलो, {name}। कुठून सुरुवात करूया?'},
+  greet_known_4:{
+    en:'Yes, {name}? What are we working on?',
+    bn:'বলুন {name}, কী নিয়ে কাজ করছি?',
+    hi:'बताइए {name}, आज किस पर काम करना है?',
+    mr:'सांगा {name}, आज कशावर काम करायचं?'},
+  greet_plain:{
+    en:'Hello, {name}! How can I help you?',
+    bn:'নমস্কার, {name}! কী সাহায্য করতে পারি?',
+    hi:'नमस्ते, {name}! मैं आपकी क्या मदद कर सकती हूँ?',
+    mr:'नमस्कार, {name}! मी तुमची काय मदत करू शकते?'},
   // The follow-up variant keeps {note} verbatim: it comes from her memory of the
   // last session and may itself be English. Flagged to Savio as a separate item --
   // translating the frame around an English sentence would be a half-fix pretending
@@ -14618,6 +16542,58 @@ function initLocationWithCoords(lat, lon){
 // ever registered, so Bella says it out loud and gives them the id anyway.
 let _welcomeMailFailed = false;
 
+/* HOW MANY GOOD MORNINGS? ONE. Savio, 2026-10-29.
+   The time-of-day greeting is spent once per PERIOD per day, and "how are
+   you" belongs only to the first contact of the day:
+     first contact today ......... Good morning, Savio! How are you today?
+     later, same period .......... Hello, Savio! How can I help you?
+     later, period has changed ... Good afternoon, Savio! Is there anything
+                                   I can help you with?
+   ONE function decides, because there were THREE places painting a greeting
+   -- deliverGreeting, newThread with its own hardcoded English line, and the
+   model's own Step 1 -- and they did not know about each other. */
+const GREET_SEEN_KEY='b_greet_seen';
+function _greetDayKey(d){ return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); }
+function _greetKind(){
+  try{
+    const v=JSON.parse(localStorage.getItem(GREET_SEEN_KEY)||'null');
+    if(!v||v.day!==_greetDayKey(new Date())) return 'full';
+    return (v.tod!==timeOfDay()) ? 'tod' : 'plain';
+  }catch(e){ return 'full'; }
+}
+function _noteGreeted(){
+  try{
+    localStorage.setItem(GREET_SEEN_KEY,JSON.stringify(
+      {day:_greetDayKey(new Date()),tod:timeOfDay()}));
+  }catch(e){}
+}
+/* Rotated, not random: random repeats itself roughly one time in four, and
+   a repeat is the very thing he is tired of. The index is stored, so the
+   next line is always a different one -- including across a reload. */
+const GREET_KNOWN_N=4;
+function _greetKnownKey(){
+  let i=0;
+  try{
+    i=Number(localStorage.getItem('b_greet_rot')||0);
+    if(!isFinite(i)||i<0) i=0;
+    localStorage.setItem('b_greet_rot',String((i+1)%GREET_KNOWN_N));
+  }catch(e){}
+  return 'greet_known_'+((i%GREET_KNOWN_N)+1);
+}
+function greetingText(addressedName){
+  const tod=timeOfDay();
+  const lang=chosenLang()||'en';
+  const k=_greetKind();
+  /* THREE STATES, AND DELETING THREADS CHANGES NONE OF THEM.
+     Savio, 2026-10-29: "Deleting thread still does not qualify for Sanjukta
+     & Jishnu like greeting." It does not, and it never did -- clearing
+     conversations touches only the thread list, while what Bella remembers
+     about HIM lives in its own keys. Only a real account reset clears those,
+     and then she rightly starts again as if they had never met. */
+  if(k==='full') return uiText('greet_'+tod,{name:addressedName},lang);
+  if(k==='tod')  return uiText('greet_'+tod+'_help',{name:addressedName},lang);
+  return uiText(_greetKnownKey(),{name:addressedName},lang);
+}
 function deliverGreeting(addressedName){
   const tod=timeOfDay();
   // Clean greeting — no motivation suffix — Thought of the Day handles that in the topbar
@@ -14627,8 +16603,9 @@ function deliverGreeting(addressedName){
   // It is OUR sentence -- Gemini never sees it -- so no prompt rule could have
   // fixed it.
   const _gl=chosenLang()||'en';
-  let msg=uiText('greet_'+tod,{name:addressedName},_gl);
+  let msg=greetingText(addressedName);
   if(userMemory.proactiveFollowUp)msg=uiText('greet_followup',{tod:tod,name:addressedName,note:userMemory.proactiveFollowUp},_gl);
+  _noteGreeted();
   playNotifSound();
   // Gemini cannot see this. bellaMsg only draws on screen — it never writes to the
   // thread history — so without this line the model opens every session believing
@@ -14761,6 +16738,616 @@ setInterval(function(){
   loadThoughtOfDay(_thoughtName, _thoughtCity);
 }, 600000);
 
+// ══ CLOCK ══════════════════════════════════════════════════════════════
+// Savio, 2026-10-28: "When we created the smart stack we had the Calendar &
+// Clock portion as well which were clickable with their own services... my
+// idea was giving them the opportunity to change from 12hrs to 24hrs clock
+// for entire Bella."
+//
+// The Date & Time cell had NO action of its own -- a tap only flipped the
+// stack -- and the 12/24 switch was a 13px icon most people would never find.
+// Now the date opens the calendar and the time opens this.
+//
+// The world clocks are the half he did not ask for and will use most: Jishnu
+// is in Birmingham, Alabama, and "what time is it for him now" is a question
+// this family actually has. It also closes item 5 of his 19-item list --
+// "Time in Alabama returns many timezones, not the answer" -- by answering it
+// directly instead of through a search.
+
+const CLOCKS_KEY='b_clocks';
+/* A CLOCK IS A PLACE, NOT A TIME ZONE, and that distinction is the whole
+   reason this stores an object. Birmingham, Alabama and Chicago are both
+   America/Chicago, so looking a zone up in TIMEZONES returns whichever city
+   happens to sit first in the list -- and Jishnu's clock came out labelled
+   "Chicago". The label the person actually chose is kept beside the zone.
+   Seeded with where his son is: his old item 5 was "Time in Alabama returns
+   many timezones, not the answer". */
+const CLOCKS_DEFAULT=[{tz:'America/Chicago',label:'Birmingham, Alabama, United States'}];
+function clockList(){
+  try{
+    const v=JSON.parse(localStorage.getItem(CLOCKS_KEY)||'null');
+    if(Array.isArray(v)){
+      // Older saves held a bare zone string. Carried forward, not discarded.
+      return v.map(function(t){
+        if(typeof t==='string') return {tz:t,label:_clkCity(t)};
+        return (t&&t.tz)?{tz:t.tz,label:t.label||_clkCity(t.tz)}:null;
+      }).filter(Boolean);
+    }
+  }catch(e){}
+  return CLOCKS_DEFAULT.map(function(c){ return {tz:c.tz,label:c.label}; });
+}
+function setClockList(l){
+  try{ localStorage.setItem(CLOCKS_KEY,JSON.stringify(l)); }catch(e){}
+}
+/* THE BROWSER REPORTS THE OLD NAME. Chrome on his Mac resolves the local
+   zone as "Asia/Calcutta" -- the deprecated alias -- while TIMEZONES holds
+   "Asia/Kolkata", so the panel showed him a raw zone id instead of his own
+   city. Aliased here, and anything still unmatched falls back to the
+   readable half of the id rather than the whole path. */
+const _TZ_ALIAS={'Asia/Calcutta':'Asia/Kolkata','Asia/Katmandu':'Asia/Kathmandu',
+  'Asia/Rangoon':'Asia/Yangon','Asia/Saigon':'Asia/Ho_Chi_Minh',
+  'America/Buenos_Aires':'America/Argentina/Buenos_Aires',
+  'Europe/Kiev':'Europe/Kyiv','Pacific/Honolulu':'Pacific/Honolulu'};
+function _clkCity(tz){
+  const z=_TZ_ALIAS[tz]||tz;
+  const t=TIMEZONES.find(function(x){ return x.tz===z; });
+  if(t) return t.city+', '+(t.state&&t.state!==t.city?t.state+', ':'')+t.country;
+  const last=String(z).split('/').pop().replace(/_/g,' ');
+  return last||String(z);
+}
+// The time THERE, now. Intl does the zone arithmetic; never a manual offset,
+// because an offset is wrong twice a year.
+function _clkNowIn(tz){
+  try{
+    const now=new Date();
+    const f=new Intl.DateTimeFormat('en-GB',{timeZone:tz,hour:'2-digit',minute:'2-digit',
+      hour12:!_clockFormat24,weekday:'short',day:'numeric',month:'short'});
+    const p={}; f.formatToParts(now).forEach(function(x){ p[x.type]=x.value; });
+    const time=_clockFormat24
+      ? (String(p.hour).padStart(2,'0')+':'+p.minute)
+      : (String(Number(p.hour)).padStart(2,'0')+':'+p.minute+' '+(p.dayPeriod||'').toUpperCase());
+    // Which DAY it is there matters more than the clock when someone is
+    // half a world away -- "tomorrow, 02:10" is the useful answer.
+    const here=new Date().getDate();
+    const there=Number(p.day);
+    let rel='';
+    if(there!==here) rel=(there>here||(here>25&&there<5))?'tomorrow':'yesterday';
+    return {time:time,day:p.weekday+' '+p.day+' '+p.month,rel:rel};
+  }catch(e){ return {time:'—',day:'',rel:''}; }
+}
+let _clkTimer=null;
+function openClockPanel(){
+  closeOtherPanels('clock');
+  document.getElementById('clk-overlay').classList.add('on');
+  document.getElementById('clk-panel').style.display='block';
+  renderClockPanel();
+  // One second is the only honest interval for a clock. Cleared on close --
+  // a timer left running behind a shut panel is exactly what "light on
+  // devices" forbids.
+  if(_clkTimer) clearInterval(_clkTimer);
+  /* THE TICK MUST NOT REBUILD THE PANEL.
+     Savio, 2026-10-28: "It says add but it just snaps and doesnt allow me to
+     add anything." The dropdown was not broken -- it was being DESTROYED. The
+     clock ticked by re-rendering the whole panel every second, so the open
+     <select> was thrown away a fraction of a second after he opened it.
+     Now the second-by-second update touches only the time strings; the
+     structure is rebuilt only when something actually changes. */
+  _clkTimer=setInterval(_clkTick,1000);
+}
+function closeClockPanel(){
+  if(_clkTimer){ clearInterval(_clkTimer); _clkTimer=null; }
+  document.getElementById('clk-overlay').classList.remove('on');
+  document.getElementById('clk-panel').style.display='none';
+}
+function setClockFormat(is24){
+  if(_clockFormat24===is24) return;
+  toggleClockFormat();          // the one place the preference is written
+  renderClockPanel();
+}
+function clockAdd(tz,label){
+  if(!tz) return;
+  const l=clockList();
+  const lb=label||_clkCity(tz);
+  if(!l.some(function(c){ return c.tz===tz&&c.label===lb; })){
+    l.push({tz:tz,label:lb}); setClockList(l);
+  }
+  const s=document.getElementById('clk-add'); if(s) s.value='';
+  renderClockPanel();
+}
+function clockRemove(tz,label){
+  setClockList(clockList().filter(function(c){
+    return !(c.tz===tz && (label==null || c.label===label)); }));
+  renderClockPanel();
+}
+/* Only the digits. No element is created, moved or removed here, so anything
+   the person is interacting with -- an open dropdown, a half-made choice --
+   survives the tick. */
+function _clkTick(){
+  const panel=document.getElementById('clk-panel');
+  if(!panel||panel.style.display!=='block') return;
+  try{
+    const hereTz=(function(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }
+                              catch(e){ return 'Asia/Kolkata'; } })();
+    const me=_clkNowIn(hereTz);
+    const t=panel.querySelector('.clk-here-t'); if(t) t.textContent=me.time;
+    const d=panel.querySelector('.clk-here-d');
+    if(d) d.textContent=me.day+' · '+_clkCity(hereTz);
+    const rows=panel.querySelectorAll('.clk-row');
+    for(let i=0;i<rows.length;i++){
+      const tz=rows[i].getAttribute('data-tz');
+      if(!tz) continue;
+      const n=_clkNowIn(tz);
+      const rt=rows[i].querySelector('.clk-row-t'); if(rt) rt.textContent=n.time;
+      const rd=rows[i].querySelector('.clk-row-day');
+      if(rd) rd.textContent=n.day+(n.rel?' · '+n.rel:'');
+    }
+  }catch(e){ console.warn('_clkTick:',e); }
+}
+function renderClockPanel(){
+  const b=document.getElementById('clk-body');
+  if(!b) return;
+  const panel=document.getElementById('clk-panel');
+  if(!panel||panel.style.display!=='block') return;
+  b.textContent='';
+  const el=function(tag,cls,txt){
+    const e=document.createElement(tag);
+    if(cls) e.className=cls;
+    if(txt!=null) e.textContent=txt;
+    return e;
+  };
+
+  // ── the 12/24 choice, as a control rather than a 13px icon ──
+  const fr=el('div','clk-fmt');
+  fr.appendChild(el('span','clk-lb','Show every time in Bella as'));
+  const grp=el('div','clk-seg');
+  [['24-hour',true,'14:30'],['12-hour',false,'2:30 PM']].forEach(function(o){
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.setAttribute('aria-pressed',_clockFormat24===o[1]?'true':'false');
+    btn.appendChild(el('b',null,o[0]));
+    btn.appendChild(el('em',null,o[2]));
+    btn.addEventListener('click',function(){ setClockFormat(o[1]); });
+    grp.appendChild(btn);
+  });
+  fr.appendChild(grp);
+  fr.appendChild(el('div','clk-note',
+    'This follows everywhere — the top bar, the weather hours, the converter.'));
+  b.appendChild(fr);
+
+  // ── here ──
+  const hereTz=(function(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }
+                            catch(e){ return 'Asia/Kolkata'; } })();
+  const me=_clkNowIn(hereTz);
+  const hw=el('div','clk-here');
+  hw.appendChild(el('div','clk-here-lb','Where you are'));
+  hw.appendChild(el('div','clk-here-t',me.time));
+  hw.appendChild(el('div','clk-here-d',me.day+' · '+_clkCity(hereTz)));
+  b.appendChild(hw);
+
+  // ── elsewhere ──
+  const list=clockList();
+  const sec=el('div','clk-sec');
+  sec.appendChild(el('h5',null,'Elsewhere'));
+  if(!list.length) sec.appendChild(el('div','clk-note','No other places yet. Add one below.'));
+  list.forEach(function(c){
+    const t=_clkNowIn(c.tz);
+    const row=el('div','clk-row');
+    row.setAttribute('data-tz',c.tz);      // so the tick can find it again
+    const L=el('div','clk-row-l');
+    L.appendChild(el('div','clk-row-city',c.label));
+    L.appendChild(el('div','clk-row-day',t.day+(t.rel?' · '+t.rel:'')));
+    const R=el('div','clk-row-t',t.time);
+    const x=document.createElement('button');
+    x.type='button'; x.className='clk-x'; x.textContent='✕';
+    x.setAttribute('aria-label','Remove '+c.label);
+    x.addEventListener('click',function(){ clockRemove(c.tz,c.label); });
+    row.appendChild(L); row.appendChild(R); row.appendChild(x);
+    sec.appendChild(row);
+  });
+  b.appendChild(sec);
+
+  /* ── ADD A PLACE, BY TYPING ──────────────────────────────────────────
+     Savio, 2026-10-28: "just like you placed a search option wherein i can
+     type and search please keep that, here i have to manually scroll down to
+     reach the country or city i need."
+     It was a <select> with every city in it -- fine with six entries,
+     unusable with seventy, and worse on a phone. Same shape as the converter
+     boxes he said work well: type, see matches, tap one. */
+  const add=el('div','clk-add-row');
+  const inp=document.createElement('input');
+  inp.type='text'; inp.id='clk-add'; inp.setAttribute('autocomplete','off');
+  inp.placeholder='Add a place — type a city or country…';
+  const res=el('div','clk-res');
+  res.id='clk-res';
+  const paint=function(q){
+    res.textContent='';
+    const needle=String(q||'').trim().toLowerCase();
+    const seen={}; let n=0;
+    for(let i=0;i<TIMEZONES.length&&n<40;i++){
+      const t=TIMEZONES[i];
+      const label=t.city+', '+(t.state&&t.state!==t.city?t.state+', ':'')+t.country;
+      const key=label.toLowerCase();
+      if(seen[key]) continue;
+      // Match on anything the person might actually type -- the city, the
+      // state, the country or the abbreviation.
+      const hay=(t.city+' '+(t.state||'')+' '+t.country+' '+(t.abbr||'')).toLowerCase();
+      if(needle && hay.indexOf(needle)===-1) continue;
+      seen[key]=1; n++;
+      const b=document.createElement('button');
+      b.type='button'; b.className='clk-res-row';
+      b.appendChild(el('span','clk-res-c',label));
+      b.appendChild(el('em',null,t.abbr||''));
+      b.addEventListener('mousedown',function(ev){ ev.preventDefault(); });
+      b.addEventListener('click',function(){ clockAdd(t.tz,label); });
+      res.appendChild(b);
+    }
+    if(!n) res.appendChild(el('div','clk-none','Nothing matches that.'));
+    res.classList.add('on');
+  };
+  inp.addEventListener('focus',function(){ paint(inp.value); });
+  inp.addEventListener('input',function(){ paint(inp.value); });
+  inp.addEventListener('keydown',function(e){
+    if(e.key!=='Enter') return;
+    const first=res.querySelector('.clk-res-row');
+    if(first) first.click();
+  });
+  // A click anywhere else puts the list away. Bound on the panel, not the
+  // document, so closing the panel takes the listener with it.
+  inp.addEventListener('blur',function(){
+    setTimeout(function(){ res.classList.remove('on'); },160);
+  });
+  add.appendChild(inp); add.appendChild(res);
+  b.appendChild(add);
+}
+
+// ══ CALENDAR ═══════════════════════════════════════════════════════════
+// His spec, 2026-10-28: "Calendar has to be able to open a monthly view,
+// yearly, daily for setting schedules, meeting reminders just like what
+// happens in our smart systems."
+//
+// IT IS BELLA'S OWN CALENDAR, NOT HIS PHONE'S, AND THAT IS NOT A SHORTCUT.
+// Firebase hands over a Google access token once at sign-in, good for about
+// an hour, with no refresh token -- browsers cannot be given one. His session
+// lasts days, so by the time he opened a calendar the token would be long
+// dead. Reading his real calendar needs a server-side OAuth flow Bella does
+// not have, plus Google's verification review for calendar scopes.
+//
+// What bridges the gap is the .ics file: every event here can be sent to the
+// calendar he actually uses, in one tap, with no sign-in and at no cost.
+// One way, Bella to him -- which is the direction that matters for something
+// Bella helped him arrange.
+
+const EVENTS_KEY='b_events';
+function _calKey(d){ return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+function calEvents(){
+  try{ const v=JSON.parse(localStorage.getItem(EVENTS_KEY)||'null');
+    return (v&&typeof v==='object')?v:{}; }catch(e){ return {}; }
+}
+function setCalEvents(v){
+  try{ localStorage.setItem(EVENTS_KEY,JSON.stringify(v)); }catch(e){}
+}
+let _calView='month', _calCursor=new Date(), _calPicked=null;
+
+function openCalendarPanel(){
+  closeOtherPanels('calendar');
+  document.getElementById('cal-overlay').classList.add('on');
+  document.getElementById('cal-panel').style.display='block';
+  _calCursor=new Date(); _calPicked=new Date(); _calView='month';
+  renderCalendar();
+}
+function closeCalendarPanel(){
+  document.getElementById('cal-overlay').classList.remove('on');
+  document.getElementById('cal-panel').style.display='none';
+}
+function calSetView(v){ _calView=v; renderCalendar(); }
+function calStep(n){
+  const d=new Date(_calCursor);
+  // The years grid steps a whole page of twelve, not one year.
+  if(_calView==='years') d.setFullYear(d.getFullYear()+n*12);
+  else if(_calView==='year') d.setFullYear(d.getFullYear()+n);
+  else if(_calView==='day') d.setDate(d.getDate()+n);
+  else d.setMonth(d.getMonth()+n);
+  _calCursor=d;
+  if(_calView==='day') _calPicked=new Date(d);
+  renderCalendar();
+}
+function calToday(){
+  _calCursor=new Date(); _calPicked=new Date(); renderCalendar();
+}
+const _CAL_M=['January','February','March','April','May','June','July',
+              'August','September','October','November','December'];
+const _CAL_D=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function renderCalendar(){
+  const b=document.getElementById('cal-body');
+  const h=document.getElementById('cal-head');
+  if(!b||!h) return;
+  b.textContent=''; h.textContent='';
+  const el=function(tag,cls,txt){
+    const e=document.createElement(tag);
+    if(cls) e.className=cls;
+    if(txt!=null) e.textContent=txt;
+    return e;
+  };
+  const ev=calEvents();
+
+  // ── the heading: what we are looking at, and the way through it ──
+  const nav=el('div','cal-nav');
+  const prev=document.createElement('button');
+  prev.type='button'; prev.className='cal-arrow'; prev.textContent='‹';
+  prev.setAttribute('aria-label','Previous'); prev.addEventListener('click',function(){ calStep(-1); });
+  const next=document.createElement('button');
+  next.type='button'; next.className='cal-arrow'; next.textContent='›';
+  next.setAttribute('aria-label','Next'); next.addEventListener('click',function(){ calStep(1); });
+  let label=_CAL_M[_calCursor.getMonth()]+' '+_calCursor.getFullYear();
+  if(_calView==='year') label=String(_calCursor.getFullYear());
+  if(_calView==='years'){
+    const base=Math.floor(_calCursor.getFullYear()/12)*12;
+    label=base+' – '+(base+11);
+  }
+  if(_calView==='day') label=_calPicked.getDate()+' '+_CAL_M[_calPicked.getMonth()]+' '+_calPicked.getFullYear();
+  nav.appendChild(prev);
+  /* Savio, 2026-10-28: "can we also have a facility where when i click 2026
+     all years open up and when i click the required year the Jan, Feb etc
+     appear". The arrows still step one at a time; this is the way to jump.
+     The heading is the control, which is where people already tap. */
+  if(_calView==='year'||_calView==='month'){
+    const lb=document.createElement('button');
+    lb.type='button'; lb.className='cal-label cal-label-btn';
+    lb.textContent=label;
+    lb.title='Choose a year';
+    lb.addEventListener('click',function(){ calSetView('years'); });
+    nav.appendChild(lb);
+  }else{
+    nav.appendChild(el('div','cal-label',label));
+  }
+  nav.appendChild(next);
+  h.appendChild(nav);
+
+  const tabs=el('div','cal-tabs');
+  [['day','Day'],['month','Month'],['year','Year']].forEach(function(v){
+    const t=document.createElement('button');
+    t.type='button'; t.textContent=v[1];
+    // The years grid is a way INTO the year view, so it keeps Year lit.
+    t.setAttribute('aria-pressed',
+      (_calView===v[0]||(_calView==='years'&&v[0]==='year'))?'true':'false');
+    t.addEventListener('click',function(){ calSetView(v[0]); });
+    tabs.appendChild(t);
+  });
+  const td=document.createElement('button');
+  td.type='button'; td.className='cal-today'; td.textContent='Today';
+  td.addEventListener('click',calToday);
+  tabs.appendChild(td);
+  h.appendChild(tabs);
+
+  if(_calView==='years'){
+    const base=Math.floor(_calCursor.getFullYear()/12)*12;
+    const g=el('div','cal-year');
+    const thisYear=new Date().getFullYear();
+    for(let i=0;i<12;i++){
+      const yy=base+i;
+      const cell=document.createElement('button');
+      cell.type='button'; cell.className='cal-ycell';
+      if(yy===thisYear) cell.classList.add('is-today');
+      if(yy===_calCursor.getFullYear()) cell.setAttribute('aria-pressed','true');
+      cell.appendChild(el('b',null,String(yy)));
+      let n=0;
+      for(let m=1;m<=12;m++) for(let d=1;d<=31;d++){
+        const k=yy+'-'+m+'-'+d;
+        if(ev[k]&&ev[k].length) n+=ev[k].length;
+      }
+      if(n) cell.appendChild(el('em',null,n+(n===1?' entry':' entries')));
+      cell.addEventListener('click',function(){
+        _calCursor=new Date(yy,_calCursor.getMonth(),1);
+        _calView='year'; renderCalendar();
+      });
+      g.appendChild(cell);
+    }
+    b.appendChild(g);
+    return;
+  }
+
+  if(_calView==='year'){
+    const g=el('div','cal-year');
+    for(let m=0;m<12;m++){
+      const cell=document.createElement('button');
+      cell.type='button'; cell.className='cal-ycell';
+      cell.appendChild(el('b',null,_CAL_M[m].slice(0,3)));
+      // how many days of that month carry something
+      let n=0;
+      for(let d=1;d<=31;d++){
+        const k=_calCursor.getFullYear()+'-'+(m+1)+'-'+d;
+        if(ev[k]&&ev[k].length) n+=ev[k].length;
+      }
+      if(n) cell.appendChild(el('em',null,n+(n===1?' entry':' entries')));
+      cell.addEventListener('click',function(){
+        _calCursor=new Date(_calCursor.getFullYear(),m,1);
+        _calView='month'; renderCalendar();
+      });
+      g.appendChild(cell);
+    }
+    b.appendChild(g);
+    return;
+  }
+
+  if(_calView==='month'){
+    const g=el('div','cal-grid');
+    _CAL_D.forEach(function(d){ g.appendChild(el('div','cal-dow',d)); });
+    const y=_calCursor.getFullYear(), m=_calCursor.getMonth();
+    const first=new Date(y,m,1);
+    // Monday-first, which is how a week is read here.
+    let lead=(first.getDay()+6)%7;
+    const days=new Date(y,m+1,0).getDate();
+    const today=new Date();
+    for(let i=0;i<lead;i++) g.appendChild(el('div','cal-pad',''));
+    for(let d=1;d<=days;d++){
+      const cell=document.createElement('button');
+      cell.type='button'; cell.className='cal-cell';
+      const key=y+'-'+(m+1)+'-'+d;
+      const isToday=(today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===d);
+      const isPicked=(_calPicked&&_calPicked.getFullYear()===y&&
+                      _calPicked.getMonth()===m&&_calPicked.getDate()===d);
+      if(isToday) cell.classList.add('is-today');
+      if(isPicked) cell.setAttribute('aria-pressed','true');
+      cell.appendChild(el('span','cal-n',String(d)));
+      const n=(ev[key]||[]).length;
+      if(n){
+        const dot=el('span','cal-dot','');
+        dot.setAttribute('aria-label',n+' entries');
+        cell.appendChild(dot);
+      }
+      cell.addEventListener('click',function(){
+        _calPicked=new Date(y,m,d); _calView='day'; _calCursor=new Date(y,m,d);
+        renderCalendar();
+      });
+      g.appendChild(cell);
+    }
+    b.appendChild(g);
+    // the chosen day's entries, under the month, so a tap never loses context
+    b.appendChild(_calDayList(_calPicked||new Date(),true));
+    return;
+  }
+
+  b.appendChild(_calDayList(_calPicked||new Date(),false));
+}
+
+function _calDayList(d,compact){
+  const el=function(tag,cls,txt){
+    const e=document.createElement(tag);
+    if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e;
+  };
+  const wrap=el('div','cal-day');
+  const key=_calKey(d);
+  const ev=calEvents();
+  const items=(ev[key]||[]).slice().sort(function(a,b){
+    return String(a.time||'').localeCompare(String(b.time||'')); });
+  wrap.appendChild(el('h5',null,
+    (compact?'':'')+d.getDate()+' '+_CAL_M[d.getMonth()]+' '+d.getFullYear()));
+  if(!items.length) wrap.appendChild(el('div','cal-none','Nothing planned.'));
+  items.forEach(function(it){
+    const row=el('div','cal-ev');
+    const L=el('div','cal-ev-l');
+    L.appendChild(el('div','cal-ev-t',it.title||'(untitled)'));
+    const meta=[];
+    if(it.time) meta.push(_calShowTime(it.time));
+    if(it.note) meta.push(it.note);
+    if(meta.length) L.appendChild(el('div','cal-ev-m',meta.join(' · ')));
+    row.appendChild(L);
+    const ics=document.createElement('button');
+    ics.type='button'; ics.className='cal-ics'; ics.textContent='Add to my calendar';
+    ics.addEventListener('click',function(){ calExportIcs(key,it.id); });
+    const del=document.createElement('button');
+    del.type='button'; del.className='cal-del'; del.textContent='✕';
+    del.setAttribute('aria-label','Delete '+(it.title||'entry'));
+    del.addEventListener('click',function(){ calDelete(key,it.id); });
+    row.appendChild(ics); row.appendChild(del);
+    wrap.appendChild(row);
+  });
+
+  // ── add one ──
+  const form=el('div','cal-form');
+  const ti=document.createElement('input');
+  ti.type='text'; ti.id='cal-new-title'; ti.placeholder='What is it?';
+  const tm=document.createElement('input');
+  tm.type='time'; tm.id='cal-new-time';
+  const nt=document.createElement('input');
+  nt.type='text'; nt.id='cal-new-note'; nt.placeholder='Note (optional)';
+  const addb=document.createElement('button');
+  addb.type='button'; addb.className='cal-add'; addb.textContent='Add';
+  addb.addEventListener('click',function(){ calAdd(key); });
+  ti.addEventListener('keydown',function(e){ if(e.key==='Enter') calAdd(key); });
+  form.appendChild(ti); form.appendChild(tm); form.appendChild(nt); form.appendChild(addb);
+  wrap.appendChild(form);
+  return wrap;
+}
+
+// The stored time is always 24-hour; only the SHOWING of it follows his
+// choice. Storing it formatted would make the preference impossible to change
+// afterwards.
+function _calShowTime(hhmm){
+  const p=String(hhmm||'').split(':');
+  if(p.length<2) return String(hhmm||'');
+  let h=Number(p[0]); const m=p[1];
+  if(_clockFormat24) return String(h).padStart(2,'0')+':'+m;
+  const ap=h>=12?'PM':'AM'; h=h%12||12;
+  return String(h).padStart(2,'0')+':'+m+' '+ap;
+}
+function calAdd(key){
+  const t=document.getElementById('cal-new-title');
+  const tm=document.getElementById('cal-new-time');
+  const nt=document.getElementById('cal-new-note');
+  const title=(t&&t.value||'').trim();
+  if(!title){ if(t) t.focus(); return; }
+  const ev=calEvents();
+  if(!Array.isArray(ev[key])) ev[key]=[];
+  ev[key].push({id:'e'+Date.now()+Math.floor(Math.random()*1000),
+    title:title,time:(tm&&tm.value)||'',note:(nt&&nt.value||'').trim()});
+  setCalEvents(ev);
+  renderCalendar();
+}
+function calDelete(key,id){
+  const ev=calEvents();
+  if(!Array.isArray(ev[key])) return;
+  ev[key]=ev[key].filter(function(x){ return x.id!==id; });
+  if(!ev[key].length) delete ev[key];
+  setCalEvents(ev);
+  renderCalendar();
+}
+
+/* THE BRIDGE TO THE CALENDAR HE ACTUALLY USES.
+   A .ics file opens in iOS Calendar, Apple Calendar and Google Calendar and
+   offers to add the event. No sign-in, no OAuth, no cost, works today -- and
+   it is the answer to "can the User be given an option to sync Events
+   recorded in Bella". */
+function _icsEsc(s){
+  return String(s==null?'':s)
+    .replace(/\\/g,'\\\\').replace(/;/g,'\\;')
+    .replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+}
+// RFC 5545 wants lines folded at 75 octets, continued with a leading space.
+function _icsFold(line){
+  if(line.length<=74) return line;
+  let out=line.slice(0,74), rest=line.slice(74);
+  while(rest.length){ out+='\r\n '+rest.slice(0,73); rest=rest.slice(73); }
+  return out;
+}
+function _icsStamp(d){
+  const p=function(n){ return String(n).padStart(2,'0'); };
+  return d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+'T'+
+         p(d.getUTCHours())+p(d.getUTCMinutes())+p(d.getUTCSeconds())+'Z';
+}
+function calExportIcs(key,id){
+  try{
+    const ev=calEvents();
+    const it=(ev[key]||[]).find(function(x){ return x.id===id; });
+    if(!it) return;
+    const parts=key.split('-').map(Number);
+    const hm=String(it.time||'09:00').split(':');
+    const start=new Date(parts[0],parts[1]-1,parts[2],Number(hm[0])||9,Number(hm[1])||0);
+    const end=new Date(start.getTime()+60*60*1000);
+    const p=function(n){ return String(n).padStart(2,'0'); };
+    // LOCAL (floating) time on purpose: a 9am appointment is 9am where he is,
+    // and a floating time cannot be shifted by the phone's zone.
+    const local=function(d){
+      return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'T'+
+             p(d.getHours())+p(d.getMinutes())+'00';
+    };
+    const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Bella//Calendar//EN',
+      'CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',
+      'UID:'+id+'@bella.local',
+      'DTSTAMP:'+_icsStamp(new Date()),
+      'DTSTART:'+local(start),
+      'DTEND:'+local(end),
+      _icsFold('SUMMARY:'+_icsEsc(it.title))];
+    if(it.note) lines.push(_icsFold('DESCRIPTION:'+_icsEsc(it.note)));
+    lines.push('END:VEVENT','END:VCALENDAR');
+    const blob=new Blob([lines.join('\r\n')+'\r\n'],{type:'text/calendar;charset=utf-8'});
+    const name=String(it.title||'event').replace(/[^A-Za-z0-9 \-_]/g,'')
+      .trim().replace(/\s+/g,'-').slice(0,40)||'event';
+    _bcSaveBlob(blob,name+'.ics');
+  }catch(e){ console.warn('calExportIcs failed:',e); }
+}
+
 function initClock(){
   const saved = localStorage.getItem('b_clock_fmt');
   if(saved !== null) _clockFormat24 = saved === '24';
@@ -14788,7 +17375,8 @@ function updateClock(){
   } else {
     const ampm = h >= 12 ? 'PM' : 'AM';
     h = h % 12 || 12;
-    timeStr = h + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+    // Two digits — see the note on _cvClock.
+    timeStr = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ' ' + ampm;
   }
   // Timezone abbreviation
   const tzName = Intl.DateTimeFormat('en',{timeZoneName:'short'}).format(now).split(' ').pop();
@@ -14802,6 +17390,19 @@ function toggleClockFormat(){
   _clockFormat24 = !_clockFormat24;
   localStorage.setItem('b_clock_fmt', _clockFormat24 ? '24' : '12');
   updateClock();
+  /* HIS POINT, 2026-10-28: the choice governs EVERY time Bella shows, not just
+     the strip. _wxClock and _cvClock already read _clockFormat24, so the values
+     were right — but a panel ALREADY ON SCREEN keeps whatever it last painted,
+     so flipping the setting with the weather open changed the top bar and
+     nothing else, and the setting looked broken. Repaint what is open. */
+  try{
+    const wp=document.getElementById('wx-panel');
+    if(wp && wp.style.display === 'block' && typeof renderWxBody === 'function') renderWxBody();
+  }catch(e){ console.warn('clock/weather repaint:', e); }
+  try{
+    const cp=document.getElementById('conv-panel');
+    if(cp && cp.style.display === 'block' && typeof doTZConvert === 'function') doTZConvert();
+  }catch(e){ console.warn('clock/converter repaint:', e); }
 }
 
 function initLocation(){
@@ -14981,6 +17582,19 @@ function _wxRain(mm){
   if(mm === null || mm === undefined) return '';
   return (mm < 1 ? mm.toFixed(1) : Math.round(mm)) + ' mm';
 }
+/* The same figures with the unit left off, for the hourly table where the
+   HEADING carries the unit once instead of every row carrying it seven times.
+   _wxRain and _wxWind keep their units -- they are still used in the day
+   summary and in the sentence under the table, where there is no heading. */
+function _wxRainN(mm){
+  if(mm === null || mm === undefined) return '';
+  return String(mm < 1 ? mm.toFixed(1) : Math.round(mm));
+}
+function _wxWindN(v){
+  if(v === null || v === undefined) return '—';
+  return String(_wxIsImperial() ? Math.round(v) : Math.round(v * 3.6));
+}
+function _wxWindUnit(){ return _wxIsImperial() ? 'mph' : 'km/h'; }
 const _WX_COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
 function _wxDir(deg){
   if(deg === null || deg === undefined) return '';
@@ -15020,7 +17634,7 @@ function _wxClock(d){
   let h = d.getHours(); const m = String(d.getMinutes()).padStart(2,'0');
   if(_clockFormat24) return String(h).padStart(2,'0') + ':' + m;
   const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
-  return h + ':' + m + ' ' + ap;
+  return String(h).padStart(2,'0') + ':' + m + ' ' + ap;
 }
 
 // TRAP. OpenWeather's forecast timestamps are UTC, and the backend passes
@@ -15452,24 +18066,44 @@ function pickFoundPlace(i){
 // them to five rows and discarding the rest.
 function _wxHours(d){
   const D = _wxDeg();
+  let _hasPop = false;
   const rows = (d.slots || []).map(s => {
     const f = s.f;
     const pop = _wxPop(f.pop);
+    if (pop != null) _hasPop = true;
     const dir = _wxDir(f.windDeg);
     return '<div class="wx-hr">' +
       '<span class="wx-hr-t">' + _expEsc(_wxClock(s.when)) + '</span>' +
       '<span class="wx-hr-i">' + _wxIcon(f.icon) + '</span>' +
       '<span class="wx-hr-temp">' + _wxTemp(f.temp) + D + '</span>' +
-      '<span class="wx-hr-pop">' + (pop != null ? 'Rain ' + pop + '%' : '') + '</span>' +
-      '<span class="wx-hr-rain">' + (f.rain3h != null ? _expEsc(_wxRain(f.rain3h)) : '') + '</span>' +
-      '<span class="wx-hr-wind">' + _expEsc((dir ? dir + ' ' : '') + _wxWind(f.windSpeed)) + '</span>' +
+      // The heading says RAIN and MM, so the row does not repeat the word or
+      // the unit on all seven lines. That is what buys the width a 320px
+      // phone needs -- "Rain 100%" and "1.2 mm" were overflowing the row.
+      '<span class="wx-hr-pop">' + (pop != null ? pop + '%' : '') + '</span>' +
+      '<span class="wx-hr-rain">' + (f.rain3h != null ? _expEsc(_wxRainN(f.rain3h)) : '') + '</span>' +
+      '<span class="wx-hr-wind">' + _expEsc((dir ? dir + ' ' : '') + _wxWindN(f.windSpeed)) + '</span>' +
       '</div>';
   }).join('');
-  return '<div class="wx-hours">' + rows +
+  // The heading row uses the SAME grid tracks as the data rows, so the labels
+  // sit exactly above the figures they name.
+  const head = '<div class="wx-hrh">' +
+    '<span>Time</span><span></span><span>Temp</span>' +
+    '<span>Rain</span><span class="wx-hrh-mm">mm</span>' +
+    '<span>Wind ' + _expEsc(_wxWindUnit()) + '</span></div>';
+  return '<div class="wx-hours">' + head + rows +
     '<div class="wx-hours-note">Readings every three hours. ' +
     // The two water columns side by side are the confusing part, so they are
     // named outright rather than left to the reader.
-    (rows.indexOf('Rain ') !== -1 ? 'The percentage is the chance of rain; '
+    /* A REGRESSION THE OLD WEATHER SUITE CAUGHT, 2026-10-28, and nothing
+       else would have. This sentence answers the question Savio actually
+       asked on 26 Oct -- "what does the water droplet mean?" -- and it was
+       switched on by LOOKING FOR THE WORD "Rain " IN THE ROWS. Moving that
+       word up into a column heading to buy width on a 320px phone therefore
+       turned the explanation off silently: the heading appeared, the
+       sentence vanished, and no check of mine noticed.
+       It now keys off whether there IS a percentage, which is the thing it
+       was always really about. */
+    (_hasPop ? 'The percentage is the chance of rain; '
       + 'the millimetres are how much. ' : '') +
     (d.rain != null && d.rain > 0 ? _expEsc(_wxRain(d.rain)) + ' expected across the day.' : '') +
     '</div></div>';
@@ -15699,6 +18333,9 @@ function forgetPlaces(){
 // SETTING: pick Birmingham today and tomorrow's top bar must not still be
 // showing Birmingham's 13 degrees while he stands in Kolkata. The RECENT list
 // persists instead, so coming back is one tap. His call, 2026-10-27.
+// TIGHTENED 2026-10-29, also his call: the choice does not even outlive the
+// PANEL now -- openWeatherPanel() clears it, so every open starts where he
+// actually is. See the note there.
 function chosenPlace(){
   try{
     const p = JSON.parse(sessionStorage.getItem('b_wx_place') || 'null');
@@ -16294,6 +18931,7 @@ function _plKm(me,p){
 }
 
 function openPlacesPanel(){
+  closeOtherPanels('places');
   document.getElementById('pl-overlay').classList.add('on');
   document.getElementById('pl-panel').style.display='block';
   _plRenderHead();
@@ -16460,7 +19098,71 @@ function _plFoot(n,cached){
     (cached?' <strong>Held from earlier in this session, so this cost nothing.</strong>':'');
 }
 
+/* ONE DISPLAY AT A TIME — his instruction, 2026-10-28: "whatever i press on
+   the top bar the other display automatically shuts and opens the one the User
+   has asked", because closing them by hand on a phone is a tedious process.
+   MEASURED FIRST: opening Weather and then Convert left BOTH panels on screen
+   with both overlays lit, which is exactly what he saw.
+
+   Each panel is closed through its OWN close function and never by hiding the
+   element, because those functions are where the radar animation is stopped,
+   the microphone is released and a live B-Meet recording is torn down. Hiding
+   the panel would leave all three running behind a shut door — the opposite of
+   "light on devices". */
+const _PANELS = [
+  { k:'weather', is:function(){ const p=document.getElementById('wx-panel');
+      return !!(p && p.style.display === 'block'); },
+    close:function(){ closeWeatherPanel(); } },
+  { k:'convert', is:function(){ const p=document.getElementById('conv-panel');
+      return !!(p && p.style.display === 'block'); },
+    close:function(){ closeConverterPanel(); } },
+  { k:'places',  is:function(){ const p=document.getElementById('pl-panel');
+      return !!(p && p.style.display === 'block'); },
+    close:function(){ closePlacesPanel(); } },
+  { k:'tools',   is:function(){ return !!document.getElementById('tl-overlay'); },
+    close:function(){ closeTools(); } },
+  { k:'clock',   is:function(){ const p=document.getElementById('clk-panel');
+      return !!(p && p.style.display === 'block'); },
+    close:function(){ closeClockPanel(); } },
+  { k:'calendar',is:function(){ const p=document.getElementById('cal-panel');
+      return !!(p && p.style.display === 'block'); },
+    close:function(){ closeCalendarPanel(); } }
+];
+function closeOtherPanels(keep){
+  for(let i=0;i<_PANELS.length;i++){
+    const p=_PANELS[i];
+    if(p.k===keep) continue;
+    // One panel refusing to shut must not stop the rest from shutting.
+    try{ if(p.is()) p.close(); }
+    catch(e){ console.warn('closeOtherPanels/'+p.k+':', e); }
+  }
+  // The top-bar menu is a dropdown over the same strip, so it goes too.
+  try{
+    const m=document.getElementById('user-menu-overlay');
+    if(m && m.classList.contains('on') && typeof closeUserMenu==='function') closeUserMenu();
+  }catch(e){}
+}
+
 function openWeatherPanel(){
+  closeOtherPanels('weather');
+  /* IT ALWAYS OPENS WHERE HE IS. Savio, 2026-10-29: "Shows Birmingham when i
+     opened why? Even if i choose any other country inside when i open it
+     should auto reset to my location."
+     The chosen place was already SESSION storage rather than local, on his
+     own call of 27 Oct, so it never survived to the next day. But within one
+     browser session it outlived the panel: look up Birmingham, shut the
+     panel, open it an hour later and Birmingham was still there.
+     Looking somewhere up is an action that belongs to that viewing, not even
+     to the rest of the session. Coming back costs one tap, because the
+     recently-used list persists and is untouched by this. */
+  try{
+    if(chosenPlace()){
+      sessionStorage.removeItem('b_wx_place');
+      // The held readings are Birmingham's; keeping them would paint his own
+      // city's name over another city's numbers.
+      _wxData = null; _wxErr = '';
+    }
+  }catch(e){ console.warn('weather reset on open:', e); }
   document.getElementById('wx-overlay').classList.add('on');
   document.getElementById('wx-panel').style.display = 'block';
   _wxSetMotion(true);           // the icons only move while he is looking
@@ -16737,7 +19439,52 @@ function _imgDropZone(){
 }
 try{_imgBind();_imgDropZone();}catch(e){}
 
+/* A PREFILLED SEARCH BOX MUST EMPTY ITSELF WHEN IT IS TAPPED.
+   Savio, 2026-10-28: "when anything needs to be typed in an already typed box
+   for search purposes the moment the cursor is put in the selected field the
+   box clears out itself ensuring no double typing happens... in the Converter
+   Section i tried typing in Units as well as Timezones... it typed in the same
+   box, the other way is deleting what was typed there which is time consuming."
+   All six converter boxes open carrying a value -- "INR - Indian Rupee",
+   "Asia/Kolkata" -- so a tap left the cursor beside existing text and the
+   filter then searched for the two mashed together.
+
+   THE TRAP THIS AVOIDS: if the box merely emptied, tapping in and tapping out
+   again without choosing would silently throw away the setting and the
+   conversion would break. So the old value is held and PUT BACK unless
+   something was typed or chosen.
+
+   The restore waits a moment on purpose. A list item is chosen with a click,
+   and blur fires BEFORE that click lands -- restoring immediately would
+   overwrite the very choice being made. */
+function _clearOnFocus(el){
+  if(!el||el._coaBound) return;
+  el._coaBound=true;
+  el.addEventListener('focus',function(){
+    if(el.value){
+      el._coaPrev=el.value;
+      el.value='';
+      // Clearing in code does NOT fire `input`, so the list would stay
+      // filtered by the text that is no longer there.
+      try{ el.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){}
+    }
+  });
+  el.addEventListener('blur',function(){
+    setTimeout(function(){
+      if(!el.value && el._coaPrev) el.value=el._coaPrev;
+      el._coaPrev=null;
+    },200);
+  });
+}
+function _bindClearOnFocus(root){
+  try{
+    const sc=(root||document).querySelectorAll('.conv-search');
+    for(let i=0;i<sc.length;i++) _clearOnFocus(sc[i]);
+  }catch(e){ console.warn('_bindClearOnFocus:',e); }
+}
+
 function openConverterPanel(){
+  closeOtherPanels('convert');
   document.getElementById('conv-overlay').classList.add('on');
   document.getElementById('conv-panel').style.display='block';
   // Set currency defaults
@@ -16759,7 +19506,13 @@ function openConverterPanel(){
   const now=new Date();
   const tEl=document.getElementById('tz-time-in');
   if(tEl) tEl.value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  // Today, so it opens on a complete answer rather than an empty dash.
+  const dEl=document.getElementById('tz-date-in');
+  if(dEl) dEl.value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   buildUnitSearchLists();
+  // Bound after the values are set, so every box that opens carrying text
+  // knows to clear itself. Idempotent -- reopening does not stack listeners.
+  _bindClearOnFocus(document.getElementById('conv-panel'));
   // Paint the Currency tab BEFORE the rate request goes out, so the panel never
   // opens on a bare dash while the network is in flight. fetchExchangeRates()
   // calls doConvert() again the moment it has an answer.
@@ -16812,11 +19565,17 @@ function _cvUnitLabel(label,amt){
 
 // Same preference as the weather panel's sunrise/sunset, but this one is handed
 // hours and minutes in a FOREIGN zone, so it cannot use _wxClock's getHours().
+/* TWO DIGITS, ALWAYS. Savio, 2026-10-29: "whenever time is written its
+   01:00 AM to 02:00 PM or 01:00 to 02:00 (24hrs clock)... it should not
+   show 1:00 AM or 1:00 either in the 12 or 24 hrs clock."
+   It is also what finally makes a column of times line up: every string
+   is then the same length, so the painted glyphs align and not merely
+   the boxes around them. Measuring the box is what let this through. */
 function _cvClock(h,m){
   const mm=String(m).padStart(2,'0');
   if(_clockFormat24) return String(h).padStart(2,'0')+':'+mm;
   const ap = h>=12 ? 'PM' : 'AM'; const hh = h%12 || 12;
-  return hh+':'+mm+' '+ap;
+  return String(hh).padStart(2,'0')+':'+mm+' '+ap;
 }
 
 // The typed amount, shown as typed. Plain toLocaleString() caps at three
@@ -16919,14 +19678,25 @@ function doUnitConvert(){
 
 function doTZConvert(){
   const timeIn=document.getElementById('tz-time-in').value;
+  const dateEl=document.getElementById('tz-date-in');
+  const dateIn=dateEl?dateEl.value:'';
   if(!timeIn){
-    _cvPaint('tz-result','tz-result-sub','tz-diff','—','','Pick a time below.');
+    _cvPaint('tz-result','tz-result-sub','tz-diff','—','','Pick a date and a time below.');
     return;
   }
   try{
     const[h,m]=timeIn.split(':').map(Number);
+    // The chosen DATE, read as a plain calendar date in the source zone --
+    // never through new Date('yyyy-mm-dd'), which parses as UTC midnight and
+    // lands on the previous day for anyone west of Greenwich.
+    let ymd=null;
+    if(dateIn){
+      const p=dateIn.split('-').map(Number);
+      if(p.length===3&&p.every(function(x){return isFinite(x);}))
+        ymd={y:p[0],mo:p[1],d:p[2]};
+    }
     // The typed time is wall-clock time in the SOURCE zone, not in the browser's zone.
-    const inst=_instantFromWallTime(h,m,_tzFrom);
+    const inst=_instantFromWallTime(h,m,_tzFrom,ymd);
     const fromAbbr=tzAbbrAt(inst,_tzFrom);
     const toAbbr=tzAbbrAt(inst,_tzTo);
     const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -16941,10 +19711,24 @@ function doTZConvert(){
     const diffH=Math.floor(absDiff/60);const diffM=absDiff%60;
     const diffStr=diffM>0?`${diffSign}${diffH}h ${diffM}m`:`${diffSign}${diffH}h`;
     // Answer first: the time you asked for IS the big line.
+    /* NAMED PLACES, NOT JUST ABBREVIATIONS. His instruction: the answer
+       should carry "day, dates, time & countries". "CST" means nothing to
+       most people and two different CSTs exist; "New York, United States"
+       cannot be misread. _clkCity resolves the city and country and already
+       handles the deprecated zone ids the browser reports. */
+    const fromPlace=(typeof _clkCity==='function')?_clkCity(_tzFrom):_tzFrom;
+    const toPlace=(typeof _clkCity==='function')?_clkCity(_tzTo):_tzTo;
+    // Plain English beats a signed number: "behind" is instantly readable,
+    // "-9h 30m" needs a moment's thought about which way.
+    const way=diffMins===0?'the same time as'
+      :(diffMins>0?'ahead of':'behind');
+    const diffPlain=diffMins===0
+      ? toPlace+' is the same time as '+fromPlace
+      : toPlace+' is '+diffStr.replace(/^[+-]/,'')+' '+way+' '+fromPlace;
     _cvPaint('tz-result','tz-result-sub','tz-diff',
       _cvClock(tp.h,tp.mi),
-      `${toAbbr} · ${toDayStr}`,
-      `${_cvClock(fp.h,fp.mi)} ${fromAbbr}, ${fromDayStr}  ·  time difference ${diffStr}`);
+      `${toDayStr} · ${toPlace} (${toAbbr})`,
+      `${_cvClock(fp.h,fp.mi)} on ${fromDayStr} · ${fromPlace} (${fromAbbr})   ·   ${diffPlain}`);
   }catch(e){
     _cvPaint('tz-result','tz-result-sub','tz-diff','—','','Conversion error.');
   }
@@ -16999,15 +19783,29 @@ function getUTCOffset(tz){
 // "GMT+5:30" for zones with no common abbreviation — fall back to our table there.
 function tzAbbrAt(instant,tz){
   const stat=(TIMEZONES.find(x=>x.tz===tz)||{}).abbr||'';
-  try{
-    const part=new Intl.DateTimeFormat('en-US',{timeZone:tz,timeZoneName:'short'}).formatToParts(instant).find(x=>x.type==='timeZoneName');
-    const live=part?part.value:'';
-    return(!live||/^GMT/i.test(live))?stat:live;
-  }catch(e){return stat;}
+  /* TWO LOCALES, ON PURPOSE. en-US names American zones properly (EDT, EST,
+     CST) but returns "GMT+1" for London, which fell back to the STATIC "GMT"
+     and labelled a July afternoon in London as GMT when it is BST. The time
+     was right -- only the label lied, which is the kind of error nobody
+     checks. en-GB says BST, and for zones it does not name (it gives
+     "GMT+5:30" for Kolkata) the static abbreviation still takes over, so IST
+     and the rest are untouched. Measured on both a July and a January date. */
+  const read=function(loc){
+    try{
+      const part=new Intl.DateTimeFormat(loc,{timeZone:tz,timeZoneName:'short'})
+        .formatToParts(instant).find(function(x){ return x.type==='timeZoneName'; });
+      const live=part?part.value:'';
+      return (!live||/^GMT/i.test(live))?'':live;
+    }catch(e){ return ''; }
+  };
+  return read('en-US')||read('en-GB')||stat;
 }
 // Resolve "HH:MM today, in zone tz" to a real instant.
-function _instantFromWallTime(h,m,tz){
-  const today=_tzParts(new Date(),tz);
+function _instantFromWallTime(h,m,tz,ymd){
+  // `ymd` is the date the wall-clock time belongs to, in the SOURCE zone.
+  // Without it this could only ever answer about today, which is the one day
+  // nobody needs a converter for.
+  const today=(ymd&&ymd.y)?ymd:_tzParts(new Date(),tz);
   const wall=Date.UTC(today.y,today.mo-1,today.d,h,m,0);
   let inst=new Date(wall-_tzOffsetMin(new Date(),tz)*60000);
   // Re-resolve once using the offset actually in force at that instant (DST edges).
@@ -17522,6 +20320,13 @@ html body.dark #conv-panel .conv-tab-btn.active-tab{
    layout; inside this grid that reads as a stray gap under From and To. */
 #conv-panel .cv-ctl .conv-search{margin-bottom:0}
 #conv-panel .cv-ctl{display:grid;grid-template-columns:92px 1fr 42px 1fr;gap:10px;align-items:end}
+/* The Time tab carries four controls now, so it gets two rows of its own:
+   WHEN (date and time) above WHERE (from, swap, to). Explicit tracks, like
+   every other column in Bella -- nothing sized by its own content. */
+#conv-time .cv-when{display:grid;grid-template-columns:1fr 132px;gap:10px;
+  align-items:end;margin-bottom:12px}
+#conv-time .cv-zones{display:grid;grid-template-columns:1fr 42px 1fr;gap:10px;
+  align-items:end}
 #conv-panel .cv-swap-cell{display:flex;align-items:end;justify-content:center;padding-bottom:1px}
 #conv-panel .cv-swap{width:38px;height:38px;border-radius:10px;border:1.5px solid var(--border);
   background:#FAF8F4;color:#0B2545;font-size:15px;line-height:1;cursor:pointer;flex-shrink:0;
@@ -17544,6 +20349,9 @@ html body.dark #conv-panel .cv-swap{background:#12233B!important;color:#F5E6C8!i
    kills the measured 37px unit fields: each control gets the full panel. */
 @media(max-width:560px){
   #conv-panel .cv-ctl{grid-template-columns:1fr}
+  /* One full-width column on a phone, same as every other tab: nothing here
+     shares a row below 560px, so nothing can truncate. */
+  #conv-time .cv-when,#conv-time .cv-zones{grid-template-columns:1fr}
   #conv-panel .cv-cat{max-width:none}
   #conv-panel .cv-swap-cell{justify-content:flex-start}
   #conv-panel .cv-swap{width:100%;height:34px}
@@ -17607,17 +20415,38 @@ html body.dark #conv-panel .cv-swap{background:#12233B!important;color:#F5E6C8!i
 .wx-drop{font-size:10px}
 
 #wx-panel .wx-hours{padding:2px 12px 10px;border-top:1px dashed var(--border)}
-#wx-panel .wx-hr{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:11px;
-  border-bottom:1px solid rgba(0,0,0,.04)}
+/* THE HOURLY ROWS — rebuilt to his instruction, 2026-10-28: "the numbers have
+   to be in one straight line same text, font size, nothing moving extra left
+   or right, completely organized".
+   WHAT WAS WRONG, measured: the row was a flexbox whose first five cells were
+   left-aligned at fixed widths and whose LAST cell carried `flex:1` and
+   `text-align:right`, so the wind reading was shoved against the far edge
+   while everything else sat left. That is the left-and-right split he saw.
+   NOW: one CSS grid, identical column tracks on every row AND on the heading
+   row, so a column cannot drift between rows — which a flexbox with a growing
+   last cell can always do. Every cell is left-aligned at its own track and
+   `tabular-nums` makes each digit the same width, so the figures line up
+   vertically as a column of numbers rather than as ragged text. */
+#wx-panel .wx-hr,#wx-panel .wx-hrh{display:grid;
+  grid-template-columns:46px 26px 44px 46px 38px minmax(0,1fr);
+  align-items:center;gap:8px;padding:6px 0;font-size:11px}
+#wx-panel .wx-hr{border-bottom:1px solid rgba(0,0,0,.04)}
 #wx-panel .wx-hr:last-of-type{border-bottom:0}
-#wx-panel .wx-hr-t{width:46px;flex-shrink:0;font-weight:600;color:#0B2545;
-  font-variant-numeric:lining-nums}
-#wx-panel .wx-hr-i{width:26px;flex-shrink:0;text-align:center;font-size:14px;line-height:0}
-#wx-panel .wx-hr-temp{width:38px;flex-shrink:0;font-weight:600;color:#0B2545}
-#wx-panel .wx-hr-pop{width:72px;flex-shrink:0;color:#1B5E8C;font-weight:600}
-#wx-panel .wx-hr-rain{width:52px;flex-shrink:0;color:#5A6B8A}
-#wx-panel .wx-hr-wind{flex:1;min-width:0;text-align:right;color:#5A6B8A;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#wx-panel .wx-hr>span,#wx-panel .wx-hrh>span{min-width:0;text-align:left;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-variant-numeric:tabular-nums lining-nums}
+/* The heading row is what makes it read as organised, and it retires the
+   guesswork over the two water columns for good -- one is a percentage
+   chance, the other is millimetres. */
+#wx-panel .wx-hrh{padding:2px 0 5px;border-bottom:1px solid rgba(0,0,0,.10)}
+#wx-panel .wx-hrh>span{font-size:9.5px;font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;color:#5A6B8A}
+#wx-panel .wx-hr-t{font-weight:600;color:#0B2545}
+#wx-panel .wx-hr-i{text-align:center;font-size:14px;line-height:0}
+#wx-panel .wx-hr-temp{font-weight:600;color:#0B2545}
+#wx-panel .wx-hr-pop{color:#1B5E8C;font-weight:600}
+#wx-panel .wx-hr-rain{color:#5A6B8A}
+#wx-panel .wx-hr-wind{color:#5A6B8A}
 #wx-panel .wx-hours-note{font-size:10px;color:#5A6B8A;margin-top:8px;line-height:1.5}
 
 /* °C / °F. Same ID-keyed shape as #wx-tabs below, and for the same reason:
@@ -17804,12 +20633,13 @@ html body.dark #rv-attr a{color:#F5E6C8!important}
   #wx-panel .wx-day-temp{font-size:12px}
   #wx-panel .wx-day-name{font-size:11px}
   #wx-panel .wx-day-pop{font-size:11px}
-  #wx-panel .wx-hr{gap:6px}
+  /* The same six tracks, narrowed together. Set on the GRID, never on the
+     cells: a per-cell width is ignored by a grid track and the columns would
+     silently stay wide and start truncating. */
+  #wx-panel .wx-hr,#wx-panel .wx-hrh{gap:6px;
+    grid-template-columns:38px 24px 36px 38px minmax(0,1fr)}
+  #wx-panel .wx-hrh>span{font-size:9px}
   #wx-panel .wx-hours{padding:2px 10px 10px}
-  #wx-panel .wx-hr-t{width:40px}
-  #wx-panel .wx-hr-i{width:18px}
-  #wx-panel .wx-hr-temp{width:34px}
-  #wx-panel .wx-hr-pop{width:64px}
   #rv-map{height:240px}
   #wx-units button{padding:5px 8px}
 }
@@ -17832,7 +20662,14 @@ html body.dark #rv-attr a{color:#F5E6C8!important}
      out in the note under the hours, so nothing is lost, and the wind gets
      its 60px back instead of truncating to "SSW 17 km...". "Rain 42%" is
      wider than the droplet it replaced, and the wind column paid for it. */
-  #wx-panel .wx-hr-rain{display:none}
+  #wx-panel .wx-hr-rain,#wx-panel .wx-hrh-mm{display:none}
+  /* FIVE tracks, not six, from here down: a hidden child takes NO grid track,
+     so a six-track row slid the wind reading into the mm slot and left the
+     last track empty. Flexbox simply closed that gap; grid does not. The
+     heading loses its mm label in the same breath or the labels would sit
+     over the wrong columns. */
+  #wx-panel .wx-hr,#wx-panel .wx-hrh{
+    grid-template-columns:44px 26px 40px 44px minmax(0,1fr)}
   #wx-panel .wx-day-top{flex-wrap:wrap}
   #wx-panel .wx-day-name{order:1;width:auto;flex:1 0 auto}
   #wx-panel .wx-day-pop{order:2}
