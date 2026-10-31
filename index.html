@@ -10697,27 +10697,49 @@ function searchGifs(query){
       const grid=document.getElementById('gif-grid');
       const results=d.results||d.data||[];
       if(!results.length){grid.innerHTML='<div style="text-align:center;color:#5A6B8A;font-size:12px;padding:20px;grid-column:span 2">No GIFs found — try a different search</div>';return;}
-      grid.innerHTML=results.map(g=>{
-        // GIPHY RETURNS TWO URLS AND THIS PICKED THE WRONG ONE. `g.url` is the
-        // Giphy WEB PAGE (https://giphy.com/gifs/...); the actual animation is
-        // in g.images.*.url on media*.giphy.com. Because g.url always exists,
-        // the `||` chain always chose the page — so sending a GIF sent a link
-        // to a web page, which is exactly what Savio saw on 2026-10-31, and
-        // why the renderer refused it: a page is not an image.
-        // fixed_height is 200px tall, which suits a 220px bubble; the rest are
-        // fallbacks, and g.url is LAST so a page URL is only ever a last resort.
+      // THE RESULTS ARE HELD, AND THE TILE CARRIES ONLY AN INDEX.
+      // This used to interpolate the URL straight into an onclick attribute,
+      // which is a string from Giphy going into executable markup — a latent
+      // injection hole, and it would have broken outright on a title or URL
+      // containing a quote. An index cannot carry a payload.
+      _gifResults = results;
+      grid.innerHTML=results.map(function(g,i){
+        // GIPHY RETURNS TWO URLS AND THE OLD CODE PICKED THE WRONG ONE. `g.url`
+        // is the Giphy WEB PAGE; the animation is in g.images.*.url on
+        // media*.giphy.com. Because g.url always exists the `||` chain always
+        // chose the page, so sending a GIF sent a link to a web page — what
+        // Savio saw on 2026-10-31 — and the renderer rightly refused it,
+        // because a page is not an image.
         const _im=(g.images||{});
-        const url=((_im.fixed_height||_im.downsized_medium||_im.fixed_height_small||_im.original||{}).url)||g.url||'';
-        const preview=g.thumbnail||(g.images&&g.images.fixed_height_small&&g.images.fixed_height_small.url)||url;
-        return`<img src="${preview}" style="width:100%;border-radius:8px;cursor:pointer;transition:transform .15s" onclick="insertGif('${url}')" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'" loading="lazy">`;
+        const preview=g.thumbnail||(_im.fixed_height_small&&_im.fixed_height_small.url)||
+                      (_im.fixed_height&&_im.fixed_height.url)||'';
+        if(!preview) return '';
+        return '<img src="'+_escHtml(preview)+'" alt="GIF" loading="lazy" '+
+          'style="width:100%;border-radius:8px;cursor:pointer;transition:transform .15s" '+
+          'onclick="insertGif('+i+')" '+
+          'onmouseover="this.style.transform=\'scale(1.03)\'" '+
+          'onmouseout="this.style.transform=\'scale(1)\'">';
       }).join('');
     }catch{showGifError();}
   },500);
 }
 function showGifError(){document.getElementById('gif-grid').innerHTML='<div style="text-align:center;color:#5A6B8A;font-size:12px;padding:20px;grid-column:span 2">Could not load GIFs. Please try again.</div>';}
-function insertGif(url){
+let _gifResults=[];
+function insertGif(i){
+  const g=(_gifResults||[])[i];
+  if(!g) return;
+  const im=g.images||{};
+  // fixed_height is 200px tall, which suits a 220px bubble.
+  const url=((im.fixed_height||im.downsized_medium||im.fixed_height_small||im.original||{}).url)||'';
+  if(!url) return;
+  // SEND BELLA THE TITLE, because she cannot see the picture. Given only a
+  // media URL she invented a description and got it wrong — she called a bear
+  // waving "Hello!" a GIF saying "Thank you", confidently, with the image
+  // right there on screen. Giphy supplies a real title; a true caption beats a
+  // confident guess. It also reads as a caption under the GIF.
+  const title=String(g.title||'').replace(/\s+/g,' ').trim();
   const ti=document.getElementById('ti');
-  ti.value+=(ti.value?' ':'')+url;
+  ti.value+=(ti.value?' ':'')+url+(title?' '+title:'');
   arz(ti);
   ti.focus();
   document.getElementById('emoji-panel').style.display='none';
