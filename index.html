@@ -10725,7 +10725,70 @@ function searchGifs(query){
 }
 function showGifError(){document.getElementById('gif-grid').innerHTML='<div style="text-align:center;color:#5A6B8A;font-size:12px;padding:20px;grid-column:span 2">Could not load GIFs. Please try again.</div>';}
 let _gifResults=[];
-function insertGif(i){
+// The GIF waiting to be sent. One at a time, like the text box itself.
+let _pendingGif=null;
+function _renderGifChip(url){
+  const bar=document.getElementById('fbar');
+  if(!bar) return;
+  bar.style.display='flex';
+  const old=document.getElementById('gif-chip'); if(old) old.remove();
+  const chip=document.createElement('div');
+  chip.className='file-chip'; chip.id='gif-chip';
+  chip.innerHTML='<img src="'+_escHtml(url)+'" alt="GIF" '+
+    'style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0">'+
+    '<span style="flex:1;overflow:hidden;text-overflow:ellipsis">GIF</span>'+
+    '<button class="chip-rm" onclick="removePendingGif()" title="Remove">\u2715</button>';
+  bar.appendChild(chip);
+}
+function removePendingGif(){
+  _pendingGif=null;
+  const c=document.getElementById('gif-chip'); if(c) c.remove();
+  const bar=document.getElementById('fbar');
+  if(bar && !bar.children.length){ bar.innerHTML=''; bar.style.display='none'; }
+}
+
+// ══ LETTING BELLA ACTUALLY SEE THE GIF ════════════════════════════════════
+// She could not. She received a URL and nothing else, so she invented a
+// description and got it wrong — a bear waving "Hello!" became "a GIF saying
+// Thank you", said confidently with the picture on screen beside her.
+//
+// TWO FACTS DECIDED HOW THIS WORKS, both measured 2026-10-31:
+//   1. GEMINI DOES NOT ACCEPT image/gif. Only png, jpeg, webp, heic, heif.
+//      So the file itself can never be sent, at any price.
+//   2. Giphy's media CDN returns `access-control-allow-origin: *`, so the
+//      browser MAY read the pixels. No proxy and no backend change needed.
+// So: draw the FIRST FRAME to a canvas and send that as a JPEG. A still frame
+// is not the animation, but it is true, and true beats invented.
+//
+// It is pushed onto pImages, which send() already turns into inlineData — no
+// new plumbing — and _histWithoutImageBytes strips it before anything is
+// stored, so this cannot refill localStorage the way attached photos did.
+// Cost: ~258 input tokens, about Rs 0.007 a GIF.
+// Fails SOFT: if the frame cannot be captured the GIF still sends as before.
+function _gifFirstFrame(url){
+  return new Promise(function(resolve){
+    var img = new Image();
+    img.crossOrigin = 'anonymous';           // required, or the canvas is tainted
+    var done = false;
+    var finish = function(v){ if(!done){ done = true; resolve(v); } };
+    setTimeout(function(){ finish(null); }, 6000);   // never hang the send
+    img.onerror = function(){ finish(null); };
+    img.onload = function(){
+      try{
+        var w = img.naturalWidth || 240, hh = img.naturalHeight || 180;
+        var scale = Math.min(1, 320 / w);    // 320px is plenty for recognition
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(w * scale));
+        c.height = Math.max(1, Math.round(hh * scale));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        finish((c.toDataURL('image/jpeg', 0.8).split(',')[1]) || null);
+      }catch(e){ finish(null); }             // tainted canvas, or no 2d context
+    };
+    img.src = url;
+  });
+}
+
+async function insertGif(i){
   const g=(_gifResults||[])[i];
   if(!g) return;
   const im=g.images||{};
@@ -10738,8 +10801,16 @@ function insertGif(i){
   // right there on screen. Giphy supplies a real title; a true caption beats a
   // confident guess. It also reads as a caption under the GIF.
   const title=String(g.title||'').replace(/\s+/g,' ').trim();
+  // Held, not typed. send() folds it in; clearFiles() drops it.
+  _pendingGif={url:url,title:title};
+  _renderGifChip(url);
   const ti=document.getElementById('ti');
-  ti.value+=(ti.value?' ':'')+url+(title?' '+title:'');
+  // Capture the frame for Bella. Awaited so it is attached before he can send,
+  // and harmless if it fails — the GIF and its title go either way.
+  try{
+    const frame = await _gifFirstFrame(url);
+    if(frame) pImages.push({ mimeType:'image/jpeg', data:frame });
+  }catch(e){ console.warn('GIF frame capture failed:', e && e.message); }
   arz(ti);
   ti.focus();
   document.getElementById('emoji-panel').style.display='none';
@@ -11146,9 +11217,18 @@ async function send(){
   if(window._sending) return; // Guard — prevent double response
   window._sending=true;window._bellaBusy=true;
   const text=inp.value.trim();
-  if(!text&&pFiles.length===0){endTurn();return;}
+  // A CHOSEN GIF IS AN ATTACHMENT, NOT TYPING. It used to be pasted into the
+  // box as a raw URL, so he saw a link, had to press send, and every such
+  // conversation was named "https://media4.giphy.com/medi...". Savio,
+  // 2026-10-31: "Cant the selcted GIF directly appear and be sent?"
+  // It is folded in here instead: the TITLE first so the thread gets a
+  // readable name, then the URL, which userMsg turns into the picture.
+  const _g=_pendingGif;
+  if(!text&&!_g&&pFiles.length===0){endTurn();return;}
   hideTypingAck();
-  const disp=text||'Please analyse the attached document(s).';
+  let disp=text||'';
+  if(_g){ disp=(disp?disp+' ':'')+(_g.title?_g.title+' ':'')+_g.url; }
+  if(!disp) disp='Please analyse the attached document(s).';
   removeSuggestions();userMsg(disp,pFiles.map(f=>f.name));
   inp.value='';inp.style.height='auto';
   if(idState!=='confirmed'){
@@ -15089,7 +15169,7 @@ function removeFile(index){
   updateFileCount();
 }
 
-function clearFiles(){pFiles=[];pTexts=[];pImages=[];document.getElementById('fbar').innerHTML='';document.getElementById('fbar').style.display='none';updateFileCount();}
+function clearFiles(){pFiles=[];pTexts=[];pImages=[];_pendingGif=null;document.getElementById('fbar').innerHTML='';document.getElementById('fbar').style.display='none';updateFileCount();}
 
 // ============================================================
 // UI HELPERS
