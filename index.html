@@ -45,10 +45,25 @@
      keeping the file here. It is here: no third party in the path, works offline,
      and the integrity hash below is of this exact file. Matt Abate, 2026-10-30. -->
 <script src="vendor/xlsx-0.20.3.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- pdf.js 4.10.38, SERVED FROM THIS REPO. 3.11.174 sat inside CVE-2024-4367:
+     a crafted PDF could run arbitrary JavaScript, and Bella reads any PDF a
+     person attaches. isEvalSupported:false was the stopgap from 2026-10-31;
+     this is the actual fix, and the stopgap stays as belt and braces.
+     EVERY BUILD FROM 4.x ON IS ES-MODULE ONLY — there is no plain-script build
+     any more — so this loads as a module and publishes pdfjsLib on window for
+     the rest of the page, which is written against the global.
+     NO integrity attribute: SRI does not apply to ES module imports, and it
+     would add nothing here anyway — the file is same-origin, so it is exactly
+     as trustworthy as the page asking for it. That is the point of self-hosting.
+     The 1.4MB worker is fetched ONLY when a PDF is opened, never on page load. -->
+<script type="module">
+  import * as pdfjsLib from './vendor/pdf-4.10.38.min.mjs';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = './vendor/pdf-4.10.38.worker.min.mjs';
+  window.pdfjsLib = pdfjsLib;
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <!-- GSI script removed — Firebase Auth handles all Google sign-in -->
-<script>if(typeof pdfjsLib!=='undefined')pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+
 <style>
 /* ============================================================
    CSS VARIABLES — change these to retheme entire app
@@ -14985,7 +15000,11 @@ async function hfile(e){
    longer ships a plain-script build — it is ES-module only, so upgrading changes
    how this page loads the library and the worker, and that deserves its own
    change and its own test run. Found 2026-10-31, not in Matt Abate's report. */
-async function extractPDF(file){const ab=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:ab,isEvalSupported:false}).promise;let t='';for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const c=await pg.getTextContent();t+=c.items.map(x=>x.str).join(' ')+'\n';}return t||'[PDF appears scanned]';}
+async function extractPDF(file){
+  // A module script is deferred, so say so plainly rather than throwing
+  // 'pdfjsLib is not defined' at someone who just attached a PDF.
+  if(typeof pdfjsLib==='undefined') return '[The PDF reader is still loading — try again in a moment.]';
+  const ab=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:ab,isEvalSupported:false}).promise;let t='';for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const c=await pg.getTextContent();t+=c.items.map(x=>x.str).join(' ')+'\n';}return t||'[PDF appears scanned]';}
 /* A LEGACY .doc IS NOT A .docx AND NOTHING HERE CAN READ IT. mammoth opens the
    zip a .docx is; a pre-2007 .doc is an OLE2 container and mammoth throws or
    returns nothing, which used to surface as a bare "[Could not extract Word
@@ -15384,7 +15403,22 @@ function userMsg(text,fileNames){
   const empty=document.getElementById('empty-state');if(empty)empty.remove();
   const m=document.getElementById('msgs');if(!m)return;const w=document.createElement('div');w.className='msg user';
   const initials=(currentAddressedName||'U').substring(0,2).toUpperCase();
-  const safe=text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // A GIF chosen from the picker used to arrive as a bare link, because
+  // insertGif pastes the URL as text and NOTHING EVER RENDERED IT. Savio,
+  // 2026-10-31: "why was i not able to send a GIF to Bella, why did only a
+  // link go?" Because a link is literally all that was ever sent. It goes as
+  // a picture now.
+  // STRICT ALLOW-LIST, and it matters: this bubble is built with innerHTML,
+  // so only Giphy's own media hosts become an <img>. Every other URL stays as
+  // escaped text. Escaping happens FIRST, so the pattern only ever sees text
+  // that is already safe.
+  // NOTE: Bella still receives the URL as text -- she cannot see the picture.
+  // Giving her real sight of it means fetching the image and sending it as
+  // data, which is separate work.
+  const safe=_escHtml(text).replace(
+    /https:\/\/(?:media\d*|i)\.giphy\.com\/[^\s"'<>]+/g,
+    function(u){ return '<img src="'+u+'" alt="GIF" loading="lazy" '+
+      'style="max-width:220px;width:100%;border-radius:10px;display:block;margin:4px 0">'; });
   const chips=fileNames&&fileNames.length>0?fileNames.map(n=>`<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);border-radius:6px;padding:3px 7px;font-size:10px;margin-bottom:4px">${String(n).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`).join(''):'';
   const uMsgId='umsg-'+(++_msgSeq);
   w.innerHTML=`<div class="mav u">${initials}</div><div class="msg-wrap"><div class="mbub" id="${uMsgId}">${chips?chips+'<br>':''}${safe}</div>
@@ -17920,7 +17954,17 @@ function _wxHourlySlots(){
     if(isNaN(when.getTime())) continue;
     out.push({ when: when, f: {
       temp: h.temp, feelsLike: h.feelsLike, pop: h.pop, rain3h: h.precip,
-      humidity: h.humidity, windSpeed: h.windSpeed, windDeg: _wxDirAt(when),
+      // THE HOUR'S OWN DIRECTION, not a borrowed one. Release 41 added
+      // wind_direction_10m to the Open-Meteo call, so every hourly row now
+      // carries its own windDeg — and nothing was reading it. _wxDirAt hunts
+      // the 3-HOURLY OpenWeather feed for the nearest reading within three
+      // hours, which is why a 22:00 row could show the wind from 21:00, and
+      // why PAST hours showed no direction at all: the 3-hourly feed only
+      // covers the future, so the gap always exceeded three hours and it
+      // returned null. Kept as the fallback for anyone whose backend has not
+      // caught up, since an older response has no windDeg on the hour.
+      humidity: h.humidity, windSpeed: h.windSpeed,
+      windDeg: (h.windDeg == null ? _wxDirAt(when) : h.windDeg),
       icon: h.icon, condition: h.condition, description: h.condition
     }});
   }
