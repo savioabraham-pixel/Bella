@@ -34,7 +34,9 @@
 <link rel="preconnect" href="https://www.google.com">
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" integrity="sha384-nFoSjZIoH3CCp8W639jJyQkuPHinJ2NHe7on1xvlUA7SuGfJAfvMldrsoAVm6ECz" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- mammoth 1.6.0 carried CVE-2025-11849 (directory traversal) and Bella reads any .docx a
+     person attaches. 1.13.0 is clean per OSV, checked 2026-10-31. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.13.0/mammoth.browser.min.js" integrity="sha512-5hAL8cCOeSztnaZ+3xjLAflXeSwJpGrdrH6McLq2Dtl0vfvCQw+jO9q652eMASTNAU8anRvrXnlW9QqzlfN2HA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <!-- SheetJS, SERVED FROM THIS REPO, NOT A CDN. 0.18.5 sat inside CVE-2023-30533
      (prototype pollution when reading a crafted file) and IT IS REACHABLE: Bella
      parses any .xlsx a person attaches. The fix exists only on SheetJS's own CDN
@@ -2059,8 +2061,8 @@ body.dark #sidebar .sb-new-chat span{
 </style>
 
 <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js" integrity="sha384-4gq9w/AGf72FXdNQ3Kn3EqWP7633NbCMjpYHt8YCZyXf23o2opcuAr4cif41tLrC" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js" integrity="sha384-xtdq4MQqPj1dB5DQsuw9O7dh4kHhMP/Wp5u8O1jiaWiou13ZfJIgiccjtVK2pBhL" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" integrity="sha384-ZaR6mWzmJtrRibZ1Vm7SoHFr8OXjyAuGAXalGDKqbxFT18oi/z+oZLIRFkpeNor1" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js" integrity="sha384-I1LYojsZ5RM1cOda44Z2h42Qa6YfsQ1XkXxREnhp4ueYBR/4d1pG1K+NZM537Vsj" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 <script>
@@ -3103,8 +3105,14 @@ const _ERR_MAX_PER_SESSION = 8;   // a loop must never become a mail storm
 // is deliberately empty and is left exactly as it is.
 let _pageLeaving = false;
 try{
-  window.addEventListener('pagehide', function(){ _pageLeaving = true; });
-  window.addEventListener('beforeunload', function(){ _pageLeaving = true; });
+  // b_active_session WAS WRITTEN ONCE AND NEVER READ OR CLEARED — the control
+  // in Part 1 B4 ("Session tracking — cleared on pagehide + beforeunload") did
+  // not exist in the code at all. The INTENT still held, because the browser
+  // throws sessionStorage away when the tab closes, but the spec described
+  // something that was not there. Implemented here rather than deleted: it is
+  // two lines, and it makes the page match its own written guardrail.
+  window.addEventListener('pagehide', function(){ _pageLeaving = true; try{ sessionStorage.removeItem('b_active_session'); }catch(e){} });
+  window.addEventListener('beforeunload', function(){ _pageLeaving = true; try{ sessionStorage.removeItem('b_active_session'); }catch(e){} });
 }catch(e){}
 async function bellaReportError(where, detail, meta){
   try{
@@ -9772,7 +9780,7 @@ Nothing Bella learns about you is ever lost — unless you choose to delete it.
 
 **What follows you everywhere.** Your account and everything Bella has saved about you — your details, your preferences, the facts you have told her — are tied to your verified Gmail. Sign in on any device, any browser, and Bella knows you.
 
-**What stays on the device.** Your conversations are kept on the device you had them on. Signing in elsewhere gives you that device's conversations, not these. Bella is still learning to carry the whole thread between devices, and until she does, **Download My Data** is how you take a conversation with you.
+**What stays on the device.** Your conversations are kept in two places — this device, and a private Google account only Bella can reach — so signing in elsewhere brings them with you's conversations, not these. Bella is still learning to carry the whole thread between devices, and until she does, **Download My Data** is how you take a conversation with you.
 
 Bella doesn't just assist. She remembers. And she never forgets anything you've asked her to hold on to — until you tell her to let go.`;
   bellaMsg(msg);
@@ -11398,10 +11406,37 @@ async function send(){
       }
       saveThreadsLocal();renderThreadList();
     }catch(e){}
+    // ══ CHANGED 2026-10-31: THE CARE KEPT, THE QUOTATION DROPPED ══════════
+    // This used to write EIGHTY CHARACTERS OF THE PERSON'S OWN WORDS, verbatim
+    // and permanently, into the Google Sheet — with no question, no notice and
+    // no undo — whenever a message contained worried / problem / issue /
+    // surgery / sick / difficult / struggling / upset / grief / stress.
+    // Those are the most sensitive things anybody says, so it fired exactly
+    // when a quotation was least welcome: the first time someone confided
+    // about surgery or grief. It also broke a written guardrail — Part 1 B4,
+    // "Write confirmation — every write action — explicit user approval —
+    // never automatic" — and sat badly beside the PRIVACY AND CARE rule added
+    // the same day telling Bella never to ASK about anyone's health while the
+    // code quietly RECORDED it.
+    // Savio, 2026-10-31, on the care itself: "This you can fix."
+    // So the trigger stays and the quotation goes. Measured before the change:
+    // exactly ONE such row existed, so nothing of value was lost.
     try{
       const concern=['worried','problem','issue','surgery','sick','difficult','struggling','upset','grief','stress'];
       if(concern.some(k=>fullMsg.toLowerCase().includes(k))&&currentProfileKey){
-        const fu=`Last time ${currentAddressedName} mentioned: "${disp.substring(0,80)}". Check in on them.`;
+        // THE CARE STAYS. THE PERSON'S WORDS DO NOT.
+        // This used to store EIGHTY CHARACTERS OF WHAT THEY ACTUALLY SAID,
+        // verbatim and for ever, in the Google Sheet. The trigger words are
+        // the most sensitive things anybody says — surgery, grief, sick — so
+        // it fired exactly when a quotation was least welcome.
+        // Now it records only THAT something was weighing on them, and the
+        // DATE. Bella can still open with "how are you doing?" a week later,
+        // which is the whole point of the feature, and the sheet never holds
+        // a sentence about someone's health or grief again.
+        // The row is an ordinary memory: visible in My Account and deletable
+        // by the person it belongs to, like every other one.
+        const _d=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long'});
+        const fu=`On ${_d}, ${currentAddressedName} mentioned something that was weighing on them. Ask gently how they are — do not guess what it was, and do not raise it if they seem fine.`;
         await bfetch(BACKEND+'/memory-write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileKey:currentProfileKey,addressedName:currentAddressedName,memoryText:fu,type:'followup'})});
       }
     }catch(e){}
