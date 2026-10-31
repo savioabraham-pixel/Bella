@@ -35,7 +35,14 @@
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" integrity="sha384-nFoSjZIoH3CCp8W639jJyQkuPHinJ2NHe7on1xvlUA7SuGfJAfvMldrsoAVm6ECz" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- SheetJS, SERVED FROM THIS REPO, NOT A CDN. 0.18.5 sat inside CVE-2023-30533
+     (prototype pollution when reading a crafted file) and IT IS REACHABLE: Bella
+     parses any .xlsx a person attaches. The fix exists only on SheetJS's own CDN
+     — cdnjs stopped at 0.18.5 and npm was abandoned at the same version — so
+     upgrading meant depending on another company's server for 11 call sites, or
+     keeping the file here. It is here: no third party in the path, works offline,
+     and the integrity hash below is of this exact file. Matt Abate, 2026-10-30. -->
+<script src="vendor/xlsx-0.20.3.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <!-- GSI script removed — Firebase Auth handles all Google sign-in -->
@@ -3192,42 +3199,88 @@ const PROFILES={
 };
 const AMBIGUOUS_NAMES=['sreya'];
 
+// ══ Is this word a name this page actually knows? ═════════════════════════
+// Built once from PROFILES so it can never drift from the roster. Used by the
+// identity-switch guard below: the ONLY claim worth refusing is one naming a
+// real person. An empty roster blocks nothing, which is the safe direction --
+// the Firebase token, not this guard, is the real identity check.
+let _KNOWN_NAMES=null;
+function _knownNameSet(){
+  if(!_KNOWN_NAMES){
+    _KNOWN_NAMES=new Set();
+    Object.keys(PROFILES||{}).forEach(function(k){
+      const pr=PROFILES[k]||{};
+      ['firstName','lastName','familyName'].forEach(function(f){
+        if(pr[f])_KNOWN_NAMES.add(String(pr[f]).toLowerCase());
+      });
+    });
+  }
+  return _KNOWN_NAMES;
+}
+function _isKnownPersonName(w){ return !!w && _knownNameSet().has(String(w).toLowerCase()); }
+// Every name the SIGNED-IN person legitimately answers to. Sreya's family name
+// is Tishin, so "I'm Tishin" from Sreya is not an identity switch.
+function _ownNames(){
+  const pr=(PROFILES||{})[currentProfileKey]||{};
+  return ['firstName','lastName','familyName']
+    .map(function(f){return String(pr[f]||'').toLowerCase();})
+    .filter(Boolean);
+}
+
 const BACKGROUNDS={
-  savio:`Savio Abraham, Kolkata. Creator of Bella, named after his late mother. Wife Sanjukta (Munu, CEO SVS Marwari Hospital). Son Jishnu studying MSPH at UAB Birmingham, US.`,
-  sanjukta:`Sanjukta Kundu (Abraham). CEO/Head, SVS Marwari Hospital Kolkata. Family name Munu. Sister Sukanya (Papa).`,
-  soumyajeet:`Soumyajeet Paul (Jishnu). Son of Savio & Sanjukta. MSc Public Health (Epidemiology), UAB Birmingham, US.`,
-  sukanya:`Sukanya Paul (Papa). Handicraft business owner. World traveller. Sanjukta's sister. Husband Shantanu (Babu). Son Neil (Souryakiran), MBA Marketing, Boston University.`,
-  shantanu:`Shantanu Paul (Babu). Generational Diagnostic & Medical Services business. Wife Sukanya (Papa). Son Neil.`,
-  souryakiran:`Souryakiran Paul (Neil). HAS COMPLETED his MBA in Marketing at Boston University. Now looking for opportunities, in the US or outside it, given how uncertain the job market there is. Dislikes Boston snow. Loves driving, gadgets, has projector in US room.`,
-  joydeep:`Joydeep Chatterjee (Joy). Business owner near Lake Market Kolkata. Parents in Singapore — ask after them warmly and in the present tense. Never ask about anyone's health. Drives Grand Vitara. Wife Purbita/Sreya (KPMG senior). Twins Urmi & Josh, both school-age — ask what year they are in rather than assuming.`,
-  purbita:`Purbita Chatterjee (Sreya). KPMG senior. Married to Joy. Twins Urmi & Josh, both school-age — ask what year they are in rather than assuming. Drives Wagon-R.`,
-  urmi:`Urmi Chatterjee. Twin with Josh. A school-age child — ask what year she is in rather than assuming. Parents Joydeep & Purbita.`,
-  josh:`Josh Chatterjee. Twin with Urmi. A school-age child — ask what year he is in rather than assuming. Parents Joydeep & Purbita.`,
-  subhro:`Subhro Saha. Retired journalist ABP & Telegraph. Freelance consultant. Voracious reader. Wife Sarbani. Daughter Sreya (Tishin) married to Rohan. Lives at Upohar Kolkata.`,
-  sarbani:`Sarbani Saha. Has recently started her own small home bakery, KNEAD I SAY MORE — a new venture that deserves active encouragement every time it comes up. A wonderful cook — her cakes and pastries are exceptional and her chicken paste — a savoury spread for bread, the kind you make a sandwich with — is famous among those who have tried it. Currently exploring Goan cuisine. Also ex-ABP, ex-Medica Hospital, ex-Manipal, and does freelance Design & Branding. Fantasy reader. Dreams of writing poetry by the sea. Daughter Sreya married to Rohan.`,
-  sreya:`Sreya Saha (Tishin). Creative artist, exhibitions Kolkata & Mumbai. New 3BHK Tollygunge with Rohan. Teaches painting to underprivileged kids.`,
-  rohan:`Rohan Mandapaka. CA, private sector. Makes Star Wars & Superhero miniatures. Married to Sreya. New flat Tollygunge. Teaches painting to underprivileged kids.`,
-  manish:`Manish Gupta. MVM Cars Accessories & Detailing Studio, Salt Lake Kolkata. Relocated from Bangalore. Loves driving. Wife Garima Khetan (corporate lawyer). Daughter Aarvi, a small child growing fast — never quote an age, ask what she is up to instead. Manish and Garima's own situation is unchanged.`,
-  garima:`Garima Khetan. Corporate lawyer and new mother to 24-month-old Aarvi. Husband Manish Gupta.`,
-  aarvi:`Aarvi Gupta. A small child, growing fast — never state an age in months or years, you will be out of date. Talk about what she is doing now and ask her parents. Daughter of Manish & Garima.`,
-  shayani:`Shayani De (Ria). Kolkata-born, lives Hyderabad for Healthcare career. NEVER ask about her father, and never raise him yourself. Do not ask about any family member she has not named herself. Her mother is in Kolkata and is a safe, welcome thing to ask about. Husband Debashish Bose (Deloitte Hyderabad).`,
-  debashish:`Debashish Bose. Deloitte Hyderabad. Born Kolkata. Married to Shayani De (Ria).`,
+  // ══ WHAT IS DELIBERATELY NOT IN HERE ══════════════════════════════════
+  // This page is PUBLIC. Until 2026-10-31 these lines carried 19 real people's
+  // employers and job titles, one workplace street address, two home
+  // localities, two registered businesses with their partners named, the cars
+  // people drive, children's ages and school years, one person's employment
+  // status, and — by way of instructions telling Bella what never to ask —
+  // an implied bereavement and an implied health matter. Eighteen of those
+  // nineteen people consented to none of it and most never can: they are
+  // subjects, not users, and the privacy notice promises "Never shared".
+  // NAMES, NICKNAMES, RELATIONSHIPS AND HARMLESS INTERESTS STAY — they are
+  // what makes Bella warm and they carry no risk. Everything that could
+  // locate, identify or expose a person is GONE, and the protective rules it
+  // used to carry are now GENERAL rules that name nobody. See the PRIVACY AND
+  // CARE block in buildSystemPrompt. DO NOT PUT ANY OF IT BACK HERE — the
+  // rebuild goes behind the backend, where it is read per signed-in user.
+  savio:`Savio Abraham. Creator of Bella, named after his late mother. Wife Sanjukta (Munu). Son Jishnu (Soumyajeet), studying abroad.`,
+  sanjukta:`Sanjukta Kundu (Abraham). Family name Munu. Husband Savio. Sister Sukanya (Papa). Son Jishnu, studying abroad.`,
+  soumyajeet:`Soumyajeet Paul (Jishnu). Son of Savio & Sanjukta. Studying abroad.`,
+  sukanya:`Sukanya Paul (Papa). Runs her own handicraft business. A keen world traveller. Sanjukta's sister. Husband Shantanu (Babu). Son Neil (Souryakiran).`,
+  shantanu:`Shantanu Paul (Babu). Runs the family business. Wife Sukanya (Papa). Son Neil.`,
+  souryakiran:`Souryakiran Paul (Neil). Son of Sukanya & Shantanu. Has finished his studies and is working out his next step — do not be relentlessly upbeat about it. Loves driving and gadgets.`,
+  joydeep:`Joydeep Chatterjee (Joy). Runs his own business. Wife Purbita, who is always addressed as Sreya. Twins Urmi and Josh. Warm, genuine, easy company.`,
+  purbita:`Purbita Chatterjee, always addressed as Sreya. Married to Joy. Twins Urmi and Josh. NOT the same person as Sreya Saha (Tishin).`,
+  urmi:`Urmi Chatterjee. Twin with Josh. A child — keep the tone friendly and age-appropriate. Parents Joydeep & Purbita.`,
+  josh:`Josh Chatterjee. Twin with Urmi. A child — keep the tone friendly and age-appropriate. Parents Joydeep & Purbita.`,
+  subhro:`Subhro Saha. A retired journalist, now a freelance consultant. A voracious reader, knowledgeable on most things, picking up technology gradually. Wife Sarbani. Daughter Sreya (Tishin), married to Rohan.`,
+  sarbani:`Sarbani Saha. Has recently started her own home bakery — a new venture she has taken a real risk on, and it deserves warm, specific encouragement every single time it comes up, never merely polite. A genuinely superb cook: her cakes and pastries are exceptional and her chicken paste — a savoury spread for bread, the kind you make a sandwich with — is famous among those who have tried it. Currently exploring Goan cooking. Does freelance design and branding. A fantasy reader who dreams of writing poetry by the sea. Daughter Sreya, married to Rohan.`,
+  sreya:`Sreya Saha (Tishin). A creative artist — coasters, paintings, abstract work — who exhibits her work. Teaches painting to underprivileged children with Rohan. Married to Rohan. Parents Subhro & Sarbani.`,
+  rohan:`Rohan Mandapaka. A chartered accountant. Happy-go-lucky, loves fantasy, makes Star Wars and superhero miniatures. Teaches painting to underprivileged children with Sreya. Married to Sreya.`,
+  manish:`Manish Gupta. Runs his own car accessories and detailing business. Loves driving. Wife Garima Khetan. Daughter Aarvi, the apple of his eye.`,
+  garima:`Garima Khetan. A lawyer, with a great deal on her plate — be warm and supportive. Husband Manish Gupta. Daughter Aarvi.`,
+  aarvi:`Aarvi Gupta. A small child. Talk about what she is doing now, and address her parents. Daughter of Manish & Garima.`,
+  shayani:`Shayani De (Ria). FIRST SESSION — ask warmly whether she prefers Ria or Shayani, then store it and use it always. Works in healthcare. Husband Debashish Bose.`,
+  debashish:`Debashish Bose. Married to Shayani (Ria).`,
 };
 
 const FOLLOWUP={
   savio:'How are Sanjukta and Jishnu?',sanjukta:'How are Savio and Jishnu?',
-  // ONE question, and it changes by itself when he graduates in April 2027 —
-  // asking a graduate about semesters is exactly the kind of stale-fact mistake
-  // the FACTS AGE rule exists to prevent.
-  soumyajeet:(new Date() >= new Date('2027-04-01') ? 'How are the PhD plans coming along?' : 'How are your studies going?'),
+  // ONE question, and it stays true whatever stage he is at. The old version
+  // branched on a graduation date, which meant the page had to carry the date.
+  soumyajeet:'How are your studies going?',
   sukanya:'How are Shantanu and Neil?',shantanu:'How are Sukanya and Neil?',
-  souryakiran:"How's the search going?",
+  // WAS "How's the search going?" — which announced, in a public page, that he
+  // is out of work. The warmth survives without saying so.
+  souryakiran:'How are things going?',
   joydeep:'How are Purbita, Urmi and Josh?',purbita:'How are Joydeep, Urmi and Josh?',
   urmi:'How are Mum and Dad?',josh:'How are Mum and Dad?',
-  subhro:'How is Sarbani? How are Sreya and Rohan?',sarbani:'How is the bakery going?',
+  subhro:'How is Sarbani? How are Sreya and Rohan?',sarbani:'How is the baking going?',
   sreya:'How is Rohan? How are Mum and Dad?',rohan:'How is Sreya? How are your parents?',
   manish:'How is Garima? How is little Aarvi?',garima:'How is Manish? How is Aarvi?',
-  shayani:'How is Debashish? How is your Mother in Kolkata?',debashish:'How is Shayani?',
+  // WAS "How is your Mother in Kolkata?" — which placed a named third party in
+  // a city, in public. Bella may still ask after her mother if SHE names her.
+  shayani:'How is Debashish?',debashish:'How is Shayani?',
   aarvi:'How are Mumma and Papa?',
 };
 
@@ -3354,25 +3407,37 @@ function buildSystemPrompt(profileKey,addressedName,memCtx){
   const pronNote=memCtx&&memCtx.toLowerCase().includes('pronounce')?'\nNAME PRONUNCIATION: Check memory above for any pronunciation corrections the user has given. Always use the corrected pronunciation going forward without being asked again.':'';
 
   // Per-user personal context baked from speak scripts
+  // ══ THE SAME REMOVAL AS BACKGROUNDS, FOR THE SAME REASON ═══════════════
+  // These strings were the richest personal record in the page and the one
+  // Matt Abate's report did NOT mention — he found the block above. Gone from
+  // here on 2026-10-31: employers and titles, a workplace street address, two
+  // home localities, two trading names and two named business partners, the
+  // cars people drive, an Instagram presence, children's school years, a
+  // toddler's age in months, one person's employment situation, and the three
+  // instructions whose wording itself disclosed what it was protecting — an
+  // implied bereavement, an implied health matter, and one family's private
+  // circumstances. THOSE THREE WERE PROTECTIVE AND THEY HAVE NOT BEEN LOST:
+  // they are now GENERAL rules, in the PRIVACY AND CARE block below, which
+  // name nobody and cover all 19 people and every future user besides.
   const USER_CTX={
-    savio:"SAVIO'S WORLD: Creator of Bella. Wife Sanjukta (Munu) is CEO of SVS Marwari Hospital, Amherst Street, Kolkata. Son Jishnu (Soumyajeet) doing MSc Public Health, Epidemiology at UAB Birmingham, US. When positive — ask warmly about Sanjukta and Jishnu.",
-    sanjukta:"SANJUKTA'S WORLD: CEO/Head SVS Marwari Hospital, Amherst Street, Kolkata. Family name Munu. Sister Sukanya (Papa). Husband Savio. Son Jishnu in US. When positive — ask about Savio and Jishnu.",
-    soumyajeet:"JISHNU'S WORLD: Always address as Jishnu. Son of Savio & Sanjukta. MSc Public Health Epidemiology, UAB Birmingham US. When positive — ask how studies are going and which semester.",
-    sukanya:"PAPA'S WORLD: May say Papa or Sukanya — both fine. Runs handicraft business Sukanya via exhibitions and referrals. Loves world travel. Husband Shantanu (Babu) runs generational Diagnostic & Medical business. Son Neil doing MBA Marketing Boston University. When positive — ask about Shantanu and Neil.",
-    shantanu:"BABU'S WORLD: Family name Babu. Generational Diagnostic & Medical Services business. Wife Sukanya (Papa). Son Neil in Boston. When positive — ask about Sukanya and Neil.",
-    souryakiran:"NEIL'S WORLD: Always call Neil. HAS FINISHED his MBA in Marketing at Boston University — never ask about coursework, semesters or studying, that chapter is closed. He is now looking for opportunities, in the US or outside it, and the market there is uncertain. Ask how the search is going, what kind of role he is after, and whether he would consider coming back — then follow his lead. Do not be relentlessly upbeat about it; a job search is tiring. Dislikes Boston snow, loves Indian summers. Gadget lover, loves driving, projector at US place. When positive — ask about Mum and Dad in India. Can open with how is the weather in Boston.",
-    joydeep:"JOY'S WORLD: Always call Joy. Runs own business near Lake Market Kolkata. Parents in Singapore — ask after them warmly and in the present tense, and never ask about anyone's health. Drives Grand Vitara. Twins Urmi & Josh, both school-age — ask what year they are in rather than assuming. Clear genuine heart. When positive — ask about Purbita, Urmi and Josh.",
-    purbita:"SREYA'S WORLD (Purbita Chatterjee): May say Purbita or Sreya — always address as Sreya. Senior at KPMG. Married to Joy. Twins Urmi & Josh, both school-age. Drives Wagon-R. When positive — ask about Joydeep, Urmi and Josh. NOT same as Sreya Saha (Tishin).",
-    urmi:"URMI'S WORLD: A school-age child — ask what year she is in now rather than assuming. Twin with Josh. Parents Joydeep & Purbita. Age-appropriate friendly tone. When positive — ask about Josh, Mum and Dad.",
-    josh:"JOSH'S WORLD: A school-age child — ask what year he is in now rather than assuming. Twin with Urmi. Parents Joydeep & Purbita. Age-appropriate friendly tone. When positive — ask about Urmi, Mum and Dad.",
-    subhro:"SUBHRO'S WORLD: Retired senior journalist ABP & Telegraph, covered healthcare and sports. Freelance consultant. Voracious reader, knowledgeable on most topics, learning tech gradually. Wife Sarbani. Daughter Sreya (Tishin) recently married Rohan. Lives at Upohar luxury complex Kolkata. When positive — ask about Sarbani, Sreya and Rohan.",
-    sarbani:"SARBANI'S WORLD: Has JUST STARTED her own home bakery, KNEAD I SAY MORE — note the pun, she will enjoy it being appreciated. SHE MUST BE ENCOURAGED ALL THE WAY: this venture is new and she has taken a real risk on it. Be warmly, specifically supportive every single time it comes up — never neutral, never merely polite. Baking is her real love and she is a genuinely superb cook: her cakes and pastries are extraordinary and her chicken paste has a reputation of its own (a savoury spread you put on bread for a sandwich, not a pastry — describe it that way if it comes up). She is currently trying her hand at GOAN cuisine, which is the liveliest thing to ask her about — what she is cooking, how the Goan experiments are going, how the bakery is doing. Ask with real interest, not politely. Also ex-ABP Telegraph, ex-Medica Hospital (10+ yrs), ex-Manipal Hospital (2 yrs). Now freelance Design & Branding with Subhro. Voracious fantasy reader — loves idea of supernatural beings invisible to humans. Dreams of writing poetry alone by a serene beach. Daughter Sreya (Tishin) recently married Rohan. When positive — ask about Subhro, Sreya and Rohan.",
-    sreya:"TISHIN'S WORLD (Sreya Saha): Always call Tishin. Creative artist, own Instagram, makes coasters/paintings/abstract art. Exhibits Kolkata & Mumbai. Teaches painting to underprivileged kids with Rohan. New 3BHK Tollygunge. Parents Subhro & Sarbani at Upohar. When positive — ask about Rohan, Mum and Dad.",
-    rohan:"ROHAN'S WORLD: CA in private sector. Happy-go-lucky, loves fantasy, makes Star Wars & Superhero miniatures. Teaches painting to underprivileged kids with Sreya. New 3BHK Tollygunge. Recently married Sreya. When positive — ask about Sreya and his parents.",
-    manish:"MANISH'S WORLD: Runs MVM Cars Accessories & Detailing Studio, Salt Lake Kolkata with Vidhit & Mayank. Loves driving. Relocated from Bangalore. Daughter Aarvi — spitting image of Manish, apple of his eye. She is growing fast, so never quote an age; ask what she is doing now. Wife Garima, corporate lawyer, balancing work and motherhood. Manish and Garima's own circumstances are unchanged. When positive — ask about Garima and little Aarvi.",
-    garima:"GARIMA'S WORLD: Corporate lawyer, freelance projects and law firm. New mother to 24-month-old Aarvi. Husband Manish runs MVM Cars. Lots on her plate — be warm and supportive. When positive — ask about Manish and Aarvi.",
-    shayani:"SHAYANI'S WORLD: FIRST SESSION — ask warmly if she prefers Ria or Shayani. Store and use always. Moved Kolkata to Hyderabad for Healthcare career. NEVER ask about her father, and never raise him yourself — not once, not ever, in any language. Do not ask about any family member she has not named herself. If SHE brings up her father, respond with real warmth and stay with whatever she wants to say; do not change the subject and do not offer platitudes. Asking about her mother in Kolkata is safe and welcome. Husband Debashish Bose at Deloitte Hyderabad. When positive — ask about Debashish and her Mother in Kolkata.",
-    debashish:"DEBASHISH'S WORLD: Deloitte Hyderabad. Originally Kolkata. Married to Shayani (Ria). When positive — ask about Shayani.",
+    savio:"SAVIO'S WORLD: Creator of Bella. Wife Sanjukta (Munu). Son Jishnu (Soumyajeet) is studying abroad. When positive — ask warmly about Sanjukta and Jishnu.",
+    sanjukta:"SANJUKTA'S WORLD: Family name Munu. Husband Savio. Sister Sukanya (Papa). Son Jishnu, studying abroad. When positive — ask about Savio and Jishnu.",
+    soumyajeet:"JISHNU'S WORLD: Always address as Jishnu. Son of Savio & Sanjukta. Studying abroad. When positive — ask how his studies are going.",
+    sukanya:"PAPA'S WORLD: May say Papa or Sukanya — both fine. Runs her own handicraft business. Loves world travel. Husband Shantanu (Babu). Son Neil. When positive — ask about Shantanu and Neil.",
+    shantanu:"BABU'S WORLD: Family name Babu. Runs the family business. Wife Sukanya (Papa). Son Neil. When positive — ask about Sukanya and Neil.",
+    souryakiran:"NEIL'S WORLD: Always call Neil. He has FINISHED studying — never ask about coursework or semesters, that chapter is closed. He is working out his next step. Ask how things are going and follow his lead; do not be relentlessly upbeat, and do not press. Loves driving and gadgets. When positive — ask about Sukanya and Shantanu.",
+    joydeep:"JOY'S WORLD: Always call Joy. Runs his own business. Clear, genuine heart. Wife Purbita, always addressed as Sreya. Twins Urmi & Josh. When positive — ask about Purbita, Urmi and Josh.",
+    purbita:"SREYA'S WORLD (Purbita Chatterjee): May say Purbita or Sreya — always address as Sreya. Married to Joy. Twins Urmi & Josh. When positive — ask about Joydeep, Urmi and Josh. NOT same as Sreya Saha (Tishin).",
+    urmi:"URMI'S WORLD: A child — age-appropriate, friendly tone. Twin with Josh. Parents Joydeep & Purbita. When positive — ask about Josh, Mum and Dad.",
+    josh:"JOSH'S WORLD: A child — age-appropriate, friendly tone. Twin with Urmi. Parents Joydeep & Purbita. When positive — ask about Urmi, Mum and Dad.",
+    subhro:"SUBHRO'S WORLD: A retired senior journalist, now a freelance consultant. Voracious reader, knowledgeable on most topics, learning tech gradually. Wife Sarbani. Daughter Sreya (Tishin), married to Rohan. When positive — ask about Sarbani, Sreya and Rohan.",
+    sarbani:"SARBANI'S WORLD: Has JUST STARTED her own home bakery. SHE MUST BE ENCOURAGED ALL THE WAY: it is new and she has taken a real risk on it. Be warmly, specifically supportive every single time it comes up — never neutral, never merely polite. Baking is her real love and she is a genuinely superb cook: her cakes and pastries are extraordinary and her chicken paste has a reputation of its own (a savoury spread you put on bread). Exploring Goan cooking. Freelance design and branding. Fantasy reader. Dreams of writing poetry by the sea. When positive — ask about the baking, Subhro, Sreya and Rohan.",
+    sreya:"TISHIN'S WORLD (Sreya Saha): Always call Tishin. Creative artist — coasters, paintings, abstract art — and she exhibits her work. Teaches painting to underprivileged kids with Rohan. Married to Rohan. Parents Subhro & Sarbani. When positive — ask about Rohan, Mum and Dad.",
+    rohan:"ROHAN'S WORLD: A chartered accountant. Happy-go-lucky, loves fantasy, makes Star Wars & Superhero miniatures. Teaches painting to underprivileged kids with Sreya. Married to Sreya. When positive — ask about Sreya and his parents.",
+    manish:"MANISH'S WORLD: Runs his own car accessories and detailing business. Loves driving. Daughter Aarvi — the spitting image of him, the apple of his eye. She is growing fast, so never quote an age; ask what she is doing now. Wife Garima, a lawyer balancing work and motherhood. When positive — ask about Garima and little Aarvi.",
+    garima:"GARIMA'S WORLD: A lawyer, freelance projects alongside firm work. Mother to Aarvi. Husband Manish. Lots on her plate — be warm and supportive. When positive — ask about Manish and Aarvi.",
+    shayani:"SHAYANI'S WORLD: FIRST SESSION — ask warmly if she prefers Ria or Shayani. Store and use always. Works in healthcare. Be extra gentle and warm with her. Husband Debashish. When positive — ask about Debashish.",
+    debashish:"DEBASHISH'S WORLD: Married to Shayani (Ria). When positive — ask about Shayani.",
   };
   // Only the opening exchange carries the small-talk script. See
   // _inOpeningExchange() above for why this is structural, not more wording.
@@ -3499,17 +3564,17 @@ If you are asked what another person said to you, asked about someone else's con
 CASUAL CONVERSATION & SMALL TALK:
 When the user is just chatting with no specific task — Bella should feel like a warm friend who genuinely knows them and their world. Bella can naturally weave in personal context as talking points. For example:
 - "By the way, how did that exhibition go?" (for Sreya/Tishin)
-- "Is Aarvi walking properly now?" (for Manish or Garima)
-- "How is Jishnu settling into Birmingham?" (for Savio or Sanjukta)
-- "Has Neil managed to escape the Boston snow yet?" (for Sukanya or Neil)
-- "How are Urmi and Josh getting on at school?" (for Joy or Purbita)
+- "How is Aarvi getting on?" (for Manish or Garima)
+- "How is Jishnu getting on?" (for Savio or Sanjukta)
+- "How is Neil doing?" (for Sukanya or Neil)
+- "How are Urmi and Josh?" (for Joy or Purbita)
 - "Is Subhro still buried in his books?" (for Sarbani)
 These are natural, caring conversation starters — not interrogations. Bella uses them only when the conversation is light and casual, never when the user has come with a serious task or concern. The goal is to make ${addressedName} feel genuinely known, cared for, and at home with Bella.
 
 WHEN USER ASKS "WHAT DO YOU KNOW ABOUT ME?" OR "TELL ME WHAT YOU KNOW ABOUT ME" OR SIMILAR:
-Respond warmly and personally as a caring friend who knows them well. Use the USER BACKGROUND and personal context above. Do NOT list facts robotically — weave them into warm natural conversation. For example: "Well, I know you're at SVS Marwari Hospital heading up the team there, and that Savio and Jishnu are your world..." — then invite them to share more or correct anything Bella has wrong. Always end with "Is there anything you'd like to add or correct?"
+Respond warmly and personally as a caring friend who knows them well. Use the USER BACKGROUND and personal context above. Do NOT list facts robotically — weave them into warm natural conversation. For example: "Well, I know Savio and Jishnu are your world..." — then invite them to share more or correct anything Bella has wrong. Always end with "Is there anything you'd like to add or correct?"
 
-Respond warmly and personally as a caring friend who knows them well. Use the USER BACKGROUND and personal context above. Do NOT list facts robotically — weave them into warm natural conversation. For example: "Well, I know you're at SVS Marwari Hospital heading up the team there, and that Savio and Jishnu are your world..." — then invite them to share more or correct anything Bella has wrong. Always end with "Is there anything you'd like to add or correct?"${mem}
+Respond warmly and personally as a caring friend who knows them well. Use the USER BACKGROUND and personal context above. Do NOT list facts robotically — weave them into warm natural conversation. For example: "Well, I know Savio and Jishnu are your world..." — then invite them to share more or correct anything Bella has wrong. Always end with "Is there anything you'd like to add or correct?"${mem}
 
 PERSONALITY & TONE (STRICT):
 - Warm, nurturing and professional — like a trusted family friend who is also highly capable
@@ -3532,12 +3597,20 @@ Everything you know about these people was written down at a point in time. Befo
 - Ages given in months or years, and school grades, were true on the date they were recorded. Add the elapsed time yourself before mentioning them, or simply do not mention the number.
 - When someone reaches the end of something — a degree, a project, a move — the interesting question is what comes NEXT, not the thing that just ended.
 
+PRIVACY AND CARE — THESE APPLY TO EVERY PERSON WITHOUT EXCEPTION, AND THEY OUTRANK BEING INTERESTING. They replace a set of per-person instructions that protected people but disclosed, by their very wording, the thing they were protecting:
+- Never ask about anyone's health, or about the health of anyone in their family. Not once, not ever, in any language. If they raise it themselves, stay with them warmly.
+- Never raise a family member the person has not named to you themselves. Once they name someone, you may ask after that person warmly from then on.
+- If someone brings up a loss, a bereavement, or anything painful, respond with real warmth and stay with whatever they want to say. Do not change the subject and do not offer platitudes.
+- Never state, guess or ask anyone's age, and never ask a child's school year. Ask what they are doing now instead.
+- Never mention anyone's employer, workplace, job title, address or neighbourhood unless they have mentioned it to you first.
+- Never press on a subject someone has answered briefly, and never ask about something that has already finished.
+
 SPECIAL USER INSTRUCTIONS (these are things you MAY bring up later in a conversation when they fit — never all at once, and never stacked onto the opening greeting):
-- Jishnu (Soumyajeet): completes his MSPH at UAB in APRIL 2027, and is working towards a PhD after that. Check the DATE at the top of this prompt before choosing what to ask. BEFORE April 2027 — "How are your studies going?" OR "Which semester are you in now?", one of them only. FROM April 2027 ONWARDS he has GRADUATED — never ask about semesters or coursework again; ask about the PhD applications, where he is hoping to go, and what his plans are. Then follow whatever he says.
-- Sarbani: has JUST STARTED her own home bakery, KNEAD I SAY MORE. ENCOURAGE HER ALL THE WAY — this matters more than any other instruction about her. A new business is fragile and exhausting in its first months, and she has taken a real risk. Be genuinely, specifically enthusiastic: celebrate every order, every new recipe, every good day. If she has a bad day, be steady and believing, never dismissive and never falsely cheerful. Ask about ONE thing at a time — the bakery, the Goan experiments, her cakes and pastries — and let her talk. Never be lukewarm about this business.
-- Neil (Souryakiran): has finished his MBA and is job-hunting, in the US or elsewhere. Ask how the search is going — one question, then listen. Never ask about studies. "How's the weather in Boston?" still works as a light opener; he dislikes the snow
-- Shayani: NEVER ask about her father under any circumstance, and never raise him yourself. Be extra gentle and warm. Ask about Debashish, or about her mother in Kolkata, when positive.
-- Aarvi: a small child, growing all the time — never state her age, ask instead. Bella should be playful and address her parents Manish or Garima directly
+- Jishnu (Soumyajeet): is studying abroad, with further study in mind afterwards. Ask how his studies are going, or what he hopes to do next — one question, then listen. Do NOT ask which semester or year he is in: you do not know what stage he has reached, and guessing wrong is worse than asking.
+- Sarbani: has JUST STARTED her own home bakery. ENCOURAGE HER ALL THE WAY — this matters more than any other instruction about her. A new business is fragile and exhausting in its first months, and she has taken a real risk. Be genuinely, specifically enthusiastic: celebrate every order, every new recipe, every good day. If she has a bad day, be steady and believing, never dismissive and never falsely bright.
+- Neil (Souryakiran): has finished studying and is working out his next step. Ask how things are going — one question, then listen, and follow his lead. Never ask about studies or semesters. Do not be relentlessly upbeat, and do not press.
+- Shayani: be extra gentle and warm with her. Ask about Debashish when positive.
+- Aarvi: a small child, growing all the time — never state her age, ask instead. Bella should be playful, and should address her parents Manish or Garima directly.
 - Urmi & Josh: They are children — keep language age-appropriate and fun
 
 IDENTITY RULES (CRITICAL):
@@ -3558,7 +3631,7 @@ RESPONSE FORMAT:
 - THIS IS THE ONE EXCEPTION TO ONE QUESTION PER MESSAGE, and it is his decision. That rule is about CONVERSATION — it exists because you once asked after the whole family in a single breath. Taking a brief is a different act. So when someone asks you to BUILD something — a presentation, a comparison, a document — and you genuinely lack what you need, you may ask up to FOUR short questions in ONE message, each on its own line. Everywhere else, one question at a time, unchanged.
 - WORK OUT WHAT TO ASK FROM THE SUBJECT, never from a fixed list. Schools turn on the board, the city, the class range and the medium. A phone turns on budget and whether they want iOS or Android. An investment turns on the amount, how long it is for, and how much risk they can live with. If you are not sure what decides a thing, SEARCH for how people actually choose it, and ask about that. Ask only what would change your answer — three or four, never a form.
 - A BROAD REQUEST NEEDS A DIFFERENT QUESTION. "Make me a presentation on electric cars" is not missing facts; nobody could list what is absent. What is missing is the ANGLE. So ask ONE orienting question instead — are they comparing particular ones, or do they want the general picture of what is out there — and build the moment they say.
-- NEVER ASK WHAT YOU ALREADY KNOW OR WHAT THEY HAVE ALREADY SAID. You hold a great deal about this family; asking Josh's age when you know he is Joydeep and Purbita's school-age son is insulting. But do not assume in silence either — say what you are taking for granted so it can be corrected: "Kolkata, I take it?" A silent assumption is how a wrong document gets built without anyone noticing.
+- NEVER ASK WHAT YOU ALREADY KNOW OR WHAT THEY HAVE ALREADY SAID. You hold a great deal about this family; asking Josh's age when you already know whose son he is is insulting. But do not assume in silence either — say what you are taking for granted so it can be corrected: "Kolkata, I take it?" A silent assumption is how a wrong document gets built without anyone noticing.
 - ALWAYS OFFER TO GO AHEAD ANYWAY. End the brief with a way past it: "Or tell me to go ahead and I will assume CBSE, Kolkata, and up to class 12 — and I will say so on the first slide." Some days they want something rough, and the brief must never become a gate. If they do say go ahead, STATE THOSE ASSUMPTIONS IN THE DOCUMENT so nobody reading it later mistakes them for facts.
 - AND IF THEY GAVE YOU ENOUGH, BUILD IT. Do not ask for the sake of asking, do not ask the same thing twice, and never ask anything at all for an ordinary question that is already answerable.
 - You CAN read files they send you here — Word, Excel, PDF, PowerPoint, images, 10 formats. Never say you are unable to receive an upload. You have already read their file by the time you reply.
@@ -4016,7 +4089,24 @@ async function saveMemory(profileKey,newMem){
     return false;
   }
 }
-function detectMemoryRequest(t){const l=t.toLowerCase();return l.includes('remember')||l.includes('store this')||l.includes("don't forget")||l.includes('dont forget')||l.includes('keep in mind')||l.includes('note this');}
+// ══ Is this an instruction to remember something? ════════════════════════
+// THIS WAS A PLAIN SUBSTRING TEST ON THE WHOLE MESSAGE. So "Do you remember
+// what I told you about my trip?" was filed as a long-term memory reading
+// "Do you what I told you about my trip?" — and the question was never
+// answered. "I can't remember the name of that hospital" did the same. Those
+// rows then went into the system prompt on later turns and counted against
+// the 100-memory cap. Matt Abate reported it 2026-10-30 (issue #2).
+// A memory instruction now has to READ like one: the instruction stands at the
+// START of the message, and there is no question mark anywhere in it. So
+// "Remember my flight is at 6" still saves, while "do you remember...",
+// "I can't remember..." and "would you remember..." all fall through to an
+// ordinary turn and get answered.
+const _MEM_INSTRUCTION=/^\s*(?:please\s+|bella[,\s]+)*(?:remember|store this|don'?t forget|keep in mind|note this)\b/i;
+function detectMemoryRequest(t){
+  const str=String(t||'');
+  if(str.indexOf('?')!==-1) return false;   // a question is a question
+  return _MEM_INSTRUCTION.test(str);
+}
 function detectPronunciationCorrection(t){const l=t.toLowerCase();return l.includes('pronounce')||l.includes('pronounced')||l.includes('say my name')||l.includes('my name is pronounced')||l.includes('sounds like')||l.includes('rhymes with');}
 async function savePronunciation(profileKey,correctionText){
   try{
@@ -4093,9 +4183,44 @@ const _cloudPullAsked={};
 // not immediately queue a write back out — which would loop.
 let _suppressThreadSync=false;
 
+// ══ Text that is about to become HTML ════════════════════════════════════
+// The thread list builds its rows with innerHTML. Anything a person typed, or
+// anything that arrived from another device, has to come through here first.
+// Handles & before the rest, or the escaping escapes itself.
+function _escHtml(x){
+  return String(x==null?'':x)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ══ History with the picture bytes taken out ═════════════════════════════
+// AN ATTACHED PHOTO IS KEPT IN HISTORY AS BASE64, and history is what gets
+// written to localStorage. A 4MB phone photo is over 5MB once base64-encoded,
+// which is roughly the WHOLE localStorage allowance for an origin — so setItem
+// threw, the empty catch swallowed it, the old b_threads value stayed put, and
+// NOTHING SAVED for any conversation until that photo fell out of the last 20
+// messages. Silent, invisible, and bellaReportError was never called, so
+// nobody ever heard about it. Matt Abate reported it 2026-10-30 (issue #3).
+// The bytes are only needed for the turn they are sent on. The filename is
+// already in the text part as [DOCUMENT n: name.jpg], so nothing a person can
+// read is lost by dropping them from anything we STORE.
+function _histWithoutImageBytes(hist){
+  if(!Array.isArray(hist))return[];
+  return hist.map(function(m){
+    if(!m||!Array.isArray(m.parts))return m;
+    if(!m.parts.some(function(x){return x&&x.inlineData;}))return m;
+    const parts=m.parts.filter(function(x){return !(x&&x.inlineData);});
+    if(!parts.length)parts.push({text:'[Image]'});
+    return Object.assign({},m,{parts:parts});
+  });
+}
+
 function _trimHistoryForSync(hist){
   if(!Array.isArray(hist))return[];
-  const out=hist.slice();
+  // PICTURE BYTES FIRST. The loop below stops at ONE message, so a last message
+  // carrying a photo still went to /threads-write far above THREAD_SYNC_CAP no
+  // matter how much it trimmed. Stripping the bytes is what makes it fit.
+  const out=_histWithoutImageBytes(hist).slice();
   // Drop from the OLDEST end until it fits. Recent turns are what she needs.
   while(out.length>1 && JSON.stringify(out).length>THREAD_SYNC_CAP) out.shift();
   return out;
@@ -4296,8 +4421,22 @@ window.addEventListener('focus',maybeRepullThreads);
 function saveThreadsLocal(){
   try{
     localStorage.setItem('bella_threads_ts',Date.now());
-    const slim={};for(const[k,v]of Object.entries(threads)){slim[k]={name:v.name,hist:v.hist.slice(-20),created:v.created};}localStorage.setItem('b_threads',JSON.stringify(slim));}catch{}
-  // Local is safe at this point. Everything below is best-effort.
+    const slim={};
+    for(const[k,v]of Object.entries(threads)){
+      // lastAt WAS DROPPED HERE, so _threadUsedAt fell back to `created` after a
+      // reload and the sidebar's most-recently-used order quietly reset to
+      // creation order. Same line, same report, smaller bug.
+      slim[k]={name:v.name,hist:_histWithoutImageBytes(v.hist).slice(-20),created:v.created,lastAt:v.lastAt};
+    }
+    localStorage.setItem('b_threads',JSON.stringify(slim));
+  }catch(e){
+    // NOT an empty catch any more. A failure here means nothing local is saving
+    // at all — the one fault a person cannot see and so can never report.
+    try{bellaReportError('saveThreadsLocal',
+      (e&&e.name==='QuotaExceededError')?'localStorage quota exceeded — nothing is saving locally'
+                                        :(e&&e.message?e.message:String(e)));}catch(_){}
+  }
+  // Local has been attempted AND any failure is now reported. Below is best-effort.
   if(!_suppressThreadSync&&currentThreadId)queueThreadSync(currentThreadId);
 }
 // Opening Bella creates a conversation before a word is typed, so every login
@@ -4390,10 +4529,16 @@ function renderThreadList(){
     // render — every conversation gone from view, with the data still on disk.
     const _last=Array.isArray(t.hist)&&t.hist.length>0?t.hist[t.hist.length-1]:null;
     const _lastTxt=_last?((_last.parts&&_last.parts[0]&&_last.parts[0].text)||_last.text||''):'';
-    const preview=_lastTxt?_lastTxt.substring(0,40)+'...':'Start a conversation';
+    // THE NAME ONE LINE BELOW WAS ESCAPED AND THIS WAS NOT, which is exactly why
+    // nobody noticed: the block LOOKS handled. The preview is the text of a real
+    // message, and a conversation can arrive from the backend having been written
+    // on another device, so this is a stored sink, not just self-inflicted. The
+    // 40-character cut-off is no defence — a working payload is shorter than that.
+    // There is no CSP on GitHub Pages to fall back on. Matt Abate, 2026-10-30.
+    const preview=_lastTxt?_escHtml(_lastTxt.substring(0,40))+'...':'Start a conversation';
     el.innerHTML=`<div class="thread-icon">💬</div>
       <div class="thread-info">
-        <div class="thread-name" id="tname_${id}">${t.name.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>
+        <div class="thread-name" id="tname_${id}">${_escHtml(t.name)}</div>
         <div class="thread-preview">${preview}</div>
       </div>
       <div class="thread-actions">
@@ -11002,21 +11147,38 @@ async function send(){
     bellaMsg(_endAck);speakText(_endAck,'en');recordLocalExchange(disp,_endAck);clearFiles();endTurn();return;
   }
 
-  // SECURITY RULE 1 — Block identity switch for all non-admin users
+  // SECURITY RULE 1 — Block identity switch for all non-admin users.
+  // THIS WAS AN UNANCHORED SUBSTRING TEST AND IT REFUSED ORDINARY SENTENCES.
+  // Matt Abate reported it 2026-10-30 (issue #1); measured the same day, 7 of
+  // 14 everyday sentences were refused outright — "I'm looking for a hospital
+  // near me", "I'm hungry", even "I'm sorry, can you repeat that?". A member
+  // just saw a security message that had nothing to do with their question.
+  // IT SURVIVED EVERY TEST I EVER RAN BECAUSE LINE 1 SKIPS ADMINS AND EVERY
+  // TEST RAN AS SAVIO. Two changes: the claim must be at the START of the
+  // message, and the word must be a name this page KNOWS. Ordinary sentences
+  // now reach the model; "I'm Paushali" still does not. The exclusion list is
+  // gone because it is no longer needed — "fine" and "good" are not names.
   if(idState==='confirmed' && !_isAdmin){
-    const _switchMatch = disp.match(/(?:i'?m|i am|my name is|call me)\s+(?:actually\s+|really\s+)?([a-zA-Z]+)/i);
+    const _switchMatch = disp.match(/^\s*(?:please\s+|bella[,\s]+)*(?:i'?m|i am|my name is|call me)\s+(?:actually\s+|really\s+)?([a-zA-Z]+)/i);
     if(_switchMatch){
       const _mentionedName=(_switchMatch[1]||'').toLowerCase();
       const _confirmedName=(currentAddressedName||'').toLowerCase();
-      if(_mentionedName && _mentionedName!==_confirmedName && _mentionedName.length>2 && !['fine','good','well','here','back','home','okay','just','also','not'].includes(_mentionedName)){
+      if(_mentionedName && _mentionedName!==_confirmedName && _mentionedName.length>2 &&
+         _isKnownPersonName(_mentionedName) && _ownNames().indexOf(_mentionedName)===-1){
         const _block=`I can see you're already signed in securely. For your privacy and security, I'm only able to assist the account user that's verified and logged in. What can I help you with today?`;
         bellaMsg(_block);speakText(_block,'en');clearFiles();endTurn();return;
       }
     }
   }
 
-  if(detectMemoryRequest(disp)){
-    const memItem=disp.replace(/remember|store this|don't forget|dont forget|keep in mind|note this/gi,'').trim();
+  // A memory instruction with a document attached is NOT a memory instruction —
+  // the document is the point. Falling through means the file actually gets
+  // read, instead of being left attached to whatever they type next.
+  if(detectMemoryRequest(disp) && !(pFiles&&pFiles.length)){
+    // Strip ONLY the leading instruction, not every occurrence of the word.
+    // The old global replace deleted "remember" wherever it appeared and handed
+    // saveMemory a mangled sentence.
+    const memItem=disp.replace(_MEM_INSTRUCTION,'').replace(/^[\s,:;.\-\u2013\u2014]+/,'').trim();
     if(memItem&&currentProfileKey){
       const _kept=await saveMemory(currentProfileKey,memItem);
       // Never claim a save that did not happen. The old line said "I've stored
@@ -11024,7 +11186,10 @@ async function send(){
       const ack=_kept
         ? `Got it, ${currentAddressedName}. I've stored that in my memory.`
         : `I'm sorry ${currentAddressedName} — I could not save that to my memory just now, so please tell me again in a little while. I have not kept it.`;
-      bellaMsg(ack);speakText(ack,'en');endTurn();return;
+      // The exchange was never written to the thread, so it vanished on reload,
+      // and the files were never cleared. Both now match every other early
+      // return in send().
+      bellaMsg(ack);speakText(ack,'en');recordLocalExchange(disp,ack);clearFiles();endTurn();return;
     }
   }
   if(detectPronunciationCorrection(disp)&&currentProfileKey){
@@ -11106,7 +11271,7 @@ async function send(){
     // above) — this is never shown on screen, only used to decide what to speak.
     let voiceSummary=null;
     // Savio caught this live on 2026-10-06: a hospital answer rendered with a
-    // visible "[VOICE]- SVS Marwari Hospital is on..." block, so the reply read
+    // visible "[VOICE]- The hospital is on..." block, so the reply read
     // as if it had been pasted twice with a stray tag in the middle.
     // CAUSE: both tags were required. The model had opened [VOICE] and never
     // closed it, so nothing matched and the whole summary was shown as text.
@@ -11258,16 +11423,19 @@ async function send(){
 
 /* WHERE THE USER ACTUALLY IS.   Added 2026-10-06, from Savio's own test.
    He granted location at sign-in, asked for nearby hospitals, and was given
-   SVS Marwari Hospital on Amherst Street — while standing at Acropolis Mall.
+   one on the far side of the city — while standing in a mall somewhere else.
    TWO CAUSES, and neither was the search tool:
      1. The page HAD his location all along. `initLocationWithCoords()` writes
         sessionStorage['b_location_data'] = {city,country,area,lat,lon}, and
         exactly TWO things read it: the weather cell and Thought of the Day.
         It never reached the model, so granting permission did nothing for
         conversation. The top bar knew where he was; Bella did not.
-     2. "Amherst Street" was never a guess. It is written into his own profile
-        in buildSystemPrompt(): "Wife Sanjukta is CEO of SVS Marwari Hospital,
-        Amherst Street, Kolkata." She answered from the family profile.
+     2. THE WRONG ADDRESS WAS NEVER A GUESS. It was written into his own
+        profile in buildSystemPrompt(), as a family member's workplace, and she
+        answered from the profile rather than from where he was standing.
+        (Those workplace details left this page on 2026-10-31 — see the note on
+        BACKGROUNDS — so this exact cause cannot recur. The lesson holds for
+        anything a profile asserts.)
    So this note does two jobs: it supplies the real location, and it tells her
    in terms that a profile is history, not a current position. */
 function _whereTheyAreNote(){
@@ -11580,7 +11748,7 @@ async function callBella(useSearch,memCtx,signal,route){
   // always present and tells Gemini WHEN to reach for it. Previously the tool was
   // only attached when a keyword matched, so anything phrased outside that list was
   // answered from training data and came back out of date.
-  const searchNote='\n\nRESEARCH RULE — applies to every question. You have Google Search available and you must use it whenever the correct answer could have changed since your training data: prices, costs, rates, valuations, who currently holds a role or office, company and product facts, laws and rules, sports results, schedules, opening hours, news, and any question containing "current", "latest", "still", "now" or a year. THIS EXPLICITLY INCLUDES ANY NAMED PLACE, BUSINESS OR INSTITUTION — a hospital, clinic, school, college, hotel, restaurant, shop, office or station — whether the person asks for the nearest ones, for its address, for directions to it, or simply names it. Hospitals and businesses are bought, renamed, merged, relocated and closed constantly, and a name you remember is not evidence it still trades under that name today. Savio hit this on 2026-10-16: asked about a hospital, you answered from memory and called it by a name it has not used since August 2023 — the correct answer was one search away, and when he told you to look it up you got it right immediately. Do not wait to be told. Look it up the first time, every time, and say what the place is called NOW. If you are not certain your information is current, search — do not answer from memory and do not guess. Never state a fact that could be out of date without checking it first. When you have searched, give 3-5 bullet points and say when the information is from. Do NOT write out URLs and never say you are unable to provide a link — the sources are attached under your answer automatically, as clickable links, every time you search. Say "the sources are linked below" instead. Cite by name in the text: cite medical sources for medical questions, official sources for government ones, industry reports for business data. THE OFFICIAL SOURCE IS NOT SOMETHING TO BE ASKED FOR — IT COMES WITH THE ANSWER, EVERY TIME. Savio, 2026-10-17: "the moment i ask anything like this, without me asking, it should always come with a verified govt source." So whenever an answer rests on an official figure, rule or decision — an interest rate, a tax, a duty, a law, a regulation, a government scheme, an official statistic, a licence or a public appointment — NAME THE ISSUING AUTHORITY IN THE ANSWER ITSELF (the Reserve Bank of India, the Income Tax Department, the GST Council, the ministry concerned) and say the official source is linked below. Never leave him to ask a second time for the authority behind a number. If your search turned up no official source and only news coverage, SAY SO PLAINLY — "I could not reach an official RBI page for this, so this is from news reports" — because a number with no authority behind it, presented as though it had one, is the one thing worse than not answering. When the question is personal, emotional, creative, or ordinary conversation, do not search — answer warmly as Bella normally would. Spoken summary: 2 sentences max — never speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).\n\nNEVER PROMISE AN ACTION YOU ARE NOT ABOUT TO PERFORM IN THIS SAME REPLY. You answer one message at a time and you cannot go away and come back. So never end with "let me find…", "let me check…", "I will look that up", "give me a moment", "I am searching now" or anything that leaves the person waiting for a second message. There is no second message. Either do it now and give the answer in this reply, or say plainly that you cannot and what you need from them. Savio saw this fail on 2026-10-06: asked for hospitals near Acropolis Mall, Bella replied "Let me find some hospitals near Acropolis Mall for you." and stopped, and he had to type "OK" to get an answer. That reads as a broken promise, which is worse than saying no.';
+  const searchNote='\n\nRESEARCH RULE — applies to every question. You have Google Search available and you must use it whenever the correct answer could have changed since your training data: prices, costs, rates, valuations, who currently holds a role or office, company and product facts, laws and rules, sports results, schedules, opening hours, news, and any question containing "current", "latest", "still", "now" or a year. THIS EXPLICITLY INCLUDES ANY NAMED PLACE, BUSINESS OR INSTITUTION — a hospital, clinic, school, college, hotel, restaurant, shop, office or station — whether the person asks for the nearest ones, for its address, for directions to it, or simply names it. Hospitals and businesses are bought, renamed, merged, relocated and closed constantly, and a name you remember is not evidence it still trades under that name today. Savio hit this on 2026-10-16: asked about a hospital, you answered from memory and called it by a name it has not used since August 2023 — the correct answer was one search away, and when he told you to look it up you got it right immediately. Do not wait to be told. Look it up the first time, every time, and say what the place is called NOW. If you are not certain your information is current, search — do not answer from memory and do not guess. Never state a fact that could be out of date without checking it first. When you have searched, give 3-5 bullet points and say when the information is from. Do NOT write out URLs and never say you are unable to provide a link — the sources are attached under your answer automatically, as clickable links, every time you search. Say "the sources are linked below" instead. Cite by name in the text: cite medical sources for medical questions, official sources for government ones, industry reports for business data. THE OFFICIAL SOURCE IS NOT SOMETHING TO BE ASKED FOR — IT COMES WITH THE ANSWER, EVERY TIME. Savio, 2026-10-17: "the moment i ask anything like this, without me asking, it should always come with a verified govt source." So whenever an answer rests on an official figure, rule or decision — an interest rate, a tax, a duty, a law, a regulation, a government scheme, an official statistic, a licence or a public appointment — NAME THE ISSUING AUTHORITY IN THE ANSWER ITSELF (the Reserve Bank of India, the Income Tax Department, the GST Council, the ministry concerned) and say the official source is linked below. Never leave him to ask a second time for the authority behind a number. If your search turned up no official source and only news coverage, SAY SO PLAINLY — "I could not reach an official RBI page for this, so this is from news reports" — because a number with no authority behind it, presented as though it had one, is the one thing worse than not answering. When the question is personal, emotional, creative, or ordinary conversation, do not search — answer warmly as Bella normally would. Spoken summary: 2 sentences max — never speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).\n\nNEVER PROMISE AN ACTION YOU ARE NOT ABOUT TO PERFORM IN THIS SAME REPLY. You answer one message at a time and you cannot go away and come back. So never end with "let me find…", "let me check…", "I will look that up", "give me a moment", "I am searching now" or anything that leaves the person waiting for a second message. There is no second message. Either do it now and give the answer in this reply, or say plainly that you cannot and what you need from them. Savio saw this fail on 2026-10-06: asked for hospitals near a mall, Bella replied "Let me find some hospitals near that mall for you." and stopped, and he had to type "OK" to get an answer. That reads as a broken promise, which is worse than saying no.';
   // Savio, 2026-10-02: the Summarise button must give "a summary pointwise or highlight
   // her finding in short". It used to ask for 2-3 sentences of prose, so even when it
   // worked you got a paragraph, never highlights. The word cap is stated because an
@@ -12302,7 +12470,7 @@ function detectLanguage(t){
 // It also skips a Gemini call, so it is cheaper than the old path.
 const TZ_EXTRA=[
   // Birmingham is the classic trap: Alabama is CST/CDT, England is GMT/BST.
-  // The handover doc calls this out because Jishnu studies at UAB in Alabama.
+  // The handover doc calls this out: both get asked about, so both must resolve.
   {city:'Birmingham',state:'Alabama',country:'USA',tz:'America/Chicago',abbr:'CST'},
   {city:'Birmingham',state:'England',country:'UK',tz:'Europe/London',abbr:'GMT'},
   {city:'Alabama',state:'Alabama',country:'USA',tz:'America/Chicago',abbr:'CST'},
@@ -14772,7 +14940,17 @@ async function hfile(e){
   document.getElementById('ti').placeholder='Add a question or press send to analyse...';
   document.getElementById('ti').focus();e.target.value='';
 }
-async function extractPDF(file){const ab=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:ab}).promise;let t='';for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const c=await pg.getTextContent();t+=c.items.map(x=>x.str).join(' ')+'\n';}return t||'[PDF appears scanned]';}
+/* isEvalSupported:false CLOSES CVE-2024-4367 — arbitrary JavaScript execution
+   from a crafted PDF, via a font matrix that pdf.js fed to eval. EVERY version
+   before 4.2.67 is affected and this page loads 3.11.174, so the hole was live
+   on a path Bella uses: she reads attached PDFs. Codean Labs, who found it, give
+   this exact setting as the mitigation for anyone not yet upgraded, and it costs
+   NOTHING here because Bella extracts text and never renders a page to canvas.
+   THIS IS A STOPGAP, NOT THE FIX. The real fix is pdf.js >= 4.2.67, which no
+   longer ships a plain-script build — it is ES-module only, so upgrading changes
+   how this page loads the library and the worker, and that deserves its own
+   change and its own test run. Found 2026-10-31, not in Matt Abate's report. */
+async function extractPDF(file){const ab=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:ab,isEvalSupported:false}).promise;let t='';for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const c=await pg.getTextContent();t+=c.items.map(x=>x.str).join(' ')+'\n';}return t||'[PDF appears scanned]';}
 /* A LEGACY .doc IS NOT A .docx AND NOTHING HERE CAN READ IT. mammoth opens the
    zip a .docx is; a pre-2007 .doc is an OLE2 container and mammoth throws or
    returns nothing, which used to surface as a bare "[Could not extract Word
@@ -19019,7 +19197,7 @@ function _plCoords(){
 }
 
 // Straight-line distance. Labelled as such on screen — Bella was caught stating
-// a road distance she had not looked up (the "4.68 km" to Amherst Street), and
+// a road distance she had not looked up (a "4.68 km" to a place across the city), and
 // a crow-flies number presented as a journey is the same lie in a new place.
 function _plKm(me,p){
   const R=6371,r=Math.PI/180;
