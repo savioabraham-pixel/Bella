@@ -3901,6 +3901,18 @@ function setHist(h){
 // pruneEmptyThreads is not the bug -- an untouched conversation really is
 // disposable. The bug is calling a conversation empty when real work happened
 // in it.
+// ══ A CONVERSATION NAME A PERSON CAN READ ════════════════════════════════
+// Thread names are the first 30 characters of the first message, so a GIF
+// produced "GIF by Vidiots https://media1...." in the sidebar — and before the
+// title existed, just the bare URL. A machine address is not a name.
+// Strips any image URL, collapses the gap it leaves, and falls back to "GIF"
+// when the message was nothing but a picture.
+function _threadNameFrom(text){
+  let t=String(text||'').replace(/https?:\/\/\S+/g,' ').replace(/\s+/g,' ').trim();
+  if(!t) t='GIF';
+  return t.substring(0,30)+(t.length>30?'...':'');
+}
+
 function recordLocalExchange(userText, bellaText){
   if(!currentThreadId || !threads[currentThreadId]) return;
   const h=getHist();
@@ -3910,7 +3922,7 @@ function recordLocalExchange(userText, bellaText){
   // Same naming rule the normal path uses, so these look like any other thread.
   const t=threads[currentThreadId];
   if(t.name==='New Conversation'||String(t.name||'').startsWith('Welcome')){
-    t.name=userText.substring(0,30)+(userText.length>30?'...':'');
+    t.name=_threadNameFrom(userText);
   }
   try{ renderThreadList(); }catch(e){}
   saveThreadsLocal();
@@ -11227,7 +11239,13 @@ async function send(){
   if(!text&&!_g&&pFiles.length===0){endTurn();return;}
   hideTypingAck();
   let disp=text||'';
-  if(_g){ disp=(disp?disp+' ':'')+(_g.title?_g.title+' ':'')+_g.url; }
+  // THE TITLE IS GONE, DELIBERATELY. It was only ever a crutch for a Bella who
+  // could not see the picture — and Giphy's titles are the AUTHOR, not the
+  // content ("GIF by Vidiots"), so it told nobody anything and turned the
+  // conversation name into "GIF by Vidiots https://media1...". She receives
+  // the frame itself now and described one correctly first try, so the caption
+  // earns nothing. Savio, 2026-10-31: "just make the Thread name say GIF".
+  if(_g){ disp=(disp?disp+' ':'')+_g.url; }
   if(!disp) disp='Please analyse the attached document(s).';
   removeSuggestions();userMsg(disp,pFiles.map(f=>f.name));
   inp.value='';inp.style.height='auto';
@@ -11526,7 +11544,7 @@ async function send(){
     try{
       if(currentThreadId&&threads[currentThreadId]){
         if(threads[currentThreadId].name==='New Conversation'||threads[currentThreadId].name.startsWith('Welcome')){
-          threads[currentThreadId].name=disp.substring(0,30)+(disp.length>30?'...':'');
+          threads[currentThreadId].name=_threadNameFrom(disp);
           {const _tt=document.getElementById('topbar-thread');if(_tt)_tt.textContent=threads[currentThreadId].name;}
         }
       }
