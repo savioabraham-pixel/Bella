@@ -3901,15 +3901,38 @@ function setHist(h){
 // pruneEmptyThreads is not the bug -- an untouched conversation really is
 // disposable. The bug is calling a conversation empty when real work happened
 // in it.
+// ══ WHAT IS ATTACHED, IN ONE WORD ════════════════════════════════════════
+// Savio, 2026-10-31: "When it is an Image..it gets name Image. When a GIF...
+// it gets named GIF, and so on Video ...named Video?" He is right, and it was
+// worse than he knew: with no typed words `disp` becomes the placeholder
+// "Please analyse the attached document(s).", so EVERY text-free attachment —
+// photo, PDF, spreadsheet, anything — produced a conversation called
+// "Please analyse the attach...". Must be read BEFORE clearFiles() empties it.
+function _attachLabel(){
+  if(_pendingGif) return 'GIF';
+  if(!pFiles || !pFiles.length) return '';
+  if(pFiles.length>1) return pFiles.length+' files';
+  const ext=String((pFiles[0]&&pFiles[0].name)||'').split('.').pop().toLowerCase();
+  return ({jpg:'Image',jpeg:'Image',png:'Image',webp:'Image',gif:'GIF',
+           mp4:'Video',mov:'Video',
+           mp3:'Audio',wav:'Audio',m4a:'Audio',aac:'Audio',
+           pdf:'PDF',doc:'Document',docx:'Document',
+           xls:'Spreadsheet',xlsx:'Spreadsheet',csv:'Spreadsheet',
+           pptx:'Presentation',txt:'Text',
+           zip:'Archive',tar:'Archive',gz:'Archive'})[ext] || 'File';
+}
+
 // ══ A CONVERSATION NAME A PERSON CAN READ ════════════════════════════════
 // Thread names are the first 30 characters of the first message, so a GIF
 // produced "GIF by Vidiots https://media1...." in the sidebar — and before the
 // title existed, just the bare URL. A machine address is not a name.
 // Strips any image URL, collapses the gap it leaves, and falls back to "GIF"
 // when the message was nothing but a picture.
-function _threadNameFrom(text){
+function _threadNameFrom(text, fallback){
   let t=String(text||'').replace(/https?:\/\/\S+/g,' ').replace(/\s+/g,' ').trim();
-  if(!t) t='GIF';
+  // The stand-in text send() uses when nothing was typed is not a name.
+  if(t==='Please analyse the attached document(s).') t='';
+  if(!t) t=fallback||'Attachment';
   return t.substring(0,30)+(t.length>30?'...':'');
 }
 
@@ -11236,6 +11259,7 @@ async function send(){
   // It is folded in here instead: the TITLE first so the thread gets a
   // readable name, then the URL, which userMsg turns into the picture.
   const _g=_pendingGif;
+  const _attachKind=_attachLabel();   // BEFORE clearFiles() empties pFiles
   if(!text&&!_g&&pFiles.length===0){endTurn();return;}
   hideTypingAck();
   let disp=text||'';
@@ -11544,7 +11568,7 @@ async function send(){
     try{
       if(currentThreadId&&threads[currentThreadId]){
         if(threads[currentThreadId].name==='New Conversation'||threads[currentThreadId].name.startsWith('Welcome')){
-          threads[currentThreadId].name=_threadNameFrom(disp);
+          threads[currentThreadId].name=_threadNameFrom(disp,_attachKind);
           {const _tt=document.getElementById('topbar-thread');if(_tt)_tt.textContent=threads[currentThreadId].name;}
         }
       }
@@ -15525,6 +15549,39 @@ function bellaMsg(text,audioUrl){
   m.appendChild(w);m.scrollTop=m.scrollHeight;
   return msgId;
 }
+// ══ EMOJI SENT ON THEIR OWN COME OUT BIG, AND ANIMATED WHERE WE HAVE THEM ══
+// Savio, 2026-10-31: "When i selected an emoji and pressed sent it came very
+// weird and small... like we do on our phone animated big emojis?"
+// insertEmoji puts the character into the box, so it rendered at message text
+// size — correct, and tiny. Phones grow an emoji-only message instead.
+// The repo already carries fifteen Noto Animated Emoji as 48x48 transparent
+// GIFs, used until now only for the mood avatar. They are reused here.
+// RULES: the message must be emoji and nothing else, at most three of them.
+// Add words and it stays an ordinary message, which is how phones behave too.
+const _ANIM_EMOJI = ['1f600','1f602','1f607','1f609','1f60a','1f60c','1f60d',
+                     '1f60e','1f618','1f642','1f914','1f917','1f929','1f970','1f973'];
+function _bigEmojiHtml(text){
+  try{
+    const t = String(text||'').trim();
+    if(!t) return null;
+    // Drop the invisible joiners so a flag or a skin tone does not read as "text".
+    const bare = t.replace(/[\uFE0F\u200D\s]/g, '');
+    if(!bare) return null;
+    const chars = Array.from(bare);
+    if(chars.length === 0 || chars.length > 3) return null;
+    for(const c of chars){ if(!/\p{Extended_Pictographic}/u.test(c)) return null; }
+    return chars.map(function(c){
+      const cp = c.codePointAt(0).toString(16);
+      if(_ANIM_EMOJI.indexOf(cp) !== -1){
+        return '<img src="emoji/'+cp+'.gif" alt="'+_escHtml(c)+'" '+
+               'style="width:72px;height:72px;vertical-align:middle;display:inline-block">';
+      }
+      // No animation for this one, but it still gets the size.
+      return '<span style="font-size:52px;line-height:1.15;display:inline-block">'+_escHtml(c)+'</span>';
+    }).join(' ');
+  }catch(e){ return null; }   // an engine without \p{...} just keeps small emoji
+}
+
 function userMsg(text,fileNames){
   // Clear suggestions when user sends
   const prev=document.getElementById('active-suggestions');
@@ -15544,7 +15601,9 @@ function userMsg(text,fileNames){
   // NOTE: Bella still receives the URL as text -- she cannot see the picture.
   // Giving her real sight of it means fetching the image and sending it as
   // data, which is separate work.
-  const safe=_escHtml(text).replace(
+  // Emoji on their own are shown large; everything else takes the normal path.
+  const _big=_bigEmojiHtml(text);
+  const safe=_big!==null?_big:_escHtml(text).replace(
     /https:\/\/(?:media\d*|i)\.giphy\.com\/[^\s"'<>]+/g,
     function(u){ return '<img src="'+u+'" alt="GIF" loading="lazy" '+
       'style="max-width:220px;width:100%;border-radius:10px;display:block;margin:4px 0">'; });
