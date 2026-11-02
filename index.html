@@ -15573,11 +15573,16 @@ function _bigEmojiHtml(text){
     return chars.map(function(c){
       const cp = c.codePointAt(0).toString(16);
       if(_ANIM_EMOJI.indexOf(cp) !== -1){
+        // 48px, NOT 72. These files are 48x48, and drawing them at 72 was a
+        // 1.5x upscale — which is the entire reason they looked blurred.
+        // Savio, 2026-11-01: "Why are they so blurred?" Because I stretched
+        // them. A 144px source exists but costs 223KB an emoji against 29KB,
+        // which does not scale to the hundreds BKC would want.
         return '<img src="emoji/'+cp+'.gif" alt="'+_escHtml(c)+'" '+
-               'style="width:72px;height:72px;vertical-align:middle;display:inline-block">';
+               'style="width:48px;height:48px;vertical-align:middle;display:inline-block">';
       }
       // No animation for this one, but it still gets the size.
-      return '<span style="font-size:52px;line-height:1.15;display:inline-block">'+_escHtml(c)+'</span>';
+      return '<span style="font-size:44px;line-height:1.1;display:inline-block">'+_escHtml(c)+'</span>';
     }).join(' ');
   }catch(e){ return null; }   // an engine without \p{...} just keeps small emoji
 }
@@ -15602,6 +15607,11 @@ function userMsg(text,fileNames){
   // Giving her real sight of it means fetching the image and sending it as
   // data, which is separate work.
   // Emoji on their own are shown large; everything else takes the normal path.
+  // THE "BLACK BACKGROUND" WAS NEVER THE GIF. Measured 2026-11-01: dropped on
+  // a red canvas, every corner pixel of 1f600.gif reads 255,0,0 — the emoji is
+  // genuinely transparent. What showed through was the navy MESSAGE BUBBLE,
+  // which around a small transparent image reads as a black box. Phones put no
+  // bubble behind an emoji-only message at all, so neither does this.
   const _big=_bigEmojiHtml(text);
   const safe=_big!==null?_big:_escHtml(text).replace(
     /https:\/\/(?:media\d*|i)\.giphy\.com\/[^\s"'<>]+/g,
@@ -15609,7 +15619,8 @@ function userMsg(text,fileNames){
       'style="max-width:220px;width:100%;border-radius:10px;display:block;margin:4px 0">'; });
   const chips=fileNames&&fileNames.length>0?fileNames.map(n=>`<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);border-radius:6px;padding:3px 7px;font-size:10px;margin-bottom:4px">${String(n).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`).join(''):'';
   const uMsgId='umsg-'+(++_msgSeq);
-  w.innerHTML=`<div class="mav u">${initials}</div><div class="msg-wrap"><div class="mbub" id="${uMsgId}">${chips?chips+'<br>':''}${safe}</div>
+  const _bubStyle=_big!==null?' style="background:none;border:none;box-shadow:none;padding:2px 0"':'';
+  w.innerHTML=`<div class="mav u">${initials}</div><div class="msg-wrap"><div class="mbub" id="${uMsgId}"${_bubStyle}>${chips?chips+'<br>':''}${safe}</div>
   <div class="msg-actions user-actions">
     <button class="msg-act-btn" onclick="retryMsg('${uMsgId}')" title="Retry"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg></button>
     <button class="msg-act-btn" onclick="editMsg('${uMsgId}')" title="Edit"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
