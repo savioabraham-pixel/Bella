@@ -15558,8 +15558,44 @@ function bellaMsg(text,audioUrl){
 // GIFs, used until now only for the mood avatar. They are reused here.
 // RULES: the message must be emoji and nothing else, at most three of them.
 // Add words and it stays an ordinary message, which is how phones behave too.
-const _ANIM_EMOJI = ['1f600','1f602','1f607','1f609','1f60a','1f60c','1f60d',
-                     '1f60e','1f618','1f642','1f914','1f917','1f929','1f970','1f973'];
+// GENERATED FROM THE emoji/ FOLDER, not hand-kept. Every codepoint here
+// has a real 144x144 animated file beside it, so nothing 404s and nothing
+// flashes a broken image. 298 of the picker's 541 emoji are animated by
+// Google's Noto set; the other 243 fall through to the large static
+// rendering below, which looks right and costs nothing.
+// Regenerate with: ls emoji/*.gif
+const _ANIM_EMOJI = [
+  '1f192', '1f193', '1f195', '1f197', '1f198', '1f199', '1f300', '1f304', '1f305', '1f307',
+  '1f308', '1f30a', '1f30b', '1f30c', '1f30d', '1f30e', '1f30f', '1f31a', '1f31b', '1f31c',
+  '1f31d', '1f31e', '1f31f', '1f32d', '1f32e', '1f32f', '1f331', '1f332', '1f335', '1f337',
+  '1f338', '1f339', '1f33c', '1f33d', '1f33f', '1f340', '1f341', '1f342', '1f343', '1f344',
+  '1f345', '1f347', '1f348', '1f34a', '1f34b', '1f34d', '1f34e', '1f352', '1f353', '1f354',
+  '1f355', '1f357', '1f35c', '1f35d', '1f35e', '1f361', '1f366', '1f368', '1f369', '1f36a',
+  '1f373', '1f375', '1f377', '1f37b', '1f37f', '1f382', '1f386', '1f3cd', '1f3ce', '1f3d5',
+  '1f3da', '1f3de', '1f3e0', '1f440', '1f441', '1f442', '1f443', '1f446', '1f447', '1f448',
+  '1f449', '1f44a', '1f44b', '1f44c', '1f44d', '1f44e', '1f44f', '1f450', '1f485', '1f48b',
+  '1f490', '1f493', '1f494', '1f495', '1f496', '1f497', '1f498', '1f499', '1f49a', '1f49b',
+  '1f49c', '1f49d', '1f49e', '1f49f', '1f4a7', '1f4aa', '1f4af', '1f4f4', '1f525', '1f590',
+  '1f595', '1f596', '1f5a4', '1f600', '1f601', '1f602', '1f603', '1f604', '1f605', '1f606',
+  '1f607', '1f609', '1f60a', '1f60b', '1f60c', '1f60d', '1f60e', '1f60f', '1f610', '1f611',
+  '1f612', '1f613', '1f614', '1f615', '1f616', '1f617', '1f618', '1f619', '1f61a', '1f61b',
+  '1f61c', '1f61d', '1f61e', '1f61f', '1f620', '1f621', '1f622', '1f623', '1f624', '1f625',
+  '1f626', '1f627', '1f628', '1f629', '1f62a', '1f62b', '1f62c', '1f62d', '1f62e', '1f62f',
+  '1f630', '1f631', '1f632', '1f633', '1f634', '1f635', '1f636', '1f637', '1f641', '1f642',
+  '1f643', '1f644', '1f64c', '1f64f', '1f680', '1f68c', '1f695', '1f697', '1f69a', '1f69c',
+  '1f6ae', '1f6b2', '1f6d1', '1f6f8', '1f6f9', '1f6fc', '1f90c', '1f90d', '1f90e', '1f90f',
+  '1f910', '1f912', '1f913', '1f914', '1f915', '1f917', '1f918', '1f919', '1f91a', '1f91b',
+  '1f91c', '1f91d', '1f91e', '1f91f', '1f922', '1f923', '1f924', '1f925', '1f927', '1f928',
+  '1f929', '1f92a', '1f92b', '1f92c', '1f92d', '1f92e', '1f92f', '1f932', '1f933', '1f942',
+  '1f951', '1f952', '1f953', '1f954', '1f95d', '1f95e', '1f966', '1f967', '1f968', '1f96c',
+  '1f96d', '1f970', '1f971', '1f973', '1f974', '1f975', '1f976', '1f978', '1f97a', '1f9b4',
+  '1f9b5', '1f9b6', '1f9bb', '1f9be', '1f9bf', '1f9c0', '1f9c3', '1f9c4', '1f9c5', '1f9c9',
+  '1f9cb', '1f9d0', '1f9e0', '1f9e1', '1fac0', '1fad0', '1fad1', '1fad6', '1fad8', '203c',
+  '2049', '2601', '2615', '261d', '2622', '2623', '262e', '262f', '2639', '2648', '2649',
+  '264a', '264b', '264c', '264d', '264e', '264f', '2650', '2651', '2652', '2653', '2668',
+  '26a0', '26a1', '26c5', '26ce', '2705', '2708', '270a', '270b', '270c', '270d', '274c',
+  '2753', '2757', '2763', '2764', '2b50'
+];
 function _bigEmojiHtml(text){
   try{
     const t = String(text||'').trim();
@@ -15573,16 +15609,20 @@ function _bigEmojiHtml(text){
     return chars.map(function(c){
       const cp = c.codePointAt(0).toString(16);
       if(_ANIM_EMOJI.indexOf(cp) !== -1){
-        // 48px, NOT 72. These files are 48x48, and drawing them at 72 was a
-        // 1.5x upscale — which is the entire reason they looked blurred.
-        // Savio, 2026-11-01: "Why are they so blurred?" Because I stretched
-        // them. A 144px source exists but costs 223KB an emoji against 29KB,
-        // which does not scale to the hundreds BKC would want.
+        // 72px DISPLAY from a 144px FILE. The two numbers are not a muddle:
+        // every screen here packs two device pixels into one CSS pixel, so a
+        // sharp 72px emoji needs 144 real pixels. The earlier 48px files drawn
+        // at 72 were a 1.5x upscale, which is what Savio saw as blur on
+        // 2026-11-01 — and even at 48 they were soft, because 48 CSS pixels is
+        // 96 device pixels on his Mac and his phone.
+        // He chose 72 on 2026-11-03 after seeing 48, 72 and 96 side by side.
         return '<img src="emoji/'+cp+'.gif" alt="'+_escHtml(c)+'" '+
-               'style="width:48px;height:48px;vertical-align:middle;display:inline-block">';
+               'style="width:72px;height:72px;vertical-align:middle;display:inline-block">';
       }
       // No animation for this one, but it still gets the size.
-      return '<span style="font-size:44px;line-height:1.1;display:inline-block">'+_escHtml(c)+'</span>';
+      // Sits level with the 72px images. The system font renders at whatever
+      // resolution the screen has, so this one is always sharp.
+      return '<span style="font-size:64px;line-height:1.1;display:inline-block">'+_escHtml(c)+'</span>';
     }).join(' ');
   }catch(e){ return null; }   // an engine without \p{...} just keeps small emoji
 }
