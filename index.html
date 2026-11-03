@@ -1190,7 +1190,7 @@ body.dark #img-panel .img-sw-hex{color:#F5E6C8!important}
 #mbtn-wave{display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;border:1px solid rgba(212,175,55,.5);background:var(--goldpale)}
 #mbtn-wave.on{display:flex}
 #mbtn-wave .vwave span{background:var(--gold)}
-.topbar-btn{width:32px;height:32px;border-radius:8px;background:#0B2545;border:1px solid #0B2545;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;color:var(--gold)}
+.topbar-btn{width:32px;height:32px;flex-shrink:0;border-radius:8px;background:#0B2545;border:1px solid #0B2545;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;color:var(--gold)}
 .topbar-btn:hover{background:var(--goldpale)}
 #msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth}
 #msgs::-webkit-scrollbar{width:4px}
@@ -2275,15 +2275,15 @@ try{
            ~30px icons, and the 135px it was not using came straight out of Food For
            Thought next door. The width is INLINE, so no stylesheet rule could have
            corrected it without !important. -->
-      <div class="tb-actions" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;flex-shrink:0;height:100%;border-left:1px solid var(--border);width:104px">
+      <div class="tb-actions" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;flex-shrink:0;height:100%;border-left:1px solid var(--border);width:auto">
         <button class="topbar-btn" id="search-btn" onclick="toggleSearch()" title="Search conversations" style="background:#0B2545;border:1px solid rgba(212,175,55,0.3)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
-        <button class="topbar-btn" onclick="openUserMenu()" title="My Account" style="background:#0B2545;border:1px solid rgba(212,175,55,0.3)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </button>
         <button class="topbar-btn" id="summarise-btn" onclick="summariseThread()" title="Summarise this conversation" style="display:none">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
+        </button>
+        <button class="topbar-btn" onclick="openUserMenu()" title="My Account" style="background:#0B2545;border:1px solid rgba(212,175,55,0.3)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </button>
       </div>
     </div>
@@ -2655,7 +2655,7 @@ try{
               <input id="fi" type="file" multiple accept=".pdf,.docx,.xlsx,.xls,.csv,.tsv,.pptx,.jpg,.jpeg,.png,.webp,.txt,.md,.json" onchange="hfile(event)" style="display:none">
             </label>
             <!-- Emoji -->
-            <button class="ibtn" onclick="toggleEmojiPicker()" title="Emoji & GIFs">
+            <button class="ibtn" id="emoji-btn" onclick="toggleEmojiPicker()" title="Emoji & GIFs">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
             </button>
             <!-- Record -->
@@ -2750,10 +2750,17 @@ try{
 </div>
 
 <!-- EMOJI PICKER PANEL -->
-<div id="emoji-panel" style="display:none;position:fixed;bottom:100px;right:20px;width:320px;max-width:95vw;background:#FFFFFF;border:1px solid rgba(11,37,69,0.15);border-radius:16px;box-shadow:0 8px 32px rgba(11,37,69,0.18);z-index:100;overflow:hidden">
+<div id="emoji-panel" style="display:none;position:fixed;bottom:100px;right:16px;width:320px;max-width:calc(100vw - 32px);background:#FFFFFF;border:1px solid rgba(11,37,69,0.15);border-radius:16px;box-shadow:0 8px 32px rgba(11,37,69,0.18);z-index:100;overflow:hidden">
   <!-- Header tabs -->
   <div style="display:flex;border-bottom:1px solid rgba(11,37,69,0.1);background:#F8F5EF">
     <button onclick="showEmojiTab('emoji')" id="etab-emoji" style="flex:1;padding:10px;border:none;background:transparent;font-size:12px;font-weight:600;color:#0B2545;cursor:pointer;border-bottom:2px solid #0B2545">😊 Emoji</button>
+    <!-- HIDDEN 2026-11-03, Savio's call. The drawer works and is tested, but it
+         holds TYPOGRAPHIC badges and he wants PICTORIAL stickers — illustrated
+         characters, like the WhatsApp tray he sent. The tab stays in the page,
+         switched off, so that when the real artwork exists it is one word here
+         to turn it back on. Removing it would mean rebuilding a working,
+         tested drawer for nothing. `sticker-test.mjs` still covers it. -->
+    <button onclick="showEmojiTab('stk')" id="etab-stk" style="display:none;flex:1;padding:10px;border:none;background:transparent;font-size:12px;font-weight:600;color:#5A6B8A;cursor:pointer;border-bottom:2px solid transparent">💬 Stickers</button>
     <button onclick="showEmojiTab('gif')" id="etab-gif" style="flex:1;padding:10px;border:none;background:transparent;font-size:12px;font-weight:600;color:#5A6B8A;cursor:pointer;border-bottom:2px solid transparent">🎬 GIFs</button>
   </div>
   <!-- Emoji tab -->
@@ -2766,10 +2773,17 @@ try{
       <button onclick="showEmojiCategory('nature')" class="ecat-btn" id="ecat-nature" style="flex-shrink:0;padding:4px 8px;border-radius:8px;border:1px solid rgba(11,37,69,0.15);background:transparent;color:#0B2545;font-size:11px;cursor:pointer">🌿 Nature</button>
       <button onclick="showEmojiCategory('food')" class="ecat-btn" id="ecat-food" style="flex-shrink:0;padding:4px 8px;border-radius:8px;border:1px solid rgba(11,37,69,0.15);background:transparent;color:#0B2545;font-size:11px;cursor:pointer">🍕 Food</button>
       <button onclick="showEmojiCategory('travel')" class="ecat-btn" id="ecat-travel" style="flex-shrink:0;padding:4px 8px;border-radius:8px;border:1px solid rgba(11,37,69,0.15);background:transparent;color:#0B2545;font-size:11px;cursor:pointer">✈️ Travel</button>
-      <button onclick="showEmojiCategory('symbols')" class="ecat-btn" id="ecat-symbols" style="flex-shrink:0;padding:4px 8px;border-radius:8px;border:1px solid rgba(11,37,69,0.15);background:transparent;color:#0B2545;font-size:11px;cursor:pointer">❤️ Symbols</button>
+      <button onclick="showEmojiCategory('activities')" class="ecat-btn" id="ecat-activities" style="flex-shrink:0;padding:4px 8px;border-radius:8px;border:1px solid rgba(11,37,69,0.15);background:transparent;color:#0B2545;font-size:11px;cursor:pointer">🎉 Activities</button>
+              <button onclick="showEmojiCategory('objects')" class="ecat-btn" id="ecat-objects" style="flex-shrink:0;padding:4px 8px;border-radius:8px;border:1px solid rgba(11,37,69,0.15);background:transparent;color:#0B2545;font-size:11px;cursor:pointer">💡 Objects</button>
+              <button onclick="showEmojiCategory('symbols')" class="ecat-btn" id="ecat-symbols" style="flex-shrink:0;padding:4px 8px;border-radius:8px;border:1px solid rgba(11,37,69,0.15);background:transparent;color:#0B2545;font-size:11px;cursor:pointer">❤️ Symbols</button>
     </div>
     <!-- Emoji grid -->
     <div id="emoji-grid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px;max-height:200px;overflow-y:auto"></div>
+  </div>
+  <!-- Sticker tab -->
+  <div id="stk-content" style="display:none;padding:8px">
+    <div id="stk-cats" style="display:flex;gap:4px;margin-bottom:8px;overflow-x:auto;padding-bottom:4px"></div>
+    <div id="stk-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:200px;overflow-y:auto"></div>
   </div>
   <!-- GIF tab -->
   <div id="gif-content" style="display:none;padding:8px">
@@ -3609,6 +3623,19 @@ PERSONALITY & TONE (STRICT):
 - Never rude — always calm even if user is upset
 - Use the user's preferred name naturally throughout — not on every sentence, just where it flows naturally
 - Understand Hinglish, Benglish, and Marathish naturally
+
+AN EMOJI SENT ON ITS OWN (Savio, 2026-11-03, rewritten the same day after reading real replies):
+An emoji by itself is a light conversational beat — a wave, a grin, a nudge. READ IT PROPERLY AND ANSWER THE PERSON, the way a friend across a table would. Do not be indifferent, and do not be a dictionary.
+- WORK OUT WHAT THEY MEANT BY SENDING IT, then respond to THAT. A football is probably a match they watched. A tractor from someone in India may be the farm, the harvest, or a joke. A compass is probably a decision. Engage with the likely meaning — and where it is natural, ask ONE specific question about it.
+- NEVER OPEN BY LABELLING THE EMOJI. These are all banned: "That's a nice emoji", "That's an interesting emoji", "That's a fun one", "It's good to see that emoji", "What a lovely emoji". They are filler, and every reply ends up sounding the same.
+- NEVER EXPLAIN WHAT THE EMOJI SYMBOLISES. Phrases like "a tractor often brings to mind hard work and cultivation" or "a compass usually suggests guidance and direction" are a dictionary entry, not a reply. They know what they sent. Skip straight to the human response.
+- DO NOT LIST ABSTRACT ASSOCIATIONS — no "games, energy and friendly competition" triples. One concrete thought beats three vague nouns.
+- VARY YOUR OPENINGS. Never begin two emoji replies in a row the same way. Sometimes react, sometimes ask, sometimes just send something back.
+- Keep it SHORT — a line or two, occasionally a single word. Match the register: playful gets playful, warm gets warm, dry gets dry. Replying with an emoji of your own is natural and welcome.
+- IF YOU ARE NOT SURE WHAT IT DEPICTS, DO NOT GUESS AND DO NOT DESCRIBE IT. Getting it wrong is worse than saying nothing — a disguised face was once called "comforting and warm", which told the person you were not really looking. Answer the mood you can read, or ask them warmly what prompted it.
+- DO NOT ESCALATE. A single sad or broken-hearted emoji is not a crisis and must not trigger counselling language. Never answer one with "I'm so sorry", "without judgment", "I'm here to listen", or support they did not ask for. Acknowledge it lightly, leave the door open in a few words, and let THEM decide whether to say more. If they then tell you something is wrong, give them your full warmth — that is when it is wanted.
+- Do not use an emoji as an excuse to resume an earlier topic. If they sent a face instead of words, they are probably not asking for the last subject back.
+- Several emoji together are ONE beat — read them as a whole, not one by one.
 
 ${_flowBlock}
 
@@ -10644,12 +10671,14 @@ const _origNewThread=newThread;
 // ============================================================
 const EMOJI_DATA={
   recent:[],
-  smileys:['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕'],
-  people:['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁','👅','👄','💋'],
-  nature:['🌸','🌹','🌺','🌻','🌼','🌷','🌱','🌿','☘️','🍀','🎋','🍃','🍂','🍁','🍄','🌾','💐','🌴','🌵','🎄','🌲','🌳','🌞','🌝','🌛','🌜','🌚','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌟','⭐','🌠','☁️','⛅','🌤','🌈','⚡','🔥','💧','🌊','🌍','🌎','🌏'],
-  food:['🍎','🍊','🍋','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶','🫑','🧄','🧅','🥔','🍠','🫘','🌽','🍞','🥐','🥖','🫓','🥨','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🫔','🌮','🌯','🥙','🧆','🥚','🍜','🍝','🍛','🍲','🫕','🍱','🥟','🍣','🍤','🍙','🍚','🍘','🍥','🥮','🍡','🍧','🍨','🍦','🥧','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','🥜','🍯','🧃','🥤','🧋','☕','🍵','🫖','🧉','🍶','🍺','🍻','🥂','🍷'],
-  travel:['✈️','🚀','🛸','🚁','🛺','🚗','🚕','🚙','🚌','🚎','🏎','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍','🛵','🚲','🛴','🛹','🛼','🚏','🛣','🏖','🏝','🗺','🧭','🏔','⛰','🌋','🗻','🏕','🏜','🏞','🏟','🏛','🏗','🧱','🏘','🏚','🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','⛩','🕋','⛲','⛺','🌁','🌃','🏙','🌄','🌅','🌆','🌇','🌉','🌌','🌠','🎇','🎆'],
-  symbols:['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕','🛑','⛔','📛','🚫','💯','💢','♨️','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️','🔰','♻️','✅','🈯','💹','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿','🅿️','🛗','🈳','🈂️','🛂','🛃','🛄','🛅','🚹','🚺','🚼','⚧','🚻','🚮','🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','▶️','⏸','⏹','⏺','⏭','⏮','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄']
+  activities:['🎈','🎁','🪔','🪅','🪩','🥇','🥈','🥉','🏆','⚽','⚾','🥎','🏀','🏉','🎾','🏸','🥍','🏏','🏑','🏒','🎿','⛸','🩰','⛳','🎯','🥏','🪃','🪁','🎣','🥋','🎱','🏓','🎳','♟','🎲','🎰','🪄','📷','📸','🫟','🎷','🎺','🪊','🎸','🪕','🎻','🪉','🥁','🪇','📺','🎞','🎬','🎭','🎟'],
+  objects:['📟','🔌','🔋','🪫','💿','💻','🖨','🪎','🪙','💎','💸','⚖','🛒','💡','🧹','🧦','🎓','👑','💍','🪭','☂','👠','👟','🌡','🩺','🛠','🪏','⚙','⛓','🖇','✂','✏','📚','📊','📈','📉','🗑','📦','🗳','⏰','⌛','⏳','🛎','🔔','📣','🔎','🔮','💣','🪤','🔒'],
+  smileys:['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🫠','🥲','🥹','☺','🫪','🫥','🫡','🫢','🫣','🫤','🫨','🫩','🤠','🤑','🤡','💩','😈','👿','👻','💀','🤖','👹','☃','⛄','👽','👾','😺','😸','😹','😻','😼','😽','🙀','😿','😾','🙈','🙉','🙊','✨','💥','🫯','🕳','🎉','🎊','🩵','🩶','🩷','💌','♥','🫂','🗣','👣','🫆','🩸','🦠','🫦','🫶','🫳','🫴','🫱','🫲','🫸','🫷','🫰','🫵'],
+  people:['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁','👅','👄','💋','🪂','🫈','💃'],
+  nature:['🌸','🌹','🌺','🌻','🌼','🌷','🌱','🌿','☘️','🍀','🎋','🍃','🍂','🍁','🍄','🌾','💐','🌴','🌵','🎄','🌲','🌳','🌞','🌝','🌛','🌜','🌚','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌟','⭐','🌠','☁️','⛅','🌤','🌈','⚡','🔥','💧','🌊','🌍','🌎','🌏','🥀','🪷','🪻','🪾','🪨','🛘','🌬','❄','🌪','🌧','🌩','🪐','☄','🦁','🐺','🐻','🐼','🦊','🐮','🦄','🦎','🐉','🦖','🦕','🐢','🐊','🐍','🐸','🐇','🐀','🐩','🐕','🦮','🐖','🐎','🫏','🐂','🐐','🦥','🦘','🐅','🐒','🦍','🦧','🐿','🦝','🦔','🦦','🦇','🐦','🐓','🐣','🐤','🐥','🦅','🦉','🕊','🪿','🦩','🦚','🐧','🦭','🦈','🫍','🐬','🐳','🐟','🐡','🦞','🦀','🐙','🪼','🫧','🦂','🕷','🐌','🐜','🦗','🦟','🪳','🪰','🐝','🐞','🦋','🐛','🪱','🐾'],
+  food:['🍎','🍊','🍋','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶','🫑','🧄','🧅','🥔','🍠','🫘','🌽','🍞','🥐','🥖','🫓','🥨','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🫔','🌮','🌯','🥙','🧆','🍜','🍝','🍛','🍲','🫕','🍱','🥟','🍣','🍤','🍙','🍚','🍘','🍥','🥮','🍡','🍧','🍨','🍦','🥧','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','🥜','🍯','🧃','🥤','🧋','☕','🍵','🫖','🧉','🍶','🍺','🍻','🥂','🍷','🍉','🥕','🍐','🫛','🫜','🫚','🥗','🍢','🧂','🍼','🍾','🫗','🍹','🥢','🍽'],
+  travel:['✈️','🚀','🛸','🚁','🛺','🚗','🚕','🚙','🚌','🚎','🏎','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍','🛵','🚲','🛴','🛹','🛼','🚏','🛣','🏖','🏝','🗺','🧭','🏔','⛰','🌋','🗻','🏕','🏜','🏞','🏟','🏛','🏗','🧱','🏘','🏚','🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','⛩','🕋','⛲','⛺','🌁','🌃','🏙','🌄','🌅','🌆','🌇','🌉','🌌','🌠','🎇','🎆','🚧','🚨','⛽','🛟','⚓','🚦','🚂','⛵','🛶','🛫','🛬','🎢','🎡','🎠','🗿'],
+  symbols:['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕','🛑','⛔','📛','🚫','💯','💢','♨️','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️','🔰','♻️','✅','🈯','💹','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿','🅿️','🛗','🈳','🈂️','🛂','🛃','🛄','🛅','🚹','🚺','🚼','⚧','🚻','🚮','🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','▶️','⏸','⏹','⏺','⏭','⏮','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','♠','🗯','💬','♾','🎶','➕','™','🏁','🚩','🏴','🏳']
 };
 
 let _recentEmojis=JSON.parse(localStorage.getItem('bella_recent_emojis')||'[]');
@@ -10658,12 +10687,57 @@ let _emojiPanelOpen=false;
 let _gifDebounce=null;
 const TENOR_KEY=''; // GIF search via backend — key stored server-side
 
+// ── THE PICKER MUST NOT COVER WHAT YOU PRESS NEXT ─────────────────────────
+// Savio, 2026-11-03, on his Android: "im OK with the size but it overlaps i
+// cant even see the sent button."
+//
+// It was pinned at `bottom:100px` — A GUESS AT THE COMPOSER'S HEIGHT, and the
+// composer is taller than that. MEASURED on 2026-11-03: at 360x800 the panel
+// ran to y 700 while the send button sat at y 671-711, so it buried it by 29px.
+// At 768 and above there is room and nothing showed, which is exactly why he
+// saw it on his phone and not on his laptop, and why the device matrix never
+// caught it — THAT MATRIX NEVER OPENS THE PICKER.
+//
+// So the panel is placed off the COMPOSER'S OWN measured top rather than any
+// number written here, and its list is capped to the gap that is actually
+// left. Nothing in this function repeats a height that CSS also holds; if the
+// composer changes, this follows it. [[bella-smart-device-adaptability-first]]
+function _positionEmojiPanel(){
+  const panel=document.getElementById('emoji-panel');
+  if(!panel||panel.style.display==='none') return;
+  const box=document.querySelector('.inp-box')||document.querySelector('.inp-area');
+  const vh=window.innerHeight;
+  const GAP=8;
+  // The top bar is a stack whose height varies with its widgets, so it is
+  // measured too rather than assumed. [[bella-topbar-layout]]
+  const bar=document.querySelector('.topbar')||document.getElementById('topbar');
+  const headroom=(bar?bar.getBoundingClientRect().bottom:0)+GAP;
+  const composerTop=box?box.getBoundingClientRect().top:vh-100;
+  panel.style.bottom=Math.max(GAP,vh-composerTop+GAP)+'px';
+  // How much vertical room is genuinely free between the bar and the composer.
+  const avail=Math.max(120,composerTop-GAP-headroom);
+  // The scrolling list absorbs the difference. Measure the panel's fixed
+  // furniture (tabs, category row, padding) instead of hard-coding it: take
+  // the panel's height minus the list's height, whatever those are today.
+  [['emoji-grid',200],['gif-grid',220]].forEach(function(pair){
+    const g=document.getElementById(pair[0]);
+    if(!g) return;
+    g.style.maxHeight=pair[1]+'px';
+    const furniture=panel.getBoundingClientRect().height-g.getBoundingClientRect().height;
+    g.style.maxHeight=Math.max(96,Math.min(pair[1],avail-furniture))+'px';
+  });
+}
+// A phone that is turned sideways loses most of its height, and the panel was
+// placed for the old one. Re-place it rather than leave it over the composer.
+window.addEventListener('resize',function(){ _positionEmojiPanel(); });
+window.addEventListener('orientationchange',function(){ setTimeout(_positionEmojiPanel,120); });
 function toggleEmojiPicker(){
   const panel=document.getElementById('emoji-panel');
   _emojiPanelOpen=!_emojiPanelOpen;
   panel.style.display=_emojiPanelOpen?'block':'none';
   if(_emojiPanelOpen){
     showEmojiCategory('smileys');
+    _positionEmojiPanel();
     // Close on outside click
     setTimeout(()=>{
       document.addEventListener('click',_closeEmojiOnOutside,{once:true});
@@ -10683,10 +10757,17 @@ function _closeEmojiOnOutside(e){
 function showEmojiTab(tab){
   document.getElementById('emoji-content').style.display=tab==='emoji'?'block':'none';
   document.getElementById('gif-content').style.display=tab==='gif'?'block':'none';
-  document.getElementById('etab-emoji').style.borderBottomColor=tab==='emoji'?'#0B2545':'transparent';
-  document.getElementById('etab-emoji').style.color=tab==='emoji'?'#0B2545':'#5A6B8A';
-  document.getElementById('etab-gif').style.borderBottomColor=tab==='gif'?'#0B2545':'transparent';
-  document.getElementById('etab-gif').style.color=tab==='gif'?'#0B2545':'#5A6B8A';
+  const _stk=document.getElementById('stk-content');
+  if(_stk){ _stk.style.display=tab==='stk'?'block':'none';
+    if(tab==='stk') renderStickers(_stkCat); }
+  for(const [id,on] of [['etab-emoji',tab==='emoji'],['etab-stk',tab==='stk'],['etab-gif',tab==='gif']]){
+    const b=document.getElementById(id); if(!b) continue;
+    b.style.borderBottomColor=on?'#0B2545':'transparent';
+    b.style.color=on?'#0B2545':'#5A6B8A';
+  }
+  // The two tabs are different heights, so the panel must be re-placed or the
+  // taller one reaches back down over the composer.
+  _positionEmojiPanel();
 }
 function showEmojiCategory(cat){
   _currentEmojiCat=cat;
@@ -10698,6 +10779,51 @@ function showEmojiCategory(cat){
   const grid=document.getElementById('emoji-grid');
   const emojis=cat==='recent'?(_recentEmojis.length?_recentEmojis:EMOJI_DATA.smileys):EMOJI_DATA[cat]||[];
   grid.innerHTML=emojis.map(e=>`<button onclick="insertEmoji('${e}')" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;border-radius:6px;transition:background .15s" onmouseover="this.style.background='rgba(11,37,69,0.08)'" onmouseout="this.style.background='none'" title="${e}">${e}</button>`).join('');
+  // Categories differ in length, so the list height changes with the choice.
+  _positionEmojiPanel();
+}
+// ── THE STICKER DRAWER ───────────────────────────────────────────────────
+// Tapping one SENDS IT. No typing, which was the whole point of his ask.
+// Each tile is the real sticker at small size, so what you press is what
+// arrives -- not an icon standing in for it.
+let _stkCat = 'Cheer';
+function renderStickers(cat){
+  _stkCat = cat || 'Cheer';
+  const groups = [];
+  for(const st of _STICKERS) if(groups.indexOf(st.g)===-1) groups.push(st.g);
+  if(groups.indexOf(_stkCat)===-1) _stkCat = groups[0];
+  const cats = document.getElementById('stk-cats');
+  if(cats) cats.innerHTML = groups.map(function(g){
+    const on = g===_stkCat;
+    return '<button onclick="renderStickers(\''+g+'\')" style="flex-shrink:0;padding:4px 8px;'+
+      'border-radius:8px;border:1px solid rgba(11,37,69,0.15);font-size:11px;cursor:pointer;'+
+      'background:'+(on?'#0B2545':'transparent')+';color:'+(on?'#D4AF37':'#0B2545')+'">'+g+'</button>';
+  }).join('');
+  const grid = document.getElementById('stk-grid');
+  if(!grid) return;
+  grid.innerHTML = _STICKERS.filter(function(st){ return st.g===_stkCat; }).map(function(st){
+    // The text is from OUR OWN list, never from anything a user typed, but it
+    // is escaped all the same -- this goes in with innerHTML.
+    return '<button class="stk-tile" onclick="sendSticker(\''+st.k+'\')" title="'+_escHtml(st.t)+'">'+
+             '<span class="stk-mini wfxc-'+(st.c||'joy')+'">'+_escHtml(st.t)+'</span>'+
+           '</button>';
+  }).join('');
+  _positionEmojiPanel();
+}
+function sendSticker(key){
+  const st = _STICKERS.filter(function(x){ return x.k===key; })[0];
+  if(!st) return;
+  const ti = document.getElementById('ti');
+  if(!ti) return;
+  // Straight out, the way a sticker behaves everywhere else -- it is not a
+  // draft to edit. Anything half-typed is kept and put back afterwards, so
+  // reaching for a sticker never destroys a sentence someone was writing.
+  const held = ti.value;
+  ti.value = st.t;
+  const panel = document.getElementById('emoji-panel');
+  if(panel){ panel.style.display='none'; _emojiPanelOpen=false; }
+  try{ send(); }catch(e){}
+  setTimeout(function(){ if(held && !ti.value){ ti.value = held; try{ arz(ti); }catch(e){} } }, 60);
 }
 function insertEmoji(emoji){
   const ti=document.getElementById('ti');
@@ -10705,6 +10831,12 @@ function insertEmoji(emoji){
   const end=ti.selectionEnd;
   ti.value=ti.value.substring(0,start)+emoji+ti.value.substring(end);
   ti.selectionStart=ti.selectionEnd=start+emoji.length;
+  // Savio, 2026-11-03: "After selection it should automatically go to the text
+  // box with the selected emoji." On a phone the panel is most of the screen,
+  // so leaving it open hid the send button he was reaching for next. Closing on
+  // choice is what phone sticker keyboards do, and it is what he asked for.
+  const _p=document.getElementById('emoji-panel');
+  if(_p){ _p.style.display='none'; _emojiPanelOpen=false; }
   ti.focus();
   arz(ti);
   _rememberEmoji(emoji);
@@ -15567,35 +15699,302 @@ function bellaMsg(text,audioUrl){
 const _ANIM_EMOJI = [
   '1f192', '1f193', '1f195', '1f197', '1f198', '1f199', '1f300', '1f304', '1f305', '1f307',
   '1f308', '1f30a', '1f30b', '1f30c', '1f30d', '1f30e', '1f30f', '1f31a', '1f31b', '1f31c',
-  '1f31d', '1f31e', '1f31f', '1f32d', '1f32e', '1f32f', '1f331', '1f332', '1f335', '1f337',
-  '1f338', '1f339', '1f33c', '1f33d', '1f33f', '1f340', '1f341', '1f342', '1f343', '1f344',
-  '1f345', '1f347', '1f348', '1f34a', '1f34b', '1f34d', '1f34e', '1f352', '1f353', '1f354',
-  '1f355', '1f357', '1f35c', '1f35d', '1f35e', '1f361', '1f366', '1f368', '1f369', '1f36a',
-  '1f373', '1f375', '1f377', '1f37b', '1f37f', '1f382', '1f386', '1f3cd', '1f3ce', '1f3d5',
-  '1f3da', '1f3de', '1f3e0', '1f440', '1f441', '1f442', '1f443', '1f446', '1f447', '1f448',
-  '1f449', '1f44a', '1f44b', '1f44c', '1f44d', '1f44e', '1f44f', '1f450', '1f485', '1f48b',
-  '1f490', '1f493', '1f494', '1f495', '1f496', '1f497', '1f498', '1f499', '1f49a', '1f49b',
-  '1f49c', '1f49d', '1f49e', '1f49f', '1f4a7', '1f4aa', '1f4af', '1f4f4', '1f525', '1f590',
-  '1f595', '1f596', '1f5a4', '1f600', '1f601', '1f602', '1f603', '1f604', '1f605', '1f606',
-  '1f607', '1f609', '1f60a', '1f60b', '1f60c', '1f60d', '1f60e', '1f60f', '1f610', '1f611',
-  '1f612', '1f613', '1f614', '1f615', '1f616', '1f617', '1f618', '1f619', '1f61a', '1f61b',
-  '1f61c', '1f61d', '1f61e', '1f61f', '1f620', '1f621', '1f622', '1f623', '1f624', '1f625',
-  '1f626', '1f627', '1f628', '1f629', '1f62a', '1f62b', '1f62c', '1f62d', '1f62e', '1f62f',
-  '1f630', '1f631', '1f632', '1f633', '1f634', '1f635', '1f636', '1f637', '1f641', '1f642',
-  '1f643', '1f644', '1f64c', '1f64f', '1f680', '1f68c', '1f695', '1f697', '1f69a', '1f69c',
-  '1f6ae', '1f6b2', '1f6d1', '1f6f8', '1f6f9', '1f6fc', '1f90c', '1f90d', '1f90e', '1f90f',
-  '1f910', '1f912', '1f913', '1f914', '1f915', '1f917', '1f918', '1f919', '1f91a', '1f91b',
-  '1f91c', '1f91d', '1f91e', '1f91f', '1f922', '1f923', '1f924', '1f925', '1f927', '1f928',
-  '1f929', '1f92a', '1f92b', '1f92c', '1f92d', '1f92e', '1f92f', '1f932', '1f933', '1f942',
-  '1f951', '1f952', '1f953', '1f954', '1f95d', '1f95e', '1f966', '1f967', '1f968', '1f96c',
-  '1f96d', '1f970', '1f971', '1f973', '1f974', '1f975', '1f976', '1f978', '1f97a', '1f9b4',
-  '1f9b5', '1f9b6', '1f9bb', '1f9be', '1f9bf', '1f9c0', '1f9c3', '1f9c4', '1f9c5', '1f9c9',
-  '1f9cb', '1f9d0', '1f9e0', '1f9e1', '1fac0', '1fad0', '1fad1', '1fad6', '1fad8', '203c',
-  '2049', '2601', '2615', '261d', '2622', '2623', '262e', '262f', '2639', '2648', '2649',
-  '264a', '264b', '264c', '264d', '264e', '264f', '2650', '2651', '2652', '2653', '2668',
-  '26a0', '26a1', '26c5', '26ce', '2705', '2708', '270a', '270b', '270c', '270d', '274c',
-  '2753', '2757', '2763', '2764', '2b50'
+  '1f31d', '1f31e', '1f31f', '1f321', '1f327', '1f329', '1f32a', '1f32c', '1f32d', '1f32e',
+  '1f32f', '1f331', '1f332', '1f335', '1f337', '1f338', '1f339', '1f33c', '1f33d', '1f33f',
+  '1f340', '1f341', '1f342', '1f343', '1f344', '1f345', '1f347', '1f348', '1f349', '1f34a',
+  '1f34b', '1f34d', '1f34e', '1f350', '1f352', '1f353', '1f354', '1f355', '1f357', '1f35c',
+  '1f35d', '1f35e', '1f361', '1f362', '1f366', '1f368', '1f369', '1f36a', '1f373', '1f375',
+  '1f377', '1f379', '1f37b', '1f37c', '1f37d', '1f37e', '1f37f', '1f381', '1f382', '1f386',
+  '1f388', '1f389', '1f38a', '1f393', '1f39e', '1f39f', '1f3a0', '1f3a1', '1f3a2', '1f3a3',
+  '1f3ac', '1f3ad', '1f3af', '1f3b0', '1f3b1', '1f3b2', '1f3b3', '1f3b6', '1f3b7', '1f3b8',
+  '1f3ba', '1f3bb', '1f3be', '1f3bf', '1f3c0', '1f3c1', '1f3c6', '1f3c9', '1f3cd', '1f3ce',
+  '1f3cf', '1f3d1', '1f3d2', '1f3d3', '1f3d5', '1f3da', '1f3de', '1f3e0', '1f3f3', '1f3f4',
+  '1f3f8', '1f400', '1f402', '1f405', '1f407', '1f409', '1f40a', '1f40c', '1f40d', '1f40e',
+  '1f410', '1f412', '1f413', '1f415', '1f416', '1f419', '1f41b', '1f41c', '1f41d', '1f41e',
+  '1f41f', '1f421', '1f422', '1f423', '1f424', '1f425', '1f426', '1f427', '1f429', '1f42c',
+  '1f42e', '1f433', '1f438', '1f43a', '1f43b', '1f43c', '1f43e', '1f43f', '1f440', '1f441',
+  '1f442', '1f443', '1f446', '1f447', '1f448', '1f449', '1f44a', '1f44b', '1f44c', '1f44d',
+  '1f44e', '1f44f', '1f450', '1f451', '1f45f', '1f460', '1f463', '1f479', '1f47b', '1f47d',
+  '1f47e', '1f47f', '1f480', '1f483', '1f485', '1f48b', '1f48c', '1f48d', '1f48e', '1f490',
+  '1f493', '1f494', '1f495', '1f496', '1f497', '1f498', '1f499', '1f49a', '1f49b', '1f49c',
+  '1f49d', '1f49e', '1f49f', '1f4a1', '1f4a3', '1f4a5', '1f4a7', '1f4a9', '1f4aa', '1f4ac',
+  '1f4af', '1f4b8', '1f4bb', '1f4bf', '1f4c8', '1f4c9', '1f4ca', '1f4da', '1f4df', '1f4e3',
+  '1f4e6', '1f4f4', '1f4f7', '1f4f8', '1f4fa', '1f50b', '1f50c', '1f50e', '1f512', '1f514',
+  '1f525', '1f52e', '1f54a', '1f573', '1f577', '1f587', '1f590', '1f595', '1f596', '1f5a4',
+  '1f5a8', '1f5d1', '1f5e3', '1f5ef', '1f5f3', '1f5ff', '1f600', '1f601', '1f602', '1f603',
+  '1f604', '1f605', '1f606', '1f607', '1f608', '1f609', '1f60a', '1f60b', '1f60c', '1f60d',
+  '1f60e', '1f60f', '1f610', '1f611', '1f612', '1f613', '1f614', '1f615', '1f616', '1f617',
+  '1f618', '1f619', '1f61a', '1f61b', '1f61c', '1f61d', '1f61e', '1f61f', '1f620', '1f621',
+  '1f622', '1f623', '1f624', '1f625', '1f626', '1f627', '1f628', '1f629', '1f62a', '1f62b',
+  '1f62c', '1f62d', '1f62e', '1f62f', '1f630', '1f631', '1f632', '1f633', '1f634', '1f635',
+  '1f636', '1f637', '1f638', '1f639', '1f63a', '1f63b', '1f63c', '1f63d', '1f63e', '1f63f',
+  '1f640', '1f641', '1f642', '1f643', '1f644', '1f648', '1f649', '1f64a', '1f64c', '1f64f',
+  '1f680', '1f682', '1f68c', '1f695', '1f697', '1f69a', '1f69c', '1f6a6', '1f6a7', '1f6a8',
+  '1f6a9', '1f6ae', '1f6b2', '1f6ce', '1f6d1', '1f6d2', '1f6d8', '1f6df', '1f6e0', '1f6eb',
+  '1f6ec', '1f6f6', '1f6f8', '1f6f9', '1f6fc', '1f90c', '1f90d', '1f90e', '1f90f', '1f910',
+  '1f911', '1f912', '1f913', '1f914', '1f915', '1f916', '1f917', '1f918', '1f919', '1f91a',
+  '1f91b', '1f91c', '1f91d', '1f91e', '1f91f', '1f920', '1f921', '1f922', '1f923', '1f924',
+  '1f925', '1f927', '1f928', '1f929', '1f92a', '1f92b', '1f92c', '1f92d', '1f92e', '1f92f',
+  '1f932', '1f933', '1f940', '1f941', '1f942', '1f947', '1f948', '1f949', '1f94b', '1f94d',
+  '1f94e', '1f94f', '1f951', '1f952', '1f953', '1f954', '1f955', '1f957', '1f95d', '1f95e',
+  '1f962', '1f966', '1f967', '1f968', '1f96c', '1f96d', '1f970', '1f971', '1f972', '1f973',
+  '1f974', '1f975', '1f976', '1f978', '1f979', '1f97a', '1f980', '1f981', '1f982', '1f984',
+  '1f985', '1f987', '1f988', '1f989', '1f98a', '1f98b', '1f98d', '1f98e', '1f994', '1f995',
+  '1f996', '1f997', '1f998', '1f99a', '1f99d', '1f99e', '1f99f', '1f9a0', '1f9a5', '1f9a6',
+  '1f9a7', '1f9a9', '1f9ad', '1f9ae', '1f9b4', '1f9b5', '1f9b6', '1f9bb', '1f9be', '1f9bf',
+  '1f9c0', '1f9c2', '1f9c3', '1f9c4', '1f9c5', '1f9c9', '1f9cb', '1f9d0', '1f9e0', '1f9e1',
+  '1f9e6', '1f9f9', '1fa70', '1fa75', '1fa76', '1fa77', '1fa78', '1fa7a', '1fa81', '1fa82',
+  '1fa83', '1fa84', '1fa85', '1fa87', '1fa89', '1fa8a', '1fa8e', '1fa8f', '1fa90', '1fa94',
+  '1fa95', '1fa99', '1faa4', '1faa8', '1faa9', '1faab', '1faad', '1fab0', '1fab1', '1fab3',
+  '1fab7', '1fabb', '1fabc', '1fabe', '1fabf', '1fac0', '1fac2', '1fac6', '1fac8', '1facd',
+  '1facf', '1fad0', '1fad1', '1fad6', '1fad7', '1fad8', '1fada', '1fadb', '1fadc', '1fadf',
+  '1fae0', '1fae1', '1fae2', '1fae3', '1fae4', '1fae5', '1fae6', '1fae7', '1fae8', '1fae9',
+  '1faea', '1faef', '1faf0', '1faf1', '1faf2', '1faf3', '1faf4', '1faf5', '1faf6', '1faf7',
+  '1faf8', '203c', '2049', '2122', '231b', '23f0', '23f3', '2601', '2602', '2603',
+  '2604', '2615', '261d', '2622', '2623', '262e', '262f', '2639', '263a', '2648',
+  '2649', '264a', '264b', '264c', '264d', '264e', '264f', '2650', '2651', '2652',
+  '2653', '265f', '2660', '2665', '2668', '267e', '2693', '2696', '2699', '26a0',
+  '26a1', '26bd', '26be', '26c4', '26c5', '26ce', '26d3', '26f3', '26f5', '26f8',
+  '26fd', '2702', '2705', '2708', '270a', '270b', '270c', '270d', '270f', '2728',
+  '2744', '274c', '2753', '2757', '2763', '2764', '2795', '2b50'
 ];
+// ── WRITTEN EFFECTS: "Yahoo!", "Zzzzz", "Boom!" ──────────────────────────
+// Savio, 2026-11-03: "what about those animated expressions like, Yahoo...or
+// Zzzzzz you know written animations effects maybe with sound?"
+//
+// A CLOSED LIST, deliberately. Trying to catch every exclamation would hijack
+// ordinary sentences, and an effect that fires when you did not expect it is
+// worse than no effect at all. Same gate as the big-emoji rule: the word must
+// be the WHOLE message. Add words to feel, never a pattern that guesses.
+//
+// SOUND IS OFF UNTIL ASKED FOR — his rule, same day: "Default will remain OFF
+// so the icon has to show it." Nothing ever plays by itself. A muted-speaker
+// button sits beside the word; pressing it plays the sound once and the icon
+// shows sound-on only while it runs. A family app that suddenly makes a noise
+// on someone's phone in company is a problem, not a delight.
+//
+// NO AUDIO FILES. Bella already loads AudioContext for the microphone, so each
+// sound is synthesised from oscillators at the moment it is pressed — zero
+// bytes added, nothing to download, nothing to cache.
+// THE STICKER SET. Savio, 2026-11-03: "a full animated sticker set of words,
+// phrases, emotions, that can be clicked and sent."
+//
+// WHY THESE ARE BUILT HERE RATHER THAN FETCHED. Tenor's API was shut down by
+// Google on 30 June 2026. GIPHY's sticker catalogue is open and user-uploaded,
+// and children use Bella. LottieFiles has NO public API -- its free animations
+// are download-only through a browser, so a curated set cannot be assembled
+// programmatically from it. Drawn here, the set is fully his, costs nothing,
+// needs no library, no API key, no rate limit and no attribution banner, and
+// it works with no network at all.
+//
+// A sticker SENDS ITS OWN WORDS as the message. Bella therefore reads "Thank
+// you" and answers it; she would learn nothing from a code like [[stk:ty]],
+// and neither would the conversation list or the summary.
+//   t: what is sent and shown      m: motion      s: sound      c: colour band
+const _STICKERS = [
+  {k:'yay',      t:'Yay!',         m:'pop',    s:'cheer', c:'joy',  g:'Cheer'},
+  {k:'yahoo',    t:'Yahoo!',       m:'pop',    s:'cheer', c:'joy',  g:'Cheer'},
+  {k:'woohoo',   t:'Woohoo!',      m:'pop',    s:'cheer', c:'joy',  g:'Cheer'},
+  {k:'hooray',   t:'Hooray!',      m:'pop',    s:'cheer', c:'joy',  g:'Cheer'},
+  {k:'bravo',    t:'Bravo!',       m:'pop',    s:'cheer', c:'joy',  g:'Cheer'},
+  {k:'welldone', t:'Well done!',   m:'pop',    s:'cheer', c:'joy',  g:'Cheer'},
+  {k:'congrats', t:'Congrats!',    m:'pop',    s:'cheer', c:'joy',  g:'Cheer'},
+  {k:'tada',     t:'Ta-da!',       m:'pop',    s:'cheer', c:'joy',  g:'Cheer'},
+  {k:'superb',   t:'Superb!',      m:'zoom',   s:'rise',  c:'joy',  g:'Cheer'},
+  {k:'wow',      t:'Wow!',         m:'zoom',   s:'rise',  c:'joy',  g:'Cheer'},
+
+  {k:'thankyou', t:'Thank you',    m:'fade',   s:'ding',  c:'warm', g:'Everyday'},
+  {k:'please',   t:'Please',       m:'fade',   s:'ding',  c:'warm', g:'Everyday'},
+  {k:'sorry',    t:'Sorry',        m:'fade',   s:'sigh',  c:'calm', g:'Everyday'},
+  {k:'gm',       t:'Good morning', m:'zoom',   s:'ding',  c:'warm', g:'Everyday'},
+  {k:'gn',       t:'Good night',   m:'drift',  s:'snore', c:'calm', g:'Everyday'},
+  {k:'welcome',  t:'Welcome!',     m:'pop',    s:'ding',  c:'warm', g:'Everyday'},
+  {k:'ok',       t:'OK!',          m:'pop',    s:'blip',  c:'calm', g:'Everyday'},
+  {k:'done',     t:'Done!',        m:'pop',    s:'ding',  c:'calm', g:'Everyday'},
+  {k:'onway',    t:'On my way',    m:'zoom',   s:'rise',  c:'calm', g:'Everyday'},
+  {k:'callme',   t:'Call me',      m:'wobble', s:'blip',  c:'calm', g:'Everyday'},
+
+  {k:'loveyou',  t:'Love you',     m:'pop',    s:'ding',  c:'love', g:'Warmth'},
+  {k:'missyou',  t:'Miss you',     m:'fade',   s:'sigh',  c:'love', g:'Warmth'},
+  {k:'takecare', t:'Take care',    m:'fade',   s:'ding',  c:'love', g:'Warmth'},
+  {k:'proud',    t:'So proud',     m:'pop',    s:'cheer', c:'love', g:'Warmth'},
+  {k:'hugs',     t:'Hugs',         m:'fade',   s:'ding',  c:'love', g:'Warmth'},
+  {k:'getwell',  t:'Get well soon',m:'fade',   s:'ding',  c:'love', g:'Warmth'},
+  {k:'gl',       t:'Good luck!',   m:'pop',    s:'cheer', c:'love', g:'Warmth'},
+  {k:'hbd',      t:'Happy Birthday!', m:'pop', s:'cheer', c:'love', g:'Warmth'},
+
+  {k:'boom',     t:'Boom!',        m:'punch',  s:'thud',  c:'bold', g:'Reactions'},
+  {k:'bang',     t:'Bang!',        m:'punch',  s:'thud',  c:'bold', g:'Reactions'},
+  {k:'pow',      t:'Pow!',         m:'punch',  s:'thud',  c:'bold', g:'Reactions'},
+  {k:'oops',     t:'Oops!',        m:'wobble', s:'blip',  c:'bold', g:'Reactions'},
+  {k:'ouch',     t:'Ouch!',        m:'wobble', s:'blip',  c:'bold', g:'Reactions'},
+  {k:'yikes',    t:'Yikes!',       m:'wobble', s:'blip',  c:'bold', g:'Reactions'},
+  {k:'aha',      t:'Aha!',         m:'pop',    s:'ding',  c:'bold', g:'Reactions'},
+  {k:'reallyq',  t:'Really?!',     m:'wobble', s:'blip',  c:'bold', g:'Reactions'},
+  {k:'nooo',     t:'Nooo!',        m:'punch',  s:'thud',  c:'bold', g:'Reactions'},
+  {k:'lol',      t:'Haha!',        m:'wobble', s:'cheer', c:'bold', g:'Reactions'},
+
+  {k:'zzz',      t:'Zzzzz',        m:'drift',  s:'snore', c:'calm', g:'Mood'},
+  {k:'hmm',      t:'Hmm...',       m:'drift',  s:'hum',   c:'calm', g:'Mood'},
+  {k:'shh',      t:'Shhh',         m:'fade',   s:'hush',  c:'calm', g:'Mood'},
+  {k:'phew',     t:'Phew!',        m:'fade',   s:'sigh',  c:'calm', g:'Mood'},
+  {k:'tired',    t:'So tired',     m:'drift',  s:'sigh',  c:'calm', g:'Mood'},
+  {k:'busy',     t:'Busy!',        m:'wobble', s:'blip',  c:'calm', g:'Mood'},
+  {k:'thinking', t:'Thinking...',  m:'drift',  s:'hum',   c:'calm', g:'Mood'},
+  {k:'brb',      t:'Back soon',    m:'zoom',   s:'blip',  c:'calm', g:'Mood'}
+];
+// Typed words still work -- the picker is an easier way in, not a replacement.
+// Built from the same list so the two can never drift apart.
+const _WORD_FX = (function(){
+  const m = {};
+  for (const st of _STICKERS){
+    // the sticker's own text, folded the same way a typed word is
+    m[st.t.toLowerCase().replace(/[^a-z ]/g,'').trim()] = st;
+    m[st.k] = st;
+  }
+  return m;
+})();
+function _wordFxKey(text){
+  var t = String(text||'').trim();
+  if(!t || t.length > 22) return null;
+  // Strip the punctuation people actually type, then fold a stretched word
+  // back to its root so "Zzzzzzz" and "Shhhh" land on the same entry.
+  var w = t.toLowerCase().replace(/[!?.,…\s-]+$/g,'').replace(/^[\s]+/,'')
+           .replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
+  if(!/^[a-z]+( [a-z]+){0,2}$/.test(w)) return null;
+  if(/^z+$/.test(w) && w.length >= 3) w = 'zzz';
+  else if(/^sh+$/.test(w) && w.length >= 3) w = 'shh';
+  else w = w.replace(/(.)\1{2,}$/, '$1$1');      // "yayyy" -> "yay" is NOT wanted
+  if(_WORD_FX[w]) return w;
+  // a final permissive fold for the cheer words people stretch: "yahooo"
+  var w2 = w.replace(/(.)\1+$/,'$1');
+  return _WORD_FX[w2] ? w2 : null;
+}
+function _bigWordHtml(text){
+  try{
+    var key = _wordFxKey(text);
+    if(!key) return null;
+    var fx = _WORD_FX[key];
+    // The word is shown AS THEY TYPED IT -- their capitals, their exclamation
+    // marks, their number of z's. Escaped first, so this is their text and
+    // never their markup.
+    var shown = _escHtml(String(text).trim());
+    return '<span class="wfx wfx-'+fx.m+' wfxc-'+(fx.c||'joy')+'">'+shown+'</span>' +
+           '<button class="wfx-spk" data-snd="'+fx.s+'" onclick="playWordFx(this)" ' +
+           'aria-label="Play the sound (sound is off by default)" title="Sound is off - press to hear it">' +
+           _WFX_ICON_OFF + '</button>';
+  }catch(e){ return null; }
+}
+// Muted speaker = the resting state, so "off" is visible before you press it.
+var _WFX_ICON_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+var _WFX_ICON_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+
+// Each sound is a few oscillators and a gain envelope. Nothing is downloaded.
+var _wfxCtx = null;
+function playWordFx(btn){
+  try{
+    var kind = btn && btn.getAttribute('data-snd');
+    if(!kind) return;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    if(!_wfxCtx) _wfxCtx = new AC();
+    // A tab that has never been clicked suspends its audio. The press IS the
+    // gesture that allows it, so resume here rather than at load.
+    if(_wfxCtx.state === 'suspended') _wfxCtx.resume();
+    var ctx = _wfxCtx, t0 = ctx.currentTime, dur = 0.45;
+    function tone(type, f0, f1, start, len, vol){
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, t0+start);
+      o.frequency.exponentialRampToValueAtTime(Math.max(20,f1), t0+start+len);
+      g.gain.setValueAtTime(0.0001, t0+start);
+      g.gain.exponentialRampToValueAtTime(vol, t0+start+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+start+len);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t0+start); o.stop(t0+start+len+0.02);
+    }
+    function noise(start, len, vol, f0, f1){
+      var n = Math.floor(ctx.sampleRate*len);
+      var buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0);
+      for(var i=0;i<n;i++) d[i] = (Math.random()*2-1);
+      var src = ctx.createBufferSource(); src.buffer = buf;
+      var flt = ctx.createBiquadFilter(); flt.type='lowpass';
+      flt.frequency.setValueAtTime(f0, t0+start);
+      flt.frequency.exponentialRampToValueAtTime(Math.max(60,f1), t0+start+len);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(vol, t0+start);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+start+len);
+      src.connect(flt); flt.connect(g); g.connect(ctx.destination);
+      src.start(t0+start); src.stop(t0+start+len);
+    }
+    if(kind==='cheer'){ dur=0.5;
+      tone('triangle',520,780,0,0.12,0.16); tone('triangle',660,990,0.10,0.12,0.16);
+      tone('triangle',880,1320,0.20,0.20,0.14); }
+    else if(kind==='rise'){ dur=0.4; tone('sine',300,900,0,0.35,0.18); }
+    else if(kind==='thud'){ dur=0.5;
+      tone('sine',180,40,0,0.35,0.30); noise(0,0.18,0.18,1200,200); }
+    else if(kind==='snore'){ dur=1.1;
+      tone('sawtooth',90,70,0,0.5,0.10); tone('sawtooth',70,95,0.55,0.5,0.08); }
+    else if(kind==='hush'){ dur=0.6; noise(0,0.55,0.12,3000,500); }
+    else if(kind==='blip'){ dur=0.25; tone('square',600,200,0,0.18,0.12); }
+    else if(kind==='ding'){ dur=0.5; tone('sine',1050,1050,0,0.40,0.14); }
+    else if(kind==='hum'){ dur=0.5; tone('sine',250,230,0,0.42,0.12); }
+    else if(kind==='sigh'){ dur=0.7; noise(0,0.6,0.10,1400,300); tone('sine',320,180,0,0.55,0.07); }
+    // The icon shows sound-on ONLY while it is actually sounding, then returns
+    // to muted -- so the resting state always reads as "off", as he asked.
+    btn.innerHTML = _WFX_ICON_ON;
+    btn.classList.add('wfx-playing');
+    setTimeout(function(){
+      btn.innerHTML = _WFX_ICON_OFF;
+      btn.classList.remove('wfx-playing');
+    }, Math.round(dur*1000)+120);
+  }catch(e){}
+}
+// ── MOTION FOR THE ONES GOOGLE NEVER ANIMATED ────────────────────────────
+// Savio, 2026-11-03: "see which are still left to be animated that can either
+// be animated or shake."
+// 243 of the 852 have no Noto animation and never will. 77 of those are things
+// a person SENDS to mean something, and they get motion. The other 166 are
+// signage, keycaps, arrows and buildings: moving those reads as broken, not
+// alive, so they stay still on purpose.
+//
+// FOUR MOTIONS, NOT ONE SHAKE. A blanket wobble on everything looks cheap, and
+// a shaking moon looks like a fault. Each group moves the way the thing itself
+// would.
+//
+// NOTHING SACRED MOVES. The nine religious symbols and the six places of
+// worship are excluded BY NAME and asserted out of every group when this list
+// is generated. A wobbling cross, temple or mosque would offend people, and
+// Bella is a family app in India. Never add any of these to a group:
+//   ✝️ ☪️ 🕉 ☸️ ✡️ 🔯 🕎 ☦️ 🛐 ⛪ 🕌 🛕 🕍 ⛩ 🕋
+const _EMOJI_MOTION_GROUPS = {
+  sway: [
+    '1f33a', '1f33b', '2618', '1f38b', '1f33e', '1f334', '1f384', '1f333'
+  ],
+  float: [
+    '1f315', '1f316', '1f317', '1f318', '1f311', '1f312', '1f313', '1f314', '1f319',
+    '1f320', '1f324'
+  ],
+  rock: [
+    '1f681', '1f6fa', '1f699', '1f68e', '1f693', '1f691', '1f692', '1f690', '1f6fb',
+    '1f69b', '1f6f5', '1f6f4'
+  ],
+  bob: [
+    '1f351', '1f965', '1f346', '1f336', '1f360', '1f950', '1f956', '1fad3', '1f95a',
+    '1f9c8', '1f9c7', '1f969', '1f356', '1f35f', '1fad4', '1f959', '1f9c6', '1f35b',
+    '1f372', '1fad5', '1f371', '1f95f', '1f363', '1f364', '1f359', '1f35a', '1f358',
+    '1f365', '1f96e', '1f367', '1f9c1', '1f370', '1f36e', '1f36d', '1f36c', '1f36b',
+    '1f330', '1f95c', '1f36f', '1f964', '1f376', '1f37a', '1fac1', '1f9b7', '1f445',
+    '1f444'
+  ]
+};
+// flattened once at load: codepoint -> motion class
+const _EMOJI_MOTION = (function(){
+  const m = {};
+  for (const k in _EMOJI_MOTION_GROUPS)
+    for (const cp of _EMOJI_MOTION_GROUPS[k]) m[cp] = 'em-' + k;
+  return m;
+})();
 function _bigEmojiHtml(text){
   try{
     const t = String(text||'').trim();
@@ -15622,7 +16021,11 @@ function _bigEmojiHtml(text){
       // No animation for this one, but it still gets the size.
       // Sits level with the 72px images. The system font renders at whatever
       // resolution the screen has, so this one is always sharp.
-      return '<span style="font-size:64px;line-height:1.1;display:inline-block">'+_escHtml(c)+'</span>';
+      // Google has no file for this one, so it is drawn by the system font —
+      // always sharp, whatever the screen. If it is one of the 77 worth moving,
+      // it carries its motion class; the other 166 get nothing and stay still.
+      const _mo = _EMOJI_MOTION[cp];
+      return '<span class="em-still'+(_mo?' '+_mo:'')+'" style="font-size:64px;line-height:1.1;display:inline-block">'+_escHtml(c)+'</span>';
     }).join(' ');
   }catch(e){ return null; }   // an engine without \p{...} just keeps small emoji
 }
@@ -15652,15 +16055,27 @@ function userMsg(text,fileNames){
   // genuinely transparent. What showed through was the navy MESSAGE BUBBLE,
   // which around a small transparent image reads as a black box. Phones put no
   // bubble behind an emoji-only message at all, so neither does this.
-  const _big=_bigEmojiHtml(text);
+  // An emoji on its own, or one of the written effects -- both get the same
+  // treatment: shown big, with no bubble behind them.
+  const _bigE=_bigEmojiHtml(text);
+  const _big=_bigE!==null?_bigE:_bigWordHtml(text);
   const safe=_big!==null?_big:_escHtml(text).replace(
     /https:\/\/(?:media\d*|i)\.giphy\.com\/[^\s"'<>]+/g,
     function(u){ return '<img src="'+u+'" alt="GIF" loading="lazy" '+
       'style="max-width:220px;width:100%;border-radius:10px;display:block;margin:4px 0">'; });
   const chips=fileNames&&fileNames.length>0?fileNames.map(n=>`<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);border-radius:6px;padding:3px 7px;font-size:10px;margin-bottom:4px">${String(n).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`).join(''):'';
   const uMsgId='umsg-'+(++_msgSeq);
+  // THE INLINE STYLE WAS NEVER ENOUGH, and that is the whole bug. Three late
+  // `!important` rules on .msg.user .mbub (light #0B2545, dark #E8D9B8, and an
+  // unconditional navy) BEAT AN INLINE STYLE, so this bubble stayed painted
+  // while its own style attribute said background:none. Savio saw a black box
+  // behind every emoji on 2026-11-03. A CLASS is carried instead, and the rule
+  // that answers it is the LAST style block in the page with higher
+  // specificity than all three — the only thing that actually wins.
+  // [[bella-important-beats-inline-style]]
   const _bubStyle=_big!==null?' style="background:none;border:none;box-shadow:none;padding:2px 0"':'';
-  w.innerHTML=`<div class="mav u">${initials}</div><div class="msg-wrap"><div class="mbub" id="${uMsgId}"${_bubStyle}>${chips?chips+'<br>':''}${safe}</div>
+  const _bubClass=_big!==null?' mbub-bare':'';
+  w.innerHTML=`<div class="mav u">${initials}</div><div class="msg-wrap"><div class="mbub${_bubClass}" id="${uMsgId}"${_bubStyle}>${chips?chips+'<br>':''}${safe}</div>
   <div class="msg-actions user-actions">
     <button class="msg-act-btn" onclick="retryMsg('${uMsgId}')" title="Retry"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg></button>
     <button class="msg-act-btn" onclick="editMsg('${uMsgId}')" title="Edit"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -22745,6 +23160,222 @@ html body.dark #tl-msg.warn{color:#F0C978 !important}
 @media(max-width:400px){
   #ip-overlay .ip-say{min-height:72px}
   #ip-overlay .ip-say-l{font-size:15px}
+}
+</style>
+
+<style id="v92-stickers">
+/* ── THE STICKER SET ──────────────────────────────────────────────────────
+   Drawn in CSS rather than fetched. Tenor's API closed on 30 June 2026,
+   GIPHY's catalogue is open and user-uploaded with children using Bella, and
+   LottieFiles has no public API to build a curated set from. So these are
+   HIS: no key, no rate limit, no attribution banner, nothing to download, and
+   they work with no network at all.
+
+   FOUR COLOUR BANDS, so a drawer of 46 reads as a set rather than a list.
+   Each is a gradient the text sits ON, not a flat block -- that is most of
+   what makes something look like a sticker rather than like text. */
+.wfx{ padding:.12em .38em; border-radius:14px; }
+.wfxc-joy  { background:linear-gradient(135deg,#F6D365 0%,#F0A23C 100%); color:#4A2C00 !important; }
+.wfxc-warm { background:linear-gradient(135deg,#FFE6A7 0%,#E0B45C 100%); color:#4A3200 !important; }
+.wfxc-love { background:linear-gradient(135deg,#F7A8B8 0%,#D9566F 100%); color:#4A0016 !important; }
+.wfxc-bold { background:linear-gradient(135deg,#6EC6FF 0%,#2B7CC4 100%); color:#00233F !important; }
+.wfxc-calm { background:linear-gradient(135deg,#CFE3D4 0%,#8FB3A0 100%); color:#13301F !important; }
+/* The gradients carry their own contrast, so they do NOT flip with the theme —
+   only the shadow does, or they would glow oddly on the dark navy. */
+body:not(.dark) .wfx{ text-shadow:none; box-shadow:0 3px 12px rgba(11,37,69,.18); }
+body.dark       .wfx{ text-shadow:none; box-shadow:0 3px 16px rgba(0,0,0,.45); }
+
+/* Tiles in the drawer: the REAL sticker, just small, so what you press is what
+   you send. Motion is off here on purpose — 10 things moving at once in a
+   small panel is noise, and it would hide which one you are about to pick. */
+.stk-tile{
+  display:flex; align-items:center; justify-content:center;
+  min-height:44px; padding:6px 4px; cursor:pointer;
+  background:none; border:none; border-radius:10px; transition:background .15s;
+}
+.stk-tile:hover{ background:rgba(11,37,69,.08); }
+.stk-tile:active{ transform:scale(.96); }
+.stk-tile:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
+body.dark .stk-tile:hover{ background:rgba(245,230,200,.12); }
+.stk-mini{
+  display:inline-block; max-width:100%;
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-size:14px; font-weight:700; line-height:1.25;
+  padding:5px 10px; border-radius:11px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  box-shadow:0 2px 6px rgba(11,37,69,.16);
+}
+</style>
+<style id="v91-word-effects">
+/* ── "Yahoo!", "Zzzzz", "Boom!" ───────────────────────────────────────────
+   The word is drawn big in Bella's own display face rather than a comic font:
+   nothing new is downloaded, and it still reads as HER rather than as a sticker
+   borrowed from somewhere else.
+   Sized in clamp() so it fills a laptop without overflowing a 320px phone —
+   the emoji beside it is a fixed 72px, and a fixed 56px word would not fit. */
+.wfx{
+  display:inline-block; vertical-align:middle;
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-size:clamp(34px, 11vw, 56px); font-weight:700; line-height:1.1;
+  letter-spacing:.5px; color:var(--gold);
+  text-shadow:0 2px 10px rgba(11,37,69,.18);
+}
+/* The gold is readable on the cream of light mode and the navy of dark, but
+   it is set per-theme rather than left to chance. [[bella-both-themes-every-time]] */
+body:not(.dark) .wfx{ color:#8A6D0F; text-shadow:0 2px 10px rgba(11,37,69,.14); }
+body.dark .wfx{ color:#D4AF37; text-shadow:0 2px 12px rgba(0,0,0,.35); }
+
+@keyframes wfx-pop{
+  0%  { transform:scale(.4) rotate(-8deg); opacity:0; }
+  60% { transform:scale(1.12) rotate(2deg); opacity:1; }
+  80% { transform:scale(.96) rotate(-1deg); }
+  100%{ transform:scale(1) rotate(0); opacity:1; }
+}
+@keyframes wfx-zoom{
+  0%  { transform:scale(.2); opacity:0; letter-spacing:14px; }
+  100%{ transform:scale(1);  opacity:1; letter-spacing:.5px; }
+}
+@keyframes wfx-punch{
+  0%  { transform:scale(2.2); opacity:0; }
+  35% { transform:scale(.88); opacity:1; }
+  55% { transform:scale(1.08); }
+  70% { transform:translateX(-5px); }
+  85% { transform:translateX(4px); }
+  100%{ transform:translateX(0) scale(1); }
+}
+@keyframes wfx-drift{
+  0%  { transform:translate(0,6px); opacity:0; }
+  30% { opacity:1; }
+  100%{ transform:translate(14px,-16px); opacity:.45; }
+}
+@keyframes wfx-fade{
+  0%  { transform:scale(1.1); opacity:0; filter:blur(5px); }
+  40% { opacity:1; filter:blur(0); }
+  100%{ transform:scale(1); opacity:.7; filter:blur(0); }
+}
+@keyframes wfx-wobble{
+  0%  { transform:rotate(0) scale(.7); opacity:0; }
+  30% { transform:rotate(-7deg) scale(1.05); opacity:1; }
+  50% { transform:rotate(6deg); }
+  70% { transform:rotate(-4deg); }
+  100%{ transform:rotate(0) scale(1); }
+}
+.wfx-pop   { animation:wfx-pop    .55s cubic-bezier(.2,1.4,.4,1) both; }
+.wfx-zoom  { animation:wfx-zoom   .45s ease-out both; }
+.wfx-punch { animation:wfx-punch  .6s  ease-out both; }
+.wfx-drift { animation:wfx-drift  2.6s ease-in-out infinite; }
+.wfx-fade  { animation:wfx-fade   .8s  ease-out both; }
+.wfx-wobble{ animation:wfx-wobble .6s  ease-out both; }
+
+/* THE SPEAKER. It rests MUTED so that "sound is off" is visible before anyone
+   presses anything — Savio's instruction, 2026-11-03. It only shows sound-on
+   while a sound is actually running, then goes back to muted.
+   44px is the tap target; the icon inside is 15px. Below that nobody on a
+   phone can hit it reliably. */
+.wfx-spk{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:44px; height:44px; min-width:44px; margin-left:6px;
+  vertical-align:middle; padding:0; cursor:pointer;
+  background:none; border:none; border-radius:50%;
+  color:var(--tsoft); opacity:.55; transition:opacity .15s, color .15s, background .15s;
+}
+.wfx-spk svg{ width:15px; height:15px; }
+.wfx-spk:hover{ opacity:1; background:rgba(212,175,55,.14); }
+.wfx-spk:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; opacity:1; }
+.wfx-spk.wfx-playing{ opacity:1; color:var(--gold); }
+body.dark .wfx-spk{ color:rgba(245,230,200,.75); }
+
+@media (prefers-reduced-motion: reduce){
+  .wfx-pop,.wfx-zoom,.wfx-punch,.wfx-drift,.wfx-fade,.wfx-wobble{ animation:none !important; opacity:1 !important; }
+}
+</style>
+<style id="v90-emoji-motion">
+/* ── THE 77 THAT MOVE ─────────────────────────────────────────────────────
+   Google animates 598 of Bella's 852 emoji. Of the 254 it never touched, 77
+   are things people actually send, and these give them motion. CSS only:
+   zero bytes, zero files, reversible by deleting this block.
+
+   FOUR MOTIONS, chosen to suit the thing rather than one blanket shake —
+   a shaking moon would read as a fault, not as life:
+     sway  — plants, because plants sway
+     float — moons and sky, a slow drift
+     rock  — vehicles, a forward tilt that reads as travelling
+     bob   — food and the rest, a gentle lift
+
+   SLOW AND SMALL ON PURPOSE. These sit beside Noto's hand-drawn GIFs, and a
+   fast jiggle next to real artwork looks cheap. Degrees and pixels are kept
+   low enough to read as life rather than as a glitch. */
+.em-still{ transform-origin:50% 85%; will-change:transform; }
+
+@keyframes em-sway{
+  0%,100%{ transform:rotate(-3.5deg); }
+  50%    { transform:rotate(3.5deg); }
+}
+@keyframes em-float{
+  0%,100%{ transform:translateY(0); }
+  50%    { transform:translateY(-7px); }
+}
+@keyframes em-rock{
+  0%,100%{ transform:translateX(0) rotate(0deg); }
+  30%    { transform:translateX(3px) rotate(-2.5deg); }
+  70%    { transform:translateX(-2px) rotate(1.5deg); }
+}
+@keyframes em-bob{
+  0%,100%{ transform:translateY(0) scale(1); }
+  50%    { transform:translateY(-5px) scale(1.04); }
+}
+.em-sway { animation:em-sway  3.4s ease-in-out infinite; }
+.em-float{ animation:em-float 4.2s ease-in-out infinite; transform-origin:50% 50%; }
+.em-rock { animation:em-rock  2.2s ease-in-out infinite; }
+.em-bob  { animation:em-bob   2.6s ease-in-out infinite; }
+
+/* Someone who has asked their device to stop moving things means it. The
+   emoji still arrives at full size — only the motion goes. */
+@media (prefers-reduced-motion: reduce){
+  .em-sway,.em-float,.em-rock,.em-bob{ animation:none !important; }
+}
+</style>
+<style id="v89-bare-emoji-bubble">
+/* ── NO BUBBLE BEHIND AN EMOJI SENT ON ITS OWN ─────────────────────────────
+   Savio, 2026-11-03: "the black box is still there behind the emoji."
+   It was never the GIF — dropped on a red canvas every corner pixel of
+   1f600.gif reads 255,0,0, so the transparency is real. It was the BUBBLE.
+
+   WHY THIS RULE LIVES HERE, AND WHY IT LOOKS OVER-QUALIFIED:
+   three rules paint this bubble with !important, and !important beats an
+   inline style, so the `style="background:none"` the renderer sets lost to
+   all three:
+     body:not(.dark) .msg.user .mbub   #0B2545   (0,4,1)   light
+     body.dark       .msg.user .mbub   #E8D9B8   (0,4,1)   dark — a CREAM box
+     .msg.user .mbub                   var(--navy) (0,2,0) unconditional
+   `html body.dark ... .mbub-bare` is (0,5,2) and sits in the LAST style block
+   in the document, so it wins on specificity AND on order. Dropping either
+   qualifier hands the bubble back to one of the three.
+
+   MEASURED, NOT ASSUMED: the dark rule paints CREAM, not black. A test that
+   only looked at light would have called this fixed while dark stayed broken,
+   which is exactly why his SOP is both themes every time.
+   The border and the inset gold shadow draw the same box with no fill at all,
+   so all three properties go, not just the colour. */
+html body .msg.user .mbub.mbub-bare,
+html body .msg.bella .mbub.mbub-bare,
+html body.dark .msg.user .mbub.mbub-bare,
+html body.dark .msg.bella .mbub.mbub-bare,
+html body:not(.dark) .msg.user .mbub.mbub-bare,
+html body:not(.dark) .msg.bella .mbub.mbub-bare{
+  background:none !important;
+  background-color:transparent !important;
+  background-image:none !important;
+  border:none !important;
+  box-shadow:none !important;
+  padding:2px 0 !important;
+}
+/* The text colour was being forced to gold in light and navy in dark by the
+   same rules. An emoji is drawn by the font in its own colours so it does not
+   care, but the alt text of a GIF that fails to load does. */
+html body .msg.user .mbub.mbub-bare,
+html body.dark .msg.user .mbub.mbub-bare *{
+  color:var(--text) !important;
 }
 </style>
 
