@@ -21413,15 +21413,48 @@ html body.dark #conv-panel .cv-swap{background:#12233B!important;color:#F5E6C8!i
 #wx-panel .wx-day-ico{font-size:20px;flex-shrink:0;width:34px;text-align:center;line-height:0}
 #wx-panel .wx-day-desc{font-size:11px;color:#5A6B8A;flex:1;min-width:0;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
-#wx-panel .wx-day-temp{font-size:13px;font-weight:600;color:#0B2545;flex-shrink:0;white-space:nowrap}
+/* ── STRAIGHT COLUMNS IN THE DAY ROWS — his THIRD ask ─────────────────────
+   Savio, 2026-11-03: "Why does the size for Monday weather differ from
+   tomorrow or day after? I need consistency across Bella please."
+
+   MEASURED 2026-11-04, and both halves of what he saw were real:
+     temperature left edge   307 / 296 / 287 / 296  — a 20px drift
+     row heights (phone)     78 / 79 / 79 / 78      — a 1px wobble
+   The chevron sat rock still at 349, so the RIGHT edge was anchored and every
+   cell drifted leftward from it by however wide that day's figures happened to
+   be: "9 / 7" is narrower than "100 / -5", so the column bent row by row.
+
+   THE COMMENT HERE USED TO CLAIM THIS COLUMN WAS ALREADY FIXED-WIDTH. It was
+   not — `.wx-day-pop` carried only `flex-shrink:0`, and `.wx-day-temp` had no
+   width at all. A comment asserting something nobody had checked is why this
+   survived three complaints. [[bella-comment-is-not-a-call-site]]
+
+   FIXED WIDTHS on both, and `tabular-nums` so every digit occupies the same
+   space — without it "1" and "9" differ and the numbers stay ragged even
+   inside a fixed box. This is the same treatment the hourly grid got on
+   2026-10-28 for the same reason. [[bella-data-in-straight-columns]] */
+/* `line-height:18px` is not decoration — it is what makes the rows equal.
+   MEASURED on a 360px phone, where the row wraps onto two lines: the rain
+   badge's line box is 18px and the temperature's was 16px, both sitting on the
+   SAME first line, so only the days that carried a rain figure grew by 2px.
+   Pinning both to 18 makes the tallest element on that line the same whether
+   a figure is there or not. */
+#wx-panel .wx-day-temp{font-size:13px;font-weight:600;color:#0B2545;flex-shrink:0;
+  white-space:nowrap;width:76px;text-align:right;line-height:18px;
+  font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
 #wx-panel .wx-day-chev{font-size:10px;color:#5A6B8A;flex-shrink:0;width:12px;text-align:center}
 /* Nothing at all on a wide row; a forced line break on a narrow one. */
 #wx-panel .wx-day-break{display:none}
-/* Chance of rain. Given its own fixed column so the day rows stay aligned
-   whether or not a particular day carries a figure. */
+/* Chance of rain — NOW genuinely a fixed column, so a day with no figure
+   leaves the same gap as a day with one and nothing shifts.
+   The fixed line-height is what removed the 1px height wobble: without it the
+   badge's own line box was a fraction taller than the row's other text, and
+   only the rows that HAD a figure grew. */
 #wx-panel .wx-day-pop{font-size:12px;font-weight:600;color:#1B5E8C;flex-shrink:0;
-  white-space:nowrap;display:flex;align-items:center;gap:2px}
-.wx-drop{font-size:10px}
+  white-space:nowrap;display:flex;align-items:center;justify-content:flex-end;gap:2px;
+  width:46px;line-height:18px;height:18px;
+  font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
+.wx-drop{font-size:10px;line-height:18px}
 
 #wx-panel .wx-hours{padding:2px 12px 10px;border-top:1px dashed var(--border)}
 /* THE HOURLY ROWS — rebuilt to his instruction, 2026-10-28: "the numbers have
