@@ -2300,20 +2300,6 @@ try{
         <button class="topbar-btn" onclick="openUserMenu()" title="My Account" style="background:#0B2545;border:1px solid rgba(212,175,55,0.3)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </button>
-        <!-- THE CHOICE SAVIO EXPECTED. He pressed this icon twice expecting a
-             summary of ALL his conversations and got nothing, because it only
-             ever summarised the one he was in. Rather than silently change
-             what the icon does, it now asks. Two options, no cleverness. -->
-        <div id="sum-menu" role="menu" aria-hidden="true">
-          <button type="button" role="menuitem" onclick="closeSummariseMenu();summariseThread()">
-            <span class="sm-t" id="sm-one"></span>
-            <span class="sm-s" id="sm-one-sub"></span>
-          </button>
-          <button type="button" role="menuitem" onclick="closeSummariseMenu();summariseAllThreads()">
-            <span class="sm-t" id="sm-all"></span>
-            <span class="sm-s" id="sm-all-sub"></span>
-          </button>
-        </div>
       </div>
     </div>
 
@@ -11566,6 +11552,20 @@ function toggleSummariseMenu(ev){
   set('sm-all-sub',uiText('summary_menu_all_sub',{n:n}));
   m.classList.add('on');
   m.setAttribute('aria-hidden','false');
+  // ANCHOR IT TO THE BUTTON, measured, every time. The top bar is a STACK and
+  // the button moves between widths, so a fixed top/right baked into the CSS
+  // would be right at one size and wrong at another.
+  try{
+    const br=document.getElementById('summarise-btn').getBoundingClientRect();
+    m.style.top = Math.round(br.bottom + 8) + 'px';
+    if(window.innerWidth > 480){
+      m.style.right = Math.max(8, Math.round(window.innerWidth - br.right)) + 'px';
+      m.style.left = 'auto';
+    } else {
+      // On a phone it spans the width, so right/left come from the stylesheet.
+      m.style.right = ''; m.style.left = '';
+    }
+  }catch(e){}
   const b=document.getElementById('summarise-btn');
   if(b) b.setAttribute('aria-expanded','true');
   setTimeout(function(){ document.addEventListener('click',_sumMenuAway); },0);
@@ -26743,7 +26743,10 @@ document.addEventListener("DOMContentLoaded", function(){
    NO font-weight:500 ANYWHERE HERE: at weight 500 the Devanagari face falls
    back and renders Hindi and Marathi as Latin junk. [[bella-devanagari-weight-500-bug]] */
 #sum-menu{
-  display:none; position:absolute; top:58px; right:12px; z-index:60;
+  /* FIXED, and a child of <body>. See the comment on the element itself:
+     absolute inside #chat-topbar (68px tall, overflow-y:hidden) left 10px of
+     it on screen. top/right are set from the button at open time. */
+  display:none; position:fixed; top:58px; right:12px; z-index:120;
   min-width:210px; max-width:calc(100vw - 24px);
   background:#FFFFFF; border:1px solid rgba(11,37,69,.14); border-radius:12px;
   box-shadow:0 10px 30px rgba(11,37,69,.18); padding:6px; overflow:hidden;
@@ -26775,5 +26778,23 @@ html body.dark #sum-menu button:focus-visible{ background:rgba(11,37,69,.09); }
   #sum-menu{ right:8px; top:54px; min-width:0; width:calc(100vw - 16px); }
 }
 </style>
+<!-- THE SUMMARISE CHOICE LIVES AT BODY LEVEL, NOT IN THE TOP BAR.
+     It shipped inside .tb-actions on 2026-11-06 and Savio saw a 10px white
+     sliver. #chat-topbar is height:68px with overflow-y:hidden, and an
+     absolutely positioned child at top:58px is simply CUT OFF at 68 --
+     10px of a 121px menu. z-index does not beat overflow clipping, and
+     getBoundingClientRect() still reported a full 210x121 box, which is why
+     my own test passed. It is position:fixed here and anchored to the button
+     at open time, so no ancestor can clip it. -->
+<div id="sum-menu" role="menu" aria-hidden="true">
+  <button type="button" role="menuitem" onclick="closeSummariseMenu();summariseThread()">
+    <span class="sm-t" id="sm-one"></span>
+    <span class="sm-s" id="sm-one-sub"></span>
+  </button>
+  <button type="button" role="menuitem" onclick="closeSummariseMenu();summariseAllThreads()">
+    <span class="sm-t" id="sm-all"></span>
+    <span class="sm-s" id="sm-all-sub"></span>
+  </button>
+</div>
 </body>
 </html>
