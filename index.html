@@ -125,7 +125,14 @@ body.dark{
   --navy3:#E8D4A8;
   --gold:#0B2545;
   --gold2:#0B2545;
-  --goldpale:#1A2438;
+  /* THE HOVER NOBODY COULD SEE. Savio, 2026-11-05: "take a look at the threads
+     when i hover can't see anything." --goldpale is the hover fill for 54
+     rules (thread rows, trash rows, clock and calendar cells). In dark it was
+     #1A2438 against a #0B2545 sidebar -- a 2% lift, which is indistinguishable
+     from nothing happening. Raised to a clearly visible but still NEUTRAL navy:
+     no hue shift, no gold, just lighter. The name says "gold" for historical
+     reasons; in dark it must never actually be gold. */
+  --goldpale:#2A4269;
   --goldlight:#1E2D42;
   --cream:#0D1520;
   --white:#162030;
@@ -1991,8 +1998,16 @@ body.dark button{
 }
 
 /* Hover = gold */
+/* NO GOLD FLASH ON HOVER. Savio, 2026-11-05, on his dark theme: "make sure the
+   hover on the dark theme doesn't make anything golden colour, we have to be
+   aesthetic about our choices." This was #D4AF37 — every button in the app
+   jumped to full gold under the cursor, which is a shout, not a hint.
+   A hover should say "you are here", and the quietest way to say it is to lift
+   the button's OWN colour, not swap its hue. Dark buttons rest at #E8D9B8, so
+   they lift to a slightly brighter cream. He agreed the lift must still be
+   visible — "a hover has to show something or it feels dead". */
 body.dark button:hover{
-  background:#D4AF37 !important;
+  background:#F3E8D2 !important;
   color:#0B2545 !important;
 }
 
@@ -2279,12 +2294,26 @@ try{
         <button class="topbar-btn" id="search-btn" onclick="toggleSearch()" title="Search conversations" style="background:#0B2545;border:1px solid rgba(212,175,55,0.3)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
-        <button class="topbar-btn" id="summarise-btn" onclick="summariseThread()" title="Summarise this conversation" style="display:none">
+        <button class="topbar-btn" id="summarise-btn" onclick="toggleSummariseMenu(event)" title="Summarise" aria-haspopup="true" aria-expanded="false">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
         </button>
         <button class="topbar-btn" onclick="openUserMenu()" title="My Account" style="background:#0B2545;border:1px solid rgba(212,175,55,0.3)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </button>
+        <!-- THE CHOICE SAVIO EXPECTED. He pressed this icon twice expecting a
+             summary of ALL his conversations and got nothing, because it only
+             ever summarised the one he was in. Rather than silently change
+             what the icon does, it now asks. Two options, no cleverness. -->
+        <div id="sum-menu" role="menu" aria-hidden="true">
+          <button type="button" role="menuitem" onclick="closeSummariseMenu();summariseThread()">
+            <span class="sm-t" id="sm-one"></span>
+            <span class="sm-s" id="sm-one-sub"></span>
+          </button>
+          <button type="button" role="menuitem" onclick="closeSummariseMenu();summariseAllThreads()">
+            <span class="sm-t" id="sm-all"></span>
+            <span class="sm-s" id="sm-all-sub"></span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -2760,7 +2789,7 @@ try{
          switched off, so that when the real artwork exists it is one word here
          to turn it back on. Removing it would mean rebuilding a working,
          tested drawer for nothing. `sticker-test.mjs` still covers it. -->
-    <button onclick="showEmojiTab('stk')" id="etab-stk" style="display:none;flex:1;padding:10px;border:none;background:transparent;font-size:12px;font-weight:600;color:#5A6B8A;cursor:pointer;border-bottom:2px solid transparent">💬 Stickers</button>
+    <button onclick="showEmojiTab('stk')" id="etab-stk" style="flex:1;padding:10px;border:none;background:transparent;font-size:12px;font-weight:600;color:#5A6B8A;cursor:pointer;border-bottom:2px solid transparent">💬 Stickers</button>
     <button onclick="showEmojiTab('gif')" id="etab-gif" style="flex:1;padding:10px;border:none;background:transparent;font-size:12px;font-weight:600;color:#5A6B8A;cursor:pointer;border-bottom:2px solid transparent">🎬 GIFs</button>
   </div>
   <!-- Emoji tab -->
@@ -3956,7 +3985,26 @@ function _attachLabel(){
 // Strips any image URL, collapses the gap it leaves, and falls back to "GIF"
 // when the message was nothing but a picture.
 function _threadNameFrom(text, fallback){
-  let t=String(text||'').replace(/https?:\/\/\S+/g,' ').replace(/\s+/g,' ').trim();
+  let t=String(text||'').replace(/\s*\(This is a STICKER[^)]*\)\s*$/,'')
+        .replace(/https?:\/\/\S+/g,' ').replace(/\s+/g,' ').trim();
+  // A PICTURE STICKER TRAVELS AS A TOKEN, AND A TOKEN IS NOT A NAME.
+  // Savio's screenshot, 2026-11-05: a conversation in his sidebar was titled
+  // ":bella-confused:". The token is deliberately plain text so the thread
+  // store, sync, history and backend need no idea what a sticker is -- but the
+  // thread NAME is read by a person, so it gets the sticker's own label.
+  // Fixed here because this is the ONE place a thread is named; both callers
+  // go through it. [[bella-comment-is-not-a-call-site]]
+  const stk=/^:bella-([a-z]+):$/.exec(t);
+  if(stk){
+    let label=null;
+    try{
+      if(typeof _BELLA_STK!=='undefined'){
+        const hit=_BELLA_STK.filter(function(s){ return s.k===stk[1]; })[0];
+        if(hit) label=hit.t;
+      }
+    }catch(e){}
+    t=label||(stk[1].charAt(0).toUpperCase()+stk[1].slice(1));
+  }
   // The stand-in text send() uses when nothing was typed is not a name.
   if(t==='Please analyse the attached document(s).') t='';
   if(!t) t=fallback||'Attachment';
@@ -10747,6 +10795,27 @@ function toggleEmojiPicker(){
 function _closeEmojiOnOutside(e){
   const panel=document.getElementById('emoji-panel');
   const btn=document.getElementById('emoji-btn');
+  // CLICKING A CATEGORY CLOSED THE WHOLE DRAWER, AND THIS IS WHY.
+  // Savio, 2026-11-05: "when i click any of the Words like Cheer, Everyday or
+  // Warmth" the panel disappears. Measured: tapping a STICKER keeps it open,
+  // tapping a CATEGORY closes it.
+  // renderStickers() rewrites #stk-cats and #stk-grid with innerHTML, which
+  // DESTROYS the very button you clicked before this document-level listener
+  // runs. By then e.target is detached, so panel.contains(e.target) is false
+  // and the panel reads the click as "outside". Nothing was outside.
+  // composedPath() is captured AT DISPATCH, so it still holds the panel even
+  // after the node is gone. Belt and braces: a target no longer in the document
+  // cannot have been outside anything.
+  let inside=false;
+  try{
+    const path=(typeof e.composedPath==='function') ? e.composedPath() : null;
+    if(path && panel && path.indexOf(panel)!==-1) inside=true;
+  }catch(err){}
+  if(!inside && e.target && !document.contains(e.target)) inside=true;
+  if(inside){
+    if(_emojiPanelOpen) document.addEventListener('click',_closeEmojiOnOutside,{once:true});
+    return;
+  }
   if(panel&&!panel.contains(e.target)&&e.target!==btn){
     panel.style.display='none';
     _emojiPanelOpen=false;
@@ -10786,10 +10855,13 @@ function showEmojiCategory(cat){
 // Tapping one SENDS IT. No typing, which was the whole point of his ask.
 // Each tile is the real sticker at small size, so what you press is what
 // arrives -- not an icon standing in for it.
-let _stkCat = 'Cheer';
+let _stkCat = 'Bella';
 function renderStickers(cat){
-  _stkCat = cat || 'Cheer';
-  const groups = [];
+  _stkCat = cat || 'Bella';
+  // Bella's own picture stickers lead, then the written ones. They share one
+  // picker on purpose -- to someone sending a sticker they are the same thing,
+  // and a second tab for ten pictures would be a worse answer than one row.
+  const groups = ['Bella'];
   for(const st of _STICKERS) if(groups.indexOf(st.g)===-1) groups.push(st.g);
   if(groups.indexOf(_stkCat)===-1) _stkCat = groups[0];
   const cats = document.getElementById('stk-cats');
@@ -10801,6 +10873,37 @@ function renderStickers(cat){
   }).join('');
   const grid = document.getElementById('stk-grid');
   if(!grid) return;
+  if(_stkCat === 'Bella'){
+    // The picture stickers. They animate in the picker too -- a still thumbnail
+    // of an animated sticker tells you nothing about what you are about to send.
+    // THE NAME IS ON THE TILE, NOT IN A TOOLTIP. Savio, 2026-11-05: "Below the
+    // Bella stickers it should at least have the name of the stickers else how
+    // will people know which sticker to use?" His screenshot caught the old
+    // behaviour exactly -- "Celebrating" appearing only on hover. THERE IS NO
+    // HOVER ON A PHONE, so on the device most people use, the names did not
+    // exist at all. `stk-bella` makes the tile a column so the caption sits
+    // under the picture.
+    // FOUR ACROSS, NOT TWO. Savio's screenshot 2026-11-05 showed two of the
+    // five rows, the third clipped mid-sticker. The 2-column grid is set
+    // inline on #stk-grid and was chosen for the WORD stickers, whose pills
+    // ("Happy Birthday!", "Good morning") genuinely need the width. The
+    // picture stickers are SQUARES and simply inherited it, so each sat in a
+    // cell twice as wide as it needed and half the drawer was empty.
+    // auto-fill rather than a hard 4: the drawer is narrower on a phone, and
+    // a fixed 4 would shrink the tiles under the 44px tap target the suite
+    // guards. minmax lets it fall to 3 and then 2 on the way down to 320px.
+    grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(66px,1fr))';
+    grid.innerHTML = _BELLA_STK.map(function(st){
+      return '<button class="stk-tile stk-bella" onclick="sendBellaSticker(\''+st.k+'\')" '+
+               'title="'+_escHtml(st.t)+'" aria-label="'+_escHtml(st.t)+'">'+
+               '<img src="stickers/bella-'+st.k+'.png" alt="'+_escHtml(st.t)+'" '+
+               'loading="lazy">'+
+               '<span class="stk-cap">'+_escHtml(st.t)+'</span>'+
+             '</button>';
+    }).join('');
+  } else {
+  // The word pills keep the two wide columns they were designed for.
+  grid.style.gridTemplateColumns = '1fr 1fr';
   grid.innerHTML = _STICKERS.filter(function(st){ return st.g===_stkCat; }).map(function(st){
     // The text is from OUR OWN list, never from anything a user typed, but it
     // is escaped all the same -- this goes in with innerHTML.
@@ -10808,7 +10911,27 @@ function renderStickers(cat){
              '<span class="stk-mini wfxc-'+(st.c||'joy')+'">'+_escHtml(st.t)+'</span>'+
            '</button>';
   }).join('');
+  }
   _positionEmojiPanel();
+}
+// A picture sticker goes out as its token. Everything downstream -- the thread
+// store, the sync, the history, the backend -- handles it as ordinary text and
+// needs no idea what a sticker is; only the renderer turns it back into a
+// picture. Same half-typed-sentence rescue as the written stickers.
+function sendBellaSticker(key){
+  if(_BELLA_STK_KEYS.indexOf(key) === -1) return;
+  const ti = document.getElementById('ti');
+  if(!ti) return;
+  const held = ti.value;
+  ti.value = ':bella-' + key + ':';
+  // THE DRAWER STAYS OPEN. Savio, 2026-11-05: "when i click then the whole
+  // panel disappears, then i have to again go to the emoji panel to reselect."
+  // Sending a sticker is rarely a single act -- people send two or three. Every
+  // other sticker drawer on a phone stays open, and closing it also made the
+  // NEXT tap land on whatever was underneath, which reads as "the click did not
+  // work". Closing it was copied from the word stickers; both are fixed.
+  try{ send(); }catch(e){}
+  setTimeout(function(){ if(held && !ti.value){ ti.value = held; try{ arz(ti); }catch(e){} } }, 60);
 }
 function sendSticker(key){
   const st = _STICKERS.filter(function(x){ return x.k===key; })[0];
@@ -10820,8 +10943,7 @@ function sendSticker(key){
   // reaching for a sticker never destroys a sentence someone was writing.
   const held = ti.value;
   ti.value = st.t;
-  const panel = document.getElementById('emoji-panel');
-  if(panel){ panel.style.display='none'; _emojiPanelOpen=false; }
+  // Drawer stays open -- same reason as sendBellaSticker above.
   try{ send(); }catch(e){}
   setTimeout(function(){ if(held && !ti.value){ ti.value = held; try{ arz(ti); }catch(e){} } }, 60);
 }
@@ -11295,7 +11417,28 @@ function checkSummariseBtn(){
   const hist=threads[currentThreadId]?.hist||[];
   const exchanges=Math.floor(hist.length/2);
   const btn=document.getElementById('summarise-btn');
-  if(btn)btn.style.display=exchanges>=5?'flex':'none';
+  // THE GATE MATCHES THE FEATURE, which it did not before. Savio, 2026-11-05:
+  // "what happened to the summary icon which was there on the RHS after the
+  // search icon & before the my accounts icon?" Nothing had -- it was hidden,
+  // because his sticker thread was two exchanges long and this read >=5.
+  // But summariseThread() itself only refuses below hist.length<4, i.e. TWO
+  // exchanges. So the icon hid for three exchanges longer than the thing it
+  // opens actually needs, and its absence read as a fault. Same number now,
+  // in both places: change one and the other must change with it.
+  // ALWAYS VISIBLE. Savio reported it "missing" TWICE on 2026-11-05 -- first on
+  // a two-exchange thread when the gate was 5, then on a brand-new empty one
+  // after I lowered the gate to 2. Both times the code was behaving exactly as
+  // written, and both times he was right that something was wrong: A CONTROL
+  // THAT VANISHES READS AS BROKEN. He cannot tell "not yet" apart from "gone".
+  // Hiding it was never buying anything either -- summariseThread() already
+  // refuses a short thread with uiText('summary_tooshort'), which is written
+  // and translated into all four languages. So the icon stays put and the
+  // feature explains itself in Bella's own voice when there is nothing to
+  // summarise yet. The exchange count still drives the subtitle below.
+  if(btn)btn.style.display='flex';
+  // The inline style="display:none" was ALSO removed from the markup. Leaving
+  // it there meant the icon stayed invisible until this function happened to
+  // run, which is a second way for it to look missing.
   const sub=document.getElementById('topbar-sub');
   if(sub&&exchanges>0)sub.textContent=exchanges+' exchange'+(exchanges!==1?'s':'');
 }
@@ -11326,6 +11469,127 @@ async function summariseThread(){
     if(reply){bellaMsg('**'+uiText('summary_heading')+'**\n\n'+reply);speakText(uiText('summary_spoken'),chosenLang()||detectLanguage(reply));}
   }catch(e){hideThinking();bellaMsg(uiText('summary_failed'));}
 }
+
+// ── SUMMARISE ACROSS EVERY CONVERSATION ───────────────────────────────────
+// Savio, 2026-11-05: "Wasnt the summary to summarise all the threads? look at
+// the LHS so many threads are there right?" It never did -- summariseThread()
+// reads threads[currentThreadId] alone, and has since before this repo had
+// usable history. His expectation was simply a better feature than the one
+// that existed, so here it is.
+//
+// FRONTEND ONLY. It reuses the same /chat endpoint, the same system prompt and
+// the same _replyLangNote() the ordinary path uses -- no backend change, no
+// deploy. Leaving out _replyLangNote() is the exact bug he found on 2026-10-03,
+// where Summarise answered in English no matter which language was chosen.
+//
+// THE DELETED THREADS ARE NOT INCLUDED, and that is deliberate rather than
+// incidental: deleting them is how he removes things, and a summary that
+// quoted a conversation he had binned would undo that. They live in a separate
+// `deletedThreads` store, so iterating `threads` is already correct.
+const _SUM_ALL_BUDGET = 48000;   // characters of transcript, ~12k tokens
+
+function _threadsForSummary(){
+  // Newest conversation first, by last activity -- so if the budget runs out
+  // it is the OLDEST that gets dropped, never what he was just doing.
+  return Object.keys(threads)
+    .map(function(id){ return {id:id, t:threads[id]}; })
+    .filter(function(x){ return x.t && Array.isArray(x.t.hist) && x.t.hist.length>0; })
+    .sort(function(a,b){ return (b.t.lastAt||0)-(a.t.lastAt||0); });
+}
+
+function _buildAllThreadsDigest(){
+  const picked=_threadsForSummary();
+  let used=0, included=0, dropped=0;
+  const parts=[];
+  for(const x of picked){
+    const lines=[];
+    for(const m of x.t.hist){
+      const who = m.role==='model' ? 'Bella' : 'Savio';
+      const txt = ((m.parts&&m.parts[0]&&m.parts[0].text)||'').trim();
+      if(txt) lines.push(who+': '+txt);
+    }
+    if(!lines.length){ continue; }
+    const when = x.t.lastAt ? new Date(x.t.lastAt).toLocaleDateString() : '';
+    const block = '--- CONVERSATION: "'+(x.t.name||'Untitled')+'"'+(when?' (last active '+when+')':'')+'\n'
+                + lines.join('\n') + '\n';
+    if(used + block.length > _SUM_ALL_BUDGET){ dropped++; continue; }
+    parts.push(block); used += block.length; included++;
+  }
+  return {text:parts.join('\n'), included:included, dropped:dropped, total:picked.length};
+}
+
+async function summariseAllThreads(){
+  const d=_buildAllThreadsDigest();
+  if(!d.included){ bellaMsg(uiText('summary_all_none')); return; }
+  showThinking();
+  const ask = 'Below are ALL of my conversations with you, each marked with its title. '
+    + 'Please give me one summary ACROSS ALL OF THEM -- not a list of each conversation '
+    + 'separately. Include: 1) The main things we have been talking about, 2) Any decisions '
+    + 'we reached, 3) Anything still open or waiting on me, 4) Anything you think I have '
+    + 'forgotten. Group by theme, not by conversation. Format clearly with headings.'
+    + (d.dropped ? ' (Note: the '+d.dropped+' oldest conversations were left out for length.)' : '')
+    + _replyLangNote();
+  const contents=[
+    {role:'user',parts:[{text:buildSystemPrompt(currentProfileKey,currentAddressedName,userMemory.memories||'')}]},
+    {role:'model',parts:[{text:'Understood. I am Bella.'}]},
+    {role:'user',parts:[{text:d.text+'\n\n'+ask}]}
+  ];
+  try{
+    const r=await bfetch(BACKEND+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents,useSearch:false})});
+    const j=await r.json();
+    let reply=j.candidates?.[0]?.content?.parts?.[0]?.text||null;
+    if(reply){
+      reply=reply.replace(/\[Thinking:[^\]]*\]/gi,'').replace(/\[Searching:[^\]]*\]/gi,'').replace(/\[Source Link Example:[^\]]*\]/gi,'').trim();
+    }
+    hideThinking();
+    if(reply){
+      bellaMsg('**'+uiText('summary_all_heading')+'**\n\n'+reply
+               +'\n\n_'+uiText('summary_all_footer',{n:d.included})+'_');
+      speakText(uiText('summary_spoken'),chosenLang()||detectLanguage(reply));
+    } else { bellaMsg(uiText('summary_failed')); }
+  }catch(e){ hideThinking(); bellaMsg(uiText('summary_failed')); }
+}
+
+// ── The little menu on the icon ───────────────────────────────────────────
+function toggleSummariseMenu(ev){
+  if(ev){ ev.stopPropagation(); }
+  const m=document.getElementById('sum-menu');
+  if(!m) return;
+  if(m.classList.contains('on')){ closeSummariseMenu(); return; }
+  // Labels are set at OPEN time, never at load: the language can change while
+  // the page is open and a label baked in at startup would be stale.
+  const n=_threadsForSummary().length;
+  const set=function(id,t){ const e=document.getElementById(id); if(e) e.textContent=t; };
+  set('sm-one',uiText('summary_menu_one'));
+  set('sm-one-sub',uiText('summary_menu_one_sub'));
+  set('sm-all',uiText('summary_menu_all'));
+  set('sm-all-sub',uiText('summary_menu_all_sub',{n:n}));
+  m.classList.add('on');
+  m.setAttribute('aria-hidden','false');
+  const b=document.getElementById('summarise-btn');
+  if(b) b.setAttribute('aria-expanded','true');
+  setTimeout(function(){ document.addEventListener('click',_sumMenuAway); },0);
+  document.addEventListener('keydown',_sumMenuEsc);
+}
+function closeSummariseMenu(){
+  const m=document.getElementById('sum-menu');
+  if(!m) return;
+  m.classList.remove('on');
+  m.setAttribute('aria-hidden','true');
+  const b=document.getElementById('summarise-btn');
+  if(b) b.setAttribute('aria-expanded','false');
+  document.removeEventListener('click',_sumMenuAway);
+  document.removeEventListener('keydown',_sumMenuEsc);
+}
+// composedPath(), not e.target -- captured AT DISPATCH, so it still holds the
+// menu even if the click rebuilt it. Same fix as the sticker drawer.
+function _sumMenuAway(e){
+  const m=document.getElementById('sum-menu'), b=document.getElementById('summarise-btn');
+  const path=(e.composedPath&&e.composedPath())||[];
+  if(path.indexOf(m)!==-1||path.indexOf(b)!==-1) return;
+  closeSummariseMenu();
+}
+function _sumMenuEsc(e){ if(e.key==='Escape') closeSummariseMenu(); }
 
 function retryMsg(id){
   const el=document.getElementById(id);
@@ -11506,6 +11770,34 @@ async function send(){
   }
   showThinking();
   let fullMsg=disp;const imagePartsForAPI=[];
+  // A STICKER IS A GESTURE, NOT A QUESTION.
+  // Savio's screenshot, 2026-11-05: he sent "Bang!" and got three paragraphs
+  // plus web sources from quora.com and merriam-webster.com. She had no way to
+  // know it was a sticker, so the router treated a one-word exclamation as a
+  // lookup and answered it like a dictionary query. Nobody wants a definition
+  // of the noise they just made.
+  // THE HINT GOES ON fullMsg ONLY -- never on `disp`, which is what was already
+  // painted on screen and what the picture renderer matches. It IS kept in the
+  // history so the thread still reads correctly after a reload, which is why
+  // _bigStickerHtml tolerates a trailing parenthetical.
+  // Frontend-only: no deploy, no backend change, ₹0.
+  (function(){
+    var sk=/^:bella-([a-z]+):$/.exec(disp);
+    var label=null;
+    if(sk && typeof _BELLA_STK!=='undefined'){
+      var hit=_BELLA_STK.filter(function(s){ return s.k===sk[1]; })[0];
+      if(hit) label=hit.t.toLowerCase();
+    }
+    if(!label && typeof _wordFxKey==='function'){
+      var wk=_wordFxKey(disp);                       // "Bang!", "Love you", ...
+      if(wk && typeof _WORD_FX!=='undefined' && _WORD_FX[wk]) label='"'+disp.trim()+'"';
+    }
+    if(!label) return;
+    fullMsg = disp + '  (This is a STICKER, not a question — ' +
+      currentAddressedName + ' sent ' + label + '. Answer the FEELING in one ' +
+      'short warm line, as a friend would. Never define the word, never search ' +
+      'the web, never list sources, never ask what it means.)';
+  })();
   if(pTexts.length>0)fullMsg+='\n\n'+pTexts.map((t,i)=>`[DOCUMENT ${i+1}: ${pFiles[i]?.name||'file'}]\n${t.substring(0,15000)}`).join('\n\n');
   for(const img of pImages){if(img)imagePartsForAPI.push({inlineData:{mimeType:img.mimeType,data:img.data}});}
   // The maker may need the files THEMSELVES, not the text pulled out of them —
@@ -15855,7 +16147,11 @@ const _WORD_FX = (function(){
   return m;
 })();
 function _wordFxKey(text){
-  var t = String(text||'').trim();
+  // Strip the sticker hint first: with it attached the string is far longer
+  // than 22 characters, so a reloaded "Bang!" would silently stop being a
+  // sticker and come back as plain text.
+  var t = (typeof _stripStickerHint==='function' ? _stripStickerHint(text)
+                                                 : String(text||'')).trim();
   if(!t || t.length > 22) return null;
   // Strip the punctuation people actually type, then fold a stretched word
   // back to its root so "Zzzzzzz" and "Shhhh" land on the same entry.
@@ -15878,7 +16174,7 @@ function _bigWordHtml(text){
     // The word is shown AS THEY TYPED IT -- their capitals, their exclamation
     // marks, their number of z's. Escaped first, so this is their text and
     // never their markup.
-    var shown = _escHtml(String(text).trim());
+    var shown = _escHtml(_stripStickerHint(text));
     return '<span class="wfx wfx-'+fx.m+' wfxc-'+(fx.c||'joy')+'">'+shown+'</span>' +
            '<button class="wfx-spk" data-snd="'+fx.s+'" onclick="playWordFx(this)" ' +
            'aria-label="Play the sound (sound is off by default)" title="Sound is off - press to hear it">' +
@@ -15995,6 +16291,69 @@ const _EMOJI_MOTION = (function(){
     for (const cp of _EMOJI_MOTION_GROUPS[k]) m[cp] = 'em-' + k;
   return m;
 })();
+// ── BELLA'S OWN PICTURE STICKERS ──────────────────────────────────────────
+// Ten animated APNGs of the Bella mascot, 144x144, shown at 72px — EXACTLY the
+// size and the two-device-pixels-per-CSS-pixel reasoning as the animated emoji
+// just below, so they reuse that path and need no new sizing code.
+// WHY APNG AND NOT GIF, like the emoji: GIF carries ONE BIT of transparency, so
+// the soft anti-aliased die-cut edge would become a hard stair-stepped edge
+// with a white fringe on the dark theme. APNG keeps the full 8-bit alpha.
+// A browser without APNG support shows frame 1 as an ordinary PNG — a still
+// sticker with a correct soft edge, which is a safe degrade, not a broken image.
+// Measured 2026-11-04: 10 files, 907 KB total, lighter than ten emoji GIFs.
+const _BELLA_STK = [
+  {k:'happy',       t:'Happy'},
+  {k:'waving',      t:'Waving'},
+  {k:'celebrating', t:'Celebrating'},
+  {k:'love',        t:'Love'},
+  {k:'thumbsup',    t:'Thumbs up'},
+  {k:'thinking',    t:'Thinking'},
+  {k:'confused',    t:'Confused'},
+  {k:'sleeping',    t:'Sleeping'},
+  {k:'crying',      t:'Crying'},
+  {k:'annoyed',     t:'Annoyed'},
+  // THE FOURTEEN HE ADDED, 2026-11-05: "Keep all 14 ... remember the names
+  // have to be below them and all need to be animated." The names come free --
+  // .stk-cap already renders `t` under every picture tile.
+  // KEYS ARE PURE LOWERCASE LETTERS, NO HYPHENS. _bigStickerHtml matches
+  // /^\s*:bella-([a-z]+):\s*$/ , so a key like 'bear-hug' would travel in the
+  // message, fail to match on the way back, and render as the raw text
+  // ":bella-bear-hug:" in the conversation -- the same class of fault as the
+  // thread titled ":bella-confused:".
+  {k:'bearhug',     t:'Bear hug'},
+  {k:'laughing',    t:'Laughing'},
+  {k:'winking',     t:'Winking'},
+  {k:'clapping',    t:'Clapping'},
+  {k:'dancing',     t:'Dancing'},
+  {k:'namaste',     t:'Namaste'},
+  {k:'surprised',   t:'Surprised'},
+  {k:'shy',         t:'Shy'},
+  {k:'sad',         t:'Sad'},
+  {k:'scared',      t:'Scared'},
+  {k:'furious',     t:'Furious'},
+  {k:'jealous',     t:'Jealous'},
+  {k:'hungry',      t:'Hungry'},
+  {k:'unwell',      t:'Unwell'}
+];
+const _BELLA_STK_KEYS = _BELLA_STK.map(function(s){ return s.k; });
+// A sticker travels as a token so it survives the ordinary text path — the
+// thread store, the sync, the history — without any of them needing to know
+// what a sticker is.
+// The hint appended for Bella's benefit (see send()) is never for human eyes.
+// It lives in the stored history, so every renderer strips it first -- otherwise
+// a reloaded thread shows the instruction instead of the sticker.
+function _stripStickerHint(text){
+  return String(text||'').replace(/\s*\(This is a STICKER[^)]*\)\s*$/,'').trim();
+}
+function _bigStickerHtml(text){
+  try{
+    const m = /^\s*:bella-([a-z]+):\s*$/.exec(_stripStickerHint(text));
+    if(!m || _BELLA_STK_KEYS.indexOf(m[1]) === -1) return null;
+    const st = _BELLA_STK.filter(function(s){ return s.k === m[1]; })[0];
+    return '<img src="stickers/bella-'+m[1]+'.png" alt="'+_escHtml(st.t)+'" '+
+           'style="width:72px;height:72px;vertical-align:middle;display:inline-block">';
+  }catch(e){ return null; }
+}
 function _bigEmojiHtml(text){
   try{
     const t = String(text||'').trim();
@@ -16057,7 +16416,10 @@ function userMsg(text,fileNames){
   // bubble behind an emoji-only message at all, so neither does this.
   // An emoji on its own, or one of the written effects -- both get the same
   // treatment: shown big, with no bubble behind them.
-  const _bigE=_bigEmojiHtml(text);
+  // A picture sticker is checked FIRST: its token is unmistakable, and leaving
+  // it to fall through would show the raw ":bella-happy:" text for one frame.
+  const _bigS=_bigStickerHtml(text);
+  const _bigE=_bigS!==null?_bigS:_bigEmojiHtml(text);
   const _big=_bigE!==null?_bigE:_bigWordHtml(text);
   const safe=_big!==null?_big:_escHtml(text).replace(
     /https:\/\/(?:media\d*|i)\.giphy\.com\/[^\s"'<>]+/g,
@@ -16369,6 +16731,41 @@ const UI_TEXT = {
     bn:'আমাদের এই আলোচনা টি সংক্ষেপ করা এখুনি সম্ভব হচ্ছে না',
     hi:'सारांश बनाने के लिए बातचीत अभी बहुत छोटी है।',
     mr:'सारांश करण्याइतकं संभाषण अजून झालेलं नाही.'},
+  summary_all_heading:{
+    en:'Everything we have talked about',
+    bn:'আমরা এ পর্যন্ত যা যা নিয়ে কথা বলেছি',
+    hi:'अब तक हमने जिन बातों पर बात की',
+    mr:'आतापर्यंत आपण ज्या गोष्टींवर बोललो'},
+  summary_all_none:{
+    en:'There are no conversations to summarise yet.',
+    bn:'এখনও সংক্ষেপ করার মতো কোনও কথা হয়নি।',
+    hi:'अभी सारांश बनाने लायक कोई बातचीत नहीं है।',
+    mr:'सारांश करण्यासारखं अजून काही बोलणं झालेलं नाही.'},
+  summary_all_footer:{
+    en:'Taken from {n} conversations.',
+    bn:'{n} টি কথোপকথন থেকে নেওয়া।',
+    hi:'{n} बातचीत से लिया गया।',
+    mr:'{n} संभाषणांमधून घेतलं.'},
+  summary_menu_one:{
+    en:'This conversation',
+    bn:'এই কথোপকথন টি',
+    hi:'यह बातचीत',
+    mr:'हे संभाषण'},
+  summary_menu_one_sub:{
+    en:'Only the one open now',
+    bn:'শুধু এখন যেটা খোলা আছে',
+    hi:'सिर्फ़ वह जो अभी खुली है',
+    mr:'फक्त आता उघडं असलेलं'},
+  summary_menu_all:{
+    en:'All my conversations',
+    bn:'আমার সব কথোপকথন',
+    hi:'मेरी सारी बातचीत',
+    mr:'माझी सगळी संभाषणं'},
+  summary_menu_all_sub:{
+    en:'All {n} together',
+    bn:'সব {n} টি একসাথে',
+    hi:'सभी {n} एक साथ',
+    mr:'सगळी {n} एकत्र'},
   summary_failed:{
     en:'Sorry, I could not summarise this thread right now.',
     bn:'আমি দুঃখিত, এই আলোচনা টি সংক্ষেপ করা সম্ভব নয়',
@@ -23322,6 +23719,185 @@ body.dark .wfx-spk{ color:rgba(245,230,200,.75); }
   .wfx-pop,.wfx-zoom,.wfx-punch,.wfx-drift,.wfx-fade,.wfx-wobble{ animation:none !important; opacity:1 !important; }
 }
 </style>
+
+<style id="v92-bella-sticker-tiles">
+/* ── BELLA'S PICTURE STICKERS IN THE DRAWER ───────────────────────────────
+   Savio, 2026-11-05, from his dark theme: "do you need that dark patch behind
+   every sticker? Looks gaudy and unclean."
+
+   THE PATCH WAS NOT MINE AND NOT DELIBERATE. `.stk-tile` sets
+   `background:none`, but a tile is a <button>, and `body.dark button` forces
+   `background:#E8D9B8 !important` across the whole app. So every transparent
+   die-cut sticker sat on a CREAM slab, and `body.dark button:hover` flashed it
+   to full gold. An !important blanket beats an ordinary rule, so the only
+   thing that wins is a more specific selector that is also !important --
+   the same mechanism `mbub-bare` needed for the black box behind emoji.
+   [[bella-important-beats-inline-style]]
+
+   The sticker is already die-cut with its own white edge: ANY fill behind it
+   fights that edge. It gets none, in either theme. */
+button.stk-tile.stk-bella,
+body.dark button.stk-tile.stk-bella{
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+  flex-direction:column;
+  gap:3px;
+  padding:6px 2px 4px;
+}
+button.stk-tile.stk-bella img{
+  width:56px; height:56px; display:block; margin:0 auto;
+}
+/* THE WHOLE TILE IS THE TARGET. Savio, 2026-11-05: "fix the click portion in
+   the sticker section properly." A tap landing on the <img> or the caption
+   rather than the <button> is a tap that does nothing on some browsers, and on
+   a phone the picture covers most of the tile -- so the dead area was the part
+   you naturally aim at. Both children stop taking pointer events, which hands
+   every tap to the button itself. 44px minimum, the accessible touch size. */
+button.stk-tile.stk-bella img,
+button.stk-tile.stk-bella .stk-cap{ pointer-events:none; }
+button.stk-tile.stk-bella{ min-height:84px; touch-action:manipulation; }
+/* The hover LIFTS, it does not repaint. Neutral in both themes, never gold. */
+button.stk-tile.stk-bella:hover{ background:rgba(11,37,69,.07) !important; }
+body.dark button.stk-tile.stk-bella:hover{ background:rgba(245,230,200,.10) !important; }
+
+/* ── THE PICKER IS A WHITE PANEL IN *BOTH* THEMES ─────────────────────────
+   Measured 2026-11-05: #emoji-panel paints rgb(255,255,255) in dark mode too.
+   The blanket rule `body.dark *:not(...){color:#F5E6C8!important}` then repaints
+   every label cream — cream on white. "Search for a GIF above" measured
+   1.23:1. THE SAME FAULT, AT THE SAME RATIO, WAS FOUND AND WRITTEN UP ON
+   2026-10-11 for the user menu; the picker is another white surface that rule
+   forgot. It stayed hidden because the contrast audit walks the page and all
+   three tabs start `display:none`.
+
+   Savio, 2026-11-05, choosing the direction himself: "Dark Mode you can keep
+   the writing in navy no issues, cream may blend into the background... you
+   need to have navy writing on the background something which is readable on
+   a white or cream background used."
+
+   So the SURFACE stays light and the TEXT turns navy. An ID in the selector is
+   what beats the blanket rule — no number of classes can, since that rule has
+   no id. Emoji glyphs are unaffected: they carry their own colour. */
+body.dark #emoji-panel,
+body.dark #emoji-panel *:not(img):not(svg):not(svg *){
+  color:#2A3F5F !important;
+}
+/* Placeholders inside the panel need saying separately — `color` does not reach them. */
+body.dark #emoji-panel input::placeholder,
+body.dark #emoji-panel textarea::placeholder{ color:#6B7A8F !important; }
+
+/* NO CREAM SLAB BEHIND A TILE. `body.dark button{background:#E8D9B8!important}`
+   gives every button in the app a cream fill; on a white panel that is a muddy
+   block behind each emoji, each GIF and each sticker. Savio: "you have managed
+   to remove the background from the dark mode on the stickers portion what
+   about the rest of the tabs under Emojis?" The category pills and the three
+   tab buttons KEEP their fill — they are navigation and need to read as
+   pressable. Only the content tiles lose it. */
+body.dark #emoji-grid button,
+body.dark #gif-grid button,
+body.dark #emoji-panel .em-btn,
+body.dark #emoji-panel .gif-tile{
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+}
+body.dark #emoji-grid button:hover,
+body.dark #gif-grid button:hover,
+body.dark #emoji-panel .em-btn:hover,
+body.dark #emoji-panel .gif-tile:hover{
+  background:rgba(11,37,69,.07) !important;
+}
+
+/* ── THE THREAD HOVER THAT ERASED THE THREAD ──────────────────────────────
+   Savio, 2026-11-05: "Check LHS when i hover on the thread can't see anything?
+   Except the current thread that i can see when i hover, i want the same thing
+   for the others as well."
+
+   I MISDIAGNOSED THIS TWICE FROM THE CODE. I read it as "the hover is too
+   faint" and spent two goes brightening --goldpale. HIS SCREENSHOT SHOWS THE
+   ACTUAL FAULT: the hovered row turns CREAM and the title and preview VANISH,
+   leaving only the edit and delete icons. A thread row is a <button>, so
+   `body.dark button:hover{background:#E8D9B8/#F3E8D2!important}` repaints it
+   cream — and the text on it is already cream. Cream on cream.
+   --goldpale never had a chance: an !important blanket beats a token.
+   [[savio-workaround-is-evidence]] — the picture was the evidence, not the CSS.
+
+   So the row lifts to a LIGHTER NAVY and the text stays cream, which is what
+   he asked for: visible, neutral, never gold. The active row keeps its own
+   look. Specificity (0,4,1) plus !important is what beats the blanket. */
+body.dark .sb-threads .thread-item:hover,
+body.dark .sb-threads .trash-item:hover,
+body.dark .sb-threads .trash-head:hover{
+  background:#2A4269 !important;
+}
+body.dark .sb-threads .thread-item:hover,
+body.dark .sb-threads .thread-item:hover *{
+  color:#F5E6C8 !important;
+}
+/* The pencil and bin must stay visible on that lift too. */
+body.dark .sb-threads .thread-item:hover svg{ stroke:#F5E6C8 !important; }
+
+/* ── THE WORD TILES KEPT THEIR SLAB ───────────────────────────────────────
+   Savio, 2026-11-05: "Backgrounds gone from emoji section in light & dark
+   modes however they are still there in the words portion in the dark mode."
+
+   MY PREVIOUS RULE AND MY AUDIT BOTH MISSED THIS FOR THE SAME REASON: they
+   looked at the tile <button>. A word tile's fill is on an INNER
+   <span class="stk-mini wfxc-*">, which carries a gradient and a drop shadow.
+   The button went transparent and the span kept its slab. **A fix and a check
+   aimed at the same wrong element agree with each other and are both wrong.**
+
+   In the DRAWER the slab goes, in both themes, so the three tabs read as one
+   surface. The word keeps its colour as TEXT, so the categories are still
+   distinguishable. The SENT sticker is untouched -- there the coloured pill
+   IS the sticker, and he likes it ("Boom!", "Congrats!"). */
+/* BOTH LAYERS, OR NEITHER. The slab is painted twice over: `body.dark button`
+   fills the TILE cream, and `.wfxc-*` paints a gradient on the inner SPAN.
+   My first attempt scoped the tile rule to `.stk-bella`, so the word tiles --
+   which are plain `.stk-tile` -- kept the cream underneath regardless of what
+   the span did. Strip both. */
+#stk-grid button.stk-tile,
+body.dark #stk-grid button.stk-tile{
+  background:transparent !important;
+  background-image:none !important;
+  border:none !important;
+  box-shadow:none !important;
+}
+#stk-grid button.stk-tile:hover{ background:rgba(11,37,69,.07) !important; }
+body.dark #stk-grid button.stk-tile:hover{ background:rgba(11,37,69,.07) !important; }
+#stk-grid .stk-mini{
+  background:none !important;
+  background-image:none !important;
+  box-shadow:none !important;
+  border:none !important;
+  font-size:13px;
+}
+/* Those text colours were chosen to sit on their own gradient; on the white
+   drawer they need to be dark enough to read on their own. */
+#stk-grid .stk-mini.wfxc-joy { color:#7A4A00 !important; }
+#stk-grid .stk-mini.wfxc-warm{ color:#6B4A00 !important; }
+#stk-grid .stk-mini.wfxc-love{ color:#8A0A2A !important; }
+#stk-grid .stk-mini.wfxc-bold{ color:#0B4B7A !important; }
+#stk-grid .stk-mini.wfxc-calm{ color:#1C4A33 !important; }
+
+/* The name, under the picture. A tooltip is not a label on a phone. */
+.stk-cap{
+  display:block; font-size:10px; line-height:1.2; font-weight:600;
+  letter-spacing:.01em; text-align:center; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; max-width:100%;
+  color:#5A6B8A;
+}
+/* MY OWN BUG, CAUGHT BY MEASUREMENT 2026-11-05 — these were CREAM (#C8B88A).
+   I assumed the drawer was dark in dark mode. IT IS NOT: #emoji-panel paints
+   rgb(255,255,255) in BOTH themes. So the captions I added yesterday were
+   cream on white at 1.97:1 — effectively invisible, and the suite passed them
+   because it only checked the caption EXISTED and had text, never its contrast.
+   Savio: "Dark Mode you can keep the writing in navy no issues, cream may
+   blend into the background." Navy it is, in both themes. 9.0:1 on white. */
+.stk-cap,
+body.dark .stk-cap,
+body.dark button.stk-tile.stk-bella .stk-cap{ color:#3D5370 !important; }
+</style>
 <style id="v90-emoji-motion">
 /* ── THE 77 THAT MOVE ─────────────────────────────────────────────────────
    Google animates 598 of Bella's 852 emoji. Of the 254 it never touched, 77
@@ -26160,5 +26736,44 @@ document.addEventListener("DOMContentLoaded", function(){
 });
 </script>
 
+<style id="v93-summary-menu">
+/* THE SUMMARISE CHOICE. Scoped by ID throughout, because the dark theme's
+   blanket `body.dark *{color:cream !important}` repaints any label that is
+   only class-scoped -- no number of classes beats it, an ID does.
+   NO font-weight:500 ANYWHERE HERE: at weight 500 the Devanagari face falls
+   back and renders Hindi and Marathi as Latin junk. [[bella-devanagari-weight-500-bug]] */
+#sum-menu{
+  display:none; position:absolute; top:58px; right:12px; z-index:60;
+  min-width:210px; max-width:calc(100vw - 24px);
+  background:#FFFFFF; border:1px solid rgba(11,37,69,.14); border-radius:12px;
+  box-shadow:0 10px 30px rgba(11,37,69,.18); padding:6px; overflow:hidden;
+}
+#sum-menu.on{ display:block; }
+#sum-menu button{
+  display:block; width:100%; text-align:left; cursor:pointer;
+  background:transparent; border:none; border-radius:8px;
+  padding:10px 12px; min-height:44px;   /* the tap target, same floor as the tiles */
+}
+#sum-menu button:hover,
+#sum-menu button:focus-visible{ background:rgba(11,37,69,.07); outline:none; }
+#sum-menu .sm-t{
+  display:block; font-size:13px; font-weight:600; line-height:1.3;
+  color:#0B2545 !important;
+}
+#sum-menu .sm-s{
+  display:block; font-size:11px; font-weight:400; line-height:1.35; margin-top:2px;
+  color:#5A6B8A !important;
+}
+/* The panel stays a WHITE card in dark mode, exactly like the emoji picker, so
+   the two read as the same surface. Only the hover tint changes. */
+html body.dark #sum-menu{ background:#FFFFFF; border-color:rgba(11,37,69,.18); }
+html body.dark #sum-menu .sm-t{ color:#0B2545 !important; }
+html body.dark #sum-menu .sm-s{ color:#5A6B8A !important; }
+html body.dark #sum-menu button:hover,
+html body.dark #sum-menu button:focus-visible{ background:rgba(11,37,69,.09); }
+@media (max-width:480px){
+  #sum-menu{ right:8px; top:54px; min-width:0; width:calc(100vw - 16px); }
+}
+</style>
 </body>
 </html>
