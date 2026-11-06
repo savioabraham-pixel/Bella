@@ -2736,7 +2736,7 @@ try{
                and the one CSS rule for the knob went with it, so nothing is
                left looking for an element that cannot exist. -->
           <!-- Disclosure -->
-          <div class="disc" style="flex:1;text-align:center">* Bella may make mistakes — Always Confirm important actions. Conversations stored securely to your account.</div>
+          <div class="disc" style="flex:1;text-align:center">* Bella may make mistakes — Always Confirm important actions. Conversations stored securely to your account. <span id="build-marker" title="Which version of Bella you are looking at"></span></div>
           <!-- Voice toggle -->
           <div class="voice-toggle" onclick="toggleVoiceMode()">
             <span style="color:#0B2545;font-weight:500">Text</span>
@@ -2831,6 +2831,15 @@ try{
     <div id="gif-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:220px;overflow-y:auto">
       <div style="text-align:center;color:#5A6B8A;font-size:12px;padding:20px;grid-column:span 2">Search for a GIF above</div>
     </div>
+    <!-- GIPHY ATTRIBUTION — REQUIRED, NOT OPTIONAL. Their API terms section 5A
+         requires attribution wherever GIPHY content is shown. The page has had
+         13 references to GIPHY and zero credit since the GIF picker was built.
+         It sits UNDER THE RESULTS, inside the GIF tab, so it is present
+         wherever their content actually appears -- not buried in a settings
+         screen the family will never open.
+         GIPHY also publish official logo artwork; this is the text form. If
+         Savio wants the official mark it is a drop-in replacement here. -->
+    <div id="giphy-credit">Powered by GIPHY</div>
   </div>
 </div>
 
@@ -3207,6 +3216,23 @@ async function retrySync(){
   // the fault is still real and the notice correctly stays.
   if(btn){ btn.disabled = false; btn.textContent = uiText('sync_fault_retry'); }
   if(!_syncFault){ try{ renderThreadList(); }catch(e){} }
+}
+
+// ══ WHICH BUILD AM I LOOKING AT ═══════════════════════════════════════════
+// Savio hit the LIVE site twice on 2026-11-06 expecting work that was only on
+// the test link, and once more with a cached page. Each time the page looked
+// identical and the only tell was a stale thread title in a screenshot.
+// There was NOTHING in the page saying which version it was.
+//
+// UPDATED BY HAND AT EVERY PUSH. That is deliberate rather than lazy: the
+// served hash cannot be embedded in the file that produces it, and a build
+// step is a new moving part on a site that is one static file. audit-all.sh
+// prints this value beside the live and local hashes, so a stale marker is
+// visible on every run rather than discovered by him.
+const BELLA_BUILD = '6 Nov 06:12';
+function paintBuildMarker(){
+  const el = document.getElementById('build-marker');
+  if(el) el.textContent = 'Build ' + BELLA_BUILD;
 }
 
 // ══ ERROR ALERTING ════════════════════════════════════════════════════════
@@ -17116,6 +17142,10 @@ function openLangPick(ev){
 
 // Reflect the saved choice as soon as the footer exists.
 document.addEventListener('DOMContentLoaded', function(){ try{ paintMicLang(); }catch(e){} });
+// The build marker is painted the same way. It sits in the disclaimer line
+// under the composer, so it is on screen on every device without a panel to
+// open -- the point is that he can read it to me without hunting for it.
+document.addEventListener('DOMContentLoaded', function(){ try{ paintBuildMarker(); }catch(e){} });
 function micLang(){
   try{ const v = localStorage.getItem('b_voice_lang'); return SPEECH_LANGS[v] ? v : 'en'; }
   catch(e){ return 'en'; }
@@ -26858,6 +26888,25 @@ document.addEventListener("DOMContentLoaded", function(){
 });
 </script>
 
+<style id="v95-marker-and-giphy">
+/* THE BUILD MARKER. Muted on purpose -- it must be readable when looked for
+   and invisible when not. Scoped by ID: the dark theme's blanket
+   body.dark *{color:cream !important} would otherwise repaint it. */
+#build-marker{
+  display:inline; white-space:nowrap; opacity:.72;
+  font-variant-numeric:tabular-nums;   /* so the time does not jiggle */
+}
+/* GIPHY ATTRIBUTION — required by their terms section 5A. It must be legible,
+   not a hidden watermark, so it carries real contrast in both themes. The
+   picker is a WHITE card in dark mode too, which is why both rules land on
+   the same colour rather than inverting. */
+#giphy-credit{
+  margin:8px 2px 2px; text-align:center;
+  font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  color:#5A6B8A !important;
+}
+html body.dark #giphy-credit{ color:#5A6B8A !important; }
+</style>
 <style id="v94-sync-fault">
 /* "I CANNOT REACH YOUR ACCOUNT". Scoped by ID throughout — the dark theme's
    blanket body.dark *{color:cream !important} repaints any class-scoped label,
