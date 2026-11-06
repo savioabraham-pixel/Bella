@@ -11617,8 +11617,15 @@ async function summariseAllThreads(){
     }
     hideThinking();
     if(reply){
+      // PLAIN TEXT, NOT _ITALICS_. This renderer has no rule for _..._ -- it
+      // handles #, ** and bullets -- so the underscores were shown to him
+      // literally: "_Taken from 24 conversations._". Adding a global italic
+      // rule would be worse than the problem, because underscores occur in
+      // ordinary text (file names, ids) and would be eaten at random.
+      // [[bella-a-size-assertion-is-not-visibility]] is the same shape of
+      // mistake: I wrote markup without checking what actually renders it.
       bellaMsg('**'+uiText('summary_all_heading')+'**\n\n'+reply
-               +'\n\n_'+uiText('summary_all_footer',{n:d.included})+'_');
+               +'\n\n'+uiText('summary_all_footer',{n:d.included}));
       speakText(uiText('summary_spoken'),chosenLang()||detectLanguage(reply));
     } else { bellaMsg(uiText('summary_failed')); }
   }catch(e){ hideThinking(); bellaMsg(uiText('summary_failed')); }
@@ -16049,7 +16056,14 @@ function bellaMsg(text,audioUrl){
     .replace(/^##\s(.+)$/gm,'<h3 style="margin:12px 0 4px;font-size:14px;color:var(--navy);font-weight:700">$1</h3>')
     .replace(/^#\s(.+)$/gm,'<h2 style="margin:14px 0 6px;font-size:15px;color:var(--navy);font-weight:700">$1</h2>')
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-    .replace(/^[-•]\s(.+)$/gm,'<li>$1</li>')
+    // ASTERISK BULLETS. The class was [-•] and Gemini writes "* ", so every
+    // bulleted line arrived with a literal asterisk in front of it. Savio's
+    // screenshot of the all-threads summary, 2026-11-06: "* Key Discussions:".
+    // SAFE BECAUSE OF THE ORDER ABOVE: **bold** has already been turned into
+    // <strong> by the previous line, so a line opening "**Bold**" can no
+    // longer match ^\*. Anchored per-line with /m, so "2 * 3" mid-sentence is
+    // untouched.
+    .replace(/^[-•*]\s(.+)$/gm,'<li>$1</li>')
     .replace(/\n/g,'<br>');
   // Wrap only contiguous runs of <li>, not the whole message — the old form put
   // surrounding prose inside the <ul>.
