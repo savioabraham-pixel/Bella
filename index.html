@@ -3252,7 +3252,7 @@ async function retrySync(){
 // step is a new moving part on a site that is one static file. audit-all.sh
 // prints this value beside the live and local hashes, so a stale marker is
 // visible on every run rather than discovered by him.
-const BELLA_BUILD = '10 Nov 16:40';
+const BELLA_BUILD = '10 Nov 12:10 · research loop';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -12040,6 +12040,10 @@ async function send(){
     const _route=(pTexts.length===0&&pImages.length===0)?routeTurn(fullMsg):{lane:'search',why:'attachment present'};
     _recordRoute(fullMsg,_route);
     reply=await callBella(_route.lane==='search',userMemory.memories||'',window._chatAbortController.signal,_route);
+    // THE RESEARCH LOOP. Hands `reply` back untouched unless this really was a
+    // research turn that came back with sources — every guard lives in
+    // _researchLoop, and a failure inside it returns the first answer.
+    reply=await _researchLoop(reply,fullMsg,_route,userMemory.memories||'',window._chatAbortController.signal);
   }catch(err){
     window._chatAbortController=null;
     hideThinking();
@@ -12561,7 +12565,7 @@ function _otherThreadsNote(){
       lines.join('\n');
   }catch(e){ return ''; }
 }
-async function callBella(useSearch,memCtx,signal,route){
+async function callBella(useSearch,memCtx,signal,route,opts){
   // Use test profile if admin test mode is active — nothing saved to real user data
   const _activeProfileKey = (_testMode && _testProfileKey) ? _testProfileKey : currentProfileKey;
   const _activeAddressedName = (_testMode && _testAddressedName) ? _testAddressedName : currentAddressedName;
@@ -12610,11 +12614,22 @@ async function callBella(useSearch,memCtx,signal,route){
      final sat buried in the middle, with a list of conversation titles after
      it, while the rule describing it insisted it was last. Those two notes are
      recent, which matches Savio's "somewhere it stopped working". */
-  const contents=[{role:'user',parts:[{text:systemPrompt+searchNote+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_otherThreadsNote()+_recalledThreadNote()+_replyLangNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
+  /* LEAN, 2026-11-10. The 14,997-character ANSWER RULES block was
+     concatenated onto EVERY request — including a chat-lane turn that never
+     searches and cannot use a single one of them. Gated on the lane now, so
+     "how are you" no longer carries the travel research list. His standing
+     requirement, 7 November 2026: "i want Bella lean and intelligent." */
+  const _needRules=route?(route.lane==='search'):!!useSearch;
+  const contents=[{role:'user',parts:[{text:systemPrompt+(_needRules?searchNote:'')+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_otherThreadsNote()+_recalledThreadNote()+_replyLangNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
   // The two tool sets cannot travel together (see routeTurn), so this is written
   // as an either/or and not as two independent fields. While BELLA_TOOLS_READY is
   // false the second branch is unreachable and the request on the wire is
   // byte-identical to the one this page has always sent.
+  /* The revise step of the research loop appends its instruction as the final
+     user turn, so the answer rules above still govern the rewrite. Nothing is
+     appended on an ordinary turn, and the request on the wire is then
+     byte-identical to the one this page has always sent. */
+  if(opts&&opts.extra) contents.push({role:'user',parts:[{text:String(opts.extra)}]});
   const _payload={contents,useSearch};
   if(BELLA_TOOLS_READY&&route&&route.lane==='tools'){_payload.useSearch=false;_payload.tools=[{functionDeclarations:_TOOL_INTENTS.map(x=>x.declaration)}];}
   const r=await bfetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_payload),signal});
@@ -12625,8 +12640,230 @@ async function callBella(useSearch,memCtx,signal,route){
   // write a working URL itself, which is why Bella kept saying "I cannot
   // directly provide a link" while the links sat in this very response,
   // unread. Stashed here and painted under the bubble by _paintSources().
-  _lastSources=_readSources(d);
+  /* keepSources: the loop gathers across its legs and ranks the union once.
+     A revise call searches nothing, so letting it overwrite here would wipe
+     every citation the loop had collected. */
+  if(!(opts&&opts.keepSources)) _lastSources=_readSources(d);
   return d.candidates?.[0]?.content?.parts?.[0]?.text||null;
+}
+
+
+// ============================================================
+// THE RESEARCH LOOP — she reads what came back, finds the gap, searches again
+// ============================================================
+/* Savio, 7 November 2026: "i do not want Bella exhausted i want her to
+   understand, think logically, prob her requirements, understand intelligently
+   then reply. not just out of the box reply"
+
+   Every answer before this was ONE SHOT: one search, one reply, with no chance
+   to read what came back and go again. This adds the going-again.
+
+   WHY CRITIQUE-AND-REVISE AND NOT PLAN-FIRST. A plan-first loop — decide the
+   searches, run them, then write — is LEANER: the 40,172-character persona
+   would be carried once instead of twice. It was not chosen, because the first
+   call is the one he tested live on 7 November: the brief, the table, the
+   chart, the recommendation line. Plan-first REPLACES that call. This leaves it
+   exactly as it is and only adds a second pass over its output. The leaner
+   shape is the next step once this one is proven by him, and the rules move
+   INTO the steps then.
+
+   IT COSTS NOTHING ON A TURN THAT IS NOT RESEARCH. Every guard is checked
+   before any extra request is made. On a brief, a chat turn, or an answer that
+   cited nothing, the loop hands back the reply it was given, untouched.
+
+   READ-ONLY, SO NOTHING HERE NEEDS CONFIRMING. His Phase 2 rule, not to be
+   softened: read-only actions need no confirmation, write actions always do.
+   Searching is read-only. This loop never sends, creates, modifies or deletes
+   anything, and it must not grow a branch that does. */
+const _LOOP_MAX_ROUNDS=2;        // critique+gather rounds after the first answer
+const _LOOP_MAX_QUERIES=6;       // search legs per round, run in parallel
+const _LOOP_BUDGET_MS=60000;     // past this she answers with what she has
+
+/* THE GATE IS ON WHAT THEY ASKED, NEVER ON A MESSAGE COUNTER. The shopping
+   answer that ended "How are Sanjukta and Jishnu?" on 29 October came from a
+   gate that counted turns. A proxy fails the first time someone does something
+   ordinary at an unusual moment.
+   EVERY TERM IS \b-BOUNDED: unbounded "known" once matched "now" and
+   "MakeMyTrip" matched "Mytrip". The generic words that nearly went in here --
+   plan, package, returns -- were left out on purpose, because "what is the
+   plan" and "when he returns" are not research.
+   IT ERRS CLOSED. An unmatched turn behaves exactly as it did before this
+   loop existed, which is the whole point of the guard. */
+const _RL_DOMAIN=/\b(flight|flights|airfare|hotel|hotels|resort|resorts|villa|villas|homestay|homestays|airbnb|train|trains|irctc|bus|buses|cab|cabs|taxi|metro|insurance|premium|loan|loans|emi|mortgage|fixed deposit|mutual fund|mutual funds|sip|nps|ppf|school|schools|college|colleges|phone|phones|smartphone|laptop|laptops|refrigerator|fridge|washing machine|television|broadband|holiday|holidays|itinerary|trip|tour|tours)\b/;
+const _RL_MONEY=/\b(price|prices|pricing|cost|costs|costlier|rate|rates|fare|fares|fee|fees|quote|quotes|budget|cheap|cheaper|cheapest|expensive|discount|offers|deal|deals|interest|yield)\b/;
+const _RL_SHAPE=/\b(compare|compared|comparison|versus|vs|better|best|recommend|recommendation|recommendations|suggest|option|options|shortlist|pros and cons)\b/;
+function _looksLikeResearch(t){
+  try{
+    const l=String(t==null?'':t).toLowerCase();
+    if(!l.trim()) return false;
+    const d=_RL_DOMAIN.test(l), m=_RL_MONEY.test(l), s=_RL_SHAPE.test(l);
+    // A subject plus either a money word or a choosing word; or money AND
+    // choosing with no subject named ("which is cheapest?").
+    return (d&&(m||s))||(m&&s);
+  }catch(e){ return false; }
+}
+
+/* A BRIEF IS NOT A DRAFT. When she has asked her five questions there is
+   nothing to critique and nothing to search -- the turn is waiting on him.
+   Reviewing it would spend money to improve a question. */
+function _replyIsBrief(t){
+  try{
+    const s=String(t==null?'':t);
+    const q=(s.match(/\?/g)||[]).length;
+    const numbered=(s.match(/^\s*\d+[.)]/gm)||[]).length;
+    return q>=3&&numbered>=3;
+  }catch(e){ return false; }
+}
+
+/* THE NARROW TRANSPORT. No persona, no answer rules, no history -- a search leg
+   needs none of them, and sending 56,164 characters to ask one question is what
+   "lean" rules out. His standing requirement, 7 November 2026: "i want Bella
+   lean and intelligent." */
+async function _askNarrow(text,useSearch,signal){
+  const body={contents:[{role:'user',parts:[{text:String(text||'')}]}],useSearch:!!useSearch};
+  const r=await bfetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal});
+  if(!r.ok) throw new Error('Backend error: '+r.status);
+  const d=await r.json();
+  const tx=(d&&d.candidates&&d.candidates[0]&&d.candidates[0].content&&
+            d.candidates[0].content.parts&&d.candidates[0].content.parts[0]&&
+            d.candidates[0].content.parts[0].text)||'';
+  return {text:tx,chunks:_sourceChunks(d)};
+}
+
+/* A LOOP THAT SHOWS NOTHING READS AS A HANG. He has twice reported a control as
+   broken when it was working exactly as written, and a research turn now takes
+   tens of seconds instead of one call. The indicator says what she is doing. */
+function _loopProgress(msg){
+  try{
+    const t=document.getElementById('thinking'); if(!t) return;
+    const sp=t.querySelector('.thinking-indicator span');
+    if(sp) sp.textContent=String(msg||'');
+  }catch(e){}
+}
+
+/* Tag parsing, written for the way a model actually behaves: an UNCLOSED tag
+   runs to the end of the reply. [VOICE] was required to be closed, the model
+   opened it and never closed it, and the whole summary was printed on screen
+   on 6 October. Never require a model to close a tag. */
+function _loopQueries(t,tag){
+  try{
+    const src=String(t||'');
+    let m=src.match(new RegExp('\\['+tag+'\\]([\\s\\S]*?)\\[\\/'+tag+'\\]','i'));
+    if(!m) m=src.match(new RegExp('\\['+tag+'\\]([\\s\\S]*)$','i'));
+    if(!m) return [];
+    return m[1].split('\n')
+      .map(function(s){ return s.replace(/^[\s\-*•]+/,'').replace(/^\d+[.)]\s*/,'').trim(); })
+      .filter(function(s){ return s.length>=8&&s.length<=200&&!/^\[/.test(s); })
+      .slice(0,_LOOP_MAX_QUERIES);
+  }catch(e){ return []; }
+}
+
+/* THE THREE PROMPTS, DELIBERATELY SHORT AND NUMBERED. Measured 2026-11-06:
+   34,000 characters of persona drove her bullet points to zero, and the fix was
+   STRUCTURE, not emphasis. A lite model takes the clearest, most repeated
+   signal, so each step here carries only its own rules. */
+function _RL_REVIEW(ask,draft,cited){
+  return 'Review your own research. Do NOT rewrite the answer here.\n\n'+
+    'THEIR QUESTION:\n'+String(ask||'').slice(0,1500)+'\n\n'+
+    'YOUR DRAFT ANSWER:\n'+String(draft||'').slice(0,6000)+'\n\n'+
+    'THE SITES YOU ACTUALLY CITED: '+(cited||'none')+'\n\n'+
+    'List only what is MISSING, judged against these five:\n'+
+    '1. A category that applies and was not checked. For travel: the aggregators (MakeMyTrip, EaseMyTrip, Yatra, Goibibo, Cleartrip, Skyscanner, Agoda, Trip.com), the airline or property OWN WEBSITE, rail and road (IRCTC, ixigo, redBus), and the review sites (Tripadvisor, Google reviews).\n'+
+    '2. Any option named without its own figure beside it.\n'+
+    '3. Any figure given as a range or a blended number instead of one per source.\n'+
+    '4. Anything they asked for that the draft does not contain.\n'+
+    '5. A figure that could have changed and carries no date.\n\n'+
+    'If searching again would fix any of it, reply with the searches to run — one real search query per line, at most '+_LOOP_MAX_QUERIES+', each naming the site or the exact thing to price:\n'+
+    '[MORE]\n'+
+    'query\n'+
+    'query\n'+
+    '[/MORE]\n\n'+
+    'If the draft is genuinely complete, reply with exactly this and nothing else:\n[ENOUGH]\n\n'+
+    'No preamble. No explanation.';
+}
+function _RL_GATHER(q){
+  return 'Search the web for: '+String(q||'').slice(0,200)+'\n\n'+
+    'Report ONLY what you found. One line per source: the site name, then the figure or the fact, then the date you saw it. '+
+    'No preamble, no advice, no recommendation, no headings. '+
+    'If you found nothing, reply with exactly: NOTHING FOUND';
+}
+function _RL_REVISE(ask,draft,gaps,findings){
+  return '\n\nNEW RESEARCH CAME IN AFTER YOUR DRAFT. Write the final answer now, and write it in full.\n\n'+
+    'THEIR QUESTION:\n'+String(ask||'').slice(0,1500)+'\n\n'+
+    'YOUR EARLIER DRAFT:\n'+String(draft||'').slice(0,6000)+'\n\n'+
+    'WHAT YOU JUDGED MISSING:\n'+String(gaps||'').slice(0,1200)+'\n\n'+
+    'WHAT THE NEW SEARCHES RETURNED:\n'+String(findings||'').slice(0,9000)+'\n\n'+
+    'RULES FOR THIS REWRITE:\n'+
+    '1. Fold the new findings in with what the draft already had. Do not drop anything the draft got right.\n'+
+    '2. Keep every figure attached to the one source that quoted it. Never blend two sources into one number.\n'+
+    '3. Follow the ANSWER RULES above in full — the table, one bullet per source, the chart when figures compare, the recommendation line last.\n'+
+    '4. NEVER state a figure that is not in the draft or in the findings above. If something was searched for and came back with nothing, say so by name.\n'+
+    '5. Do not mention this rewrite, the draft, or that you searched twice. They asked a question; give them the answer.';
+}
+
+/* Returns the answer to show. Hands back exactly what it was given whenever it
+   decides not to run, so the no-fire path behaves as it did before. */
+async function _researchLoop(reply,fullMsg,route,memCtx,signal){
+  const started=Date.now();
+  try{
+    if(!reply) return reply;
+    if(!route||route.lane!=='search') return reply;        // chat, tools, maker: not research
+    if(!_looksLikeResearch(fullMsg)) return reply;          // the gate, erring closed
+    if(!_lastSources||!_lastSources.length) return reply;   // she never actually searched
+    if(_replyIsBrief(reply)) return reply;                  // she asked for a brief; that stands
+    let pool=_lastSources.slice();
+    let draft=reply, gaps=[], findings=[], legs=0;
+    for(let round=0;round<_LOOP_MAX_ROUNDS;round++){
+      if(signal&&signal.aborted) return draft;
+      if(Date.now()-started>_LOOP_BUDGET_MS) break;
+      // MEASURED at 320px: 'her own research' renders 179px and WRAPS to two
+      // lines; 'her research' is 171px and stays on one. His phone-first rule.
+      _loopProgress('Bella is checking her research...');
+      const cited=pool.map(function(s){ return s.label||s.title||''; })
+                      .filter(Boolean).slice(0,12).join(', ');
+      const rv=await _askNarrow(_RL_REVIEW(fullMsg,draft,cited),false,signal);
+      if(/\[ENOUGH\]/i.test(rv.text)) break;
+      const qs=_loopQueries(rv.text,'MORE');
+      if(!qs.length) break;
+      if(signal&&signal.aborted) return draft;
+      // 'more source(s)' is 179px at six and wraps; without 'more' it is 156px.
+      _loopProgress('Bella is checking '+qs.length+' source'+(qs.length===1?'':'s')+'...');
+      // IN PARALLEL, and one failed leg must never lose the others.
+      const got=await Promise.all(qs.map(function(q){
+        return _askNarrow(_RL_GATHER(q),true,signal)
+          .catch(function(){ return {text:'',chunks:[]}; });
+      }));
+      legs+=qs.length;
+      const fresh=[];
+      got.forEach(function(leg,i){
+        if(leg&&leg.chunks&&leg.chunks.length) pool=pool.concat(leg.chunks);
+        const tx=String((leg&&leg.text)||'').trim();
+        if(tx&&!/^NOTHING FOUND/i.test(tx)) fresh.push(qs[i]+'\n'+tx);
+      });
+      if(!fresh.length) break;
+      findings=findings.concat(fresh);
+      gaps.push(String(rv.text||'').replace(/\[[^\]]*\]/g,' ').replace(/\s+/g,' ').trim().slice(0,600));
+      if(signal&&signal.aborted) return draft;
+      _loopProgress('Bella is writing it up...');
+      // The ONE call in this loop that carries the persona and the answer
+      // rules, because this is the one that writes what he reads.
+      const revised=await callBella(false,memCtx,signal,route,{
+        extra:_RL_REVISE(fullMsg,draft,gaps.join(' '),findings.join('\n\n')),
+        keepSources:true
+      });
+      if(revised&&String(revised).trim().length>40) draft=revised;
+      else break;
+    }
+    // RANKED ONCE, OVER THE UNION. Ranking each leg separately and keeping the
+    // last one's six is how four searches' worth of citations would vanish.
+    _lastSources=_rankSources(pool);
+    try{ console.log('[research loop] legs='+legs+' sources='+_lastSources.length+' ms='+(Date.now()-started)); }catch(e){}
+    return draft;
+  }catch(e){
+    // A loop that fails must never cost them the answer they already had.
+    console.warn('research loop:',e);
+    return reply;
+  }
 }
 
 // The citations for the most recent reply. Module-scoped rather than returned,
@@ -12851,7 +13088,14 @@ function _dstMarkEl(tz){
   m.title='Daylight saving time is in force here right now — clocks are an hour ahead of this zone\'s standard time';
   return m;
 }
-function _readSources(d){
+/* SPLIT 2026-11-10 for the research loop. Extraction and RANKING were one
+   function. The loop makes several searches for one answer, and ranking each
+   leg on its own then keeping the last one's six is how every source found
+   before it would vanish — the same six-source cap that was already DELETING
+   direct property links rather than demoting them. Now every leg EXTRACTS and
+   the union is RANKED once. _readSources() stays as the single-response
+   wrapper, so no existing caller changes. */
+function _sourceChunks(d){
   try{
     const g=d&&d.candidates&&d.candidates[0]&&d.candidates[0].groundingMetadata;
     const chunks=(g&&g.groundingChunks)||[];
@@ -12864,6 +13108,18 @@ function _readSources(d){
       one.label=_sourceLabel(one.title);
       one.official=_officialSource(one);
       out.push(one);
+    });
+    return out;
+  }catch(e){ return []; }
+}
+function _rankSources(out){
+  try{
+    out=Array.isArray(out)?out:[];
+    // Two legs can return the same page, so the union is deduped on the uri
+    // before anything is ordered.
+    const _u={}; out=out.filter(function(x){
+      if(!x||!x.uri) return false;
+      if(_u[x.uri]) return false; _u[x.uri]=1; return true;
     });
     // OFFICIAL FIRST, and the rest in the order Google returned them. He should
     // not have to read down a list of news sites to find the authority. A
@@ -12886,6 +13142,8 @@ function _readSources(d){
     return uniq.slice(0,6);
   }catch(e){ return []; }
 }
+// The single-response path every existing caller uses, unchanged in behaviour.
+function _readSources(d){ return _rankSources(_sourceChunks(d)); }
 
 // Painted under the answer, not inside it: the bubble text is what gets spoken,
 // copied, translated and stored, and a list of URLs belongs in none of those.
