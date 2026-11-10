@@ -254,6 +254,41 @@ body.dark .bopt{background:var(--white);border-color:var(--border)}
   .bopt-meta{flex-direction:row;align-items:center;gap:10px;width:auto;flex-wrap:wrap}
   .bopt-go{margin-top:0}
 }
+/* ── THE CONFIRMATION CARD — Phase 2's gate, 2026-11-10 ──────────────
+   Themed from the same tokens as .bopt so it reads as part of Bella rather
+   than as a browser dialog, and measured at 320px like everything else. */
+.bconf{margin:2px 0 0;background:var(--white);border:1px solid var(--border);
+  border-radius:12px;padding:12px 14px;max-width:100%}
+.bconf-head{font-weight:700;color:var(--text);font-size:.98rem;line-height:1.35;margin:0 0 10px}
+.bconf-body{display:flex;flex-direction:column;gap:8px;margin:0 0 12px}
+.bconf-row{display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:baseline}
+.bconf-k{color:var(--tmid);font-size:.84rem;line-height:1.4}
+.bconf-v{color:var(--text);font-size:.92rem;line-height:1.45;word-break:break-word}
+.bconf-in{width:100%;box-sizing:border-box;padding:7px 9px;border-radius:8px;
+  border:1px solid var(--border);background:var(--csurf);color:var(--text);
+  font:inherit;font-size:.92rem}
+.bconf-in:focus{outline:2px solid var(--tmid);outline-offset:1px}
+.bconf-acts{display:flex;gap:8px;flex-wrap:wrap}
+.bconf-btn{font:inherit;font-size:.88rem;font-weight:600;padding:8px 14px;border-radius:9px;
+  border:1px solid var(--border);background:var(--csurf);color:var(--text);cursor:pointer;
+  min-height:40px}
+.bconf-btn:hover:not(:disabled){border-color:var(--tmid)}
+.bconf-btn:disabled{opacity:.5;cursor:default}
+.bconf-ok{background:#1f7a4d;border-color:#1f7a4d;color:#fff}
+.bconf-ok:hover:not(:disabled){background:#19633e;border-color:#19633e}
+.bconf-no{color:var(--tmid)}
+.bconf-note{color:var(--tmid);font-size:.78rem;margin:10px 0 0;line-height:1.4}
+.bconf-verdict{margin:10px 0 0;font-size:.85rem;font-weight:600;color:var(--tmid)}
+.bconf-approve{border-color:#1f7a4d}
+.bconf-ignore{opacity:.75}
+body.dark .bconf{background:var(--white);border-color:var(--border)}
+body.dark .bconf-ok{background:#2e9c66;border-color:#2e9c66;color:#07210f}
+body.dark .bconf-ok:hover:not(:disabled){background:#38b377;border-color:#38b377}
+/* A 92px label column inside a 320px phone leaves nothing for the value. */
+@media (max-width:520px){
+  .bconf-row{grid-template-columns:1fr;gap:3px}
+  .bconf-btn{flex:1 1 auto}
+}
 .bchart-plot{position:relative;background:var(--csurf);border:1px solid var(--border);
   border-radius:10px;padding:10px 12px;overflow-x:auto}
 .bchart-plot svg{display:block;width:100%;height:auto}
@@ -3252,7 +3287,7 @@ async function retrySync(){
 // step is a new moving part on a site that is one static file. audit-all.sh
 // prints this value beside the live and local hashes, so a stale marker is
 // visible on every run rather than discovered by him.
-const BELLA_BUILD = '10 Nov 12:10 · research loop';
+const BELLA_BUILD = '10 Nov 16:12 · phase 2';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -12039,11 +12074,18 @@ async function send(){
     // search lane, exactly as it did before this router existed.
     const _route=(pTexts.length===0&&pImages.length===0)?routeTurn(fullMsg):{lane:'search',why:'attachment present'};
     _recordRoute(fullMsg,_route);
-    reply=await callBella(_route.lane==='search',userMemory.memories||'',window._chatAbortController.signal,_route);
-    // THE RESEARCH LOOP. Hands `reply` back untouched unless this really was a
-    // research turn that came back with sources — every guard lives in
-    // _researchLoop, and a failure inside it returns the first answer.
-    reply=await _researchLoop(reply,fullMsg,_route,userMemory.memories||'',window._chatAbortController.signal);
+    if(_route.lane==='tools'){
+      // PHASE 2. Function calling, with his confirmation standing in front of
+      // every write. Web search is NOT attached on this lane and must not be:
+      // Gemini 400s when google_search and functionDeclarations travel together.
+      reply=await _toolTurn(fullMsg,_route,userMemory.memories||'',window._chatAbortController.signal,lang);
+    }else{
+      reply=await callBella(_route.lane==='search',userMemory.memories||'',window._chatAbortController.signal,_route);
+      // THE RESEARCH LOOP. Hands `reply` back untouched unless this really was a
+      // research turn that came back with sources — every guard lives in
+      // _researchLoop, and a failure inside it returns the first answer.
+      reply=await _researchLoop(reply,fullMsg,_route,userMemory.memories||'',window._chatAbortController.signal);
+    }
   }catch(err){
     window._chatAbortController=null;
     hideThinking();
@@ -12630,6 +12672,12 @@ async function callBella(useSearch,memCtx,signal,route,opts){
      appended on an ordinary turn, and the request on the wire is then
      byte-identical to the one this page has always sent. */
   if(opts&&opts.extra) contents.push({role:'user',parts:[{text:String(opts.extra)}]});
+  /* PHASE 2. The model's own functionCall turn, and the REAL result of running
+     it, appended so the next step answers from what HAPPENED rather than from
+     what it intended. Role 'user' for the response and the matching `id` are
+     what v1beta generateContent wants -- checked against Google's own docs on
+     2026-11-10, not remembered. */
+  if(opts&&Array.isArray(opts.extraTurns)&&opts.extraTurns.length) contents.push.apply(contents,opts.extraTurns);
   const _payload={contents,useSearch};
   if(BELLA_TOOLS_READY&&route&&route.lane==='tools'){_payload.useSearch=false;_payload.tools=[{functionDeclarations:_TOOL_INTENTS.map(x=>x.declaration)}];}
   const r=await bfetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_payload),signal});
@@ -12644,6 +12692,20 @@ async function callBella(useSearch,memCtx,signal,route,opts){
      A revise call searches nothing, so letting it overwrite here would wipe
      every citation the loop had collected. */
   if(!(opts&&opts.keepSources)) _lastSources=_readSources(d);
+  /* A functionCall part carries no `.text`, so the ordinary return below would
+     answer null and the turn would read as a failure. The tools lane asks for
+     the parts themselves. The ordinary path is untouched. */
+  if(opts&&opts.raw){
+    const _parts=(d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts)||[];
+    const _calls=[];
+    _parts.forEach(function(p){
+      if(p&&p.functionCall&&p.functionCall.name)
+        _calls.push({name:p.functionCall.name,id:p.functionCall.id,args:p.functionCall.args||{}});
+    });
+    const _txt=_parts.filter(function(p){ return p&&typeof p.text==='string'; })
+                     .map(function(p){ return p.text; }).join('').trim();
+    return {text:_txt||null,calls:_calls};
+  }
   return d.candidates?.[0]?.content?.parts?.[0]?.text||null;
 }
 
@@ -13932,7 +13994,10 @@ function isTimeSensitive(t){ return _TIME_RE.test(String(t||'')); }
 // backend half is written up in BACKEND-QUEUE.md and is NOT deployed). Until
 // then routeTurn never returns 'tools', so the live behaviour of this page is
 // two-lane and the third lane cannot fire by accident.
-const BELLA_TOOLS_READY=false;
+/* ON since 2026-11-10. What was missing was never the switch: it was the
+   declarations, the confirmation gate and the executor, which now exist
+   below. `/chat` has forwarded `tools` to Gemini since release 39. */
+const BELLA_TOOLS_READY=true;
 
 // Whole-string matches, never includes(). A substring test against short words
 // is precisely how "Joyce" was handed Joydeep's account; the same mistake here
@@ -13958,7 +14023,558 @@ const _CHAT_SHAPES=[
 // so the routing rule and the declaration can never drift apart: a name in this
 // array with no matching declaration is a turn routed to a tool that does not
 // exist. Inert while BELLA_TOOLS_READY is false.
-const _TOOL_INTENTS=[];
+
+// ============================================================
+// WEB PUSH — the only way Bella reaches him with the tab CLOSED
+// ============================================================
+/* Phase 2's PLAN/CONFIRM stages are useless if Bella can only speak while
+   someone is already looking at her. /push-notify was never this: it publishes
+   to Pub/Sub, which cannot reach a browser. This is Firebase Cloud Messaging,
+   which can.
+
+   WHY FCM AND NOT THE `web-push` LIBRARY. The backend already depends on
+   firebase-admin, so sending costs NO new npm package and NO new environment
+   variable — the existing service account signs it. Measured 2026-11-10:
+   `web-push` would have added a dependency and a VAPID private key to the
+   20 env vars, for the same result.
+
+   IT IS INERT UNTIL HE GENERATES THE KEY. With FCM_VAPID_KEY empty, nothing
+   below runs: no service worker is installed, no permission is requested, and
+   the page behaves exactly as it does today. That is deliberate — this shipped
+   before the key existed so the frontend half could be reviewed live without
+   waiting on a Firebase Console visit.
+
+   NOTHING HERE EVER AUTO-PROMPTS. A permission box on page load is the most
+   hated pattern on the web, browsers punish it, and a refusal is permanent and
+   hard to undo. Bella asks ONCE, in the one moment it makes sense: just after
+   he has approved a reminder, where a notification is obviously the point. */
+const FCM_VAPID_KEY='';   // Firebase Console -> Project settings -> Cloud Messaging -> Web Push certificates -> Generate key pair (the PUBLIC key; it is safe in page code)
+
+function _pushConfigured(){ return typeof FCM_VAPID_KEY==='string'&&FCM_VAPID_KEY.length>20; }
+function _pushSupported(){
+  try{
+    return _pushConfigured() && 'serviceWorker' in navigator && 'PushManager' in window &&
+           typeof Notification!=='undefined' && typeof firebase!=='undefined';
+  }catch(e){ return false; }
+}
+/* THE MESSAGING SDK IS LOADED ON DEMAND, NOT IN <head>. It is 38,251 bytes,
+   and with push off nobody needs it -- adding it to every page load would cost
+   every user on every device for a feature that is not on. His standing rule:
+   Bella must be light on devices. Carries the same SRI hash discipline as the
+   two Firebase tags in <head>; the hash was computed from the served file on
+   2026-11-10 and verified stable across two fetches. */
+const _FCM_SDK='https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js';
+const _FCM_SDK_SRI='sha384-HY9kcCUNf5iP55Q7dt4qtyKGMq0L6BbtAwNb4LYA6MXDWUL8DRlsj1xhtwKBZ2BL';
+let _fcmSdkLoading=null;
+function _loadMessagingSDK(){
+  if(typeof firebase!=='undefined'&&typeof firebase.messaging==='function') return Promise.resolve(true);
+  if(_fcmSdkLoading) return _fcmSdkLoading;
+  _fcmSdkLoading=new Promise(function(res){
+    const t=document.createElement('script');
+    t.src=_FCM_SDK; t.integrity=_FCM_SDK_SRI;
+    t.crossOrigin='anonymous'; t.referrerPolicy='no-referrer';
+    t.onload=function(){ res(typeof firebase!=='undefined'&&typeof firebase.messaging==='function'); };
+    t.onerror=function(){ res(false); };   // a blocked or altered file must fail CLOSED
+    document.head.appendChild(t);
+  });
+  return _fcmSdkLoading;
+}
+function _pushState(){
+  try{ return _pushSupported() ? Notification.permission : 'unsupported'; }
+  catch(e){ return 'unsupported'; }
+}
+
+/* Returns {ok, why}. Never throws: a failure here must never take a turn down. */
+async function _pushEnable(){
+  try{
+    if(!_pushSupported()) return {ok:false,why:'notifications are not available on this device'};
+    if(!await _loadMessagingSDK()) return {ok:false,why:'the notification library would not load'};
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted') return {ok:false,why:perm==='denied'
+      ? 'your browser is blocking notifications for this site'
+      : 'you did not allow it'};
+    // Scope must be the directory the worker is served from. GitHub Pages
+    // serves this site at /Bella/, so './' resolves correctly both there and
+    // on a local http.server at the repo root.
+    const reg=await navigator.serviceWorker.register('./firebase-messaging-sw.js',{scope:'./'});
+    await navigator.serviceWorker.ready;
+    const messaging=firebase.messaging();
+    const token=await messaging.getToken({vapidKey:FCM_VAPID_KEY,serviceWorkerRegistration:reg});
+    if(!token) return {ok:false,why:'the browser would not issue a push token'};
+    const r=await bfetch(`${BACKEND}/push-subscribe`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({profileKey:currentProfileKey,token:token,
+        platform:(navigator.userAgent||'').slice(0,120)})});
+    if(!r.ok) return {ok:false,why:'Bella could not store it ('+r.status+')'};
+    try{ localStorage.setItem('b_push_on','1'); }catch(e){}
+    return {ok:true};
+  }catch(e){
+    console.warn('push enable:',e);
+    return {ok:false,why:String((e&&e.message)||e)};
+  }
+}
+
+/* THE ONE MOMENT IT IS ASKED. Called after a reminder has actually been
+   written -- not before, not on load, and once ever. On iOS this is also the
+   honest moment to say that notifications need Bella on the Home Screen,
+   because Safari will not deliver a push to a plain tab. */
+function _pushOfferOnce(){
+  try{
+    if(!_pushSupported()) return;
+    if(_pushState()!=='default') return;                     // already decided
+    if(localStorage.getItem('b_push_offered')==='1') return;  // asked before
+    localStorage.setItem('b_push_offered','1');
+    const msgs=document.getElementById('msgs'); if(!msgs) return;
+    const wrap=document.createElement('div'); wrap.className='msg bella';
+    const av=document.createElement('div'); av.className='mav b'; av.textContent='B';
+    const mw=document.createElement('div'); mw.className='msg-wrap';
+    const card=document.createElement('div'); card.className='bconf';
+    wrap.appendChild(av); wrap.appendChild(mw); mw.appendChild(card);
+    const h=document.createElement('div'); h.className='bconf-head';
+    h.textContent='Shall I be able to tell you, even when Bella is closed?';
+    card.appendChild(h);
+    const b=document.createElement('div'); b.className='bconf-note';
+    const iOS=/iPad|iPhone|iPod/.test(navigator.userAgent||'');
+    b.textContent=iOS
+      ? 'Your phone only allows this once Bella is added to your Home Screen — Share, then "Add to Home Screen", then come back and tap Yes.'
+      : 'Without this, a reminder only reaches you while Bella is open on screen.';
+    card.appendChild(b);
+    const acts=document.createElement('div'); acts.className='bconf-acts';
+    const yes=document.createElement('button'); yes.type='button';
+    yes.className='bconf-btn bconf-ok'; yes.textContent='Yes, notify me';
+    const no=document.createElement('button'); no.type='button';
+    no.className='bconf-btn bconf-no'; no.textContent='Not now';
+    acts.appendChild(yes); acts.appendChild(no); card.appendChild(acts);
+    const out=document.createElement('div'); out.className='bconf-verdict';
+    card.appendChild(out);
+    yes.addEventListener('click',async function(){
+      yes.disabled=true; no.disabled=true; out.textContent='One moment...';
+      const r=await _pushEnable();
+      out.textContent=r.ok ? 'Done — I can reach you now.'
+                           : 'I could not turn that on: '+r.why;
+    });
+    no.addEventListener('click',function(){
+      yes.disabled=true; no.disabled=true;
+      out.textContent='That is fine. Ask me any time.';
+    });
+    msgs.appendChild(wrap); msgs.scrollTop=msgs.scrollHeight;
+  }catch(e){ console.warn('push offer:',e); }
+}
+
+// ============================================================
+// PHASE 2 — THE AGENTIC LOOP
+// OBSERVE -> REASON -> PLAN -> CONFIRM -> ACT -> LEARN
+// ============================================================
+/* His architecture (V2-Bella_Phase2_Architecture_v2.docx), and THE ONE RULE IN
+   IT THAT IS NEVER SOFTENED, in his own capitals:
+
+     "Bella never acts without confirmation. Read-only actions need no
+      confirmation. Write actions (send, create, modify, delete) always need
+      explicit user approval."
+
+   That rule is what makes a proactive assistant safe enough for a family, and
+   it is the thing the industry keeps trading away for convenience. Every write
+   below goes through _confirmAction and CANNOT reach the network until he has
+   pressed Approve. There is no bypass, no "trusted action" list, and no
+   remembered consent — approval is per action, every time.
+
+   WHY THIS NEEDED NO DEPLOY. Measured 2026-11-10: `/chat` already destructures
+   `tools` from the request body and forwards it to Gemini (release 39's
+   passthrough, built ahead of its UI). So the declarations, the router, the
+   confirmation and the execution all live in this page. Nothing was deployed
+   and nothing was added to Artifact Registry.
+
+   THE HARD CONSTRAINT: Gemini answers HTTP 400 to "Built-in tools
+   ({google_search}) and Function Calling cannot be combined in the same
+   request." The backend already treats it as either/or, and routeTurn sends a
+   turn down exactly one lane. Never try to attach both. */
+
+// Only WRITE intents route into this lane. Read-only questions stay in the
+// search lane, which already answers them well and is the behaviour he has
+// tested. The read-only tools below exist so Bella can CHAIN inside a tools
+// turn -- "remind me to carry an umbrella if it rains tomorrow" needs the
+// weather before it can write the reminder.
+const _TOOL_MAX_CALLS=4;          // actions Bella may chain in one turn
+const _TOOL_IDEMPOTENT_MS=300000; // the same action twice inside 5 minutes is refused
+
+/* profileKey is INJECTED BY THIS PAGE AND NEVER DECLARED TO THE MODEL.
+   If the model could name whose data to touch, a sentence inside an attached
+   document could make Bella write to another person's rows. Nothing may ever
+   cross between users. Every build() below reads currentProfileKey directly. */
+function _toolProfileKey(){
+  const k=(typeof _testMode!=='undefined'&&_testMode&&typeof _testProfileKey!=='undefined'&&_testProfileKey)
+    ? _testProfileKey : currentProfileKey;
+  if(!k) throw new Error('no profile');
+  return k;
+}
+
+const _TOOL_INTENTS=[
+  // ─── WRITE ACTIONS — every one needs his approval ───────────────
+  {
+    name:'set_reminder', write:true, endpoint:'/smart-reminder',
+    // Tight on purpose. routeTurn checks tools BEFORE the time veto, so a
+    // greedy pattern here would steal ordinary questions out of the search
+    // lane. A match needs the person to be ASKING FOR A REMINDER.
+    re:/\b(remind me|set a reminder|put a reminder|reminder to|wake me)\b/,
+    title:'Set a reminder',
+    declaration:{
+      name:'set_reminder',
+      description:'Create a reminder for the person you are speaking to. Use only when they ask to be reminded of something.',
+      parameters:{type:'object',properties:{
+        what:{type:'string',description:'What to remind them about, in their own words.'},
+        when:{type:'string',description:'When, as plainly as they said it (e.g. "tomorrow at 7am", "every Monday"). Leave empty if they did not say.'},
+        repeat:{type:'string',enum:['once','daily','weekly','monthly'],description:'How often it repeats. Use "once" unless they asked for a repeat.'}
+      },required:['what']}
+    },
+    fields:[{k:'what',label:'What'},{k:'when',label:'When'}],
+    lines:function(a){ return [['What',a.what||''],['When',a.when||'she will work it out from your words'],['Repeats',a.repeat||'once']]; },
+    build:function(a){ return {profileKey:_toolProfileKey(),reminderText:String(a.what||''),
+      reminderTime:String(a.when||'')||undefined,repeatType:String(a.repeat||'once')}; }
+  },
+  {
+    name:'add_to_shopping_list', write:true, endpoint:'/shopping-list',
+    re:/\b(shopping list|grocery list|groceries)\b/,
+    title:'Add to your shopping list',
+    declaration:{
+      name:'add_to_shopping_list',
+      description:'Add one or more items to the shopping list. Use only when they ask for something to go ON the list.',
+      parameters:{type:'object',properties:{
+        items:{type:'array',items:{type:'string'},description:'The items to add, one per entry.'},
+        list:{type:'string',description:'Which list, if they named one. Leave empty for the usual list.'}
+      },required:['items']}
+    },
+    fields:[{k:'items',label:'Items',list:true}],
+    lines:function(a){ return [['Items',(a.items||[]).join(', ')],['List',a.list||'your usual list']]; },
+    build:function(a){ return {profileKey:_toolProfileKey(),action:'add',
+      items:Array.isArray(a.items)?a.items:[String(a.items||'')],listName:String(a.list||'')||undefined}; }
+    // NOTE: the endpoint also takes action 'clear', and it is NOT declared.
+    // Measured 2026-11-10: that branch returns {ok:true,action:'cleared'} and
+    // deletes NOTHING -- its own code says "implement batch delete if needed".
+    // Declaring it would have Bella report a list cleared that is still full.
+  },
+  {
+    name:'add_task', write:true, endpoint:'/task-manage',
+    re:/\b(add a task|new task|to-?do list|add to my tasks|remind me to do)\b/,
+    title:'Add a task',
+    declaration:{
+      name:'add_task',
+      description:'Add a task to their to-do list. Use only when they ask for a task to be recorded.',
+      parameters:{type:'object',properties:{
+        task:{type:'string',description:'The task, in their own words.'}
+      },required:['task']}
+    },
+    fields:[{k:'task',label:'Task'}],
+    lines:function(a){ return [['Task',a.task||'']]; },
+    build:function(a){ return {profileKey:_toolProfileKey(),action:'create',task:String(a.task||'')}; }
+  },
+
+  // ─── READ-ONLY — no confirmation, by his rule. Not routed to; ───
+  // ─── reachable only so a tools turn can chain to them.        ───
+  {
+    name:'get_weather', write:false, endpoint:'/weather', re:null,
+    declaration:{
+      name:'get_weather',
+      description:'Current weather and forecast for a place. Use before a reminder or plan that depends on the weather.',
+      parameters:{type:'object',properties:{
+        city:{type:'string',description:'City name. Leave empty to use where they are now.'}
+      },required:[]}
+    },
+    build:function(a){
+      if(a&&a.city) return {city:String(a.city)};
+      // The same source _whereTheyAreNote() reads, and the same guard: the
+      // COORDINATES are a location even when the place name failed to resolve.
+      let d=null; try{ d=JSON.parse(sessionStorage.getItem('b_location_data')||'null'); }catch(e){}
+      if(d&&Number.isFinite(d.lat)&&Number.isFinite(d.lon)) return {lat:d.lat,lon:d.lon};
+      if(d&&(d.city||d.area)) return {city:String(d.city||d.area)};
+      throw new Error('no location: ask them which place they mean');
+    }
+  },
+  {
+    name:'convert_currency', write:false, endpoint:'/currency-convert', re:null,
+    declaration:{
+      name:'convert_currency',
+      description:'Convert an amount from one currency to another at the live rate.',
+      parameters:{type:'object',properties:{
+        amount:{type:'number',description:'The amount to convert.'},
+        from:{type:'string',description:'Three-letter code converting FROM, e.g. USD.'},
+        to:{type:'string',description:'Three-letter code converting TO, e.g. INR.'}
+      },required:['amount','from','to']}
+    },
+    build:function(a){ return {amount:Number(a.amount),from:String(a.from||''),to:String(a.to||'')}; }
+  },
+  {
+    name:'get_stock_price', write:false, endpoint:'/stock-price', re:null,
+    declaration:{
+      name:'get_stock_price',
+      description:'Live share prices for one or more listed companies.',
+      parameters:{type:'object',properties:{
+        symbols:{type:'array',items:{type:'string'},description:'Ticker symbols, e.g. ["RELIANCE","TCS"] or ["AAPL"].'},
+        exchange:{type:'string',description:'Exchange, if they named one.'}
+      },required:['symbols']}
+    },
+    build:function(a){ return {symbols:Array.isArray(a.symbols)?a.symbols:[String(a.symbols||'')],
+      exchange:String(a.exchange||'')||undefined}; }
+  },
+  {
+    name:'check_flight_status', write:false, endpoint:'/flight-status', re:null,
+    declaration:{
+      name:'check_flight_status',
+      description:'The live status of a specific flight by its number.',
+      parameters:{type:'object',properties:{
+        flightNumber:{type:'string',description:'The flight number, e.g. 6E2134.'},
+        date:{type:'string',description:'The date, if they gave one.'}
+      },required:['flightNumber']}
+    },
+    build:function(a){ return {flightNumber:String(a.flightNumber||''),date:String(a.date||'')||undefined}; }
+  },
+  {
+    name:'read_my_lists', write:false, endpoint:'/shopping-list', re:null,
+    declaration:{
+      name:'read_my_lists',
+      description:'Read back what is already on their shopping list. Read-only.',
+      parameters:{type:'object',properties:{
+        list:{type:'string',description:'Which list, if they named one.'}
+      },required:[]}
+    },
+    build:function(a){ return {profileKey:_toolProfileKey(),action:'read',listName:String((a&&a.list)||'')||undefined}; }
+  }
+];
+
+function _toolByName(n){
+  for(let i=0;i<_TOOL_INTENTS.length;i++) if(_TOOL_INTENTS[i].name===n) return _TOOL_INTENTS[i];
+  return null;
+}
+// The declarations Gemini is shown. Built from the same array the router reads,
+// so a routed name can never lack a declaration.
+function _toolDeclarations(){ return _TOOL_INTENTS.map(function(t){ return t.declaration; }); }
+
+/* ── CONFIRM ───────────────────────────────────────────────────────
+   The card that stands between Bella and every write. It is a real gate:
+   _executeTool is not reached until this resolves 'approve'.
+
+   THREE ANSWERS, which are his: Approve, Edit, Ignore.
+   - Approve  does it, once.
+   - Edit     opens the values so he can correct her before she acts. This is
+              the one that matters -- a wrong reminder half-right is the common
+              case, and without Edit the only option is to refuse and retype.
+   - Ignore   does nothing and TELLS HER so, so she does not offer it again.
+
+   It never auto-approves, never times out into approval, and never remembers
+   a decision for "next time". */
+let _confirmSeq=0;
+function _confirmAction(tool,args,lang){
+  return new Promise(function(resolve){
+    const id='bconf'+(++_confirmSeq);
+    const msgs=document.getElementById('msgs');
+    if(!msgs){ resolve({action:'ignore',args:args,why:'nowhere to ask'}); return; }
+    let current=JSON.parse(JSON.stringify(args||{}));
+    let done=false;
+    const finish=function(action){
+      if(done) return; done=true;
+      try{ card.querySelectorAll('button,input').forEach(function(b){ b.disabled=true; }); }catch(e){}
+      card.classList.add('bconf-'+action);
+      const verdict=document.createElement('div');
+      verdict.className='bconf-verdict';
+      verdict.textContent = action==='approve' ? 'You approved this.' : 'You said no. Nothing was done.';
+      card.appendChild(verdict);
+      resolve({action:action,args:current});
+    };
+
+    const wrap=document.createElement('div');
+    wrap.className='msg bella'; wrap.id=id;
+    const av=document.createElement('div'); av.className='mav b'; av.textContent='B';
+    const mw=document.createElement('div'); mw.className='msg-wrap';
+    const card=document.createElement('div'); card.className='bconf';
+    wrap.appendChild(av); wrap.appendChild(mw); mw.appendChild(card);
+
+    const h=document.createElement('div'); h.className='bconf-head';
+    h.textContent='May I '+((tool.title||tool.name).charAt(0).toLowerCase()+(tool.title||tool.name).slice(1))+'?';
+    card.appendChild(h);
+
+    const body=document.createElement('div'); body.className='bconf-body';
+    card.appendChild(body);
+
+    const renderRead=function(){
+      body.innerHTML='';
+      const rows=(tool.lines?tool.lines(current):[]);
+      rows.forEach(function(r){
+        const row=document.createElement('div'); row.className='bconf-row';
+        const k=document.createElement('div'); k.className='bconf-k'; k.textContent=r[0];
+        const v=document.createElement('div'); v.className='bconf-v'; v.textContent=r[1]||'—';
+        row.appendChild(k); row.appendChild(v); body.appendChild(row);
+      });
+    };
+    const renderEdit=function(){
+      body.innerHTML='';
+      (tool.fields||[]).forEach(function(f){
+        const row=document.createElement('div'); row.className='bconf-row';
+        const k=document.createElement('label'); k.className='bconf-k';
+        k.textContent=f.label; k.setAttribute('for',id+'-'+f.k);
+        const inp=document.createElement('input'); inp.className='bconf-in';
+        inp.type='text'; inp.id=id+'-'+f.k;
+        inp.value = f.list ? (current[f.k]||[]).join(', ') : (current[f.k]||'');
+        inp.addEventListener('input',function(){
+          current[f.k] = f.list
+            ? inp.value.split(',').map(function(x){return x.trim();}).filter(Boolean)
+            : inp.value;
+        });
+        row.appendChild(k); row.appendChild(inp); body.appendChild(row);
+      });
+    };
+    renderRead();
+
+    const acts=document.createElement('div'); acts.className='bconf-acts';
+    const mk=function(label,cls,fn){
+      const b=document.createElement('button'); b.type='button';
+      b.className='bconf-btn '+cls; b.textContent=label;
+      b.addEventListener('click',fn); acts.appendChild(b); return b;
+    };
+    // Approve disables ITSELF on the first click. A double tap on a phone must
+    // never send twice, and the idempotency guard in _executeTool is the second
+    // line of defence, not the first.
+    const ok=mk('Approve','bconf-ok',function(){ ok.disabled=true; finish('approve'); });
+    let editing=false;
+    const ed=mk('Edit','bconf-edit',function(){
+      editing=!editing;
+      if(editing){ renderEdit(); ed.textContent='Done editing'; }
+      else { renderRead(); ed.textContent='Edit'; }
+    });
+    mk('Ignore','bconf-no',function(){ finish('ignore'); });
+    card.appendChild(acts);
+
+    const note=document.createElement('div'); note.className='bconf-note';
+    note.textContent='Nothing happens until you choose.';
+    card.appendChild(note);
+
+    msgs.appendChild(wrap); msgs.scrollTop=msgs.scrollHeight;
+    try{ ok.focus(); }catch(e){}
+
+    // Pressing stop mid-turn is a refusal, not an approval.
+    try{
+      const sig=window._chatAbortController&&window._chatAbortController.signal;
+      if(sig) sig.addEventListener('abort',function(){ finish('ignore'); },{once:true});
+    }catch(e){}
+  });
+}
+
+/* ── ACT ───────────────────────────────────────────────────────────
+   Nothing in here runs for a write tool unless _confirmAction resolved
+   'approve'. The idempotency key is the second guard behind the disabled
+   button: a retry, a refresh or a model asking twice cannot double-write. */
+const _toolDone={};
+function _toolKey(name,payload){
+  try{ return name+'|'+JSON.stringify(payload); }catch(e){ return name+'|?'; }
+}
+async function _executeTool(tool,args,signal){
+  let payload;
+  try{ payload=tool.build(args||{}); }
+  catch(e){ return {ok:false,error:String(e.message||e)}; }
+  if(tool.write){
+    const k=_toolKey(tool.name,payload), now=Date.now();
+    if(_toolDone[k]&&(now-_toolDone[k])<_TOOL_IDEMPOTENT_MS){
+      return {ok:false,alreadyDone:true,
+        error:'This exact action was already done a moment ago. It was not repeated.'};
+    }
+    _toolDone[k]=now;
+  }
+  try{
+    const r=await bfetch(`${BACKEND}${tool.endpoint}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),signal:signal});
+    const d=await r.json().catch(function(){ return {}; });
+    if(!r.ok){
+      // A failed write must not be remembered as done.
+      if(tool.write){ try{ delete _toolDone[_toolKey(tool.name,payload)]; }catch(e){} }
+      return {ok:false,error:(d&&d.error)||('the server answered '+r.status)};
+    }
+    return d&&typeof d==='object'?d:{ok:true};
+  }catch(e){
+    if(tool.write){ try{ delete _toolDone[_toolKey(tool.name,payload)]; }catch(e2){} }
+    return {ok:false,error:String((e&&e.message)||e)};
+  }
+}
+
+/* ── THE TURN ──────────────────────────────────────────────────────
+   REASON (Gemini picks the actions) -> PLAN (the order it asked for) ->
+   CONFIRM (him, per write) -> ACT -> LEARN (the result goes back so she
+   answers from what actually happened, not from what she intended).
+
+   TWO ROUNDS, so she can chain: check the weather, THEN write the reminder.
+   Bounded because an unbounded tool loop is how an agent burns money in a
+   circle. Past the cap she answers with what she has. */
+const _TOOL_MAX_ROUNDS=2;
+
+async function _toolTurn(fullMsg,route,memCtx,signal,lang){
+  try{
+    const extraTurns=[];
+    let acted=false;
+    for(let round=0;round<_TOOL_MAX_ROUNDS;round++){
+      if(signal&&signal.aborted) return null;
+      const step=await callBella(false,memCtx,signal,route,
+        {raw:true,extraTurns:extraTurns.slice()});
+      const calls=(step&&step.calls)||[];
+      if(!calls.length){
+        // She answered in words. Either nothing needed doing, or she is
+        // asking him something first -- both are finished turns.
+        return (step&&step.text)||null;
+      }
+      const responses=[];
+      for(let i=0;i<calls.length&&i<_TOOL_MAX_CALLS;i++){
+        const c=calls[i];
+        const tool=_toolByName(c.name);
+        if(!tool){
+          responses.push({name:c.name,id:c.id,response:{ok:false,
+            error:'There is no such action. Tell them plainly that you cannot do this one.'}});
+          continue;
+        }
+        if(signal&&signal.aborted) return null;
+        let args=c.args||{};
+        if(tool.write){
+          // THE GATE. Nothing below this line runs without his word.
+          hideThinking();
+          const v=await _confirmAction(tool,args,lang);
+          if(v.action!=='approve'){
+            responses.push({name:c.name,id:c.id,response:{ok:false,declined:true,
+              note:'They said no. Do not do it, do not ask a second time, and do not '+
+                   'propose a workaround unless they ask. Acknowledge it in one short line.'}});
+            continue;
+          }
+          args=v.args;
+          showThinking();
+        }
+        _loopProgress(tool.write?'Bella is doing that...':'Bella is checking...');
+        const res=await _executeTool(tool,args,signal);
+        if(tool.write&&res&&res.ok!==false){
+          acted=true;
+          /* A reminder Bella cannot deliver is half a promise. This is the one
+             place permission is ever requested, and only once ever -- see
+             _pushOfferOnce. Inert while FCM_VAPID_KEY is empty. */
+          if(tool.name==='set_reminder'){ try{ _pushOfferOnce(); }catch(e){} }
+        }
+        responses.push({name:c.name,id:c.id,response:res});
+      }
+      // What she asked for, and what actually came back. Both go to the model
+      // so the sentence she writes matches reality -- she has claimed to have
+      // saved things that were never written, and that is how it happens.
+      extraTurns.push({role:'model',parts:calls.map(function(c){
+        const fc={name:c.name,args:c.args||{}}; if(c.id) fc.id=c.id;
+        return {functionCall:fc};
+      })});
+      extraTurns.push({role:'user',parts:responses.map(function(r){
+        const fr={name:r.name,response:r.response||{}}; if(r.id) fr.id=r.id;
+        return {functionResponse:fr};
+      })});
+    }
+    // Past the round cap: one more pass, text only, so the turn always ends
+    // in words rather than in a silent failure.
+    if(signal&&signal.aborted) return null;
+    const last=await callBella(false,memCtx,signal,route,{raw:true,extraTurns:extraTurns});
+    return (last&&last.text)||(acted?'That is done.':null);
+  }catch(e){
+    console.warn('tool turn:',e);
+    return null;
+  }
+}
 
 // Returns {lane, why} — `why` exists so a wrong route can be read off the log
 // instead of guessed at. Never throws: a router that throws would take the whole
@@ -13973,7 +14589,15 @@ function routeTurn(t){
     // — letting the word "now" pull an action into the search lane would make
     // the tools lane unreachable for the most natural way of asking.
     if(BELLA_TOOLS_READY){
-      const hit=_TOOL_INTENTS.find(x=>x.re.test(l));
+      /* `x.re &&` IS LOAD-BEARING. The read-only tools carry re:null on
+         purpose -- they are reachable only by chaining inside a tools turn,
+         never by routing. Without this guard `null.test` throws, the catch
+         below swallows it, and EVERY turn that matches no write intent lands
+         in the router's error path and is answered as 'search'. That silently
+         kills the chat lane and undoes the lane-gated prompt cut. Measured
+         2026-11-10: "how are you today" and a memory instruction both came
+         back 'search'. A thrown default looks exactly like a working one. */
+      const hit=_TOOL_INTENTS.find(x=>x.re&&x.re.test(l));
       if(hit) return {lane:'tools',why:'action intent: '+hit.name,tool:hit.name};
     }
     // THE VETO. Anything that reads as volatile keeps the search tool, whatever
