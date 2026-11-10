@@ -569,18 +569,41 @@ body.dark .bchart-dl button{background:transparent!important;
 @media(max-width:480px){.bchart-stat .bchart-statvl{font-size:26px}}
 /* Grounded-search citations, under the answer. Both themes come free: --tmid
    and --navy are redefined in body.dark, so no second rule is needed. */
-.src-note{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 0;
-  padding:6px 10px;border-left:2px solid var(--bordermid);font-size:11px;line-height:1.5}
+.src-note{display:flex;flex-wrap:wrap;align-items:center;gap:7px 10px;margin:9px 0 0;
+  padding:8px 12px;border-left:3px solid var(--bordermid);font-size:13px;line-height:1.6}
 .src-lab{color:var(--tmid);font-weight:600;letter-spacing:.02em}
-.src-note a{color:var(--navy);text-decoration:underline;text-underline-offset:2px;
-  max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src-note a{color:var(--navy);text-decoration:underline;text-underline-offset:3px;
+  font-weight:600;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .src-note a:hover{opacity:.75}
 /* The badge is painted as a SURFACE, never as a text colour: body.dark's
    blanket colour rule repaints text cream and outranks a class, so a coloured
    label would lose in dark mode. A background and a border are untouched by
    that rule, so the same markup reads correctly in both themes. */
+.src-none{border-left-color:var(--tlight)}
+.src-none .src-lab{font-weight:500;font-style:italic;color:var(--tmid)}
+/* UNSOURCED FIGURES. Savio, 7 November 2026. A rule telling her not to quote an
+   unchecked rate is only as good as her obedience, and on 7 Nov she quoted FD and
+   mutual-fund rates from memory, named SBI and HDFC beside them and charted ten
+   years of growth on top. The page can see what she cannot be trusted to admit:
+   figures present, no grounding returned. Louder than .src-none on purpose -- that
+   one is a mild footnote about provenance, this one is a caution about numbers he
+   might act on. Uses --goldpale/--navy, the same pair as the table header, so it
+   carries into dark without a second definition. */
+.src-warn{background:var(--goldpale);border-left-color:var(--gold);
+  padding:7px 11px;border-radius:0 6px 6px 0}
+.src-warn .src-lab{color:var(--navy);font-weight:600;font-style:normal}
+/* The verdict, once lifted below the chart, is no longer inside the
+   bubble and would otherwise sit on the page background with no padding. */
+.bmsg-rec-moved{margin:10px 0 0;padding:11px 14px;background:var(--goldpale);
+  border-left:3px solid var(--gold);border-radius:0 6px 6px 0;color:var(--navy);
+  font-size:13px;line-height:1.55}
+.dst-mark{display:inline-flex;align-items:center;justify-content:center;margin-left:5px;
+  width:16px;height:16px;border-radius:50%;border:1px solid #D4AF37;
+  background:rgba(212,175,55,.18);font-size:10px;line-height:1;vertical-align:middle;
+  font-style:normal;cursor:help}
+body.dark .dst-mark{background:rgba(212,175,55,.26);border-color:#E3C25A}
 .src-off{display:inline-flex;align-items:center;padding:1px 6px;border-radius:999px;
-  border:1px solid #D4AF37;background:rgba(212,175,55,.16);font-size:9.5px;
+  border:1px solid #D4AF37;background:rgba(212,175,55,.16);font-size:10.5px;
   font-weight:700;letter-spacing:.04em;text-transform:uppercase}
 /* LITERAL GOLD, NOT var(--gold). body.dark sets --gold:#0B2545 because the two
    roles invert in dark mode — gold becomes the button GROUND and navy the text
@@ -588,7 +611,7 @@ body.dark .bchart-dl button{background:transparent!important;
    disappears. Measured: border was rgb(11,37,69) against a rgb(11,37,69)
    ground. The same trap is already flagged elsewhere in this file. */
 body.dark .src-off{background:rgba(212,175,55,.22);border-color:#E3C25A}
-@media(max-width:480px){.src-note a{max-width:130px}}
+@media(max-width:480px){.src-note a{max-width:180px}}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:'BellaIndic','DM Sans',sans-serif;background:#FAF8F4;color:var(--text);height:100dvh;overflow:hidden}
 
@@ -3229,7 +3252,7 @@ async function retrySync(){
 // step is a new moving part on a site that is one static file. audit-all.sh
 // prints this value beside the live and local hashes, so a stale marker is
 // visible on every run rather than discovered by him.
-const BELLA_BUILD = '6 Nov 06:12';
+const BELLA_BUILD = '7 Nov 13:05';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -3718,7 +3741,7 @@ MARATHI = EVERYDAY MUMBAI MARATHI:
 - Use colloquial forms (मोठं rather than the stiffer written मोठे) and short, spoken sentences.
 - Use the respectful तुम्ही form.
 
-ACROSS ALL THREE: write for the ear, not the page. If a sentence sounds like a textbook or a news bulletin, rewrite it the way a person would actually say it.
+ACROSS ALL THREE OF THE INDIAN LANGUAGES ABOVE (Hindi, Marathi, Bengali): write for the ear, not the page. If a sentence sounds like a textbook or a news bulletin, rewrite it the way a person would actually say it. THIS IS ABOUT WORD CHOICE IN THOSE THREE LANGUAGES AND NOTHING ELSE. It never overrides the ANSWER RULES: a searched answer still uses bullet points, named sources and a My recommendation line, in every language including English.
 
 TIME FORMAT (applies to EVERY reply, spoken and written, not only web searches): Always give clock times in 24-hour format — 14:00, not 2:00 PM. Bella is used worldwide and AM/PM is ambiguous outside India. This applies to every time you state: current times, timezone conversions, opening hours, schedules, reminders and arrival times alike.
 
@@ -3738,9 +3761,9 @@ When the user is just chatting with no specific task — Bella should feel like 
 These are natural, caring conversation starters — not interrogations. Bella uses them only when the conversation is light and casual, never when the user has come with a serious task or concern. The goal is to make ${addressedName} feel genuinely known, cared for, and at home with Bella.
 
 WHEN USER ASKS "WHAT DO YOU KNOW ABOUT ME?" OR "TELL ME WHAT YOU KNOW ABOUT ME" OR SIMILAR:
-Respond warmly and personally as a caring friend who knows them well. Use the USER BACKGROUND and personal context above. Do NOT list facts robotically — weave them into warm natural conversation. For example: "Well, I know Savio and Jishnu are your world..." — then invite them to share more or correct anything Bella has wrong. Always end with "Is there anything you'd like to add or correct?"
+Respond warmly and personally as a caring friend who knows them well. Use the USER BACKGROUND and personal context above. Do NOT list facts robotically — weave them into warm natural conversation. (THIS APPLIES TO PERSONAL SMALL TALK ONLY. When you have searched the web, the ANSWER RULES win: bullet points and named sources.) For example: "Well, I know Savio and Jishnu are your world..." — then invite them to share more or correct anything Bella has wrong. Always end with "Is there anything you'd like to add or correct?"
 
-Respond warmly and personally as a caring friend who knows them well. Use the USER BACKGROUND and personal context above. Do NOT list facts robotically — weave them into warm natural conversation. For example: "Well, I know Savio and Jishnu are your world..." — then invite them to share more or correct anything Bella has wrong. Always end with "Is there anything you'd like to add or correct?"${mem}
+Respond warmly and personally as a caring friend who knows them well. Use the USER BACKGROUND and personal context above. Do NOT list facts robotically — weave them into warm natural conversation. (THIS APPLIES TO PERSONAL SMALL TALK ONLY. When you have searched the web, the ANSWER RULES win: bullet points and named sources.) For example: "Well, I know Savio and Jishnu are your world..." — then invite them to share more or correct anything Bella has wrong. Always end with "Is there anything you'd like to add or correct?"${mem}
 
 PERSONALITY & TONE (STRICT):
 - Warm, nurturing and professional — like a trusted family friend who is also highly capable
@@ -3826,7 +3849,7 @@ series: Mutual Fund | 112000, 125440, 140493
 [/CHART]
 - THE RULES OF THAT BLOCK. The type is line, bar or pie — line for anything over time, bar for comparing separate things, pie only for shares of one whole. One labels line. One series line per thing being compared, name first, then a bar, then the numbers. Plain numbers only: no currency symbols, no commas inside a number, no percent signs, no words. Every series must have exactly as many numbers as there are labels. Between 2 and 12 labels, and at most 4 series.
 - THE FIGURES IN THE BLOCK MUST BE THE SAME FIGURES YOU USED IN YOUR WORDS. Never invent numbers to make a chart, and never draw one from figures you have not stated. If you do not have real numbers, do not draw anything — ask for them instead.
-- HOW TO STRUCTURE AN ANALYSIS, because your headings BECOME the document. Savio, 28 October 2026: "Bella has to intelligently decipher the heading... Some PPTs may use a slide called Competitors or Competitive Benchmarks." When he downloads your answer as a Word document or a PowerPoint, every heading you write becomes a section: its own line in the Contents page and its own numbered separator slide. So write headings the way you would name slides.
+- THE ANALYSIS ENGINE, AND IT RUNS IN EVERY LANE — searched or not. Savio, 7 November 2026: \'all such questions on analysis, comparing, competitior analysis, behaviour, etc etc between 2 or more services or products must come with detailed analytics... and then the download options.\' He is right that none of this is new machinery: you can already draw charts, write tables and hand over Excel, Word and PowerPoint. What was missing was the instruction to USE them. So whenever a question asks you to COMPARE, RANK or CHOOSE BETWEEN two or more things, or to analyse how something has MOVED OVER TIME, you follow the shape below. Every time.\n- WHAT SETS IT OFF. MONEY: investments of any kind — fixed deposits, mutual funds, PPF, NPS, gold, property — loans, credit cards, insurance, tax regimes, savings accounts, currency and remittance. TRAVEL: flights, hotels, villas and homestays, trains, buses, local transport, packages, visas. THINGS THEY BUY: phones, laptops, televisions, appliances, cars, two-wheelers, and anything asked as \'which should I get\'. SERVICES: hospitals and treatment costs, schools and colleges, broadband and mobile plans, courses and coaching, contractors and vendors. BUSINESS: competitors, market share, pricing, suppliers, GST and compliance choices. AND ANYTHING OVER TIME: prices, rates, returns, performance across months or years. The wording that signals it: compare, versus, better, best, cheapest, worth it, which should I, pros and cons, difference between, alternatives to, competitors of, analysis of.\n- WHAT MUST NOT SET IT OFF. Ordinary warm conversation, anything emotional or creative, a single factual lookup such as \'what is the repo rate\', and a follow-up inside an analysis you have already done. YOU TAKE A BRIEF ONCE. A second interrogation in the same conversation is worse than never having asked.\n- THE ORDER IS FIXED, AND IT IS HIS. Settled 28 October 2026, confirmed again 7 November 2026 after he checked it himself: \'the My Recommendations section has to come last after the graphs & tables not before that.\' So: (1) the brief, if you need one; (2) \'In brief\' — two or three lines that answer the question on their own; (3) the detailed analysis, under headings you have named for what is in them, and it MUST include the two sections below; (4) the comparison TABLE; (5) the CHART; (6) \'My recommendation\' LAST. A reader meets the evidence before the verdict. NEVER put your recommendation above the chart, however natural it feels to lead with your view.\n- TWO SECTIONS ARE COMPULSORY INSIDE THE ANALYSIS. Savio, 7 November 2026: \'Very Important please add it as a part of the steps.\'\n  \'What it costs in total\' — the REAL total, not the headline. Taxes, fees, baggage, convenience charges, delivery, installation, maintenance, interest over the full term, GST where it applies. Give the total for each option side by side, and say plainly what is NOT included because you could not find it. A headline price that quietly omits Rs2,000 of fees is not a cheaper option, it is a wrong answer.\n  \'What to watch\' — the risks and the fine print, in plain words. Cancellation and refund terms and what they actually cost. Lock-in periods, exit loads, prepayment penalties. What is excluded — waiting periods on a health policy, what a warranty does not cover. Who the traveller or buyer must deal with when something goes wrong, which is not always who took the money. Anything that changes after an introductory period. If a thing genuinely carries no catch you can find, say so rather than inventing one — but look first, because the catch is usually the reason one option looks cheaper than the rest.\n- CHOOSE THE RIGHT PICTURE. Bar when you are setting separate things against each other — four websites, five banks, three phones. Line when something moves over time — rates across ten years, fares across a month. Pie only for shares of one whole. If the figures do not compare and do not move, draw nothing.\n- SOURCES FOR EVERYTHING YOU SAY, NOT ONLY FOR COMPARISONS. Savio, 7 November 2026: \'Remember whatever information Bella gives sources need to be there to support her findings.\' Every figure, rate, date, rule and statement of fact carries the name of where it came from, inside the sentence itself. If you did not check something, say so in the same breath as saying it — \'I have not checked this against a live source\' — rather than letting it stand as though you had.\n- AND KNOW WHICH SOURCE IS THE REAL ONE. Interest and deposit rates: the Reserve Bank of India, then the bank\'s own page. Mutual funds: AMFI and SEBI, then the fund house. Insurance: IRDAI, then the insurer. Tax: the Income Tax Department and the GST Council. Hospitals: NABH, the state health department, and the hospital itself. Schools: CBSE, ICSE or the state board, then the school. Property: RERA. Telecom: TRAI. Railways: IRCTC, and name it as the official source. NEWS COVERAGE IS NOT AN OFFICIAL SOURCE — if that is all you found, say so plainly, because a number presented as official when it is not is worse than no answer.\n- THE DOWNLOADS APPEAR BY THEMSELVES. Picture, Excel, Word and PowerPoint buttons are placed under your chart by the app, already in his colours, with your headings as the slides and sections. Never tell anyone to rebuild your answer somewhere else, and never offer to \'prepare\' a file in a later message — the file is already there.\n- HOW TO STRUCTURE AN ANALYSIS, because your headings BECOME the document. Savio, 28 October 2026: "Bella has to intelligently decipher the heading... Some PPTs may use a slide called Competitors or Competitive Benchmarks." When he downloads your answer as a Word document or a PowerPoint, every heading you write becomes a section: its own line in the Contents page and its own numbered separator slide. So write headings the way you would name slides.
 - NAME A SECTION FOR WHAT IS IN IT, never with a generic label. "Competitors", "Competitive benchmarks", "What it costs", "The risks", "Market outlook", "How the two compare", "What changed this year" — these tell a reader where they are. "Analysis", "Details", "More information", "Points" do not. Never title a section with the same word as the document itself, and never repeat a heading.
 - OPEN WITH "In brief" — two or three lines that answer the question on their own, for someone who reads nothing else. CLOSE WITH "My recommendation" — your actual view, not a summary. Everything specific goes between them, under headings of your own choosing. Three to six sections suits most answers; one long undivided wall suits none.
 - USE THE WEB WHEN THE ANSWER DEPENDS ON WHAT IS TRUE NOW — interest rates, prices, who the competitors are, market figures, anything that has changed since you were trained. Search first, then write, and name the source in the sentence. The links are attached under your answer automatically. An analysis built on remembered numbers is worse than no analysis, because it looks researched.
@@ -4334,11 +4357,36 @@ async function saveMemory(profileKey,newMem){
 // "Remember my flight is at 6" still saves, while "do you remember...",
 // "I can't remember..." and "would you remember..." all fall through to an
 // ordinary turn and get answered.
-const _MEM_INSTRUCTION=/^\s*(?:please\s+|bella[,\s]+)*(?:remember|store this|don'?t forget|keep in mind|note this)\b/i;
+// WIDENED 2026-11-06, after a measured miss. Savio ended a long instruction
+// with "Please put this is memory that any flight or hotel booking inside India
+// would need to compared on all these websites before recommending ?" and
+// NOTHING WAS STORED, for two independent reasons: the pattern was anchored to
+// the START of the message, and a single "?" anywhere returned false outright.
+// Bella then told him "I have stored that for all future travel planning",
+// which was untrue. THE PHRASE HE REACHED FOR -- "put this in memory" -- was
+// not in the vocabulary at all.
+//
+// TWO PATTERNS, DELIBERATELY DIFFERENT IN STRICTNESS:
+//   _MEM_OPENER   the old start-anchored one, kept as it was.
+//   _MEM_EXPLICIT an unmistakable storage instruction, allowed ANYWHERE in the
+//                 message, because a real one often arrives at the end of a
+//                 paragraph of context -- which is exactly what he did.
+// The explicit list stays narrow on purpose: every phrase names memory or
+// saving outright, so ordinary conversation cannot trip it.
+const _MEM_OPENER=/^\s*(?:please\s+|bella[,\s]+)*(?:remember|store this|don'?t forget|keep in mind|note this)\b/i;
+// "in" is spelt "is" here on purpose -- it is the slip he actually made
+// ("put this is memory"), and the surrounding words leave no doubt what was
+// meant. No valid English sentence reads "put this is memory", so tolerating
+// it cannot swallow an ordinary remark.
+const _MEM_EXPLICIT=/\b(?:put|keep|save|store|add|hold)\s+(?:this|that|it|these|the\s+following)?\s*(?:in(?:to)?|is|to)\s+(?:your\s+)?memory\b|\bsave\s+(?:this|that)\s+for\s+(?:later|good|future)\b|\bmake\s+a\s+note\s+of\s+(?:this|that)\b|\b(?:store|save)\s+(?:this|that)\s+permanently\b|\bcommit\s+(?:this|that)\s+to\s+memory\b/i;
 function detectMemoryRequest(t){
   const str=String(t||'');
-  if(str.indexOf('?')!==-1) return false;   // a question is a question
-  return _MEM_INSTRUCTION.test(str);
+  // An explicit "put this in memory" IS an instruction even when the sentence
+  // is politely phrased as a question. Checked first, so the "?" rule below
+  // can no longer swallow a real one.
+  if(_MEM_EXPLICIT.test(str)) return true;
+  if(str.indexOf('?')!==-1) return false;   // otherwise, a question is a question
+  return _MEM_OPENER.test(str);
 }
 function detectPronunciationCorrection(t){const l=t.toLowerCase();return l.includes('pronounce')||l.includes('pronounced')||l.includes('say my name')||l.includes('my name is pronounced')||l.includes('sounds like')||l.includes('rhymes with');}
 async function savePronunciation(profileKey,correctionText){
@@ -11722,6 +11770,22 @@ function retryMsg(id){
 function editMsg(id){
   const el=document.getElementById(id);
   if(!el)return;
+  /* PRESSING EDIT MEANS STOP. Savio, 7 November 2026: he caught the Enter key
+     by accident mid-sentence, reached straight for Edit, and Bella carried on
+     answering the half-written question anyway -- then spent a full search on
+     it. His words: she "should have realised and stopped the answer there".
+     abortCurrentTurn() already existed for the voice interrupt and for "skip";
+     Edit simply never called it. Checked BEFORE the box is filled, because
+     the answer is what he is trying to stop, not the typing. */
+  const wasAnswering=!!(window._bellaBusy||window._sending||window._chatAbortController);
+  if(wasAnswering){
+    try{ abortCurrentTurn(); }catch(e){ console.warn('edit-abort failed:',e); }
+    try{ window._pendingMessage=null; }catch(e){}
+    /* And she says so, rather than just going quiet -- a stopped answer with
+       no word about it reads as a crash. */
+    try{ bellaMsg('Looks like you want to edit that — go ahead, I will wait.'); }
+    catch(e){ console.warn('edit-notice failed:',e); }
+  }
   const text=el.innerText||el.textContent;
   const ti=document.getElementById('ti');
   ti.value=text.trim();
@@ -12076,6 +12140,16 @@ async function send(){
     // says about a law, a policy or a government figure.
     try{_paintOptions(bellaMsgId,_inlineOptions);}catch(e){}
     try{_paintSources(bellaMsgId,_lastSources);}catch(e){}
+    // SHE MUST NOT PROMISE LINKS SHE HAS NOT GOT. His screenshot, 2026-11-06:
+    // a flight-rates answer ended "The sources are linked below." with no
+    // sources row under it, because that turn never actually searched. The
+    // prompt tells her to say that line, so a prompt cannot be the guarantee --
+    // only the page can. If nothing was grounded, the sentence is removed and
+    // replaced with the truth, so a promise is never left unkept on screen.
+    try{ if(!_lastSources||!_lastSources.length) _dropSourcePromise(bellaMsgId); }catch(e){}
+    // His decision, 7 November 2026: "Please add this." A prompt rule cannot be the
+    // guarantee here either -- only the page can.
+    try{ if(!_lastSources||!_lastSources.length) _warnUnsourcedFigures(bellaMsgId); }catch(e){}
     _lastSources=[];
     // Long answers (8+ sentences) speak only the short summary and point to
     // the screen for the rest. Short answers are spoken in full, as before.
@@ -12496,7 +12570,31 @@ async function callBella(useSearch,memCtx,signal,route){
   // always present and tells Gemini WHEN to reach for it. Previously the tool was
   // only attached when a keyword matched, so anything phrased outside that list was
   // answered from training data and came back out of date.
-  const searchNote='\n\nRESEARCH RULE — applies to every question. You have Google Search available and you must use it whenever the correct answer could have changed since your training data: prices, costs, rates, valuations, who currently holds a role or office, company and product facts, laws and rules, sports results, schedules, opening hours, news, and any question containing "current", "latest", "still", "now" or a year. THIS EXPLICITLY INCLUDES ANY NAMED PLACE, BUSINESS OR INSTITUTION — a hospital, clinic, school, college, hotel, restaurant, shop, office or station — whether the person asks for the nearest ones, for its address, for directions to it, or simply names it. Hospitals and businesses are bought, renamed, merged, relocated and closed constantly, and a name you remember is not evidence it still trades under that name today. Savio hit this on 2026-10-16: asked about a hospital, you answered from memory and called it by a name it has not used since August 2023 — the correct answer was one search away, and when he told you to look it up you got it right immediately. Do not wait to be told. Look it up the first time, every time, and say what the place is called NOW. If you are not certain your information is current, search — do not answer from memory and do not guess. Never state a fact that could be out of date without checking it first. When you have searched, give 3-5 bullet points and say when the information is from. Do NOT write out URLs and never say you are unable to provide a link — the sources are attached under your answer automatically, as clickable links, every time you search. Say "the sources are linked below" instead. Cite by name in the text: cite medical sources for medical questions, official sources for government ones, industry reports for business data. THE OFFICIAL SOURCE IS NOT SOMETHING TO BE ASKED FOR — IT COMES WITH THE ANSWER, EVERY TIME. Savio, 2026-10-17: "the moment i ask anything like this, without me asking, it should always come with a verified govt source." So whenever an answer rests on an official figure, rule or decision — an interest rate, a tax, a duty, a law, a regulation, a government scheme, an official statistic, a licence or a public appointment — NAME THE ISSUING AUTHORITY IN THE ANSWER ITSELF (the Reserve Bank of India, the Income Tax Department, the GST Council, the ministry concerned) and say the official source is linked below. Never leave him to ask a second time for the authority behind a number. If your search turned up no official source and only news coverage, SAY SO PLAINLY — "I could not reach an official RBI page for this, so this is from news reports" — because a number with no authority behind it, presented as though it had one, is the one thing worse than not answering. When the question is personal, emotional, creative, or ordinary conversation, do not search — answer warmly as Bella normally would. Spoken summary: 2 sentences max — never speak URLs aloud. Any time of day must always be given in 24-hour format (e.g. 14:00, not 2:00 PM).\n\nNEVER PROMISE AN ACTION YOU ARE NOT ABOUT TO PERFORM IN THIS SAME REPLY. You answer one message at a time and you cannot go away and come back. So never end with "let me find…", "let me check…", "I will look that up", "give me a moment", "I am searching now" or anything that leaves the person waiting for a second message. There is no second message. Either do it now and give the answer in this reply, or say plainly that you cannot and what you need from them. Savio saw this fail on 2026-10-06: asked for hospitals near a mall, Bella replied "Let me find some hospitals near that mall for you." and stopped, and he had to type "OK" to get an answer. That reads as a broken promise, which is worse than saying no.';
+  // MEASURED 2026-11-06, same model, same question, same search tool, only the
+  // persona changing: WITH Bella's 34,215-character persona attached she returned
+  // 2 sources, 0 bullets and 0 named booking sites; WITHOUT it, 4 sources and 3
+  // bullets. Her own personality was smothering her format rules, and three
+  // instructions were pulling against each other -- 'write for the ear, not the
+  // page' (a LANGUAGE-REGISTER rule for Hindi/Marathi/Bengali, read as universal),
+  // 'do NOT list facts robotically' (scoped to small talk, applied everywhere) and
+  // 'give 3-5 bullet points', which sat 37%% of the way into an unbroken
+  // 3,041-character paragraph. Prose won two to one.
+  // REWRITTEN as 15 short numbered rules that open by overriding style guidance
+  // elsewhere. Re-measured with the SAME persona weight: 3 sources, 4 bullets,
+  // 4 named booking sites, a My recommendation line, no trailing filler question.
+  // The anecdotes that used to live in this string are kept below as comments --
+  // they are why the rules exist, which matters to whoever edits this next, but
+  // they diluted the instruction for the model and are not sent any more:
+  //   2026-10-16  asked about a hospital, she answered from memory and used a name
+  //               it had not traded under since August 2023.  -> rule 2
+  //   2026-10-17  his words: "the moment i ask anything like this, without me
+  //               asking, it should always come with a verified govt source." -> rule 25
+  //   2026-10-06  asked for hospitals near a mall, she replied "Let me find some
+  //               hospitals near that mall for you." and stopped. -> rule 28
+  //   2026-11-06  his words: "Bella shold be giving comparative rates from different
+  //               websites and the sources nothing is arriving also my recommendations
+  //               in bullet points nothing is coming"              -> rules 14-24
+  const searchNote='\n\nANSWER RULES — for an answer you have searched for. These ADD to the rules above on taking a brief, drawing a chart and structuring an analysis. They do NOT cancel them. Where this block says nothing, the rules above stand in full.\n\nWHEN TO SEARCH\n1. Search the web whenever the answer could have changed since your training: prices, rates, costs, fees, availability, opening hours, schedules, news, sports results, laws, taxes, government schemes, who currently holds a role, and anything containing "current", "latest", "still", "now" or a year.\n2. ALWAYS search when a named place or business is mentioned — hotel, hospital, clinic, school, college, restaurant, shop, office, station — whether they ask for its address, for directions, for the nearest ones, or simply name it. Businesses are renamed, relocated and closed constantly, and a name you remember is not evidence it still trades under that name. Say what it is called NOW.\n3. Never state a fact that could be out of date without checking it first. If you are not certain your information is current, search. Do not guess.\n4. NEVER ASK THEM TO SUPPLY WHAT YOU COULD HAVE SEARCHED FOR. Savio, 7 November 2026, after you answered "I can draw that as soon as I have the data, Savio. Attach the file" to a question about fixed deposit and mutual fund returns. Deposit rates and fund returns are published figures; you look them up. Asking someone to fetch public numbers on your behalf is the same refusal as sending them to a spreadsheet, and you are never to make it.\n5. Do NOT search for personal, emotional or creative questions, or for ordinary conversation. Answer those warmly, as Bella, in prose.\n\nTAKE A BRIEF BEFORE YOU RESEARCH. Savio, 7 November 2026: "Bella has to be intelligently proactive."\n6. When they ask you to COMPARE things, or for the best or the cheapest of something, and you lack what you need to compare like for like — ASK FIRST. Research nothing yet and quote no price. This covers travel, flights, hotels, villas and holidays, finance and investments, insurance, loans, schools, phones and appliances, and anything else whose answer is a recommendation between options.\n7. ASK AT LEAST FIVE QUESTIONS, and more whenever more would change your answer. There is no upper limit. His decision, 7 November 2026, raising his own earlier limit of four. Put them in ONE message, numbered, each on its own line.\n8. FIVE RELEVANT QUESTIONS, NEVER FIVE QUESTIONS. Every one must change what you would answer. If only three come to mind, think harder about the subject — never pad. A brief that asks what it will not use is a form, and he does not want a form.\n9. WORK THEM OUT FROM THE SUBJECT. Travel turns on: by air, rail or road; one way or return; exact dates or flexible; how many are travelling; whether a stay is needed too; preferred time of day; the budget; and WHERE WITHIN THE DESTINATION. A destination is not a location: North Goa and South Goa are different searches, as are Bandra and Navi Mumbai, and a resort list spanning the whole state is no use to anyone. Savio, 7 November 2026: \'since you never asked me where in Goa\'. If they have not said which part, ASK, and name a few areas so the question is easy to answer. Money turns on: the amount; lump sum or monthly; for how long; appetite for risk; the goal; the tax bracket. Insurance turns on: age; dependants; cover already held; sum assured wanted; term or whole life; pre-existing conditions. For any other subject, work out what actually decides it — and if you do not know, SEARCH for how people choose it, then ask about that.\nALWAYS ASK WHETHER TO LOOK BEYOND THE OPTIONS THEY NAMED. Savio, 7 November 2026: \'The probing questions need to have are you only considering Ola & Uber or should i suggest other available option with my recommendation?\' He is right, and this is where you are most useful. Someone naming two options is telling you what they know about, not what exists. So make one of your questions: \'Are you set on those two, or shall I include anything else operating there?\' — then, if they say yes, go and find what actually runs in that city.\n10. NEVER ASK WHAT YOU ALREADY KNOW OR WHAT THEY HAVE ALREADY SAID. You hold a great deal about this family, and everything said so far in this conversation. If they have given you the destination, the month or the amount, do not ask for it again. Where you are assuming something, say so instead of staying silent: "Kolkata, I take it?" A silent assumption is how a wrong answer gets built without anyone noticing — on 7 November 2026 you wrote "one-way" and he had never said it.\n11. ALWAYS OFFER THE WAY PAST IT. Close the brief with "Or tell me to go ahead and I will assume..." and name the assumptions. A brief must never become a gate; some days they want something rough. If they say go ahead, STATE THOSE ASSUMPTIONS IN THE ANSWER so nobody mistakes a guess for a fact.\n12. ASK ONCE. Once they have answered, research and build. Never take a second brief in the same conversation, and never re-ask something they have already told you.\n13. THIS IS THE ONE EXCEPTION TO ONE QUESTION PER MESSAGE, and it covers the brief alone. Ordinary conversation stays at one question at a time, unchanged.\n\nTHE SHAPE OF A SEARCHED ANSWER — use this every time you have searched\n14. Line 1 is the direct answer, one sentence. No preamble. Never open with "I\'d be happy to", "Great question", or by restating what they asked.\n15. Then your findings, ONE BULLET PER SOURCE, each beginning "- ". THERE IS NO LIMIT ON THE NUMBER OF BULLETS. Savio, 7 November 2026: "No caps please its has to be a comparative analysis use all sites given + any other recommendations." Never drop a source you found in order to keep the answer short.\n16. PRICES, RATES, COSTS AND FEES MUST BE COMPARED ACROSS SOURCES — one bullet per source, each naming the source and its own figure. For example: "- MakeMyTrip: ₹11,400 a night, river-view room, breakfast included". NEVER merge different sources into one blended number, and never give a range without saying who quotes each end of it.\n17. TRAVEL IS NEVER ANSWERED FROM ONE SITE, AND NEVER FROM ONE SEARCH. Run a SEPARATE SEARCH FOR EACH CATEGORY of the TRAVEL RESEARCH LIST below — the aggregators, then the airlines direct, then rail and road, then the stays — because one sweep returns only whichever handful of names it happens to surface. Then give one bullet per site with its own figure, and NAME THE SITES YOU CHECKED THAT CAME BACK WITH NOTHING. A list that quietly omits four of them looks identical to one that checked them all.\n18. PUT A COMPARISON IN A TABLE. Savio has asked three times for data in straight columns. Whenever you compare three or more things on the same measures, write a markdown table — it renders as a real table on his screen. For a travel comparison the columns are: Source, Price, What you actually pay, Seen on. Keep each figure in its own column so the eye runs down a column rather than across a line. Carry on in prose below the table.\nTHE TABLE MUST BE IN EXACTLY THIS SHAPE, and the second line of dashes is NOT optional — without it the table does not render and he sees a mess of vertical bars on his screen:\n| Source | Price | What you actually pay | Seen on |\n|---|---|---|---|\n| MakeMyTrip | ₹7,641 | ₹8,230 with baggage | 7 Nov 2026 |\n| Goibibo | ₹7,416 | ₹7,990 with baggage | 7 Nov 2026 |\nEvery row must have the same number of bars as the header. Keep cells short — a long sentence in a cell is unreadable on a phone. Put nothing but the figure and a few words in each cell.\n19. DRAW THE CHART AS WELL whenever the figures compare separate things or change over time, using the [CHART] block exactly as set out earlier in this prompt. A searched answer gets a chart on the same terms as any other answer — searching never takes that away. Bar for comparing sources against each other, line for anything over time.\n20. NEVER CHART OR TABULATE A NUMBER YOU DID NOT ACTUALLY FIND. Savio, 7 November 2026, after you charted ten years of returns from remembered rates and put SBI and HDFC beside them. A chart is the most convincing thing on the screen, so an unsearched figure inside one is the most dangerous thing you can put in front of him. If you have not got real figures, search for them; if the search does not yield them, say so plainly and draw nothing.\n21. A DAY-BY-DAY FARE CALENDAR DOES NOT EXIST IN SEARCH RESULTS. When they tell you their dates are flexible, search SEVERAL SPECIFIC DATES across the period, then plot only the fares you actually retrieved, naming the dates on the chart. Never invent a weekly pattern and never draw a line through numbers you did not find.\n22. Say how recent the figures are, and put that date in the table.\n23. Then a line beginning "My recommendation: " with one or two sentences of your actual view — what you would do, and why. Not a summary of the bullets. IT GOES LAST, AFTER THE TABLE AND THE CHART. His instruction: a reader should meet the evidence before the verdict.\n24. Then, ONLY IF YOU ACTUALLY RAN A SEARCH FOR THIS ANSWER: "The sources are linked below." If you answered from what you already knew, DO NOT say it — say "I have not checked this against a live source" instead. Never write out a URL, and never say you cannot provide a link; the links are attached under your answer automatically whenever you search.\n\nALWAYS\n25. Name your source inside the sentence: medical sources for medical questions, the issuing authority for anything official (the Reserve Bank of India, the Income Tax Department, the GST Council, the ministry concerned), industry reports for business figures. If you found only news coverage and no official page, say so plainly — a number presented as official when it is not is worse than no answer at all.\n26. Clock times in 24-hour format — 14:00, never 2:00 PM.\n27. Spoken summary: 2 sentences maximum. Never speak a URL aloud.\n28. Never promise to do something in a later message. There is no later message. Either answer now, or say plainly what you need from them.\n29. NEVER CLAIM YOU HAVE SAVED SOMETHING TO MEMORY. Savio asked you on 6 November 2026 to put his travel-site list in memory and you answered "I have stored that for all future travel planning" — nothing was written, because storing is done by the app and not by you, and that turn never triggered it. A false promise about memory is worse than refusing, because he stops repeating what he believes you now hold. Say "I will keep that in mind for this conversation" when it is only this conversation, and if he wants it kept for good, tell him to say it starting with the word "Remember".\n\nTRAVEL RESEARCH LIST — MANDATORY. Savio, 6 November 2026, extended with his approval on 7 November 2026, for every user and every kind of travel: resort stays, villa stays, homestays, Airbnb stays, hotel stays, flights and local travel.\nINDIA, STAY AND TRAVEL: MakeMyTrip, EaseMyTrip, Yatra, Goibibo, Cleartrip, Skyscanner, Agoda, Trip.com.\nINDIA, FLIGHTS, DIRECT FROM THE AIRLINE: IndiGo, Akasa Air, SpiceJet, Air India, Air India Express.\nINDIA, RAIL AND ROAD: IRCTC for trains — it is the official Indian Railways source and must be named as such — plus ixigo and redBus.\nINDIA, GETTING AROUND A CITY: the ride-hailing and auto apps that actually operate in THAT city, the state or city transport app where one exists, the metro, and the local buses. Search for them by city; never assume the same apps run everywhere.\nINDIA, STAYS BEYOND HOTELS: Airbnb and Booking.com for villas, homestays and apartments.\nINTERNATIONAL, STAY: Booking.com, Expedia, Hotels.com, Agoda, Airbnb, Vrbo, Hostelworld for budget beds, and the hotel website itself.\nINTERNATIONAL, FLIGHTS: Skyscanner, Google Flights, Kayak, Momondo, Trip.com, and the airline website itself.\nWHAT A PLACE IS ACTUALLY LIKE: Tripadvisor and Google reviews. Quote what reviewers say, and say how many reviews it rests on.\n\nNEVER RECOMMEND THESE, WHATEVER THE PRICE, and say why if asked: eDreams and Opodo — the Australian regulator fined eDreams in June 2026 over its Prime subscription advertising, Italy acted the same year, and the Spanish consumer body OCU logged about 1,300 complaints in a year. Gotogate and Mytrip — rated 2.4 out of 5 across more than 150,000 reviews. Kiwi.com — repeated reports of refunds never arriving and charges added after the headline price. If one of these is genuinely the cheapest, SAY the price exists and SAY you are not recommending it, and give the best reputable option instead.\n\nHOW TO COMPARE, AND THIS IS THE PART THAT MATTERS:\n- Compare the TOTAL — taxes, fees, baggage and cancellation included. Never the headline. In May 2026 the Indian consumer authority CCPA was directed to investigate online flight platforms over cancellation charges, and drip pricing was identified on 11 of 26 platforms, MakeMyTrip and Cleartrip among them. The first number on the screen is not the price.\n- SAY WHICH KIND OF NUMBER EACH ONE IS. A "from" price on an aggregator and a real quote for named dates are not the same thing, and putting them side by side implies they are. Mark the "from" prices as such in the table.\n- Skyscanner, Google Flights, Kayak, Momondo and trivago FIND prices; they do not sell them. Say which seller the fare is actually with, because that is who the traveller must deal with when something goes wrong.\n- The provider website always goes in the comparison — airline, hotel or homestay — because booking direct often drops the convenience fee and makes changes easier.\n- Never recommend from a single source. The question is always which is the better deal, and one price cannot answer it.\n- NEVER CONFINE A COMPARISON TO THE BRANDS THEY NAMED, once they have said you may widen it. Local travel is the clearest case: beyond Ola and Uber a city will often have bike and auto aggregators, a state or city-run app, the metro and the local buses — and which of those actually operate varies completely from one city to the next. SEARCH FOR WHAT RUNS IN THAT PARTICULAR CITY rather than reciting names you remember, because an app that is everywhere in one state does not exist in the next, and some you may recall are not Indian services at all. Name what you find, give each one its own figure, and say which you would take.';
   // Savio, 2026-10-02: the Summarise button must give "a summary pointwise or highlight
   // her finding in short". It used to ask for 2-3 sentences of prose, so even when it
   // worked you got a paragraph, never highlights. The word cap is stated because an
@@ -12565,6 +12663,162 @@ function _officialSource(s){
     return _OFFICIAL_PAT.test(hay);
   }catch(e){ return false; }
 }
+// HIS STANDING RULE, 2026-11-06: "we need more legible sources".
+// Gemini hands back a bare lowercase host -- "goibibo.com", "rbi.org.in" -- which
+// is the least readable form of the most important part of a searched answer.
+// THE DOMAIN IS KEPT IN FULL. He has to be able to RATIFY a figure, and on a
+// phone there is no tooltip to fall back on, so nothing may be hidden: this only
+// capitalises. A short host is an acronym (rbi -> RBI); a longer one gets a
+// capital (goibibo -> Goibibo). Anything that already looks like a real page
+// title -- spaces or existing capitals -- is left exactly as it came.
+// HOW A SITE SPELLS ITSELF. His screenshots, 2026-11-06, showed the chips
+// reading "Makemytrip.com" and "Hotelscombined.in" while Bella's own sentence
+// above them said "MakeMyTrip" -- the same brand, two spellings, on one screen.
+// Plain capitalisation cannot know where the humps go, so the ones she actually
+// cites are listed. Anything not here still gets the safe fallback below.
+const _SRC_BRAND={
+  makemytrip:'MakeMyTrip', easemytrip:'EaseMyTrip', goibibo:'Goibibo',
+  cleartrip:'Cleartrip', yatra:'Yatra', ixigo:'ixigo', redbus:'redBus',
+  skyscanner:'Skyscanner', airindia:'AirIndia', goindigo:'GoIndigo',
+  akasaair:'AkasaAir', spicejet:'SpiceJet', vistara:'Vistara',
+  hotelscombined:'HotelsCombined', booking:'Booking', agoda:'Agoda',
+  expedia:'Expedia', kayak:'KAYAK', momondo:'momondo', trivago:'trivago',
+  airbnb:'Airbnb', tripadvisor:'TripAdvisor', trip:'Trip', oyorooms:'OYORooms',
+  tajhotels:'TajHotels', marriott:'Marriott', hyatt:'Hyatt',
+  youtube:'YouTube', wikipedia:'Wikipedia', imdb:'IMDb', github:'GitHub',
+  openstreetmap:'OpenStreetMap', accuweather:'AccuWeather',
+  rbi:'RBI', irctc:'IRCTC', incometaxindia:'IncomeTaxIndia', gst:'GST',
+  ndma:'NDMA', imd:'IMD', nic:'NIC',
+  ndtv:'NDTV', bbc:'BBC', reuters:'Reuters', cnbctv18:'CNBCTV18',
+  moneycontrol:'MoneyControl', livemint:'LiveMint', thehindu:'TheHindu',
+  indiatimes:'IndiaTimes', hindustantimes:'HindustanTimes',
+  economictimes:'EconomicTimes',
+  amazon:'Amazon', flipkart:'Flipkart', myntra:'Myntra'
+};
+function _sourceLabel(t){
+  try{
+    const s=String(t||'').trim();
+    if(!s) return 'source';
+    if(/\s/.test(s)||/[A-Z]/.test(s)) return s;   // a real title, not a host
+    if(s.indexOf('.')===-1) return _SRC_BRAND[s]||(s.charAt(0).toUpperCase()+s.slice(1));
+    const host=s.replace(/^www\./,'');
+    const first=host.split('.')[0];
+    const rest=host.slice(first.length);
+    // A brand spelling may only re-CASE the host, never rewrite it: he has to
+    // be able to read the chip and know exactly which site the figure came from.
+    // Guarded at build time, and again here so a future edit cannot slip past.
+    const brand=_SRC_BRAND[first];
+    if(brand&&brand.toLowerCase()===first) return brand+rest;
+    // FALLBACK, unchanged: a short host is an acronym, a longer one gets a
+    // capital. The domain is never shortened -- he has to be able to ratify it.
+    const name=first.length<=4?first.toUpperCase():first.charAt(0).toUpperCase()+first.slice(1);
+    return name+rest;
+  }catch(e){ return String(t||'source'); }
+}
+// ── DAYLIGHT SAVING ──────────────────────────────────────────────────────
+// Savio, 2026-11-06: "ensure that all timezones which follow daylight savings
+// are automatically following the same for the affected countries or states...
+// a small icon next to it so we know its under daylight savings timing."
+//
+// THE TIMES WERE ALREADY RIGHT and needed nothing: every zone here is an IANA
+// id rendered through Intl.DateTimeFormat, so the clock follows the browser's
+// own timezone database and springs forward the second the zone does.
+//
+// THE LABELS WERE NOT. Measured 2026-11-06: all 22 DST zones carried ONE frozen
+// abbreviation, wrong for roughly half of every year -- London said "GMT" in
+// July, Paris "CET" in August, Sydney "AEDT" in June.
+//
+// WHY NOT SIMPLY ASK THE BROWSER FOR THE NAME: Intl's short name returns
+// "GMT+5:30" for India and "GMT+11" for Sydney, which is WORSE than the curated
+// word. So the PAIR is curated and only the CHOICE between them is computed.
+const _TZ_DST={
+  'America/New_York':['EST','EDT'], 'America/Toronto':['EST','EDT'],
+  'America/Chicago':['CST','CDT'],  'America/Denver':['MST','MDT'],
+  'America/Los_Angeles':['PST','PDT'], 'America/Vancouver':['PST','PDT'],
+  'Europe/London':['GMT','BST'],
+  'Europe/Paris':['CET','CEST'],    'Europe/Berlin':['CET','CEST'],
+  'Europe/Amsterdam':['CET','CEST'],'Europe/Madrid':['CET','CEST'],
+  'Europe/Rome':['CET','CEST'],     'Europe/Zurich':['CET','CEST'],
+  'Europe/Stockholm':['CET','CEST'],'Europe/Oslo':['CET','CEST'],
+  'Europe/Copenhagen':['CET','CEST'],
+  'Europe/Helsinki':['EET','EEST'], 'Europe/Athens':['EET','EEST'],
+  'Africa/Cairo':['EET','EEST'],
+  'Australia/Sydney':['AEST','AEDT'], 'Australia/Melbourne':['AEST','AEDT'],
+  'Pacific/Auckland':['NZST','NZDT']
+};
+// The zone's offset right now against its own January and July offsets. Taking
+// the MINIMUM as standard time is what makes this work in BOTH hemispheres --
+// Sydney's summer is January, so a northern-only rule would invert there.
+function _dstOffsetMin(tz,d){
+  const f=new Intl.DateTimeFormat('en-US',{timeZone:tz,hour12:false,year:'numeric',
+    month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const p={}; f.formatToParts(d).forEach(function(x){ if(x.type!=='literal') p[x.type]=x.value; });
+  const h=(p.hour==='24')?0:+p.hour;
+  return Math.round((Date.UTC(+p.year,+p.month-1,+p.day,h,+p.minute)-d.getTime())/60000);
+}
+function _tzIsDst(tz){
+  try{
+    /* THE CURATED TABLE USED TO BE A GATE, AND THAT IS WHY HIS CLOCK WAS BARE.
+       Savio, 7 November 2026: Sydney and Melbourne showed 17:48 with no AEDT
+       and no sun, while the Converter two panels away said AEDT correctly.
+       The reason was this line: any zone missing from _TZ_DST returned false
+       before the arithmetic below ever ran -- and the arithmetic does not need
+       the table at all. The table names a zone; it was never meant to decide
+       whether a zone keeps daylight saving. Every city he adds by typing fell
+       through it. */
+    const now=new Date(), y=now.getUTCFullYear();
+    const a=_dstOffsetMin(tz,new Date(Date.UTC(y,0,15)));
+    const b=_dstOffsetMin(tz,new Date(Date.UTC(y,6,15)));
+    if(a===b) return false;
+    return _dstOffsetMin(tz,now)>Math.min(a,b);
+  }catch(e){ return false; }
+}
+// The label a person should see RIGHT NOW. Non-DST zones keep their curated
+// word untouched, so IST stays IST and never becomes "GMT+5:30".
+function _tzAbbr(tz,stored){
+  const pair=_TZ_DST[tz];
+  if(pair) return _tzIsDst(tz)?pair[1]:pair[0];
+  if(stored) return stored;
+  /* NEITHER CURATED NOR STORED -- ask the browser. A city he typed himself is
+     in no table of ours, and an empty label is worse than any label at all.
+     Intl gives a word where one exists (CST, WET) and an offset where none
+     does (Hobart answers "GMT+11", Singapore "GMT+8"). BOTH are accepted: I
+     first rejected the offset form as noise and measured that it left Hobart,
+     Singapore, Dubai and Tokyo with a blank line -- the very fault being
+     fixed. Zones with a nicer name never reach here, because the curated
+     table and the stored abbreviation are both tried first, which is why
+     Kolkata still reads IST and never "GMT+5:30". */
+  try{
+    const part=new Intl.DateTimeFormat('en-US',{timeZone:tz,timeZoneName:'short'})
+      .formatToParts(new Date()).find(function(x){ return x.type==='timeZoneName'; });
+    const v=part?String(part.value).trim():'';
+    if(/^[A-Z]{2,5}$/.test(v)) return v;
+    if(/^(?:GMT|UTC)[+\u2212-]\d{1,2}(?::\d{2})?$/.test(v)) return v;
+    return '';
+  }catch(e){ return ''; }
+}
+// Both names, so searching "BST" finds London in December too.
+function _tzSearchAbbr(tz,stored){
+  const pair=_TZ_DST[tz];
+  return pair?(pair[0]+' '+pair[1]):(stored||'');
+}
+// THE ICON. Painted as a SURFACE with a border, never as a coloured text label:
+// body.dark repaints all text cream and outranks a class, so a gold-lettered
+// mark would vanish in dark mode -- the same trap already documented for the
+// "Official" badge on the sources row.
+function _dstMark(tz){
+  return _tzIsDst(tz)
+    ? '<span class="dst-mark" title="Daylight saving time is in force here right now — clocks are an hour ahead of this zone\'s standard time">\u2600</span>'
+    : '';
+}
+function _dstMarkEl(tz){
+  if(!_tzIsDst(tz)) return null;
+  const m=document.createElement('span');
+  m.className='dst-mark';
+  m.textContent='\u2600';
+  m.title='Daylight saving time is in force here right now — clocks are an hour ahead of this zone\'s standard time';
+  return m;
+}
 function _readSources(d){
   try{
     const g=d&&d.candidates&&d.candidates[0]&&d.candidates[0].groundingMetadata;
@@ -12575,6 +12829,7 @@ function _readSources(d){
       if(!/^https?:\/\//i.test(w.uri))return;      // never render a javascript: or data: uri
       if(seen[w.uri])return; seen[w.uri]=1;
       const one={uri:w.uri,title:(w.title||'').trim()||'source',domain:(w.domain||'').trim()};
+      one.label=_sourceLabel(one.title);
       one.official=_officialSource(one);
       out.push(one);
     });
@@ -12583,7 +12838,16 @@ function _readSources(d){
     // stable sort keeps Google's own ranking inside each group.
     const off=out.filter(function(x){return x.official;});
     const rest=out.filter(function(x){return !x.official;});
-    return off.concat(rest).slice(0,6);
+    // DEDUPE ON THE VISIBLE LABEL, not just the uri. His screenshot showed
+    // "Youtube.com" twice -- two different videos, one indistinguishable chip,
+    // which reads as a bug. Official entries are ordered first above, so the
+    // survivor of any clash is the more authoritative one.
+    const ordered=off.concat(rest), lbl={}, uniq=[];
+    ordered.forEach(function(x){
+      const k=(x.label||x.title||'').toLowerCase();
+      if(lbl[k]) return; lbl[k]=1; uniq.push(x);
+    });
+    return uniq.slice(0,6);
   }catch(e){ return []; }
 }
 
@@ -12600,6 +12864,50 @@ function _paintOptions(msgId,pack){
     bub.appendChild(el);
   }catch(e){ console.warn('_paintOptions failed:',e); }
 }
+// Strips the "sources are linked below" sentence when no source arrived, and
+// says plainly where the answer came from instead. Operates on the rendered
+// bubble, so what he READS and what he COPIES agree.
+const _SRC_PROMISE=/\s*(?:\(|\[)?\s*(?:and\s+)?the\s+sources?\s+(?:are|is)\s+linked\s+below[^.<]*[.]?\s*(?:\)|\])?/ig;
+function _dropSourcePromise(msgId){
+  const bub=document.getElementById(msgId); if(!bub) return;
+  if(!/sources?\s+(?:are|is)\s+linked\s+below/i.test(bub.innerHTML)) return;
+  bub.innerHTML=bub.innerHTML.replace(_SRC_PROMISE,' ')
+    .replace(/(<br>\s*){3,}/g,'<br><br>')
+    .replace(/(<br>\s*)+$/,'');
+  const note=document.createElement('div');
+  note.className='src-note src-none';
+  const lab=document.createElement('span');
+  lab.className='src-lab';
+  lab.textContent='No live sources for this one — answered from what Bella already knew.';
+  note.appendChild(lab);
+  const wrap=bub.parentNode; if(!wrap) return;
+  const acts=wrap.querySelector('.msg-actions');
+  if(acts) wrap.insertBefore(note,acts); else wrap.appendChild(note);
+}
+// FIGURES WITH NOTHING BEHIND THEM. Fires on what is ON SCREEN, not on what she
+// claimed -- _dropSourcePromise only runs when she SAID "the sources are linked
+// below", and on the live site she gave rates and claimed nothing at all, so no
+// notice appeared. Two triggers, both deliberate: any rupee amount, or two or more
+// percentages. One lone percentage is left alone so "100% sure" in ordinary talk
+// does not raise a caution about money.
+function _warnUnsourcedFigures(msgId){
+  const bub=document.getElementById(msgId); if(!bub) return false;
+  const wrap=bub.parentNode; if(!wrap) return false;
+  if(wrap.querySelector('.src-warn')) return false;
+  const t=bub.textContent||'';
+  const money=/(?:\u20B9|\bRs\.?\s?)\s?\d/i.test(t);
+  const pcts=(t.match(/\d(?:[.,]\d+)?\s?%/g)||[]).length;
+  if(!money && pcts<2) return false;
+  const note=document.createElement('div');
+  note.className='src-note src-warn';
+  const lab=document.createElement('span');
+  lab.className='src-lab';
+  lab.textContent='These figures were not checked against a live source \u2014 treat them as a rough illustration, not as current rates.';
+  note.appendChild(lab);
+  const acts=wrap.querySelector('.msg-actions');
+  if(acts) wrap.insertBefore(note,acts); else wrap.appendChild(note);
+  return true;
+}
 function _paintSources(msgId,list){
   if(!list||!list.length)return;
   const bub=document.getElementById(msgId); if(!bub)return;
@@ -12613,8 +12921,8 @@ function _paintSources(msgId,list){
   list.forEach(function(s){
     const a=document.createElement('a');
     a.href=s.uri; a.target='_blank'; a.rel='noopener noreferrer nofollow';
-    a.textContent=s.title;            // textContent, never innerHTML
-    a.title=s.title;
+    a.textContent=s.label||s.title;   // textContent, never innerHTML
+    a.title=s.title;                  // the exact host, unchanged, on hover
     if(s.official){
       const b=document.createElement('span');
       b.className='src-off';
@@ -13248,6 +13556,16 @@ function dateInZone(tz){
   return new Intl.DateTimeFormat('en-GB',{timeZone:tz,weekday:'long',day:'numeric',month:'long'}).format(new Date());
 }
 // Returns an answer string, or null if this isn't a plain "time in X" question.
+// The zone's current name, and a sun when it is on summer time, for a CHAT
+// reply. A message is plain text -- it is spoken, copied and translated -- so
+// this is a word and a character, never markup.
+function _tzSuffix(tz){
+  try{
+    const ab=_tzAbbr(tz,(TIMEZONES.find(x=>x.tz===tz)||{}).abbr);
+    if(!ab) return '';
+    return ' '+ab+(_tzIsDst(tz)?' \u2600 (daylight saving)':'');
+  }catch(e){ return ''; }
+}
 function answerTimeQuery(text){
   const t=String(text||'').trim();
   const m=t.match(/(?:what(?:'s| is)?\s+(?:the\s+)?(?:current\s+)?time|current time|time)\s*(?:is it\s*)?(?:in|at)\s+([a-z\s,]+)/i);
@@ -13256,17 +13574,36 @@ function answerTimeQuery(text){
   if(!zones.length) return null;
   // Genuinely ambiguous place name — ask rather than guess.
   if(zones.length>1){
-    const opts=zones.map(z=>`${z.city}, ${z.state||z.country} — ${timeInZone(z.tz)}`);
+    const opts=zones.map(z=>`${z.city}, ${z.state||z.country} — ${timeInZone(z.tz)}${_tzSuffix(z.tz)}`);
     return `There's more than one place by that name. Here's the time in each:\n\n`+
            opts.map(o=>`- ${o}`).join('\n')+
            `\n\nWhich one did you mean?`;
   }
   const z=zones[0];
   const where=[z.city,z.state&&z.state!==z.city?z.state:null,z.country].filter(Boolean).join(', ');
-  return `It's ${timeInZone(z.tz)} in ${where} right now — ${dateInZone(z.tz)}.`;
+  return `It's ${timeInZone(z.tz)}${_tzSuffix(z.tz)} in ${where} right now — ${dateInZone(z.tz)}.`;
 }
 
-function isTimeSensitive(t){const l=t.toLowerCase();return['today','tonight','now','current','latest','recent','live','score','weather','price','news','update','right now','this week','this month','happening','2026','2025','breaking','just','aaj','abhi','kal','what time','time is it','what\'s the time','current time in','time zone in','timezone','time zone',"o'clock"].some(w=>l.includes(w));}
+// WHOLE WORDS, NEVER SUBSTRINGS. Measured 2026-11-06: this used includes(),
+// so "all these KNOWn websites" matched "now" and forced a web search on a
+// message that was an instruction, not a question. "knows", "snowing",
+// "Kalyan" and "live wire" all tripped it too. The same mistake is called out
+// three lines above _CHAT_SHAPES -- a substring test against short words is how
+// "Joyce" was once handed Joydeep's account. Phrases keep their spaces; every
+// term is bounded so it must stand on its own.
+// 'live' ALONE was dropped: "I live in Kolkata" and "a live wire" are not
+// questions about anything current. The phrases that actually mean it are
+// listed below instead.
+const _TIME_WORDS=['today','tonight','now','current','latest','recent','score',
+  'weather','price','prices','news','update','right now','this week','this month',
+  'live score','live match','live news','live update','live rate',
+  'happening','2026','2025','breaking','just','aaj','abhi','kal','what time',
+  'time is it',"what's the time",'current time in','time zone in','timezone',
+  'time zone',"o'clock"];
+const _TIME_RE=new RegExp('(?:^|[^a-z0-9])(?:'+
+  _TIME_WORDS.map(function(w){return w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}).join('|')+
+  ')(?![a-z0-9])','i');
+function isTimeSensitive(t){ return _TIME_RE.test(String(t||'')); }
 
 // ══ THE PRE-ROUTER — which lane does this turn leave in? ═══════════════════
 // MEASURED 2026-10-13 by calling the API rather than reading the docs: Gemini
@@ -13351,11 +13688,16 @@ function routeTurn(t){
     // A question mark is treated as a question, full stop. "How are you?" losing
     // its search tool would be harmless, but the rule that lets it through is the
     // same rule that would let a real question through, so neither is allowed.
-    if(raw.indexOf('?')!==-1) return {lane:'search',why:'question mark'};
     // "Remember that I take my tea without sugar" is an instruction to store
     // something; no web search can help. The veto above already protects
     // "remember today's gold price".
+    // CHECKED BEFORE THE QUESTION MARK, measured 2026-11-06: Savio ended an
+    // explicit "put this is memory..." instruction with a polite "?", and it
+    // was routed to search and never stored. detectMemoryRequest only returns
+    // true for a question when the storage wording is unmistakable, so
+    // "do you remember yesterday?" is still treated as the question it is.
     if(detectMemoryRequest(raw)) return {lane:'chat',why:'memory instruction'};
+    if(raw.indexOf('?')!==-1) return {lane:'search',why:'question mark'};
     // Social turns only, and only short ones. The cap is a second guard behind
     // the anchors: a long message is doing something more than saying hello.
     if(raw.length<=40&&_CHAT_SHAPES.some(re=>re.test(l))) return {lane:'chat',why:'social turn'};
@@ -14628,6 +14970,25 @@ function _bcAnalysis(root,M){
         cur={head:clean((h?h[1]:bold[1])),paras:[],bullets:[]};
         continue;
       }
+      /* THE VERDICT IS A PLAIN LINE, NOT A HEADING, AND THAT IS WHY IT
+         VANISHED. Savio's deck, 7 November 2026: the Contents listed seven
+         sections and "My recommendation" was in none of them. The splitter
+         above only opens a section on a #-heading or a wholly-bold line, and
+         the searched-answer rules tell her to write "My recommendation: ..."
+         as an ordinary sentence -- so it was swallowed into whatever section
+         happened to be open, nothing was ever marked `last`, and step 6 of
+         the deck ("the verdict, last") rendered nothing at all. The most
+         important paragraph in the document was the one that fell through.
+         Caught HERE rather than by asking her to write a heading, because a
+         rule she must remember is weaker than a line the page enforces. */
+      const rec=t.match(/^(?:\*\*)?\s*My\s+recommendations?\b\s*:?\s*(?:\*\*)?\s*:?\s*([\s\S]*)$/i);
+      if(rec){
+        push();
+        cur={head:'My recommendation',paras:[],bullets:[]};
+        const restOfLine=clean(rec[1]||'');
+        if(restOfLine) cur.paras.push(restOfLine);
+        continue;
+      }
       const bl=t.match(/^[*\-•]\s+(.+)$/);
       if(bl){ cur.bullets.push(clean(bl[1])); continue; }
       cur.paras.push(clean(t));
@@ -14727,11 +15088,51 @@ function _bcEmu(px){ return Math.round(px*914400/96); }
 // chart parts. I recommended a library once before without checking that, so
 // it is said out loud here instead of being discovered later. Every figure is
 // a real cell, so a native chart is two clicks away for anyone who wants one.
+/* A TABLE IS SPREADSHEET DATA WHETHER OR NOT THERE IS A CHART. Savio,
+   7 November 2026: an answer with a perfectly good four-column table offered
+   him Word and PowerPoint and no Excel, because the only thing that had ever
+   counted as "figures" was a chart. Her markdown tables are read back out of
+   the answer text here -- the same text the deck and the document already
+   use -- so the workbook carries the real grid and not just prose. */
+function _bcNoteTables(root){
+  const txt=(root&&root._bcNote)?String(root._bcNote):'';
+  if(!txt) return [];
+  const isRow=function(l){ return /^\s*\|.*\|\s*$/.test(l); };
+  const isSep=function(l){ return /^\s*\|[\s:|-]*\|\s*$/.test(l)&&l.indexOf('-')>=0; };
+  const cells=function(l){
+    return l.trim().replace(/^\|/,'').replace(/\|$/,'').split('|')
+            .map(function(c){ return c.trim().replace(/\*\*/g,''); });
+  };
+  const lines=txt.split('\n'), out=[];
+  let i=0;
+  while(i<lines.length){
+    if(isRow(lines[i])&&i+1<lines.length&&isSep(lines[i+1])){
+      const rows=[cells(lines[i])];
+      i+=2;
+      while(i<lines.length&&isRow(lines[i])){ rows.push(cells(lines[i])); i++; }
+      if(rows.length>1) out.push(rows);
+    }else i++;
+  }
+  return out;
+}
 async function _bcXlsx(M,root,png,w,h){
   // No figures means no figures sheet. The analysis alone still makes a
   // perfectly good workbook; an empty grid would not.
   if(!M){
     const wb0=XLSX.utils.book_new();
+    /* Her own tables first, one sheet each, so the numbers land in real cells
+       that can be sorted and summed -- which is the whole point of asking for
+       a spreadsheet rather than a document. */
+    const nt=_bcNoteTables(root);
+    nt.forEach(function(rows,ix){
+      const wsT=XLSX.utils.aoa_to_sheet(rows);
+      wsT['!cols']=(rows[0]||[]).map(function(_,c){
+        let wd=10;
+        rows.forEach(function(r){ wd=Math.max(wd,String(r[c]==null?'':r[c]).length+2); });
+        return {wch:Math.min(42,wd)};
+      });
+      XLSX.utils.book_append_sheet(wb0,wsT,nt.length>1?('Figures '+(ix+1)):'Figures');
+    });
     const a0=[['Analysis'],['']];
     _bcAnalysis(root,null).forEach(function(b){
       a0.push([b.head]);
@@ -15035,6 +15436,116 @@ const _DECK = {
 };
 function _dEmu(inches){ return Math.round(inches*914400); }
 
+/* A REAL POWERPOINT CHART, NOT A PHOTOGRAPH OF ONE. Savio, 7 November 2026:
+   "I distinctly remember we had frozen a format + index items for all PPT
+   formats made". He was right -- release 23 froze title / index / numbered
+   separators / content / closing AND native editable charts via pptxgenjs,
+   explicitly "not pictures of charts, so they stay editable". That is the
+   BACKEND builder. The in-chat download button is a second, later builder
+   that runs in the browser, and it inherited the layout but shipped a PNG:
+   the deck he unzipped had no ppt/charts part at all, only image1.png.
+   This closes that gap on the client side, so a deck costs nothing and is
+   still editable.
+   SAFETY: returns null on anything it cannot vouch for, and the caller falls
+   straight back to the picture. A deck that opens with a photo beats a deck
+   that does not open. */
+function _bcChartPartXml(M,title,esc){
+  if(!M||!M.series||!M.series.length||!M.labels||!M.n) return null;
+  if(M.kind==='stat') return null;                 // a single number is not a chart
+  const form=(M.form==='line'||M.form==='pie')?M.form:'bar';
+  const series=M.series.slice(0,4);
+  const n=Math.min(M.n,48);
+  if(n<1||n>48) return null;
+  // Every series must be numeric and the right length, or the file is junk.
+  for(let s=0;s<series.length;s++){
+    const v=series[s].values;
+    if(!v||v.length<n) return null;
+    for(let i=0;i<n;i++){
+      if(v[i]===null||v[i]===undefined) continue;  // a gap is allowed
+      if(typeof v[i]!=='number'||!isFinite(v[i])) return null;
+    }
+  }
+  const COLS=['2a78d6','eb6834','1baf7a','eda100'];
+  const AX1='111111111', AX2='222222222';
+  const col=function(i){ return COLS[i%COLS.length]; };
+  const cats=function(){
+    let p='';
+    for(let i=0;i<n;i++) p+='<c:pt idx="'+i+'"><c:v>'+esc(String(M.labels[i]==null?'':M.labels[i]))+'</c:v></c:pt>';
+    return '<c:cat><c:strRef><c:f>Sheet1!$A$2:$A$'+(n+1)+'</c:f>'+
+           '<c:strCache><c:ptCount val="'+n+'"/>'+p+'</c:strCache></c:strRef></c:cat>';
+  };
+  const vals=function(s){
+    const colLetter=String.fromCharCode(66+s);     // B, C, D, E
+    let p='';
+    for(let i=0;i<n;i++){
+      const v=series[s].values[i];
+      if(v===null||v===undefined) continue;
+      p+='<c:pt idx="'+i+'"><c:v>'+v+'</c:v></c:pt>';
+    }
+    return '<c:val><c:numRef><c:f>Sheet1!$'+colLetter+'$2:$'+colLetter+'$'+(n+1)+'</c:f>'+
+           '<c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="'+n+'"/>'+p+
+           '</c:numCache></c:numRef></c:val>';
+  };
+  const txOf=function(s){
+    const colLetter=String.fromCharCode(66+s);
+    return '<c:tx><c:strRef><c:f>Sheet1!$'+colLetter+'$1</c:f><c:strCache><c:ptCount val="1"/>'+
+           '<c:pt idx="0"><c:v>'+esc(String(series[s].label||('Series '+(s+1))))+'</c:v></c:pt>'+
+           '</c:strCache></c:strRef></c:tx>';
+  };
+  // ELEMENT ORDER IS PART OF THE SCHEMA HERE -- PowerPoint refuses a file whose
+  // children are in the wrong sequence, so each branch is written out in full
+  // rather than assembled from shared pieces.
+  let plot='';
+  if(form==='pie'){
+    let dpts='';
+    for(let i=0;i<n;i++) dpts+='<c:dPt><c:idx val="'+i+'"/><c:bubble3D val="0"/>'+
+      '<c:spPr><a:solidFill><a:srgbClr val="'+col(i)+'"/></a:solidFill></c:spPr></c:dPt>';
+    plot='<c:pieChart><c:varyColors val="1"/><c:ser><c:idx val="0"/><c:order val="0"/>'+
+      txOf(0)+dpts+cats()+vals(0)+'</c:ser><c:firstSliceAng val="0"/></c:pieChart>';
+  }else if(form==='line'){
+    let ser='';
+    for(let s=0;s<series.length;s++){
+      ser+='<c:ser><c:idx val="'+s+'"/><c:order val="'+s+'"/>'+txOf(s)+
+        '<c:spPr><a:ln w="22225"><a:solidFill><a:srgbClr val="'+col(s)+'"/></a:solidFill></a:ln></c:spPr>'+
+        '<c:marker><c:symbol val="circle"/><c:size val="5"/>'+
+        '<c:spPr><a:solidFill><a:srgbClr val="'+col(s)+'"/></a:solidFill></c:spPr></c:marker>'+
+        cats()+vals(s)+'<c:smooth val="0"/></c:ser>';
+    }
+    plot='<c:lineChart><c:grouping val="standard"/><c:varyColors val="0"/>'+ser+
+      '<c:marker val="1"/><c:axId val="'+AX1+'"/><c:axId val="'+AX2+'"/></c:lineChart>';
+  }else{
+    let ser='';
+    for(let s=0;s<series.length;s++){
+      ser+='<c:ser><c:idx val="'+s+'"/><c:order val="'+s+'"/>'+txOf(s)+
+        '<c:spPr><a:solidFill><a:srgbClr val="'+col(s)+'"/></a:solidFill></c:spPr>'+
+        '<c:invertIfNegative val="0"/>'+cats()+vals(s)+'</c:ser>';
+    }
+    plot='<c:barChart><c:barDir val="col"/><c:grouping val="clustered"/><c:varyColors val="0"/>'+
+      ser+'<c:gapWidth val="70"/><c:overlap val="-20"/>'+
+      '<c:axId val="'+AX1+'"/><c:axId val="'+AX2+'"/></c:barChart>';
+  }
+  const axes=(form==='pie')?'':(
+    '<c:catAx><c:axId val="'+AX1+'"/><c:scaling><c:orientation val="minMax"/></c:scaling>'+
+    '<c:delete val="0"/><c:axPos val="b"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/>'+
+    '<c:tickLblPos val="nextTo"/><c:crossAx val="'+AX2+'"/></c:catAx>'+
+    '<c:valAx><c:axId val="'+AX2+'"/><c:scaling><c:orientation val="minMax"/></c:scaling>'+
+    '<c:delete val="0"/><c:axPos val="l"/><c:majorGridlines/><c:majorTickMark val="none"/>'+
+    '<c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="'+AX1+'"/></c:valAx>');
+  const ttl=String(title||M.title||'').slice(0,160);
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"'+
+    ' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'+
+    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
+    '<c:chart>'+
+    (ttl?('<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1400" b="1"/></a:pPr>'+
+          '<a:r><a:rPr lang="en-IN" sz="1400" b="1"/><a:t>'+esc(ttl)+'</a:t></a:r></a:p></c:rich></c:tx>'+
+          '<c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/>')
+         :'<c:autoTitleDeleted val="1"/>')+
+    '<c:plotArea><c:layout/>'+plot+axes+'</c:plotArea>'+
+    '<c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>'+
+    '<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/>'+
+    '</c:chart></c:chartSpace>';
+}
 async function _bcPptx(M,root,png,w,h){
   const D=_DECK, zip=new JSZip();
   let uid=1;
@@ -15158,10 +15669,22 @@ async function _bcPptx(M,root,png,w,h){
      So the list is built from the slides, in slide order, and the separator
      numbering starts after the opening rather than at 01 -- which makes a
      tile number and its Contents line the same number, always. */
+  /* DECIDED BEFORE THE CONTENTS PAGE IS WRITTEN, not after. The Contents is
+     built here, and the chart slide is built further down -- so keying the
+     index off `png` while the slide keys off `chartXml` would put a line in
+     the index with no slide behind it, or a slide with no line. That exact
+     mismatch is what Savio caught in October: "your PPT started index with
+     competitive benchmarks but the flow showed In Brief?" One decision, used
+     by both. */
+  let chartXml=null;
+  if(M){
+    try{ chartXml=_bcChartPartXml(M,title,esc); }
+    catch(e){ console.warn('native chart refused, using the picture:',e); chartXml=null; }
+  }
   const sections=[];
   opening.forEach(function(b){ sections.push(b.head); });
   mid.forEach(function(b){ sections.push(b.head); });
-  if(png) sections.push('The chart');
+  if(chartXml||png) sections.push('The chart');
   if(M) sections.push('The figures');
   tail.forEach(function(b){ sections.push(b.head); });
   if(srcs.length) sections.push('Where these figures came from');
@@ -15202,8 +15725,22 @@ async function _bcPptx(M,root,png,w,h){
     slides.push({xml:contentSlide(b.head,
       bullets(_bcBullets(b,170).slice(0,7),0.9,1.6,D.W-1.8,5.0,1600))});
   });
-  // 4 — the chart
-  if(png){
+  // 4 — the chart. NATIVE AND EDITABLE when the figures allow it, a picture
+  // when they do not. Built before the slide so a failure costs only the
+  // editability, never the deck.
+  if(chartXml){
+    slides.push({xml:separator(++no,'The chart')});
+    slides.push({usesChart:true,xml:SLIDE(rect(0,0,D.W,1.1,D.NAVY)+
+      text(title,0.4,0.15,D.W-0.8,0.8,2200,true,D.CREAM)+
+      '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="'+id()+'" name="Chart"/>'+
+      '<p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>'+
+      '<p:xfrm><a:off x="'+_dEmu(0.7)+'" y="'+_dEmu(1.5)+'"/>'+
+      '<a:ext cx="'+_dEmu(D.W-1.4)+'" cy="'+_dEmu(D.H-2.2)+'"/></p:xfrm>'+
+      '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">'+
+      '<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"'+
+      ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'+
+      ' r:id="rIdChart"/></a:graphicData></a:graphic></p:graphicFrame>')});
+  }else if(png){
     slides.push({xml:separator(++no,'The chart')});
     const sc=Math.min((10.6*96)/w,(4.6*96)/h,1);
     const cx=_dEmu(w*sc/96), cy=_dEmu(h*sc/96);
@@ -15272,6 +15809,7 @@ async function _bcPptx(M,root,png,w,h){
     '<Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>'+
     '<Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>'+
     ov+
+    (chartXml?'<Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>':'')+
     '<Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>'+
     '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'+
     '</Types>');
@@ -15281,6 +15819,7 @@ async function _bcPptx(M,root,png,w,h){
     '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>'+
     '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'+
     '</Relationships>');
+  if(chartXml) zip.file('ppt/charts/chart1.xml',chartXml);
   zip.file('docProps/core.xml',_bcCore(title));
   let sldIds='', presRels=
     '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>';
@@ -15361,6 +15900,7 @@ async function _bcPptx(M,root,png,w,h){
     zip.file('ppt/slides/slide'+(i+1)+'.xml',sl.xml);
     let rels='<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>';
     if(sl.usesImage) rels+='<Relationship Id="rIdImg" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>';
+    if(sl.usesChart) rels+='<Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>';
     zip.file('ppt/slides/_rels/slide'+(i+1)+'.xml.rels',
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
       '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
@@ -15414,10 +15954,15 @@ function _bcDownloadRow(root){
   const lb=document.createElement('span');
   lb.className='bchart-dl-lb'; lb.textContent='Download';
   wrap.appendChild(lb);
-  // No chart means no picture to save and no table to put in a spreadsheet.
-  // Offering either would be a button that produces an empty file.
+  /* No chart means no picture to save. It does NOT mean no spreadsheet:
+     Savio, 7 November 2026 -- an answer carrying a four-column table offered
+     him Word and PowerPoint only. Excel is offered whenever there are figures
+     to put in it, from a chart OR from a table she wrote. Picture still needs
+     a chart, because there is nothing to photograph without one. */
+  const hasTable=(function(){ try{ return _bcNoteTables(root).length>0; }catch(e){ return false; } })();
   const formats=root._bcM?_BC_FORMATS
-    :_BC_FORMATS.filter(function(f){ return f.k==='docx'||f.k==='pptx'; });
+    :_BC_FORMATS.filter(function(f){
+        return f.k==='docx'||f.k==='pptx'||(f.k==='xlsx'&&hasTable); });
   formats.forEach(function(f){
     const b=document.createElement('button');
     b.type='button'; b.textContent=f.label;
@@ -15466,6 +16011,21 @@ function _paintChart(msgId,chart,blob,filename,note,ask,srcs){
   }
   const acts=wrap.querySelector('.msg-actions');
   if(acts) wrap.insertBefore(box,acts); else wrap.appendChild(box);
+  /* THE EVIDENCE BEFORE THE VERDICT. With the chart now on the page, lift her
+     recommendation out of the bubble and set it down underneath, which is the
+     order he ruled on and the order the Word and PowerPoint files already
+     use. Done here rather than by instructing her, because the chart's
+     position in her reply is fixed by the parser and no wording can change
+     it. Silent no-op when she wrote no recommendation, or when one has
+     already been moved. */
+  try{
+    const rec=bub.querySelector('.bmsg-rec');
+    if(rec&&!wrap.querySelector('.bmsg-rec-moved')){
+      rec.classList.add('bmsg-rec-moved');
+      if(box.nextSibling) wrap.insertBefore(rec,box.nextSibling);
+      else wrap.appendChild(rec);
+    }
+  }catch(e){ console.warn('verdict move failed:',e); }
   return true;
 }
 
@@ -16082,6 +16642,17 @@ function bellaMsg(text,audioUrl){
     .replace(/^##\s(.+)$/gm,'<h3 style="margin:12px 0 4px;font-size:14px;color:var(--navy);font-weight:700">$1</h3>')
     .replace(/^#\s(.+)$/gm,'<h2 style="margin:14px 0 6px;font-size:15px;color:var(--navy);font-weight:700">$1</h2>')
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    /* MARK THE VERDICT SO IT CAN BE MOVED BELOW THE CHART. Savio's rule,
+       28 October 2026, reconfirmed 7 November: "the My Recommendations
+       section has to come last after the graphs & tables not before that."
+       On screen it could not be: the [CHART] block has to be the LAST thing
+       in her reply for the parser to find it, so the chart is always painted
+       UNDER the whole bubble and her verdict always sat above it. Marking it
+       here -- while newlines still exist, before they become <br> -- lets
+       _paintChart lift this one paragraph below the picture. Anchored per
+       line, so "I have no recommendation" mid-sentence is untouched. */
+    .replace(/^((?:<strong>)?\s*My recommendations?\b[^\n]*)$/gmi,
+             '<div class="bmsg-rec">$1</div>')
     // ASTERISK BULLETS. The class was [-•] and Gemini writes "* ", so every
     // bulleted line arrived with a literal asterisk in front of it. Savio's
     // screenshot of the all-threads summary, 2026-11-06: "* Key Discussions:".
@@ -16089,7 +16660,23 @@ function bellaMsg(text,audioUrl){
     // <strong> by the previous line, so a line opening "**Bold**" can no
     // longer match ^\*. Anchored per-line with /m, so "2 * 3" mid-sentence is
     // untouched.
-    .replace(/^[-•*]\s(.+)$/gm,'<li>$1</li>')
+    // INDENTED bullets too. Savio's live screenshots, 7 November 2026: her nested
+    // sub-points arrived as "    * After 1 year: ~Rs2,14,000" and the anchor below
+    // allowed no leading space, so every one of them kept a literal asterisk. HTML
+    // collapses the indent, so on screen they sat flush left and looked like plain
+    // text with a stray star in front -- which is why this read as a formatting
+    // fault and not as a nesting one.
+    .replace(/^[ \t]*[-•*]\s(.+)$/gm,'<li>$1</li>')
+    // SINGLE-ASTERISK EMPHASIS. His screenshots, 2026-11-06: "*Taj Ganga Kutir*"
+    // and "*Taj Taal Kutir*" reached the screen WITH their asterisks showing,
+    // because this renderer handled **bold** and bullets but never *italic*.
+    // ORDER IS WHAT MAKES THIS SAFE, and it must stay last of the three:
+    //   **bold** became <strong> two lines up, so no ** pair can reach here;
+    //   "* item" became <li> on the line above, so a bullet cannot be eaten.
+    // BOTH ENDS MUST BE NON-SPACE, which is what keeps arithmetic intact:
+    // "2 * 3 * 4" has a space after each asterisk, so it never matches. No
+    // lookbehind — iOS Safari only gained it in 16.4 and this page targets older.
+    .replace(/\*(\S[^*\n]*?\S|\S)\*/g,'<em>$1</em>')
     .replace(/\n/g,'<br>');
   // Wrap only contiguous runs of <li>, not the whole message — the old form put
   // surrounding prose inside the <ul>.
@@ -18385,7 +18972,15 @@ function renderClockPanel(){
     row.setAttribute('data-tz',c.tz);      // so the tick can find it again
     const L=el('div','clk-row-l');
     L.appendChild(el('div','clk-row-city',c.label));
-    L.appendChild(el('div','clk-row-day',t.day+(t.rel?' · '+t.rel:'')));
+    // THE ZONE'S NAME RIGHT NOW, AND THE SUN IF IT IS ON SUMMER TIME.
+    // His screenshots, 2026-11-06: this list showed a bare time and nothing
+    // else, so Sydney and Melbourne sat on daylight saving with no sign of it.
+    // The picker had the mark and this panel did not -- and this is the panel
+    // he actually opens.
+    const _ab=_tzAbbr(c.tz,(TIMEZONES.find(x=>x.tz===c.tz)||{}).abbr);
+    const dayLine=el('div','clk-row-day',t.day+(t.rel?' · '+t.rel:'')+(_ab?' · '+_ab:''));
+    const _m=_dstMarkEl(c.tz); if(_m) dayLine.appendChild(_m);
+    L.appendChild(dayLine);
     const R=el('div','clk-row-t',t.time);
     const x=document.createElement('button');
     x.type='button'; x.className='clk-x'; x.textContent='✕';
@@ -18420,13 +19015,14 @@ function renderClockPanel(){
       if(seen[key]) continue;
       // Match on anything the person might actually type -- the city, the
       // state, the country or the abbreviation.
-      const hay=(t.city+' '+(t.state||'')+' '+t.country+' '+(t.abbr||'')).toLowerCase();
+      const hay=(t.city+' '+(t.state||'')+' '+t.country+' '+_tzSearchAbbr(t.tz,t.abbr)).toLowerCase();
       if(needle && hay.indexOf(needle)===-1) continue;
       seen[key]=1; n++;
       const b=document.createElement('button');
       b.type='button'; b.className='clk-res-row';
       b.appendChild(el('span','clk-res-c',label));
-      b.appendChild(el('em',null,t.abbr||''));
+      b.appendChild(el('em',null,_tzAbbr(t.tz,t.abbr)));
+      const _dm=_dstMarkEl(t.tz); if(_dm) b.appendChild(_dm);
       b.addEventListener('mousedown',function(ev){ ev.preventDefault(); });
       b.addEventListener('click',function(){ clockAdd(t.tz,label); });
       res.appendChild(b);
@@ -21300,14 +21896,14 @@ function filterTZList(side){
     t.city.toLowerCase().includes(q)||
     t.state.toLowerCase().includes(q)||
     t.country.toLowerCase().includes(q)||
-    t.abbr.toLowerCase().includes(q)
+    _tzSearchAbbr(t.tz,t.abbr).toLowerCase().includes(q)
   );
   renderTZList(list,filtered,side);list.classList.add('on');
 }
 
 function renderTZList(list,items,side){
   const current=side==='from'?_tzFrom:_tzTo;
-  list.innerHTML=items.map(t=>`<div class="conv-select-item ${t.tz===current?'selected':''}" onclick="selectTZ('${side}','${t.tz}')">${t.state}, ${t.country} — ${t.abbr}</div>`).join('');
+  list.innerHTML=items.map(t=>`<div class="conv-select-item ${t.tz===current?'selected':''}" onclick="selectTZ('${side}','${t.tz}')">${t.state}, ${t.country} — ${_tzAbbr(t.tz,t.abbr)}${_dstMark(t.tz)}</div>`).join('');
 }
 
 function selectTZ(side,tz){
@@ -21340,7 +21936,8 @@ function getUTCOffset(tz){
 // Live abbreviation so New York reads EDT in summer, EST in winter. Intl gives
 // "GMT+5:30" for zones with no common abbreviation — fall back to our table there.
 function tzAbbrAt(instant,tz){
-  const stat=(TIMEZONES.find(x=>x.tz===tz)||{}).abbr||'';
+  const _tzrow=TIMEZONES.find(x=>x.tz===tz)||{};
+  const stat=_tzAbbr(tz,_tzrow.abbr);
   /* TWO LOCALES, ON PURPOSE. en-US names American zones properly (EDT, EST,
      CST) but returns "GMT+1" for London, which fell back to the STATIC "GMT"
      and labelled a July afternoon in London as GMT when it is BST. The time
@@ -21374,7 +21971,7 @@ function _instantFromWallTime(h,m,tz,ymd){
 function tzLabel(tz){
   const t=TIMEZONES.find(x=>x.tz===tz);
   if(!t) return tz;
-  return `${t.state}, ${t.country} — ${t.abbr}`;
+  return `${t.state}, ${t.country} — ${_tzAbbr(t.tz,t.abbr)}`;
 }
 
 function filterCurrencyList(side){
