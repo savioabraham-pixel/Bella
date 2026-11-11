@@ -1447,7 +1447,7 @@ body.dark #theme-now{color:rgba(245,230,200,.72)!important}
 .sbtn{width:40px;height:40px;border-radius:12px;background:#0B2545;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s}
 .sbtn:hover{background:var(--navy2)}
 .sbtn:active{transform:scale(.92)}
-.inp-footer{display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 4px;gap:8px;flex-wrap:wrap}
+.inp-footer{display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 4px;gap:8px}
 .inp-box{background:#FAF8F4;border:1.5px solid var(--border);border-radius:16px;overflow:hidden;transition:border-color .2s;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .inp-box:focus-within{border-color:rgba(212,175,55,.5);box-shadow:0 0 0 3px rgba(212,175,55,.08)}
 .disc{font-size:9px;color:#0B2545;font-weight:500}
@@ -2795,20 +2795,21 @@ try{
                left looking for an element that cannot exist. -->
           <!-- Disclosure -->
           <div class="disc" style="flex:1;text-align:center">* Bella may make mistakes — Always Confirm important actions. Conversations stored securely to your account.</div>
-          <!-- Voice toggle, with the build marker beneath it.
-               MOVED HERE 2026-11-11, his decision: appended to the end of
-               "...stored securely to your account." the version string read as
-               part of that sentence and looked like a mistake. It belongs under
-               the Text/Voice switch on the right, out of the prose. -->
-          <div class="inp-right">
-            <div class="voice-toggle" onclick="toggleVoiceMode()">
-              <span style="color:#0B2545;font-weight:500">Text</span>
-              <div class="toggle-sw" id="voice-tog"></div>
-              <span style="color:#0B2545;font-weight:500">Voice</span>
-            </div>
-            <span id="build-marker" title="Which version of Bella you are looking at"></span>
+          <!-- Voice toggle -->
+          <div class="voice-toggle" onclick="toggleVoiceMode()">
+            <span style="color:#0B2545;font-weight:500">Text</span>
+            <div class="toggle-sw" id="voice-tog"></div>
+            <span style="color:#0B2545;font-weight:500">Voice</span>
           </div>
         </div>
+        <!-- THE BUILD MARKER GETS ITS OWN LINE, BELOW the disclaimer row.
+             Savio, 11 November 2026, twice. First it sat at the end of
+             "...stored securely to your account." and read as part of that
+             sentence. Then I tucked it under the Text/Voice switch and he
+             said: "it is looking cluttered there... it has to go below the
+             line it is already placed at, not below the toggle."
+             So: its own row, nothing beside it, right-aligned. -->
+        <div class="inp-build"><span id="build-marker" title="Which version of Bella you are looking at"></span></div>
       </div>
     </div>
 
@@ -3294,7 +3295,7 @@ async function retrySync(){
 // step is a new moving part on a site that is one static file. audit-all.sh
 // prints this value beside the live and local hashes, so a stale marker is
 // visible on every run rather than discovered by him.
-const BELLA_BUILD = '11 Nov 16:31 · reminders';
+const BELLA_BUILD = '11 Nov 19:20 · push fix';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -14125,6 +14126,7 @@ async function _pushEnable(){
         platform:(navigator.userAgent||'').slice(0,120)})});
     if(!r.ok) return {ok:false,why:'Bella could not store it ('+r.status+')'};
     try{ localStorage.setItem('b_push_on','1'); }catch(e){}
+    try{ await _pushForeground(); }catch(e){}
     return {ok:true};
   }catch(e){
     console.warn('push enable:',e);
@@ -14150,6 +14152,41 @@ async function _pushBackendReady(){
     _pushReadyCache=JSON.stringify((d&&d.checks)||{}).indexOf('"webPush"')!==-1;
   }catch(e){ _pushReadyCache=false; }
   return _pushReadyCache;
+}
+
+/* A PUSH THAT ARRIVES WHILE BELLA IS OPEN GOES NOWHERE WITHOUT THIS.
+   MEASURED LIVE 2026-11-11: the reminder row read `sent` — FCM accepted it —
+   and nothing appeared on his screen. He was watching for it, so Bella was
+   OPEN and VISIBLE, and that is the whole explanation: Firebase delivers to
+   `onBackgroundMessage` ONLY when the page is hidden or closed. With the tab
+   in front, it delivers to `onMessage` in the PAGE instead — and I had only
+   ever written the background half. The message arrived and was discarded.
+   The notification is raised through the service worker's registration rather
+   than `new Notification(...)`, so a foreground alert looks identical to a
+   background one and clicking it behaves the same way.
+   Registered on load for anyone already subscribed, and again right after
+   they switch it on. Idempotent -- `_fgBound` makes a second call harmless. */
+let _fgBound=false;
+async function _pushForeground(){
+  try{
+    if(_fgBound) return true;
+    if(!_pushConfigured()) return false;
+    if(typeof Notification==='undefined'||Notification.permission!=='granted') return false;
+    if(!('serviceWorker' in navigator)) return false;
+    if(!await _loadMessagingSDK()) return false;
+    const reg=await navigator.serviceWorker.getRegistration('./');
+    if(!reg) return false;
+    firebase.messaging().onMessage(function(payload){
+      try{
+        const d=(payload&&payload.data)||{};
+        const body=String(d.body||'You asked me to remind you about something.').slice(0,300);
+        reg.showNotification('Bella',{body:body,tag:String(d.tag||'bella-reminder'),
+          renotify:false,data:{url:d.url||'./'}});
+      }catch(e){ console.warn('foreground push:',e); }
+    });
+    _fgBound=true;
+    return true;
+  }catch(e){ console.warn('_pushForeground:',e); return false; }
 }
 
 /* THE ONE MOMENT IT IS ASKED. Called after a reminder has actually been
@@ -18798,6 +18835,15 @@ document.addEventListener('DOMContentLoaded', function(){ try{ paintMicLang(); }
 // under the composer, so it is on screen on every device without a panel to
 // open -- the point is that he can read it to me without hunting for it.
 document.addEventListener('DOMContentLoaded', function(){ try{ paintBuildMarker(); }catch(e){} });
+/* Anyone who already said yes needs the foreground listener bound again on
+   every load, or a reminder arriving while they are looking at Bella is lost.
+   Costs nothing for everyone else: it returns before loading anything unless
+   a key is configured AND permission is already granted. */
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    if(localStorage.getItem('b_push_on')==='1') Promise.resolve(_pushForeground()).catch(function(){});
+  }catch(e){}
+});
 function micLang(){
   try{ const v = localStorage.getItem('b_voice_lang'); return SPEECH_LANGS[v] ? v : 'en'; }
   catch(e){ return 'en'; }
@@ -28574,11 +28620,10 @@ document.addEventListener("DOMContentLoaded", function(){
 /* THE BUILD MARKER. Muted on purpose -- it must be readable when looked for
    and invisible when not. Scoped by ID: the dark theme's blanket
    body.dark *{color:cream !important} would otherwise repaint it. */
-/* THE RIGHT-HAND COLUMN: the Text/Voice switch, and the build marker under it.
-   `.inp-footer` wraps now, so on a narrow phone this column drops onto its own
-   line instead of crushing the disclaimer -- measured at 320px, where a nowrap
-   marker beside the switch does not fit. */
-.inp-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+/* ITS OWN ROW, under the disclaimer line and clear of the Text/Voice switch.
+   Right-aligned, because that is where he asked for it; `width:100%` rather
+   than a flex child, so nothing can squeeze it on a narrow phone. */
+.inp-build{width:100%;text-align:right;padding:0 4px;margin:3px 0 0;box-sizing:border-box}
 /* COLOUR IS var(--navy) AND THERE IS NO body.dark OVERRIDE. That is not an
    oversight -- it is the fix.
    THE DARK THEME INVERTS ITS OWN TOKENS: `body.dark` sets --navy:#D4AF37 and
@@ -28592,7 +28637,7 @@ document.addEventListener("DOMContentLoaded", function(){
    var(--navy) reads navy in light and gold in dark, and in dark the blanket
    rule lands it on cream alongside its neighbours. Measured both ways. */
 #build-marker{
-  display:block; text-align:right; white-space:nowrap; opacity:.72;
+  display:inline-block; white-space:nowrap; opacity:.72;
   font-size:9px; font-weight:500; color:var(--navy);
   font-variant-numeric:tabular-nums;   /* so the time does not jiggle */
 }
