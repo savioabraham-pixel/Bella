@@ -1447,7 +1447,7 @@ body.dark #theme-now{color:rgba(245,230,200,.72)!important}
 .sbtn{width:40px;height:40px;border-radius:12px;background:#0B2545;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s}
 .sbtn:hover{background:var(--navy2)}
 .sbtn:active{transform:scale(.92)}
-.inp-footer{display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 4px;gap:8px}
+.inp-footer{display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 4px;gap:8px;flex-wrap:wrap}
 .inp-box{background:#FAF8F4;border:1.5px solid var(--border);border-radius:16px;overflow:hidden;transition:border-color .2s;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .inp-box:focus-within{border-color:rgba(212,175,55,.5);box-shadow:0 0 0 3px rgba(212,175,55,.08)}
 .disc{font-size:9px;color:#0B2545;font-weight:500}
@@ -2794,12 +2794,19 @@ try{
                and the one CSS rule for the knob went with it, so nothing is
                left looking for an element that cannot exist. -->
           <!-- Disclosure -->
-          <div class="disc" style="flex:1;text-align:center">* Bella may make mistakes — Always Confirm important actions. Conversations stored securely to your account. <span id="build-marker" title="Which version of Bella you are looking at"></span></div>
-          <!-- Voice toggle -->
-          <div class="voice-toggle" onclick="toggleVoiceMode()">
-            <span style="color:#0B2545;font-weight:500">Text</span>
-            <div class="toggle-sw" id="voice-tog"></div>
-            <span style="color:#0B2545;font-weight:500">Voice</span>
+          <div class="disc" style="flex:1;text-align:center">* Bella may make mistakes — Always Confirm important actions. Conversations stored securely to your account.</div>
+          <!-- Voice toggle, with the build marker beneath it.
+               MOVED HERE 2026-11-11, his decision: appended to the end of
+               "...stored securely to your account." the version string read as
+               part of that sentence and looked like a mistake. It belongs under
+               the Text/Voice switch on the right, out of the prose. -->
+          <div class="inp-right">
+            <div class="voice-toggle" onclick="toggleVoiceMode()">
+              <span style="color:#0B2545;font-weight:500">Text</span>
+              <div class="toggle-sw" id="voice-tog"></div>
+              <span style="color:#0B2545;font-weight:500">Voice</span>
+            </div>
+            <span id="build-marker" title="Which version of Bella you are looking at"></span>
           </div>
         </div>
       </div>
@@ -3287,7 +3294,7 @@ async function retrySync(){
 // step is a new moving part on a site that is one static file. audit-all.sh
 // prints this value beside the live and local hashes, so a stale marker is
 // visible on every run rather than discovered by him.
-const BELLA_BUILD = '11 Nov 10:10 · clock zones';
+const BELLA_BUILD = '11 Nov 16:31 · reminders';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -14242,6 +14249,87 @@ const _TOOL_IDEMPOTENT_MS=300000; // the same action twice inside 5 minutes is r
    If the model could name whose data to touch, a sentence inside an attached
    document could make Bella write to another person's rows. Nothing may ever
    cross between users. Every build() below reads currentProfileKey directly. */
+/* THE TIME IS RESOLVED HERE, IN HIS BROWSER, AND NEVER SENT AS A PHRASE.
+   MEASURED LIVE 2026-11-11: the page sent reminderTime:"at 16:25 hrs" and the
+   row was written with that sentence sitting in the time column. The sweep does
+   Date.parse() on it, gets NaN, and SKIPS the row — so the reminder never fires
+   and never expires either. It sits `pending` for ever, silently.
+   WHY IT WAS SILENT: /smart-reminder runs its own phrase-to-time converter ONLY
+   when reminderTime is empty. Filling that field in switched off the very thing
+   that would have saved it.
+   AND THE BACKEND COULD NOT HAVE DONE IT CORRECTLY ANYWAY: its converter prompts
+   the model with new Date().toISOString() — UTC — so "16:25" would have become
+   16:25Z, which is 21:55 in Kolkata. ONLY THE BROWSER KNOWS WHICH ZONE HE IS IN.
+   Returns null rather than guessing: a reminder at the wrong hour is worse than
+   Bella saying she did not follow. */
+function _whenISOOut(d){
+  var pretty=d.toLocaleString(undefined,{weekday:'short',day:'2-digit',month:'short',
+    hour:'2-digit',minute:'2-digit',hour12:false});
+  return {iso:d.toISOString(),pretty:pretty};
+}
+function _whenToISO(phrase,now){
+  try{
+    var raw=String(phrase==null?'':phrase).toLowerCase().trim();
+    if(!raw) return null;
+    var base=(now instanceof Date)?new Date(now.getTime()):new Date();
+    var d=new Date(base.getTime()); d.setSeconds(0,0);
+
+    /* "IN 2 HOURS" IS MATCHED BEFORE THE STRIP, AND THAT ORDER IS THE WHOLE
+       POINT. The strip below removes "hrs/hours" so that "16:25 hrs" parses —
+       run first, it turned "in 2 hours" into "in 2" and the relative form
+       returned null. Caught by the parser's own test, not by reading it. */
+    var m=raw.match(/\bin (\d{1,3}) ?(min|mins|minute|minutes|hrs|hr|hours|hour|day|days)\b/);
+    if(m){
+      var n=parseInt(m[1],10), u=m[2];
+      if(/^d/.test(u)) d.setDate(d.getDate()+n);
+      else if(/^h/.test(u)) d.setHours(d.getHours()+n);
+      else d.setMinutes(d.getMinutes()+n);
+      return _whenISOOut(d);
+    }
+
+    var s=raw.replace(/\b(at|by|around|about|on|this|hrs|hr|hours|hour|o'clock|oclock)\b/g,' ')
+             .replace(/\s+/g,' ').trim();
+    if(!s) return null;
+
+    var dayShift=0, daySet=false;
+    if(/\btomorrow\b/.test(s)){ dayShift=1; daySet=true; }
+    else if(/\b(today|tonight)\b/.test(s)){ dayShift=0; daySet=true; }
+    else{
+      var names=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+      for(var i=0;i<7;i++){
+        if(new RegExp('\\b'+names[i]+'\\b').test(s)){
+          var diff=(i-base.getDay()+7)%7; if(diff===0) diff=7;  /* "monday" = the NEXT one */
+          dayShift=diff; daySet=true; break;
+        }
+      }
+    }
+
+    var hh=null, mm=0;
+    m=s.match(/\b(\d{1,2}):(\d{2})\s*(am|pm)?\b/);
+    if(m){
+      hh=parseInt(m[1],10); mm=parseInt(m[2],10);
+      if(m[3]==='pm'&&hh<12) hh+=12;
+      if(m[3]==='am'&&hh===12) hh=0;
+    }else{
+      m=s.match(/\b(\d{1,2})\s*(am|pm)\b/);
+      if(m){
+        hh=parseInt(m[1],10); mm=0;
+        if(m[2]==='pm'&&hh<12) hh+=12;
+        if(m[2]==='am'&&hh===12) hh=0;
+      }else{
+        m=s.match(/\b(\d{3,4})\b/);           /* "1625", "0930" */
+        if(m){ var v=('0000'+m[1]).slice(-4); hh=parseInt(v.slice(0,2),10); mm=parseInt(v.slice(2),10); }
+      }
+    }
+    if(hh===null||hh>23||mm>59) return null;
+    d.setDate(d.getDate()+dayShift);
+    d.setHours(hh,mm,0,0);
+    /* A time already gone, with no day named, means the next one round. */
+    if(!daySet && d.getTime()<=base.getTime()+60000) d.setDate(d.getDate()+1);
+    return _whenISOOut(d);
+  }catch(e){ return null; }
+}
+
 function _toolProfileKey(){
   const k=(typeof _testMode!=='undefined'&&_testMode&&typeof _testProfileKey!=='undefined'&&_testProfileKey)
     ? _testProfileKey : currentProfileKey;
@@ -14268,9 +14356,25 @@ const _TOOL_INTENTS=[
       },required:['what']}
     },
     fields:[{k:'what',label:'What'},{k:'when',label:'When'}],
-    lines:function(a){ return [['What',a.what||''],['When',a.when||'she will work it out from your words'],['Repeats',a.repeat||'once']]; },
-    build:function(a){ return {profileKey:_toolProfileKey(),reminderText:String(a.what||''),
-      reminderTime:String(a.when||'')||undefined,repeatType:String(a.repeat||'once')}; }
+    /* THE CARD SHOWS THE RESOLVED TIME, NOT THE PHRASE. He approved
+       "at 16:25 hrs" and had no way of seeing that it had not been understood.
+       Now the card reads "Wed, 11 Nov, 16:25" — so a misread time is visible
+       BEFORE he approves it, and Edit is there to correct it. */
+    lines:function(a){
+      var r=_whenToISO(a&&a.when);
+      var when=r?r.pretty:((a&&a.when)
+        ?('could not read "'+a.when+'" — press Edit and give a time')
+        :'no time given — press Edit and add one');
+      return [['What',(a&&a.what)||''],['When',when],['Repeats',(a&&a.repeat)||'once']];
+    },
+    build:function(a){
+      var r=_whenToISO(a&&a.when);
+      /* Refuse rather than write a row that can never fire. _executeTool turns
+         this into an ok:false the model has to tell him about. */
+      if(!r) throw new Error('I could not work out when you meant by "'+((a&&a.when)||'')+'". Ask them for a time like "17:30" or "tomorrow at 9am".');
+      return {profileKey:_toolProfileKey(),reminderText:String((a&&a.what)||''),
+        reminderTime:r.iso,repeatType:String((a&&a.repeat)||'once')};
+    }
   },
   {
     name:'add_to_shopping_list', write:true, endpoint:'/shopping-list',
@@ -28470,8 +28574,26 @@ document.addEventListener("DOMContentLoaded", function(){
 /* THE BUILD MARKER. Muted on purpose -- it must be readable when looked for
    and invisible when not. Scoped by ID: the dark theme's blanket
    body.dark *{color:cream !important} would otherwise repaint it. */
+/* THE RIGHT-HAND COLUMN: the Text/Voice switch, and the build marker under it.
+   `.inp-footer` wraps now, so on a narrow phone this column drops onto its own
+   line instead of crushing the disclaimer -- measured at 320px, where a nowrap
+   marker beside the switch does not fit. */
+.inp-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+/* COLOUR IS var(--navy) AND THERE IS NO body.dark OVERRIDE. That is not an
+   oversight -- it is the fix.
+   THE DARK THEME INVERTS ITS OWN TOKENS: `body.dark` sets --navy:#D4AF37 and
+   --gold:#0B2545, so inside dark, var(--gold) IS NAVY. My first attempt here
+   was `body.dark #build-marker{color:var(--gold)!important}`, reasoning that
+   the marker had lost .disc's gold. Measured: it painted rgb(11,37,69) on a
+   rgb(11,37,69) footer -- 1.00:1, perfectly invisible. The ID selector plus
+   !important beat the blanket `body.dark *{color:cream!important}` that
+   correctly paints the disclaimer and the Text/Voice labels, so the override
+   was the ONLY thing breaking it.
+   var(--navy) reads navy in light and gold in dark, and in dark the blanket
+   rule lands it on cream alongside its neighbours. Measured both ways. */
 #build-marker{
-  display:inline; white-space:nowrap; opacity:.72;
+  display:block; text-align:right; white-space:nowrap; opacity:.72;
+  font-size:9px; font-weight:500; color:var(--navy);
   font-variant-numeric:tabular-nums;   /* so the time does not jiggle */
 }
 /* GIPHY ATTRIBUTION — required by their terms section 5A. It must be legible,
