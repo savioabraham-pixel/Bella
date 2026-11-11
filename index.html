@@ -3287,7 +3287,7 @@ async function retrySync(){
 // step is a new moving part on a site that is one static file. audit-all.sh
 // prints this value beside the live and local hashes, so a stale marker is
 // visible on every run rather than discovered by him.
-const BELLA_BUILD = '11 Nov 06:31 · push key';
+const BELLA_BUILD = '11 Nov 10:10 · clock zones';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -19860,6 +19860,25 @@ function clockRemove(tz,label){
 /* Only the digits. No element is created, moved or removed here, so anything
    the person is interacting with -- an open dropdown, a half-made choice --
    survives the tick. */
+/* ONE WRITER FOR THE DAY LINE, AND THAT IS THE WHOLE FIX.
+   Savio, 2026-11-11: "The AEDT flashed and goes it doesnt stay in some places."
+   renderClockPanel built the line WITH the zone label and the daylight-saving
+   sun; _clkTick then rewrote it every 1000ms as
+       rd.textContent = n.day + (n.rel ? ' · ' + n.rel : '')
+   which dropped the " · AEDT" AND destroyed the sun, because assigning
+   textContent removes every child element. So the label was correct for under
+   one second and then gone — which is exactly what he saw, and why it looked
+   like a half-finished feature rather than a bug.
+   TWO WRITERS OF THE SAME LINE, ONE OF THEM UPDATED. They are one function now
+   so they cannot drift apart again. The "where you are" line never carried the
+   label at all, in either path; it does now, through this same function. */
+function _clkPaintDay(node,tz,dayText){
+  if(!node) return;
+  let ab='';
+  try{ ab=_tzAbbr(tz,(TIMEZONES.find(function(x){return x.tz===tz;})||{}).abbr)||''; }catch(e){}
+  node.textContent=String(dayText||'')+(ab?' · '+ab:'');
+  try{ const m=_dstMarkEl(tz); if(m) node.appendChild(m); }catch(e){}
+}
 function _clkTick(){
   const panel=document.getElementById('clk-panel');
   if(!panel||panel.style.display!=='block') return;
@@ -19869,7 +19888,7 @@ function _clkTick(){
     const me=_clkNowIn(hereTz);
     const t=panel.querySelector('.clk-here-t'); if(t) t.textContent=me.time;
     const d=panel.querySelector('.clk-here-d');
-    if(d) d.textContent=me.day+' · '+_clkCity(hereTz);
+    _clkPaintDay(d,hereTz,me.day+' · '+_clkCity(hereTz));
     const rows=panel.querySelectorAll('.clk-row');
     for(let i=0;i<rows.length;i++){
       const tz=rows[i].getAttribute('data-tz');
@@ -19877,7 +19896,7 @@ function _clkTick(){
       const n=_clkNowIn(tz);
       const rt=rows[i].querySelector('.clk-row-t'); if(rt) rt.textContent=n.time;
       const rd=rows[i].querySelector('.clk-row-day');
-      if(rd) rd.textContent=n.day+(n.rel?' · '+n.rel:'');
+      _clkPaintDay(rd,tz,n.day+(n.rel?' · '+n.rel:''));
     }
   }catch(e){ console.warn('_clkTick:',e); }
 }
@@ -19919,7 +19938,9 @@ function renderClockPanel(){
   const hw=el('div','clk-here');
   hw.appendChild(el('div','clk-here-lb','Where you are'));
   hw.appendChild(el('div','clk-here-t',me.time));
-  hw.appendChild(el('div','clk-here-d',me.day+' · '+_clkCity(hereTz)));
+  const _hd=el('div','clk-here-d','');
+  _clkPaintDay(_hd,hereTz,me.day+' · '+_clkCity(hereTz));
+  hw.appendChild(_hd);
   b.appendChild(hw);
 
   // ── elsewhere ──
@@ -19938,9 +19959,8 @@ function renderClockPanel(){
     // else, so Sydney and Melbourne sat on daylight saving with no sign of it.
     // The picker had the mark and this panel did not -- and this is the panel
     // he actually opens.
-    const _ab=_tzAbbr(c.tz,(TIMEZONES.find(x=>x.tz===c.tz)||{}).abbr);
-    const dayLine=el('div','clk-row-day',t.day+(t.rel?' · '+t.rel:'')+(_ab?' · '+_ab:''));
-    const _m=_dstMarkEl(c.tz); if(_m) dayLine.appendChild(_m);
+    const dayLine=el('div','clk-row-day','');
+    _clkPaintDay(dayLine,c.tz,t.day+(t.rel?' · '+t.rel:''));
     L.appendChild(dayLine);
     const R=el('div','clk-row-t',t.time);
     const x=document.createElement('button');
