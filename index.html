@@ -3295,7 +3295,7 @@ async function retrySync(){
 // step is a new moving part on a site that is one static file. audit-all.sh
 // prints this value beside the live and local hashes, so a stale marker is
 // visible on every run rather than discovered by him.
-const BELLA_BUILD = '11 Nov 19:20 · push fix';
+const BELLA_BUILD = '12 Nov 05:20 · zone names';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -13096,6 +13096,7 @@ function _dstOffsetMin(tz,d){
   return Math.round((Date.UTC(+p.year,+p.month-1,+p.day,h,+p.minute)-d.getTime())/60000);
 }
 function _tzIsDst(tz){
+  tz=(typeof _TZ_ALIAS!=='undefined'&&_TZ_ALIAS[tz])||tz;   /* same old-name trap */
   try{
     /* THE CURATED TABLE USED TO BE A GATE, AND THAT IS WHY HIS CLOCK WAS BARE.
        Savio, 7 November 2026: Sydney and Melbourne showed 17:48 with no AEDT
@@ -13115,9 +13116,22 @@ function _tzIsDst(tz){
 // The label a person should see RIGHT NOW. Non-DST zones keep their curated
 // word untouched, so IST stays IST and never becomes "GMT+5:30".
 function _tzAbbr(tz,stored){
-  const pair=_TZ_DST[tz];
-  if(pair) return _tzIsDst(tz)?pair[1]:pair[0];
+  /* THE BROWSER REPORTS THE OLD NAME. Chrome on his Mac resolves the local zone
+     as "Asia/Calcutta", the deprecated alias; every table here is filed under
+     "Asia/Kolkata". _clkCity() already aliases, which is why the panel named his
+     city correctly — but the ABBREVIATION never did, so his own line read
+     "GMT+5:30" (the raw offset, straight from Intl) while the Mumbai row, in the
+     SAME zone, read "IST". Aliased here so every caller gets it right at once.
+     The TIMEZONES lookup is repeated because callers compute `stored` from the
+     UN-aliased name and come up empty — fixing it only in the callers would
+     leave the next one to make the same mistake. */
+  const z=_TZ_ALIAS[tz]||tz;
+  const pair=_TZ_DST[z];
+  if(pair) return _tzIsDst(z)?pair[1]:pair[0];
   if(stored) return stored;
+  const _row=TIMEZONES.find(function(x){ return x.tz===z; });
+  if(_row&&_row.abbr) return _row.abbr;
+  tz=z;
   /* NEITHER CURATED NOR STORED -- ask the browser. A city he typed himself is
      in no table of ours, and an empty label is worse than any label at all.
      Intl gives a word where one exists (CST, WET) and an offset where none
