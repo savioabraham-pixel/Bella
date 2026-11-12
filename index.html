@@ -2802,15 +2802,20 @@ try{
             <span style="color:#0B2545;font-weight:500">Voice</span>
           </div>
         </div>
-        <!-- THE BUILD MARKER GETS ITS OWN LINE, BELOW the disclaimer row.
-             Savio, 11 November 2026, twice. First it sat at the end of
-             "...stored securely to your account." and read as part of that
-             sentence. Then I tucked it under the Text/Voice switch and he
-             said: "it is looking cluttered there... it has to go below the
-             line it is already placed at, not below the toggle."
-             So: its own row, nothing beside it, right-aligned. -->
-        <div class="inp-build"><span id="build-marker" title="Which version of Bella you are looking at"></span></div>
       </div>
+      <!-- THE BUILD MARKER SITS OUTSIDE THE BOX, UNDER IT, ON THE RIGHT.
+           Savio, 12 November 2026: "go outside the box, below the text box on
+           the RHS... the toggle switch & the Bella line should return to its
+           normal positions."
+           FOURTH PLACEMENT, and the first one he chose rather than I guessed.
+           It was: at the end of the disclaimer sentence (read as part of it) ->
+           under the Text/Voice switch (cluttered) -> its own row inside the box,
+           right (still under the switch) -> its own row inside the box, left
+           (stranded in a corner). Outside the box it belongs to the page rather
+           than to the composer, which is what it always was: a version stamp,
+           not part of the message you are writing.
+           The disclaimer and the switch are back exactly as they were. -->
+      <div class="inp-build"><span id="build-marker" title="Which version of Bella you are looking at"></span></div>
     </div>
 
 <!-- SEARCH OVERLAY -->
@@ -28642,13 +28647,10 @@ document.addEventListener("DOMContentLoaded", function(){
 /* ITS OWN ROW, under the disclaimer line and clear of the Text/Voice switch.
    Right-aligned, because that is where he asked for it; `width:100%` rather
    than a flex child, so nothing can squeeze it on a narrow phone. */
-/* LEFT, and that is the third placement — the first two were wrong and he said
-   so each time. Right-aligned put it on its own line but still directly below
-   the Text/Voice switch, which was the clutter he meant. Centred looked right
-   on a desktop and MEASURED as still overlapping the switch's column at 320,
-   360 and 390px, because on a narrow row the switch takes a third of the width.
-   Left is the only placement clear of the switch at EVERY width. */
-.inp-build{width:100%;text-align:left;padding:0 4px;margin:3px 0 0;box-sizing:border-box}
+/* OUTSIDE the composer box, under it, right-aligned — his choice, 12 Nov.
+   A sibling of .inp-box inside .inp-area, so it is page furniture rather than
+   part of the thing you type into. */
+.inp-build{width:100%;text-align:right;padding:0 2px;margin:6px 0 0;box-sizing:border-box}
 /* COLOUR IS var(--navy) AND THERE IS NO body.dark OVERRIDE. That is not an
    oversight -- it is the fix.
    THE DARK THEME INVERTS ITS OWN TOKENS: `body.dark` sets --navy:#D4AF37 and
