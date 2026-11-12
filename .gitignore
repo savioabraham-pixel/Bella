@@ -74,3 +74,9 @@ next-env.d.ts
 # on his screen (bank alerts, real conversations) and the repo is public.
 Screenshots for Changes/
 Screenshot*.png
+
+# Local notification diagnostic, 2026-11-12. Served at
+# http://localhost:8000/_notiftest.html so Savio can test whether his MAC shows
+# a notification at all, with Bella, Google and the network taken out of the
+# picture. Never belongs on the live site.
+_notiftest.html
