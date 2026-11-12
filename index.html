@@ -3295,7 +3295,12 @@ async function retrySync(){
 // step is a new moving part on a site that is one static file. audit-all.sh
 // prints this value beside the live and local hashes, so a stale marker is
 // visible on every run rather than discovered by him.
-const BELLA_BUILD = '12 Nov 05:20 · zone names';
+/* JUST THE DATE AND TIME. It used to carry a nickname for the build — "· zone
+   names", "· push fix" — and Savio read that as a label that ought to be
+   showing him a value: "shouldn't it show the zone name rather than 'zone
+   names'?" He is right. Its only job is to tell him WHICH version he is
+   looking at so he can read it back to me, and a timestamp does that alone. */
+const BELLA_BUILD = '12 Nov 05:46';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -28637,7 +28642,13 @@ document.addEventListener("DOMContentLoaded", function(){
 /* ITS OWN ROW, under the disclaimer line and clear of the Text/Voice switch.
    Right-aligned, because that is where he asked for it; `width:100%` rather
    than a flex child, so nothing can squeeze it on a narrow phone. */
-.inp-build{width:100%;text-align:right;padding:0 4px;margin:3px 0 0;box-sizing:border-box}
+/* LEFT, and that is the third placement — the first two were wrong and he said
+   so each time. Right-aligned put it on its own line but still directly below
+   the Text/Voice switch, which was the clutter he meant. Centred looked right
+   on a desktop and MEASURED as still overlapping the switch's column at 320,
+   360 and 390px, because on a narrow row the switch takes a third of the width.
+   Left is the only placement clear of the switch at EVERY width. */
+.inp-build{width:100%;text-align:left;padding:0 4px;margin:3px 0 0;box-sizing:border-box}
 /* COLOUR IS var(--navy) AND THERE IS NO body.dark OVERRIDE. That is not an
    oversight -- it is the fix.
    THE DARK THEME INVERTS ITS OWN TOKENS: `body.dark` sets --navy:#D4AF37 and
