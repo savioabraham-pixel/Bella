@@ -3305,7 +3305,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '12 Nov 07:17';
+const BELLA_BUILD = '12 Nov 07:51';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -28663,19 +28663,21 @@ document.addEventListener("DOMContentLoaded", function(){
    was the ONLY thing breaking it.
    var(--navy) reads navy in light and gold in dark, and in dark the blanket
    rule lands it on cream alongside its neighbours. Measured both ways. */
-/* IDENTICAL TO .disc — same size, weight, family AND colour, with nothing
-   added. Savio, 12 Nov: "the colour & font has to match the Bella line it
-   looks larger." Measured, and he was right; two things differed:
-   - `font-variant-numeric:tabular-nums` forced every DIGIT to the same fixed,
-     wider advance, so "12 Nov 05:46" rendered visibly broader and read as a
-     bigger font at an identical 9px. I had added it "so the time does not
-     jiggle" — copied from a clock, where it belongs. This repaints once, on
-     load. It never needed it.
-   - `opacity:.72` made the colour a lighter navy than the line beside it.
-   Both gone. It is now the same 9px / 500 / BellaIndic / var(--navy) as .disc. */
+/* 7px — HIS CHOICE, 12 Nov: "i would choose 6px or max 7px for the line."
+   Same weight, family and colour as `.disc`; only smaller, so it reads as a
+   footnote rather than as part of the page's copy. 7 rather than 6 because its
+   one job is to be read back to me when I ask which version he is on, and 6px
+   on a retina screen is hard to read aloud; 7 is the smallest that stays
+   comfortable and is inside the bound he set.
+   WHAT WAS WRONG BEFORE, measured rather than guessed: it was 9px like `.disc`
+   and still looked LARGER, because `font-variant-numeric:tabular-nums` forces
+   every DIGIT to the same fixed, wider advance — so "12 Nov 07:17" spread
+   visibly broader at an identical size. I had copied that from a clock, where
+   it stops the time jiggling as it ticks; this repaints once, on load.
+   `opacity:.72` also made it a lighter navy than the line beside it. Both gone. */
 #build-marker{
   display:inline-block; white-space:nowrap;
-  font-size:9px; font-weight:500; color:var(--navy);
+  font-size:7px; font-weight:500; color:var(--navy);
 }
 /* GIPHY ATTRIBUTION — required by their terms section 5A. It must be legible,
    not a hidden watermark, so it carries real contrast in both themes. The
