@@ -28663,10 +28663,19 @@ document.addEventListener("DOMContentLoaded", function(){
    was the ONLY thing breaking it.
    var(--navy) reads navy in light and gold in dark, and in dark the blanket
    rule lands it on cream alongside its neighbours. Measured both ways. */
+/* IDENTICAL TO .disc — same size, weight, family AND colour, with nothing
+   added. Savio, 12 Nov: "the colour & font has to match the Bella line it
+   looks larger." Measured, and he was right; two things differed:
+   - `font-variant-numeric:tabular-nums` forced every DIGIT to the same fixed,
+     wider advance, so "12 Nov 05:46" rendered visibly broader and read as a
+     bigger font at an identical 9px. I had added it "so the time does not
+     jiggle" — copied from a clock, where it belongs. This repaints once, on
+     load. It never needed it.
+   - `opacity:.72` made the colour a lighter navy than the line beside it.
+   Both gone. It is now the same 9px / 500 / BellaIndic / var(--navy) as .disc. */
 #build-marker{
-  display:inline-block; white-space:nowrap; opacity:.72;
+  display:inline-block; white-space:nowrap;
   font-size:9px; font-weight:500; color:var(--navy);
-  font-variant-numeric:tabular-nums;   /* so the time does not jiggle */
 }
 /* GIPHY ATTRIBUTION — required by their terms section 5A. It must be legible,
    not a hidden watermark, so it carries real contrast in both themes. The
