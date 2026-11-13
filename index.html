@@ -3312,7 +3312,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 13:58';
+const BELLA_BUILD = '13 Nov 16:09';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -14960,6 +14960,29 @@ function _memKind(k){
    NONE had ever been called from the page (measured 2026-11-12). They take the
    same shape -- {profileKey, action, ...} -- which is what makes one grouped
    tool honest rather than a fudge. */
+/* ── AND SHE CAN READ IT BACK ───────────────────────────────────────
+   MEASURED 2026-11-13, hours after shipping `log_something`: all four
+   endpoints have READ actions — `summary`, `search`, `read` — and NOT ONE
+   had a caller. So she could record what he spent, how he slept and how he
+   felt, and could not answer a single question about any of it. **I shipped
+   a write-only record and did not notice until he asked what was missing.**
+   A log nobody can query is a diary with the pages glued shut.
+
+   THIS IS ALSO THE CLEAREST EDGE SHE HAS. ChatGPT, Claude and Gemini all
+   write documents; none of them keeps a personal record you can ask about
+   months later. "How much did I spend on that?" and "how was I feeling in
+   October?" are questions only something that has been with you can answer.
+
+   IT REPLACES `read_my_lists` RATHER THAN JOINING IT, so the toolbox stays at
+   fifteen. One obvious "look back at what you have recorded" is also easier
+   for her to choose correctly than five near-identical readers. */
+const _LOOK_KINDS={
+  list:    {ep:'/shopping-list',     action:'read',    label:'your lists'},
+  expense: {ep:'/expense-track',     action:'summary', label:'what you spent'},
+  mood:    {ep:'/mood-journal',      action:'read',    label:'how you have been feeling'},
+  health:  {ep:'/health-log',        action:'read',    label:'your health notes'},
+  person:  {ep:'/relationship-note', action:'read',    label:'notes about someone'}
+};
 const _LOG_KINDS={
   expense:{ep:'/expense-track',     label:'Expense'},
   mood:   {ep:'/mood-journal',      label:'How they are feeling'},
@@ -15306,15 +15329,35 @@ const _TOOL_INTENTS=[
     build:function(a){ return {flightNumber:String(a.flightNumber||''),date:String(a.date||'')||undefined}; }
   },
   {
-    name:'read_my_lists', write:false, endpoint:'/shopping-list', re:null,
-    declaration:{
-      name:'read_my_lists',
-      description:'Read back what is already on their shopping list. Read-only.',
-      parameters:{type:'object',properties:{
-        list:{type:'string',description:'Which list, if they named one.'}
-      },required:[]}
+    name:'look_back', write:false, chatTool:true, re:null,
+    endpoint:function(p,a){
+      const k=String((a&&a.kind)||'').trim().toLowerCase();
+      return (_LOOK_KINDS[k]||{}).ep||'';
     },
-    build:function(a){ return {profileKey:_toolProfileKey(),action:'read',listName:String((a&&a.list)||'')||undefined}; }
+    declaration:{
+      name:'look_back',
+      description:'Read back something they have recorded with you before: their lists, what they have spent, how they have been feeling, their health notes, or notes about a particular person. Use it whenever a question depends on what they told you weeks or months ago rather than on anything you can search for. Reading costs nothing; guessing at their own history is worse than saying you will look.',
+      parameters:{type:'object',properties:{
+        kind:{type:'string',enum:['list','expense','mood','health','person'],description:'Which record to read.'},
+        about:{type:'string',description:'For a person, THAT PERSON’S NAME. For a list, which list. For an expense, a category or word to look for. Otherwise leave empty.'}
+      },required:['kind']}
+    },
+    build:function(a){
+      const k=String((a&&a.kind)||'').trim().toLowerCase();
+      const spec=_LOOK_KINDS[k];
+      if(!spec) throw new Error('I do not know which record they mean. Ask whether it is their lists, their spending, how they have been feeling, a health note, or notes about someone.');
+      const about=String((a&&a.about)||'').trim();
+      const body={profileKey:_toolProfileKey(),action:spec.action};
+      if(k==='person'){
+        if(!about) throw new Error('ask who they mean before reading notes about a person');
+        body.personName=about;
+      }
+      if(k==='list'&&about) body.listName=about;
+      /* An expense QUERY is a search, not a summary — the endpoint has both,
+         and handing a word to the summary branch would silently ignore it. */
+      if(k==='expense'&&about){ body.action='search'; body.query=about; }
+      return body;
+    }
   }
 ];
 
@@ -15398,7 +15441,9 @@ function _permFor(name,args){
   const k=String((args&&args.kind)||'').toLowerCase();
   if(name==='recall'||name==='remember_this') return 'memory';
   if(name==='log_something') return (k==='health')?'health':'records';
-  if(name==='add_to_shopping_list'||name==='add_task'||name==='read_my_lists') return 'records';
+  if(name==='add_to_shopping_list'||name==='add_task') return 'records';
+  // Reading a record is the same data as writing it, so it is the same class.
+  if(name==='look_back') return (k==='health')?'health':'records';
   if(name==='set_reminder'||name==='follow_up_later'||name==='watch_the_weather') return 'reach_out';
   if(name==='get_weather'||name==='convert_currency'||name==='get_stock_price'||
      name==='check_flight_status'||name==='plan_a_route') return 'outside';
