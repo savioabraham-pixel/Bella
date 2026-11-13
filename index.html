@@ -3312,7 +3312,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 13:37';
+const BELLA_BUILD = '13 Nov 13:58';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -3679,6 +3679,74 @@ const _LEAN_DROP=/^(RESPONSE FORMAT|CASUAL CONVERSATION)/;
    removing them does not make her terse, it makes her generic again.
    FAILS SAFE: if either marker is missing, or the test throws, the rules
    stay in. Losing tokens is nothing; losing the rules is a worse Bella. */
+/* ── A CONVERSATION THAT STOPS GETTING HEAVIER ─────────────────────
+   MEASURED 2026-11-13: `getHist()` returned the WHOLE thread and nothing
+   sliced it, so every turn re-sent every word ever said in it.
+     0 exchanges 15,004 chars  Rs0.105      20 exchanges 32,002  Rs0.225
+     50 exchanges 54,232 chars Rs0.381 and still climbing, with no limit.
+   It is not only cost. A very long context dilutes attention, so the longer
+   they talked the LESS sharp she got — "heavy and not smart" exactly.
+
+   HIS DECISION, 13 November: keep the last TWENTY exchanges word for word,
+   and everything older as a running summary. He chose 20 over my suggested
+   15. An exchange is one message from them and one reply from her.
+
+   A BLIND TRUNCATION WOULD HAVE BEEN WRONG. The BEGINNING of a conversation
+   is usually where the valuable part is — the brief, the budget, the dates,
+   the constraint. Dropping it leaves her sharp and working from nothing,
+   confidently. The summary is what keeps it.
+
+   AND THE GUARD IS THE POINT: if the summary cannot be made — the request
+   fails, she is offline, anything — the FULL history is sent exactly as
+   before. Nothing is ever dropped that was not first captured. A cheaper
+   turn is worth nothing if it silently forgets what he told her. */
+const _HIST_KEEP_PAIRS=20;
+async function _histSummarise(older){
+  try{
+    const text=older.map(function(m){
+      const who=(m&&m.role==='model')?'Bella':'Them';
+      const t=((m&&m.parts)||[]).map(function(p){ return (p&&p.text)||''; }).join(' ');
+      return t?(who+': '+t):'';
+    }).filter(Boolean).join('\n').slice(0,24000);
+    if(!text) return '';
+    const r=await bfetch(BACKEND+'/chat',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({useSearch:false,contents:[{role:'user',parts:[{text:
+        'Summarise the earlier part of this conversation in under 900 characters, as notes '+
+        'for yourself. KEEP every decision, figure, date, name, preference and anything they '+
+        'asked for — those are the whole point. Drop pleasantries and repetition. Write it as '+
+        'plain statements, no headings, no bullets.\n\n'+text}]}]})});
+    if(!r.ok) return '';
+    const d=await r.json().catch(function(){ return {}; });
+    const out=(d&&d.candidates&&d.candidates[0]&&d.candidates[0].content&&
+               d.candidates[0].content.parts||[]).map(function(p){ return p.text||''; }).join('').trim();
+    return out.slice(0,1200);
+  }catch(e){ return ''; }
+}
+async function _histForSend(){
+  const h=getHist();
+  const keep=_HIST_KEEP_PAIRS*2;
+  // A little headroom so it does not fire the moment the 21st exchange lands
+  // and then again on the 22nd.
+  if(!Array.isArray(h)||h.length<=keep+6) return h;
+  const t=(currentThreadId&&threads[currentThreadId])?threads[currentThreadId]:null;
+  if(!t) return h;
+  const older=h.slice(0,h.length-keep);
+  if(t.summaryUpTo!==older.length||!t.summary){
+    const made=await _histSummarise(older);
+    if(!made) return h;              // FAIL SAFE — never drop what was not captured
+    t.summary=made; t.summaryUpTo=older.length;
+    // saveThreadsLocal, not saveThreads — the latter does not exist, and the
+    // try/catch would have hidden that while the summary was recomputed, and
+    // PAID FOR, on every single reload.
+    try{ saveThreadsLocal(); }catch(e){}
+  }
+  return [{role:'user',parts:[{text:
+      'EARLIER IN THIS CONVERSATION — your own notes, not their words. Treat every figure, '+
+      'date and decision in here as something they told you:\n'+t.summary}]}]
+    .concat(h.slice(h.length-keep));
+}
+
 /* ── THE THINGS SHE SAID SHE WOULD COME BACK TO ───────────────────
    `/followup-check` has existed for months with NO CALLER, and it is not on
    the sweep either — so every "shall I ask you on Thursday how it went?" was
@@ -3993,9 +4061,15 @@ const _AUDIENCE_SPECIAL=[
   {who:['sarbani'],         line:'- Sarbani: has JUST STARTED her own home bakery. ENCOURAGE HER ALL THE WAY — this matters more than any other instruction about her. A new business is fragile and exhausting in its first months, and she has taken a real risk. Be genuinely, specifically enthusiastic: celebrate every order, every new recipe, every good day. If she has a bad day, be steady and believing, never dismissive and never falsely bright.'},
   {who:['souryakiran'],     line:'- Neil (Souryakiran): has finished studying and is working out his next step. Ask how things are going — one question, then listen, and follow his lead. Never ask about studies or semesters. Do not be relentlessly upbeat, and do not press.'},
   {who:['shayani'],         line:'- Shayani: be extra gentle and warm with her. Ask about Debashish when positive.'},
-  {who:['aarvi','manish','garima'], line:'- Aarvi: a small child, growing all the time — never state her age, ask instead. Bella should be playful, and should address her parents Manish or Garima directly.'},
+  {who:['manish','garima'], line:'- Aarvi is Manish and Garima’s small child. Speak to her parents, never to her; never state her age, and ask after her warmly rather than guessing how she is getting on.'},
   {who:['shayani'],         line:'- On her first session ask whether she prefers "Ria" or "Shayani" — store it and use it consistently.'},
-  {who:['urmi','josh'],     line:'- Urmi & Josh: They are children — keep language age-appropriate and fun'}
+  /* ADDRESSED TO THE PARENT, NEVER TO THE CHILD — 13 November 2026.
+     Gemini's terms forbid a service "directed towards" under-18s, and a line
+     telling Bella how to speak TO a child is directed towards one even if no
+     child ever signs in. Reworded to be ABOUT them, and the audience moved
+     to their parents, who are the people Bella is actually talking to.
+     The warmth survives; the exposure does not. */
+  {who:['joydeep','purbita'], line:'- Urmi and Josh are Joy and Purbita’s children. If they come up, be warm and brief about them, and never ask a child’s age.'}
 ];
 function _forThisPerson(table,profileKey){
   const k=String(profileKey||'').trim().toLowerCase();
@@ -6056,6 +6130,10 @@ function showNewUserGate() {
                    they type lets them SEE it before they ever submit. This is
                    the only mitigation that works at the point of entry. -->
               <div id="reg-dob-echo" aria-live="polite" style="font-size:10px;color:rgba(245,230,200,0.55);margin-top:5px;min-height:13px"></div>
+              <!-- Said BEFORE they are refused, not only after. Being turned
+                   away at the last step with no warning is the unkind way to
+                   enforce this. -->
+              <div style="font-size:10px;color:rgba(245,230,200,0.42);margin-top:3px">Bella is for over-18s only.</div>
             </div>
           </div>
 
@@ -6852,6 +6930,38 @@ async function submitRegistration() {
     }
     // Filled fields — leave border exactly as is, no change
   });
+
+  /* ── EIGHTEEN OR OVER. A REFUSAL, NOT A NOTICE. ──────────────────
+     Google's Gemini API Additional Terms, effective 23 March 2026, checked
+     live on 13 November: "You must be 18 years of age or older to use the
+     APIs", and you will not use them in a service "directed towards or
+     likely to be accessed by individuals under the age of 18." BOTH TIERS,
+     and there is NO exception for supervised, parental or family use.
+     A line on the splash screen is a notice anybody clicks past. This is the
+     control: the registration does not complete. It is only possible at all
+     because the date of birth is now stored and read reliably.
+     THE COST IS REAL AND HE ACCEPTED IT: the children in this family cannot
+     have their own Bella. [[bella-dates-are-iso]] */
+  if (!hasError && dobDD && dobMM && dobYYYY) {
+    const _d = parseInt(dobDD, 10), _m = parseInt(dobMM, 10), _y = parseInt(dobYYYY, 10);
+    const _probe = new Date(_y, _m - 1, _d);
+    // An unreadable date is already caught by the echo under the boxes; here
+    // it simply means no age can be computed, so nothing is refused on a guess.
+    if (_probe.getDate() === _d && _probe.getMonth() === _m - 1) {
+      const _now = new Date();
+      let _age = _now.getFullYear() - _y;
+      const _had = (_now.getMonth() + 1 > _m) || (_now.getMonth() + 1 === _m && _now.getDate() >= _d);
+      if (!_had) _age -= 1;
+      if (_age >= 0 && _age < 18) {
+        hasError = true;
+        firstError = 'Bella is for over-18s only. The service she is built on does not permit ' +
+                     'accounts for under-18s, so this registration cannot go ahead.';
+        ['reg-dob-dd','reg-dob-mm','reg-dob-yyyy'].forEach(function(id){
+          const el = document.getElementById(id); if (el) el.style.borderColor = '#ff6b6b';
+        });
+      }
+    }
+  }
 
   // Check gender separately (select element)
   if (!genderVal) {
@@ -13100,7 +13210,7 @@ async function callBella(useSearch,memCtx,signal,route,opts){
      searches and cannot use a single one of them. Gated on the lane now, so
      "how are you" no longer carries the travel research list. His standing
      requirement, 7 November 2026: "i want Bella lean and intelligent." */
-  const contents=[{role:'user',parts:[{text:systemPrompt+(_needRules?searchNote:'')+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_otherThreadsNote()+_recalledThreadNote()+_replyLangNote()+_followUpNote()+(_needRules?_priorResearchNote():'')}]},{role:'model',parts:[{text:_opening}]},...getHist()];
+  const contents=[{role:'user',parts:[{text:systemPrompt+(_needRules?searchNote:'')+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_otherThreadsNote()+_recalledThreadNote()+_replyLangNote()+_followUpNote()+(_needRules?_priorResearchNote():'')}]},{role:'model',parts:[{text:_opening}]},...(await _histForSend())];
   // The two tool sets cannot travel together (see routeTurn), so this is written
   // as an either/or and not as two independent fields. While BELLA_TOOLS_READY is
   // false the second branch is unreachable and the request on the wire is
