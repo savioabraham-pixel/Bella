@@ -3312,7 +3312,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 13:11';
+const BELLA_BUILD = '13 Nov 13:37';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -3679,6 +3679,65 @@ const _LEAN_DROP=/^(RESPONSE FORMAT|CASUAL CONVERSATION)/;
    removing them does not make her terse, it makes her generic again.
    FAILS SAFE: if either marker is missing, or the test throws, the rules
    stay in. Losing tokens is nothing; losing the rules is a worse Bella. */
+/* ── THE THINGS SHE SAID SHE WOULD COME BACK TO ───────────────────
+   `/followup-check` has existed for months with NO CALLER, and it is not on
+   the sweep either — so every "shall I ask you on Thursday how it went?" was
+   written down and never read back. The machinery for being proactive was
+   complete and switched off.
+
+   IT IS A NOTE IN THE PROMPT, NOT A MESSAGE AND NOT AN EXTRA MODEL CALL.
+   Painting "you mentioned an interview" into the chat on load would be an
+   interruption and would read like a robot; asking Gemini to compose an
+   opener would cost a whole turn before she has been spoken to. A note lets
+   her raise it IN HER OWN WORDS, in the reply she was going to write anyway,
+   and only if it fits. Zero extra turns, about 200 characters, once a day.
+   His own rule: open from something you ACTUALLY HOLD, never a stock
+   question — and never stack it onto the greeting.
+
+   GATED ON THE `memory` PERMISSION. Reading back what she noted about them
+   is exactly what that class covers, and if they have not allowed it she
+   stays quiet rather than asking for permission the moment the page opens. */
+let _followUps=[];
+function _fuKey(){
+  let who='anon'; try{ who=String(_toolProfileKey()||'anon').toLowerCase(); }catch(e){}
+  return 'b_followup_'+who;
+}
+async function _loadFollowUps(){
+  try{
+    if(typeof _permGranted==='function'&&!_permGranted('memory')) return;
+    let key=''; try{ key=_toolProfileKey()||''; }catch(e){}
+    if(!key) return;
+    // At most once a day. A follow-up raised every time they open Bella stops
+    // being thoughtful and becomes nagging.
+    let last=''; try{ last=localStorage.getItem(_fuKey())||''; }catch(e){}
+    const today=new Date().toISOString().slice(0,10);
+    if(last===today) return;
+    const r=await bfetch(BACKEND+'/followup-check',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({profileKey:key})});
+    const d=await r.json().catch(function(){ return {}; });
+    if(!r.ok) return;
+    const rows=Array.isArray(d&&d.followups)?d.followups:[];
+    _followUps=rows.map(function(x){ return String((x&&x.text)||'').trim(); })
+                   .filter(function(t){ return t.length>3; }).slice(0,2);
+    if(_followUps.length){ try{ localStorage.setItem(_fuKey(),today); }catch(e){} }
+  }catch(e){}
+}
+function _followUpNote(){
+  try{
+    if(!_followUps.length) return '';
+    const list=_followUps.map(function(t){ return '- '+t.slice(0,160); }).join('\n');
+    // Consumed on first use: it belongs in the opening reply of the session,
+    // not on every turn afterwards.
+    _followUps=[];
+    return '\n\nSOMETHING YOU SAID YOU WOULD COME BACK TO:\n'+list+
+      '\nRaise ONE of these — the one that fits best — naturally, in your own words, and only '+
+      'if this message gives you room for it. Never list them, never raise more than one, and '+
+      'never force it in front of what they have actually asked. If their message is a task or '+
+      'a question, answer that first and leave this.';
+  }catch(e){ return ''; }
+}
+
 /* ── SHE CAN REMEMBER AND SEARCH. SHE MUST ALSO BE ABLE TO FORGET. ──
    `/memory-delete` has existed for months with NO CALLER, so "forget that"
    had nothing behind it. That is a trust gap before it is a technical one:
@@ -8310,6 +8369,8 @@ function completeLogin(userData) {
   // A greeting comes before business, and both come after everything that
   // decides whether Bella loads at all.
   try{ Promise.resolve(_bdayGreet()).catch(function(){}); }catch(e){}
+  // Fetched now so it is ready for her FIRST reply; it adds no turn of its own.
+  try{ Promise.resolve(_loadFollowUps()).catch(function(){}); }catch(e){}
   // After everything else, for the same reason: an unfinished plan must never
   // be what stands between somebody and Bella loading.
   try{ _planResume(); }catch(e){ console.warn('plan resume:',e); }
@@ -13039,7 +13100,7 @@ async function callBella(useSearch,memCtx,signal,route,opts){
      searches and cannot use a single one of them. Gated on the lane now, so
      "how are you" no longer carries the travel research list. His standing
      requirement, 7 November 2026: "i want Bella lean and intelligent." */
-  const contents=[{role:'user',parts:[{text:systemPrompt+(_needRules?searchNote:'')+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_otherThreadsNote()+_recalledThreadNote()+_replyLangNote()+(_needRules?_priorResearchNote():'')}]},{role:'model',parts:[{text:_opening}]},...getHist()];
+  const contents=[{role:'user',parts:[{text:systemPrompt+(_needRules?searchNote:'')+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_otherThreadsNote()+_recalledThreadNote()+_replyLangNote()+_followUpNote()+(_needRules?_priorResearchNote():'')}]},{role:'model',parts:[{text:_opening}]},...getHist()];
   // The two tool sets cannot travel together (see routeTurn), so this is written
   // as an either/or and not as two independent fields. While BELLA_TOOLS_READY is
   // false the second branch is unreachable and the request on the wire is
