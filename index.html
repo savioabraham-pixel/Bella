@@ -3310,7 +3310,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 08:43';
+const BELLA_BUILD = '13 Nov 09:58';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -5730,8 +5730,14 @@ function showNewUserGate() {
                 <span style="color:rgba(245,230,200,0.3);font-size:14px">/</span>
                 <input id="reg-dob-mm" type="text" placeholder="MM" maxlength="2" inputmode="numeric" style="width:42px;padding:10px 4px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;text-align:center;box-sizing:border-box" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'" oninput="if(this.value.length===2){document.getElementById('reg-dob-yyyy').focus();}">
                 <span style="color:rgba(245,230,200,0.3);font-size:14px">/</span>
-                <input id="reg-dob-yyyy" type="text" placeholder="YYYY" maxlength="4" inputmode="numeric" style="width:56px;padding:10px 4px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;text-align:center;box-sizing:border-box" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'">
+                <input id="reg-dob-yyyy" type="text" placeholder="YYYY" maxlength="4" inputmode="numeric" style="width:56px;padding:10px 4px;border-radius:10px;border:1.5px solid rgba(245,230,200,0.15);background:#0B2545;color:#F5E6C8;font-size:13px;font-family:'BellaIndic','DM Sans',sans-serif;outline:none;text-align:center;box-sizing:border-box" onfocus="this.style.borderColor='#D4AF37'" onblur="this.style.borderColor='rgba(245,230,200,0.15)'" oninput="_regDobEcho()">
               </div>
+              <!-- SAID BACK IN WORDS. Half the world writes 05/06 meaning
+                   6 May and half meaning 5 June. No parser can repair a date
+                   typed into the wrong box — but showing "21 May 1975" while
+                   they type lets them SEE it before they ever submit. This is
+                   the only mitigation that works at the point of entry. -->
+              <div id="reg-dob-echo" aria-live="polite" style="font-size:10px;color:rgba(245,230,200,0.55);margin-top:5px;min-height:13px"></div>
             </div>
           </div>
 
@@ -6486,7 +6492,18 @@ async function submitRegistration() {
   const dobDD = document.getElementById('reg-dob-dd').value.trim();
   const dobMM = document.getElementById('reg-dob-mm').value.trim();
   const dobYYYY = document.getElementById('reg-dob-yyyy').value.trim();
-  const dob = dobDD && dobMM && dobYYYY ? `${dobDD.padStart(2,'0')}/${dobMM.padStart(2,'0')}/${dobYYYY}` : '';
+  /* STORED AS ISO, YYYY-MM-DD. MEASURED 2026-11-13, and this was a live
+     fault, not a precaution: JavaScript reads a slash date AMERICAN-STYLE.
+       new Date('21/05/1975')  -> Invalid Date   <- what this form used to store
+       new Date('05/06/1975')  -> 6 May          <- when we meant 5 June
+     So every consumer of this field was either failing outright or silently
+     taking the wrong day. /birthday-check on the backend does exactly
+     `new Date(dob)`, which is one reason it has never worked.
+     ISO is unambiguous in every country and parses correctly everywhere. The
+     three boxes are still DD / MM / YYYY on screen, because that is what the
+     person is reading — only the stored form changes. */
+  const dob = dobDD && dobMM && dobYYYY
+    ? `${dobYYYY}-${dobMM.padStart(2,'0')}-${dobDD.padStart(2,'0')}` : '';
   const gender = document.getElementById('reg-gender').value;
   const errEl = document.getElementById('gate-error-2');
 
@@ -15215,6 +15232,48 @@ async function _executeTool(tool,args,signal){
   }
 }
 
+/* Says the typed date back in words while they type. A wrong box is visible
+   the moment it is wrong, which no amount of parsing afterwards can achieve. */
+const _MONTH_NAMES=['January','February','March','April','May','June','July',
+                    'August','September','October','November','December'];
+function _regDobEcho(){
+  const el=document.getElementById('reg-dob-echo');
+  if(!el) return;
+  const g=function(id){ const n=document.getElementById(id); return n?n.value.trim():''; };
+  const d=parseInt(g('reg-dob-dd'),10), m=parseInt(g('reg-dob-mm'),10), y=parseInt(g('reg-dob-yyyy'),10);
+  if(!g('reg-dob-dd')&&!g('reg-dob-mm')&&!g('reg-dob-yyyy')){ el.textContent=''; return; }
+  if(!(d>=1&&d<=31)||!(m>=1&&m<=12)||!(y>=1900&&y<=2200)){
+    el.textContent='Day, month, year — e.g. 21 / 05 / 1975';
+    el.style.color='rgba(245,230,200,0.55)';
+    return;
+  }
+  // A real date, not just three numbers in range: 31/02 must not read back as
+  // "31 February" and then quietly become 3 March.
+  const probe=new Date(y,m-1,d);
+  if(probe.getDate()!==d||probe.getMonth()!==m-1){
+    el.textContent='There is no such date — please check it';
+    el.style.color='#E8B4B8';
+    return;
+  }
+  el.textContent=d+' '+_MONTH_NAMES[m-1]+' '+y;
+  el.style.color='#D4AF37';
+}
+/* ANYTHING ALREADY STORED AS DD/MM/YYYY IS MOVED TO ISO, ONCE. Safe because
+   this page's own form wrote it from a box labelled DD — it is day-first by
+   construction, whatever country the person is in. Nothing is guessed. */
+function _dobMigrate(){
+  try{
+    const u=JSON.parse(localStorage.getItem('b_registered_user')||'null');
+    if(!u||!u.dob) return;
+    const m=String(u.dob).trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+    if(!m) return;                                   // already ISO, or unreadable
+    const d=+m[1], mo=+m[2], y=+m[3];
+    if(mo<1||mo>12||d<1||d>31) return;               // never repair what we cannot read
+    u.dob=y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    localStorage.setItem('b_registered_user',JSON.stringify(u));
+  }catch(e){}
+}
+
 /* ── BIRTHDAYS ──────────────────────────────────────────────────────
    His design, 13 November 2026, and it is the reason this needs no backend
    at all: *"whenever they access Bella in their timezone on their special day
@@ -15239,9 +15298,18 @@ function _bdayParse(raw){
   if(mt){ y=+mt[1]; m=+mt[2]; d=+mt[3]; }
   else{
     mt=t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);   // 21/05/1975
-    // DAY FIRST. He is in India and writes 21/05; reading that as month-first
-    // would wish him on the wrong day every year.
-    if(mt){ d=+mt[1]; m=+mt[2]; y=+mt[3]; }
+    if(mt){
+      const a=+mt[1], b=+mt[2]; y=+mt[3];
+      /* RESOLVE WHAT CAN BE RESOLVED. A part over 12 can only be the day, so
+         21/05 and 05/21 both mean 21 May and neither needs a guess.
+         When BOTH parts are 12 or under the value is genuinely ambiguous in
+         the abstract — 05/06 is 5 June here and 6 May in America. It is read
+         DAY-FIRST because this page's own form writes it from a box labelled
+         DD, so every value we have ever stored is day-first by construction.
+         New registrations are stored as ISO and never reach this branch. */
+      if(b>12&&a<=12){ m=a; d=b; }                  // 05/21 -> 21 May
+      else { d=a; m=b; }                            // 21/05 and the ambiguous case
+    }
   }
   if(!m||!d||m<1||m>12||d<1||d>31) return null;
   return {y:(y&&y>1900&&y<2200)?y:null,m:m,d:d};
@@ -15270,6 +15338,8 @@ function _bdayWhen(raw,now){
   return null;
 }
 async function _bdayGreet(){
+  // Before anything reads the date, move a legacy slash date to ISO.
+  try{ _dobMigrate(); }catch(e){}
   let u=null;
   try{ u=JSON.parse(localStorage.getItem('b_registered_user')||'null'); }catch(e){}
   if(!u||!u.dob) return;
