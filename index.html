@@ -3305,7 +3305,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '12 Nov 11:09';
+const BELLA_BUILD = '13 Nov 05:44';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -12092,10 +12092,18 @@ async function send(){
     // search lane, exactly as it did before this router existed.
     const _route=(pTexts.length===0&&pImages.length===0)?routeTurn(fullMsg):{lane:'search',why:'attachment present'};
     _recordRoute(fullMsg,_route);
-    if(_route.lane==='tools'){
+    if(_route.lane==='tools'||_route.lane==='chat'){
       // PHASE 2. Function calling, with his confirmation standing in front of
       // every write. Web search is NOT attached on this lane and must not be:
       // Gemini 400s when google_search and functionDeclarations travel together.
+      /* THE CHAT LANE COMES THROUGH HERE TOO SINCE 12 November 2026. Declaring
+         a tool is useless unless something can execute what she picks, and
+         _toolTurn is that something — reason, confirm, act, then feed the REAL
+         result back so her sentence matches what happened.
+         A chat turn that calls nothing returns step.text and behaves exactly as
+         it did before. The research loop is not run on this lane: it already
+         returned its input untouched for a turn with no sources, and a chat
+         turn never has any. */
       reply=await _toolTurn(fullMsg,_route,userMemory.memories||'',window._chatAbortController.signal,lang);
     }else{
       reply=await callBella(_route.lane==='search',userMemory.memories||'',window._chatAbortController.signal,_route);
@@ -12697,7 +12705,25 @@ async function callBella(useSearch,memCtx,signal,route,opts){
      2026-11-10, not remembered. */
   if(opts&&Array.isArray(opts.extraTurns)&&opts.extraTurns.length) contents.push.apply(contents,opts.extraTurns);
   const _payload={contents,useSearch};
-  if(BELLA_TOOLS_READY&&route&&route.lane==='tools'){_payload.useSearch=false;_payload.tools=[{functionDeclarations:_TOOL_INTENTS.map(x=>x.declaration)}];}
+  /* THE TOOLS LANE CARRIES EVERY TOOL; AN ORDINARY CONVERSATION CARRIES ONLY
+     THE FOUR SHE MAY RAISE HERSELF. For Bella to be proactive she has to be
+     able to act on a turn where nobody asked her to, and routeTurn only ever
+     entered the tools lane on an explicit request — so the router enforced
+     "only when they ask" no matter what the tool descriptions said.
+     The chat lane is the right home for it: it already carries NO web search,
+     so attaching declarations costs it nothing it was using. The SEARCH lane
+     is deliberately left alone — google_search and functionDeclarations 400
+     when sent together, and searching is what that lane is for.
+     [[bella-gemini-tools-cannot-combine]] */
+  if(BELLA_TOOLS_READY&&route&&(route.lane==='tools'||route.lane==='chat')){
+    const _decl=(route.lane==='tools')
+      ? _TOOL_INTENTS
+      : _TOOL_INTENTS.filter(function(x){ return x.chatTool; });
+    if(_decl.length){
+      _payload.useSearch=false;
+      _payload.tools=[{functionDeclarations:_decl.map(function(x){ return x.declaration; })}];
+    }
+  }
   const r=await bfetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_payload),signal});
   if(!r.ok)throw new Error('Backend error: '+r.status);
   const d=await r.json();
@@ -14398,6 +14424,26 @@ function _toolProfileKey(){
   return k;
 }
 
+/* THE ONLY TYPES remember_this MAY WRITE. `type:"user"` diverts
+   /memory-write into upsertUserRow and REWRITES THEIR IDENTITY ROW — name,
+   email, mobile, date of birth. The model must not be able to reach that by
+   naming a type, so the value is forced back onto this list in build()
+   rather than trusted from the enum it was given. */
+const _MEM_KINDS=['fact','preference','person','date','followup'];
+function _memKind(k){
+  const t=String(k==null?'':k).trim().toLowerCase();
+  return _MEM_KINDS.indexOf(t)>=0?t:'fact';
+}
+/* WHERE EACH SORT OF LOG GOES. All four endpoints were built months ago and
+   NONE had ever been called from the page (measured 2026-11-12). They take the
+   same shape -- {profileKey, action, ...} -- which is what makes one grouped
+   tool honest rather than a fudge. */
+const _LOG_KINDS={
+  expense:{ep:'/expense-track',     label:'Expense'},
+  mood:   {ep:'/mood-journal',      label:'How they are feeling'},
+  health: {ep:'/health-log',        label:'Health note'},
+  person: {ep:'/relationship-note', label:'Note about someone'}
+};
 const _TOOL_INTENTS=[
   // ─── WRITE ACTIONS — every one needs his approval ───────────────
   {
@@ -14474,8 +14520,169 @@ const _TOOL_INTENTS=[
     build:function(a){ return {profileKey:_toolProfileKey(),action:'create',task:String(a.task||'')}; }
   },
 
+  /* ── THE ONES SHE MAY RAISE HERSELF — 12 November 2026 ──────────────
+     Savio: "the main aim is to have Bella be cognitively proactive and think
+     intelligently."
+     MEASURED THAT DAY: she had eight tools, every write one said "Use only
+     when they ask", AND routeTurn could only enter the tools lane on an
+     explicit request. The instruction and the router agreed with each other,
+     so she could never offer anything. Both halves had to change.
+     These carry `chatTool`, so they ride on an ordinary conversational turn
+     and not only on a turn that asked for an action.
+     EVERY WRITE STILL GOES THROUGH THE CONFIRM CARD. Proactive means she may
+     OFFER. It has never meant she may act. */
+  {
+    name:'remember_this', write:true, endpoint:'/memory-write', chatTool:true,
+    // No regex: an explicit "remember that ..." is already caught by
+    // detectMemoryRequest and routed to chat, which now carries this tool.
+    re:null,
+    title:'Remember this',
+    declaration:{
+      name:'remember_this',
+      description:'Store one durable fact about the person you are speaking to, so you still know it next month. Offer it yourself when they tell you something lasting — a preference, a relationship, a date, a constraint, something about their health. Not for passing detail, and never for anything they have asked you to forget.',
+      parameters:{type:'object',properties:{
+        fact:{type:'string',description:'The single fact, as one short plain sentence, e.g. "Prefers an aisle seat on long flights."'},
+        kind:{type:'string',enum:['fact','preference','person','date','followup'],description:'What sort of thing it is.'}
+      },required:['fact']}
+    },
+    fields:[{k:'fact',label:'Fact'}],
+    lines:function(a){ return [['Remember',(a&&a.fact)||''],['As',_memKind(a&&a.kind)]]; },
+    build:function(a){
+      const f=String((a&&a.fact)||'').trim();
+      if(!f) throw new Error('there is nothing to remember yet — ask them what they would like kept');
+      return {profileKey:_toolProfileKey(),memoryText:f,type:_memKind(a&&a.kind)};
+    }
+  },
+  {
+    name:'follow_up_later', write:true, endpoint:'/smart-reminder', chatTool:true,
+    re:null,
+    title:'Come back to this later',
+    declaration:{
+      name:'follow_up_later',
+      description:'Arrange to come back to something YOURSELF, later, without being asked again. Offer it when they mention something with a natural check-back — an interview, a test result, a delivery, a decision they are sleeping on. Say that you will, then use this. At most one per conversation.',
+      parameters:{type:'object',properties:{
+        about:{type:'string',description:'What to come back to, in their own words, e.g. "how the interview went".'},
+        when:{type:'string',description:'When to come back to it, e.g. "Thursday evening", "in three days".'}
+      },required:['about','when']}
+    },
+    fields:[{k:'about',label:'About'},{k:'when',label:'When'}],
+    lines:function(a){
+      const r=_whenToISO(a&&a.when);
+      return [['Come back to',(a&&a.about)||''],
+              ['When',r?r.pretty:('could not read "'+((a&&a.when)||'')+'" — press Edit and give a time')]];
+    },
+    build:function(a){
+      const r=_whenToISO(a&&a.when);
+      if(!r) throw new Error('I could not work out when you meant by "'+((a&&a.when)||'')+'". Ask them for a day and a time.');
+      return {profileKey:_toolProfileKey(),
+        reminderText:'Following up: '+String((a&&a.about)||'').trim(),
+        reminderTime:r.iso,repeatType:'once',context:'followup'};
+    }
+  },
+  {
+    name:'watch_the_weather', write:true, endpoint:'/watch-set', chatTool:true,
+    re:/\b(watch the weather|weather alerts?|warn me (about|if|when) (the )?(weather|rain|storm))\b/,
+    title:'Watch the weather',
+    declaration:{
+      name:'watch_the_weather',
+      description:'Switch a standing watch on the weather where they are on or off, so you can warn them when a severe warning is issued for their area. Offer it when a plan of theirs depends on the weather. Switching it off needs no reason from them.',
+      parameters:{type:'object',properties:{
+        on:{type:'boolean',description:'true to start watching, false to stop.'}
+      },required:['on']}
+    },
+    // Nothing to type: the only argument is on or off, and the card says which.
+    fields:[],
+    lines:function(a){
+      const on=!(a&&a.on===false);
+      let where='where you are now';
+      try{ const d=JSON.parse(sessionStorage.getItem('b_location_data')||'null');
+           if(d&&(d.city||d.area)) where=String(d.city||d.area); }catch(e){}
+      return [['Watch',on?'on':'off'],['Where',where],
+              ['Warns you about','severe weather warnings only']];
+    },
+    build:function(a){
+      const on=!(a&&a.on===false);
+      if(!on) return {profileKey:_toolProfileKey(),on:false};
+      // The same source get_weather reads, and the same guard: COORDINATES
+      // are a location even when the place name never resolved.
+      let d=null; try{ d=JSON.parse(sessionStorage.getItem('b_location_data')||'null'); }catch(e){}
+      if(!(d&&Number.isFinite(d.lat)&&Number.isFinite(d.lon)))
+        throw new Error('I do not have their location, so there is nowhere to watch. Ask them which place they mean.');
+      return {profileKey:_toolProfileKey(),on:true,lat:d.lat,lon:d.lon};
+    }
+  },
+
+  {
+    name:'log_something', write:true, chatTool:true, re:null,
+    endpoint:function(p,a){
+      const k=String((a&&a.kind)||'').trim().toLowerCase();
+      return (_LOG_KINDS[k]||{}).ep||'';
+    },
+    title:'Keep a record of this',
+    declaration:{
+      name:'log_something',
+      description:'Keep a dated record of one thing for them: money they spent, how they are feeling, something about their health, or something worth remembering about another person. Offer it when they mention one in passing — this is what lets you answer "how much did I spend on that" or "how was I feeling in October" months later. One thing per call.',
+      parameters:{type:'object',properties:{
+        kind:{type:'string',enum:['expense','mood','health','person'],description:'Which record it belongs in.'},
+        what:{type:'string',description:'The thing itself, in their own words.'},
+        about:{type:'string',description:'For an expense, the category. For a health note, the sort of note. For a person, THAT PERSON’S NAME. Leave empty for a mood.'},
+        amount:{type:'number',description:'Only for an expense: how much, as a plain number.'},
+        currency:{type:'string',description:'Only for an expense, if they named one. Leave empty for rupees.'}
+      },required:['kind','what']}
+    },
+    fields:[{k:'what',label:'What'},{k:'about',label:'About'}],
+    lines:function(a){
+      const k=String((a&&a.kind)||'').trim().toLowerCase();
+      const out=[['Record',(_LOG_KINDS[k]||{}).label||'—'],['What',(a&&a.what)||'']];
+      if(k==='expense') out.push(['Amount',((a&&a.currency)||'INR')+' '+((a&&a.amount)!=null?a.amount:'—')]);
+      if(a&&a.about) out.push([k==='person'?'Who':'Category',a.about]);
+      return out;
+    },
+    build:function(a){
+      const k=String((a&&a.kind)||'').trim().toLowerCase();
+      if(!_LOG_KINDS[k]) throw new Error('I do not know which record that belongs in. Ask them whether it is money spent, how they are feeling, a health note, or a note about someone.');
+      const what=String((a&&a.what)||'').trim();
+      if(!what) throw new Error('there is nothing to record yet — ask them what to put down');
+      const key=_toolProfileKey();
+      if(k==='expense'){
+        const amt=Number(a&&a.amount);
+        if(!isFinite(amt)||amt<=0) throw new Error('an expense needs an amount — ask them how much it was');
+        return {profileKey:key,action:'log',amount:amt,description:what,
+          category:String((a&&a.about)||'')||undefined,
+          currency:String((a&&a.currency)||'INR')};
+      }
+      if(k==='mood') return {profileKey:key,action:'log',mood:what,entry:what};
+      if(k==='health') return {profileKey:key,action:'log',
+        entryType:String((a&&a.about)||'note'),entry:what};
+      const who=String((a&&a.about)||'').trim();
+      if(!who) throw new Error('a note about someone needs their name — ask who it is about');
+      return {profileKey:key,action:'add',personName:who,note:what,noteType:'note'};
+    }
+  },
+
   // ─── READ-ONLY — no confirmation, by his rule. Not routed to; ───
   // ─── reachable only so a tools turn can chain to them.        ───
+  /* SHE HAS WRITTEN MEMORIES FOR MONTHS AND NEVER ONCE SEARCHED THEM.
+     Measured 2026-11-12: /memory-write had callers, /memory-search had NONE.
+     Everything she knew arrived as one bulk dump in the prompt, which works
+     at 200 rows and collapses at 2,000 — and a dump cannot answer "what do I
+     know that matters HERE". This is the retrieval half.
+     [[bella-she-cannot-confirm-her-own-memory]] */
+  {
+    name:'recall', write:false, endpoint:'/memory-search', re:null, chatTool:true,
+    declaration:{
+      name:'recall',
+      description:'Search what you have already remembered about this person. Use it BEFORE answering anything that depends on what you know about them — a preference, a plan, a person, a date, something they told you weeks ago. Searching costs nothing; guessing costs their trust. One idea per search.',
+      parameters:{type:'object',properties:{
+        about:{type:'string',description:'A word or short phrase to look for, in their own words, e.g. "Goa", "allergy", "Jishnu".'}
+      },required:['about']}
+    },
+    build:function(a){
+      const q=String((a&&a.about)||'').trim();
+      if(!q) throw new Error('there is nothing to search for — pick a word from what they said');
+      return {profileKey:_toolProfileKey(),query:q};
+    }
+  },
   {
     name:'get_weather', write:false, endpoint:'/weather', re:null,
     declaration:{
@@ -14507,6 +14714,31 @@ const _TOOL_INTENTS=[
       },required:['amount','from','to']}
     },
     build:function(a){ return {amount:Number(a.amount),from:String(a.from||''),to:String(a.to||'')}; }
+  },
+  {
+    name:'plan_a_route', write:false, endpoint:'/maps-route', re:null,
+    declaration:{
+      name:'plan_a_route',
+      description:'How long a journey takes and which way it goes, between two places. Use it before agreeing a time with them, or before a reminder that depends on them travelling.',
+      parameters:{type:'object',properties:{
+        origin:{type:'string',description:'Where they start. Leave empty to use where they are now.'},
+        destination:{type:'string',description:'Where they are going.'},
+        mode:{type:'string',enum:['driving','walking','transit','bicycling'],description:'How they are travelling. Driving if they did not say.'}
+      },required:['destination']}
+    },
+    build:function(a){
+      const to=String((a&&a.destination)||'').trim();
+      if(!to) throw new Error('ask them where they are going');
+      let from=String((a&&a.origin)||'').trim();
+      if(!from){
+        // Same source get_weather reads, same guard.
+        let d=null; try{ d=JSON.parse(sessionStorage.getItem('b_location_data')||'null'); }catch(e){}
+        if(d&&Number.isFinite(d.lat)&&Number.isFinite(d.lon)) from=d.lat+','+d.lon;
+        else if(d&&(d.city||d.area)) from=String(d.city||d.area);
+      }
+      if(!from) throw new Error('I do not know where they are starting from. Ask them.');
+      return {origin:from,destination:to,mode:String((a&&a.mode)||'driving')};
+    }
   },
   {
     name:'get_stock_price', write:false, endpoint:'/stock-price', re:null,
@@ -14683,8 +14915,21 @@ async function _executeTool(tool,args,signal){
     }
     _toolDone[k]=now;
   }
+  /* ONE TOOL, FOUR ENDPOINTS. `log_something` covers an expense, a mood, a
+     health note and a note about someone, because four near-identical
+     declarations would cost four slots out of a budget of about fifteen and
+     make every one of them harder to pick correctly. build() has already run
+     and already refused an unknown kind, so by the time this resolves the
+     endpoint the argument is known good. A plain string still works and is
+     what every other tool uses. */
+  let _ep=tool.endpoint;
+  if(typeof _ep==='function'){
+    try{ _ep=_ep(payload,args||{}); }catch(e){ return {ok:false,error:String(e.message||e)}; }
+  }
+  if(typeof _ep!=='string'||_ep.charAt(0)!=='/')
+    return {ok:false,error:'that action is not wired to anything'};
   try{
-    const r=await bfetch(`${BACKEND}${tool.endpoint}`,{
+    const r=await bfetch(`${BACKEND}${_ep}`,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify(payload),signal:signal});
     const d=await r.json().catch(function(){ return {}; });
