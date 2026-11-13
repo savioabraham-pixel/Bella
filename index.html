@@ -3062,6 +3062,7 @@ try{
       </div>
       <div class="menu-items open" id="sec-data">
         <div class="menu-item" onclick="showMyMemory();closeUserMenu()">My Memory</div>
+        <div class="menu-item" onclick="showMyMemoryManage();closeUserMenu()">Forget Something</div>
         <div class="menu-item" onclick="showMyReminders();closeUserMenu()">My Reminders</div>
         <div class="menu-item" onclick="showWhatBellaMayDo();closeUserMenu()">What Bella May Do</div>
         <div class="menu-item" onclick="downloadMyData();closeUserMenu()">Download My Data</div>
@@ -3311,7 +3312,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 12:47';
+const BELLA_BUILD = '13 Nov 13:11';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -3678,6 +3679,155 @@ const _LEAN_DROP=/^(RESPONSE FORMAT|CASUAL CONVERSATION)/;
    removing them does not make her terse, it makes her generic again.
    FAILS SAFE: if either marker is missing, or the test throws, the rules
    stay in. Losing tokens is nothing; losing the rules is a worse Bella. */
+/* ── SHE CAN REMEMBER AND SEARCH. SHE MUST ALSO BE ABLE TO FORGET. ──
+   `/memory-delete` has existed for months with NO CALLER, so "forget that"
+   had nothing behind it. That is a trust gap before it is a technical one:
+   a memory you cannot remove is not a memory you agreed to.
+   ONE AT A TIME, EACH CONFIRMED, and the line is struck through rather than
+   vanishing — the same rule as a cancelled reminder, so he can see what he
+   pressed. Deleting EVERYTHING is deliberately NOT offered here: that is
+   account deletion, it lives in My Account where it belongs, and it must
+   never be one tap away from a tidy-up. */
+async function forgetOneMemory(line,row,btn){
+  const key=(function(){ try{ return _toolProfileKey()||''; }catch(e){ return ''; } })();
+  if(!key||!line) return;
+  btn.disabled=true; btn.textContent='Forgetting…';
+  try{
+    const r=await bfetch(BACKEND+'/memory-delete',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({profileKey:key,memoryText:line})});
+    const d=await r.json().catch(function(){ return {}; });
+    if(!r.ok) throw new Error((d&&d.error)||('the server answered '+r.status));
+    row.style.textDecoration='line-through'; row.style.opacity='0.55';
+    btn.textContent='Forgotten';
+    /* The page's own copy must forget it too, or she keeps using it until
+       the next reload and he would reasonably think the button did nothing. */
+    try{
+      if(typeof userMemory!=='undefined'&&userMemory&&userMemory.memories){
+        userMemory.memories=String(userMemory.memories).split('\n')
+          .filter(function(x){ return x.trim()!==String(line).trim(); }).join('\n');
+      }
+    }catch(e){}
+  }catch(e){
+    btn.disabled=false; btn.textContent='Could not forget it — try again';
+  }
+}
+function showMyMemoryManage(){
+  const msgs=document.getElementById('msgs');
+  if(!msgs) return;
+  /* `userMemory` IS A TOP-LEVEL `let`, SO IT IS NOT A PROPERTY OF window.
+     Guarding on window.userMemory made this screen ALWAYS empty — caught by
+     the suite, which found no buttons to press. The existing showMyMemory()
+     reads it directly, and so does this. */
+  const mem=(typeof userMemory!=='undefined'&&userMemory&&userMemory.memories)
+    ? String(userMemory.memories) : '';
+  const lines=mem.split('\n').map(function(x){ return x.trim(); })
+                 .filter(function(x){ return x.length>1; });
+  if(!lines.length){ showMyMemory(); return; }   // it already says the right thing
+  const wrap=document.createElement('div'); wrap.className='msg bella';
+  const av=document.createElement('div'); av.className='mav b'; av.textContent='B';
+  const mw=document.createElement('div'); mw.className='msg-wrap';
+  const card=document.createElement('div'); card.className='bconf';
+  wrap.appendChild(av); wrap.appendChild(mw); mw.appendChild(card);
+  const h=document.createElement('div'); h.className='bconf-head';
+  h.textContent='What I remember — and what you can remove';
+  card.appendChild(h);
+  lines.slice(0,40).forEach(function(line){
+    const body=document.createElement('div'); body.className='bconf-body';
+    const r=document.createElement('div'); r.className='bconf-row';
+    const k=document.createElement('div'); k.className='bconf-k'; k.textContent='Remembered';
+    const v=document.createElement('div'); v.className='bconf-v'; v.textContent=line;
+    r.appendChild(k); r.appendChild(v); body.appendChild(r);
+    const acts=document.createElement('div'); acts.className='bconf-acts';
+    const b=document.createElement('button'); b.type='button';
+    b.className='bconf-btn bconf-no'; b.textContent='Forget this';
+    b.setAttribute('aria-label','Forget: '+line.slice(0,60));
+    b.addEventListener('click',function(){ forgetOneMemory(line,v,b); });
+    acts.appendChild(b); body.appendChild(acts);
+    card.appendChild(body);
+  });
+  const note=document.createElement('div'); note.className='bconf-note';
+  note.textContent=(lines.length>40?('Showing the first 40 of '+lines.length+'. '):'')+
+    'Forgetting one removes it for good. To remove everything, use Delete Account.';
+  card.appendChild(note);
+  msgs.appendChild(wrap); msgs.scrollTop=msgs.scrollHeight;
+}
+
+/* ── WHAT SHE LOOKED UP LAST TIME ──────────────────────────────────
+   His question, 13 November: a friend-and-assistant "without duplication,
+   wastage of resources". Measured the same day: **there is no cache of any
+   kind — zero.** Ask about Goa hotels today and again on Friday and she
+   starts from nothing, pays for the whole search again, and may hand back
+   different numbers with no explanation for the difference.
+
+   THIS IS DELIBERATELY NOT A CACHE, AND THAT MATTERS.
+   Serving a stored PRICE would break the rule the whole app is built on —
+   never state a figure that could be out of date without checking it. So
+   nothing here is ever served INSTEAD of a search. What is kept is the fact
+   that she looked, when, and what she found, handed to her as context so she
+   can say WHAT HAS CHANGED rather than contradicting herself in silence.
+   **It does not cut the search bill. It removes the duplicated EFFORT and
+   the contradictory answer, which is the part that was actually costing
+   something.** Saying otherwise would be selling him a saving that is not
+   there. [[research-live-before-advising]]
+
+   Per account, newest first, capped at 12 — a note about what she found in
+   August helps nobody and is weight on every turn. */
+const _RSCH_MAX=12, _RSCH_GIST=260;
+let _currentAsk='';
+function _rschKey(){
+  let who='anon'; try{ who=String(_toolProfileKey()||'anon').toLowerCase(); }catch(e){}
+  return 'b_research_'+who;
+}
+function _rschAll(){
+  try{ const a=JSON.parse(localStorage.getItem(_rschKey())||'[]'); return Array.isArray(a)?a:[]; }
+  catch(e){ return []; }
+}
+/* Matched on the words that carry meaning. Deliberately crude: a near miss
+   costs one short note, a false match costs nothing worse than a sentence
+   saying what she found before. */
+function _rschWords(t){
+  const stop={the:1,a:1,an:1,of:1,for:1,in:1,on:1,to:1,and:1,or:1,is:1,are:1,was:1,
+    what:1,which:1,how:1,me:1,my:1,i:1,you:1,we:1,can:1,do:1,does:1,best:1,please:1};
+  return String(t||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/)
+    .filter(function(w){ return w.length>3&&!stop[w]; });
+}
+function _rschRemember(question,answer){
+  try{
+    const q=String(question||'').trim();
+    if(q.length<12) return;
+    const gist=String(answer||'').replace(/\s+/g,' ').trim().slice(0,_RSCH_GIST);
+    if(!gist) return;
+    const all=_rschAll().filter(function(r){ return r.q!==q; });
+    all.unshift({q:q,g:gist,at:new Date().toISOString()});
+    localStorage.setItem(_rschKey(),JSON.stringify(all.slice(0,_RSCH_MAX)));
+  }catch(e){}
+}
+function _priorResearchNote(){
+  try{
+    const now=_rschWords(_currentAsk);
+    if(now.length<2) return '';
+    const all=_rschAll();
+    let best=null,bestScore=0;
+    all.forEach(function(r){
+      const had=_rschWords(r.q);
+      let hit=0;
+      now.forEach(function(w){ if(had.indexOf(w)>=0) hit++; });
+      const score=hit/Math.max(2,now.length);
+      if(score>bestScore){ bestScore=score; best=r; }
+    });
+    // Half the meaningful words in common. Below that it is a different
+    // question and the note would be noise.
+    if(!best||bestScore<0.5) return '';
+    let when=best.at;
+    try{ when=new Date(best.at).toLocaleDateString('en-GB',
+      {day:'numeric',month:'short'}); }catch(e){}
+    return '\n\nYOU HAVE LOOKED THIS UP BEFORE, on '+when+', and what you found was: "'+
+      best.g+'" Check it again now — figures move — and SAY WHAT HAS CHANGED since then, '+
+      'or that nothing has. Never contradict that earlier answer without naming the difference.';
+  }catch(e){ return ''; }
+}
+
 /* ── A STICKER IS A CONVERSATION, NOT A SEARCH QUERY ────────────────
    MEASURED 2026-11-13, and it was bad: **39 of his 46 word stickers routed
    to the SEARCH lane**, so "Yay!" made Bella run a web search for "Yay!",
@@ -12272,6 +12422,9 @@ async function send(){
     const _route=(pTexts.length===0&&pImages.length===0)?routeTurn(fullMsg)
                :{lane:'search',why:'attachment present',emoji:_hasEmoji(fullMsg)};
     _recordRoute(fullMsg,_route);
+    // The prompt builder has no access to the message; this is how the
+    // "you looked this up before" note knows what was asked.
+    try{ _currentAsk=fullMsg; }catch(e){}
     if(_route.lane==='tools'||_route.lane==='chat'){
       // PHASE 2. Function calling, with his confirmation standing in front of
       // every write. Web search is NOT attached on this lane and must not be:
@@ -12356,6 +12509,9 @@ async function send(){
       (_inlineOptions?'\n\n(Buying options were shown as cards: '+
         _inlineOptions.items.map(function(o){ return o.name; }).join('; ')+'.)':'');
     const h=getHist();h.push({role:'model',parts:[{text:_histText}]});setHist(h);
+    /* Only what she RESEARCHED is worth remembering she researched. A chat
+       turn or a sticker has nothing to come back to. */
+    try{ if(_route&&_route.lane==='search') _rschRemember(fullMsg,reply); }catch(e){}
     const bellaMsgId=bellaMsg(reply);
     // Under her words, where the explanation is. No download: nothing was
     // built as a file here, and offering one that does not exist would be a
@@ -12883,7 +13039,7 @@ async function callBella(useSearch,memCtx,signal,route,opts){
      searches and cannot use a single one of them. Gated on the lane now, so
      "how are you" no longer carries the travel research list. His standing
      requirement, 7 November 2026: "i want Bella lean and intelligent." */
-  const contents=[{role:'user',parts:[{text:systemPrompt+(_needRules?searchNote:'')+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_otherThreadsNote()+_recalledThreadNote()+_replyLangNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
+  const contents=[{role:'user',parts:[{text:systemPrompt+(_needRules?searchNote:'')+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_otherThreadsNote()+_recalledThreadNote()+_replyLangNote()+(_needRules?_priorResearchNote():'')}]},{role:'model',parts:[{text:_opening}]},...getHist()];
   // The two tool sets cannot travel together (see routeTurn), so this is written
   // as an either/or and not as two independent fields. While BELLA_TOOLS_READY is
   // false the second branch is unreachable and the request on the wire is
