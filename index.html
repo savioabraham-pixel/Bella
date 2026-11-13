@@ -3311,7 +3311,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 11:22';
+const BELLA_BUILD = '13 Nov 11:41';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -3665,6 +3665,39 @@ function _inOpeningExchange(){
    removes more than it should, the FULL prompt is used and the saving is
    given up. Lean must never be the reason she forgets who she is. */
 const _LEAN_DROP=/^(RESPONSE FORMAT|CASUAL CONVERSATION)/;
+/* ── THE EMOJI RULES RIDE ONLY WHEN THERE IS AN EMOJI ───────────────
+   2,563 characters telling her how to answer an emoji sent on its own —
+   priceless on that turn, dead weight on every other. UNLIKE the rest of
+   PERSONALITY & TONE this one is safe to gate, because it is not her voice:
+   it is advice about a specific kind of message, and the message either is
+   that kind or it is not.
+   **DO NOT CUT THE REST OF THAT BLOCK.** Nearly every line of it repairs
+   something she actually did wrong — the flowery metaphors, the emoji
+   dictionary entries, counselling language in reply to one sad face, the
+   stock family question on every new thread. Those are not boilerplate;
+   removing them does not make her terse, it makes her generic again.
+   FAILS SAFE: if either marker is missing, or the test throws, the rules
+   stay in. Losing tokens is nothing; losing the rules is a worse Bella. */
+function _hasEmoji(t){
+  try{ return /\p{Extended_Pictographic}/u.test(String(t==null?'':t)); }
+  catch(e){ return true; }
+}
+function _stripEmojiRules(prompt){
+  const src=String(prompt||'');
+  const a=src.indexOf('AN EMOJI SENT ON ITS OWN');
+  if(a<0) return src;
+  const b=src.indexOf('YOU HAVE ALREADY ASKED', a);
+  if(b<0||b<=a) return src;
+  /* THE GUARD IS AN ABSOLUTE SPAN, NOT A PERCENTAGE. It was a percentage
+     first, and that was a real bug: the block is 6% of the FULL prompt but
+     15% of the LEAN one, so the guard rejected the strip on exactly the
+     turns it was meant to help — silently, with the suite still green
+     because the suite measured the full prompt. A percentage of a thing that
+     changes size is not a safety check. */
+  const removed=b-a;
+  if(removed>6000) return src;        // the markers have moved; give up the saving
+  return src.slice(0,a)+src.slice(b);
+}
 function _leanPrompt(full,midTask){
   const src=String(full||'');
   if(src.length<4000) return src;
@@ -12757,6 +12790,8 @@ async function callBella(useSearch,memCtx,signal,route,opts){
      lean and intelligent." */
   const _needRules=route?(route.lane==='search'):!!useSearch;
   if(!_needRules) systemPrompt=_leanPrompt(systemPrompt,!!(opts&&opts.lean));
+  // Nobody sent an emoji, so the emoji rules are 2,563 characters of nothing.
+  if(!(route&&route.emoji)) systemPrompt=_stripEmojiRules(systemPrompt);
   // RESEARCH RULE. Google Search is now attached to every request, so this note is
   // always present and tells Gemini WHEN to reach for it. Previously the tool was
   // only attached when a keyword matched, so anything phrased outside that list was
@@ -15845,7 +15880,9 @@ async function _toolTurn(fullMsg,route,memCtx,signal,lang,forceLean){
 function routeTurn(t){
   try{
     const raw=String(t==null?'':t).trim();
-    if(!raw) return {lane:'search',why:'empty'};
+    // Carried on the route so callBella can decide whether the emoji rules
+    // are worth their 2,563 characters this turn.
+    if(!raw) return {lane:'search',why:'empty',emoji:false};
     const l=raw.toLowerCase();
     // Tools are checked BEFORE the time veto on purpose. "Send that email now"
     // is an instruction, not a question, and web search has nothing to offer it
@@ -15861,11 +15898,11 @@ function routeTurn(t){
          2026-11-10: "how are you today" and a memory instruction both came
          back 'search'. A thrown default looks exactly like a working one. */
       const hit=_TOOL_INTENTS.find(x=>x.re&&x.re.test(l));
-      if(hit) return {lane:'tools',why:'action intent: '+hit.name,tool:hit.name};
+      if(hit) return {lane:'tools',why:'action intent: '+hit.name,tool:hit.name,emoji:_hasEmoji(raw)};
     }
     // THE VETO. Anything that reads as volatile keeps the search tool, whatever
     // else it matches below.
-    if(isTimeSensitive(raw)) return {lane:'search',why:'time-sensitive wording'};
+    if(isTimeSensitive(raw)) return {lane:'search',why:'time-sensitive wording',emoji:_hasEmoji(raw)};
     // A question mark is treated as a question, full stop. "How are you?" losing
     // its search tool would be harmless, but the rule that lets it through is the
     // same rule that would let a real question through, so neither is allowed.
@@ -15877,15 +15914,16 @@ function routeTurn(t){
     // was routed to search and never stored. detectMemoryRequest only returns
     // true for a question when the storage wording is unmistakable, so
     // "do you remember yesterday?" is still treated as the question it is.
-    if(detectMemoryRequest(raw)) return {lane:'chat',why:'memory instruction'};
-    if(raw.indexOf('?')!==-1) return {lane:'search',why:'question mark'};
+    if(detectMemoryRequest(raw)) return {lane:'chat',why:'memory instruction',emoji:_hasEmoji(raw)};
+    if(raw.indexOf('?')!==-1) return {lane:'search',why:'question mark',emoji:_hasEmoji(raw)};
     // Social turns only, and only short ones. The cap is a second guard behind
     // the anchors: a long message is doing something more than saying hello.
-    if(raw.length<=40&&_CHAT_SHAPES.some(re=>re.test(l))) return {lane:'chat',why:'social turn'};
-    return {lane:'search',why:'default'};
+    if(raw.length<=40&&_CHAT_SHAPES.some(re=>re.test(l))) return {lane:'chat',why:'social turn',emoji:_hasEmoji(raw)};
+    return {lane:'search',why:'default',emoji:_hasEmoji(raw)};
   }catch(e){
     console.warn('routeTurn failed, defaulting to search:',e);
-    return {lane:'search',why:'router error'};
+    // The router failed, so we do not know what they sent. Keep the rules.
+    return {lane:'search',why:'router error',emoji:true};
   }
 }
 
