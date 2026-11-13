@@ -3311,7 +3311,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 11:41';
+const BELLA_BUILD = '13 Nov 12:09';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -3678,6 +3678,29 @@ const _LEAN_DROP=/^(RESPONSE FORMAT|CASUAL CONVERSATION)/;
    removing them does not make her terse, it makes her generic again.
    FAILS SAFE: if either marker is missing, or the test throws, the rules
    stay in. Losing tokens is nothing; losing the rules is a worse Bella. */
+/* ── A STICKER IS A CONVERSATION, NOT A SEARCH QUERY ────────────────
+   MEASURED 2026-11-13, and it was bad: **39 of his 46 word stickers routed
+   to the SEARCH lane**, so "Yay!" made Bella run a web search for "Yay!",
+   carry 52,248 characters to do it, and answer in the bullet-points-and-
+   sources register that lane exists for. The animated set was worse — it
+   sends `:bella-congrats:` and she searched the web for THAT.
+   A sticker is the warmest, simplest thing anyone sends her and it was the
+   most expensive turn in the app.
+   EXACT MATCHES ONLY, against the two lists the page already holds, so this
+   can never steal a sentence somebody actually typed. And if a person types
+   "Yay!" by hand, chat is the right lane for that too. */
+function _isStickerMessage(t){
+  const raw=String(t==null?'':t).trim();
+  if(!raw) return false;
+  if(/^:bella-[a-z0-9_-]+:$/i.test(raw)) return true;      // the animated set
+  try{
+    if(typeof _STICKERS==='undefined') return false;
+    const low=raw.toLowerCase();
+    return _STICKERS.some(function(x){
+      return String((x&&x.t)||'').trim().toLowerCase()===low;
+    });
+  }catch(e){ return false; }
+}
 function _hasEmoji(t){
   try{ return /\p{Extended_Pictographic}/u.test(String(t==null?'':t)); }
   catch(e){ return true; }
@@ -12228,7 +12251,10 @@ async function send(){
   try{
     // An attachment is never a social turn — a file always goes out in the
     // search lane, exactly as it did before this router existed.
-    const _route=(pTexts.length===0&&pImages.length===0)?routeTurn(fullMsg):{lane:'search',why:'attachment present'};
+    // The attachment route is built by hand, so it needs the emoji flag set
+    // by hand too — a photo with an emoji caption is still an emoji message.
+    const _route=(pTexts.length===0&&pImages.length===0)?routeTurn(fullMsg)
+               :{lane:'search',why:'attachment present',emoji:_hasEmoji(fullMsg)};
     _recordRoute(fullMsg,_route);
     if(_route.lane==='tools'||_route.lane==='chat'){
       // PHASE 2. Function calling, with his confirmation standing in front of
@@ -15899,6 +15925,27 @@ function routeTurn(t){
          back 'search'. A thrown default looks exactly like a working one. */
       const hit=_TOOL_INTENTS.find(x=>x.re&&x.re.test(l));
       if(hit) return {lane:'tools',why:'action intent: '+hit.name,tool:hit.name,emoji:_hasEmoji(raw)};
+    }
+    // His own stickers, both sets. Checked after the tools test so an
+    // instruction is never stolen, and before every other test so the time
+    // veto and the question mark cannot drag a sticker into search.
+    if(_isStickerMessage(raw)) return {lane:'chat',why:'a sticker',emoji:_hasEmoji(raw)};
+    /* AN EMOJI ON ITS OWN WAS DOING A WEB SEARCH. Measured 2026-11-13:
+       "🎉" fell through every test here to the 'search' default, so Bella
+       googled a party popper and carried 54,810 characters to do it — the
+       single most expensive turn in the app, for the one message that should
+       be the cheapest and warmest.
+       Checked AFTER the tools test on purpose: "remind me to call mum 📞" is
+       an instruction that happens to carry an emoji, and it must still reach
+       the tools lane.
+       THE CAP IS WHAT KEEPS IT HONEST — with the emoji and the spaces taken
+       out, at most two characters may remain. "hi 😀" is a beat; a real
+       sentence with an emoji in it is still a real sentence. */
+    if(_hasEmoji(raw)){
+      let bare='';
+      try{ bare=raw.replace(/\p{Extended_Pictographic}|\p{Emoji_Modifier}|️|‍/gu,'').replace(/\s+/g,''); }
+      catch(e){ bare=raw; }
+      if(bare.length<=2) return {lane:'chat',why:'an emoji beat',emoji:true};
     }
     // THE VETO. Anything that reads as volatile keeps the search tool, whatever
     // else it matches below.
