@@ -3310,7 +3310,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 07:52';
+const BELLA_BUILD = '13 Nov 08:43';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -8031,6 +8031,9 @@ function completeLogin(userData) {
   // if the notice wording changes. After everything else, so it can never be
   // what stands between somebody and Bella loading.
   try{ maybeAskConsent(); }catch(e){}
+  // A greeting comes before business, and both come after everything that
+  // decides whether Bella loads at all.
+  try{ Promise.resolve(_bdayGreet()).catch(function(){}); }catch(e){}
   // After everything else, for the same reason: an unfinished plan must never
   // be what stands between somebody and Bella loading.
   try{ _planResume(); }catch(e){ console.warn('plan resume:',e); }
@@ -15210,6 +15213,102 @@ async function _executeTool(tool,args,signal){
     if(tool.write){ try{ delete _toolDone[_toolKey(tool.name,payload)]; }catch(e2){} }
     return {ok:false,error:String((e&&e.message)||e)};
   }
+}
+
+/* ── BIRTHDAYS ──────────────────────────────────────────────────────
+   His design, 13 November 2026, and it is the reason this needs no backend
+   at all: *"whenever they access Bella in their timezone on their special day
+   post start of 00:00 hrs... Post that whenever i acess Bella a belated wish
+   would be nice."*
+   A wish that waits to be OPENED needs no sweep, no scheduler, no
+   notification and no deploy. The date of birth is already in the account
+   record this browser holds, and the browser's own clock IS their timezone.
+   His second rule: *"for people above 50's a beautiful poem is the best."*
+   Under 50 she varies between a short wish, a poem and a joke.
+   **NEVER a joke about their age** — his instruction, and the one way this
+   feature can hurt somebody. */
+const _BDAY_BELATED_DAYS=14;
+/* NEVER GUESS A BIRTHDAY. A wrong date means wishing somebody on a day that
+   is not theirs, which is worse than silence, so anything ambiguous returns
+   null and nothing happens. */
+function _bdayParse(raw){
+  const t=String(raw==null?'':raw).trim();
+  if(!t) return null;
+  let y=null,m=null,d=null;
+  let mt=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);            // 1975-05-21
+  if(mt){ y=+mt[1]; m=+mt[2]; d=+mt[3]; }
+  else{
+    mt=t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);   // 21/05/1975
+    // DAY FIRST. He is in India and writes 21/05; reading that as month-first
+    // would wish him on the wrong day every year.
+    if(mt){ d=+mt[1]; m=+mt[2]; y=+mt[3]; }
+  }
+  if(!m||!d||m<1||m>12||d<1||d>31) return null;
+  return {y:(y&&y>1900&&y<2200)?y:null,m:m,d:d};
+}
+function _bdayAge(b,today){
+  if(!b||!b.y) return null;
+  let a=today.getFullYear()-b.y;
+  const had=(today.getMonth()+1>b.m)||((today.getMonth()+1===b.m)&&today.getDate()>=b.d);
+  if(!had) a-=1;
+  return (a>=0&&a<130)?a:null;
+}
+function _bdayKey(){
+  let who='anon'; try{ who=String(_toolProfileKey()||'anon').toLowerCase(); }catch(e){}
+  return 'b_bday_'+who;
+}
+/* Returns 'today' | 'belated' | null. */
+function _bdayWhen(raw,now){
+  const b=_bdayParse(raw); if(!b) return null;
+  const today=now||new Date();
+  if((today.getMonth()+1)===b.m&&today.getDate()===b.d) return 'today';
+  // How many days since it passed this year. A belated wish six months late
+  // is not a kindness, so it is capped.
+  const thisYear=new Date(today.getFullYear(),b.m-1,b.d);
+  const days=Math.floor((today-thisYear)/86400000);
+  if(days>0&&days<=_BDAY_BELATED_DAYS) return 'belated';
+  return null;
+}
+async function _bdayGreet(){
+  let u=null;
+  try{ u=JSON.parse(localStorage.getItem('b_registered_user')||'null'); }catch(e){}
+  if(!u||!u.dob) return;
+  const now=new Date();
+  const when=_bdayWhen(u.dob,now);
+  if(!when) return;
+  // ONCE A YEAR. Stored per account so a second sign-in on the same device
+  // does not wish them twice; two different devices could still both wish
+  // them, which is a far smaller fault than a missed birthday.
+  let seen=null;
+  try{ seen=JSON.parse(localStorage.getItem(_bdayKey())||'null'); }catch(e){}
+  if(seen&&seen.year===now.getFullYear()) return;
+  try{ localStorage.setItem(_bdayKey(),JSON.stringify({year:now.getFullYear(),kind:when})); }catch(e){}
+  const b=_bdayParse(u.dob), age=_bdayAge(b,now);
+  const name=(u.preferredName||u.fullName||'').split(' ')[0]||'';
+  const older=(age!==null&&age>=50);
+  const style=older
+    ? 'Write a SHORT, beautiful poem for them — four to six lines, warm and dignified, about the year ahead rather than the years behind.'
+    : 'Choose ONE of these and do it well: a short warm wish, a light four-line poem, or a gentle joke. Vary it from year to year.';
+  const instruction=
+    'It is '+(when==='today'?'their birthday TODAY':'just past their birthday, and you have only just seen them')+'.'+
+    (name?(' Their name is '+name+'.'):'')+
+    '\n'+style+
+    '\nNEVER make a joke about their age and never state their age back to them.'+
+    (when==='belated'?'\nOpen by saying you are sorry to be late, in one short line.':'')+
+    '\nNo headings, no bullet points, no emoji more than one. Four sentences at the very most.';
+  let msg=null;
+  try{
+    // lane 'birthday' deliberately matches neither 'tools' nor 'chat', so no
+    // tool declarations are attached and no web search is asked for -- she is
+    // writing a greeting, not deciding anything.
+    msg=await callBella(false,(window.userMemory&&userMemory.memories)||'',null,
+      {lane:'birthday',why:'birthday'},{extra:instruction});
+  }catch(e){ msg=null; }
+  // She must never be silent on somebody's birthday because a request failed.
+  if(!msg) msg=(when==='today')
+    ? ('Happy birthday'+(name?(', '+name):'')+'. I hope today is a lovely one.')
+    : ('A belated happy birthday'+(name?(', '+name):'')+' — I am sorry to be late. I hope it was a lovely day.');
+  try{ bellaMsg(msg); }catch(e){}
 }
 
 /* ── THE PLAN ───────────────────────────────────────────────────────
