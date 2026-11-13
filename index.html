@@ -3311,7 +3311,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 12:09';
+const BELLA_BUILD = '13 Nov 12:47';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -3731,9 +3731,25 @@ function _leanPrompt(full,midTask){
     if(isHead(lines[i])) dropping=_LEAN_DROP.test(lines[i].trim());
     if(!dropping) out.push(lines[i]);
   }
-  const lean=out.join('\n');
+  // `let`, not `const`: the capability core below is appended to it.
+  let lean=out.join('\n');
   // Nothing dropped, or far too much dropped: both mean the headers moved.
   if(lean.length<src.length*0.25||lean.length>=src.length) return src;
+  /* TWO CAPABILITIES LEAVE WITH RESPONSE FORMAT, AND THEY MUST NOT.
+     Measured 2026-11-13: the trim keeps her identity, confidentiality,
+     language, memory rules, tone and the 24-hour clock — but the [CHART]
+     syntax and "take a brief before you build" live inside RESPONSE FORMAT
+     and went with it. Most build-and-compare requests route to the search
+     lane and keep everything, but NOT ALL of them do, and a turn that lands
+     elsewhere would quietly lose the ability to draw a chart at all.
+     **A lean prompt may cost her WORDS. It must never cost her CAPABILITIES.**
+     ~430 characters, about Rs0.003 a turn, and it buys back both. */
+  lean+='\n\nTWO THINGS THE FULLER RULES WOULD HAVE TOLD YOU, AND THEY STILL APPLY. '+
+    'If figures in your answer COMPARE separate things or CHANGE over time, end the reply with '+
+    'a block of exactly this shape and nothing else:\n[CHART]\ntype: bar\ntitle: what it shows\n'+
+    'labels: A, B, C\nseries: Name | 1, 2, 3\n[/CHART]\nOnly ever from figures you actually have. '+
+    'And if they ask you to BUILD something and you genuinely lack what you need, ask up to four '+
+    'short questions in one message first — then offer to go ahead anyway on stated assumptions.';
   // Only true once something HAS run. Saying it on a first round would have
   // her report on an action that has not happened.
   if(!midTask) return lean;
