@@ -2583,6 +2583,10 @@ try{
         <button id="wxtab-radar" onclick="switchWxTab('radar')">Radar</button>
       </div>
       <div id="wx-body"></div>
+      <!-- OUTSIDE #wx-body ON PURPOSE. renderWxBody rewrites that node on
+           every fetch, so a control placed inside it is wiped the moment the
+           weather refreshes — the two-writers-one-node fault. -->
+      <div id="wx-watch"></div>
       <!-- The radar lives in its OWN element rather than inside #wx-body,
            which renderWxBody() rewrites wholesale. A map rebuilt from scratch
            on every repaint would re-request every tile, lose the pan and
@@ -3306,7 +3310,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 07:30';
+const BELLA_BUILD = '13 Nov 07:52';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -3638,6 +3642,45 @@ function _inOpeningExchange(){
   try{ return getHist().length <= 2; }catch(e){ return true; }
 }
 
+/* ── THE LEAN PROMPT, FOR MID-TASK ROUNDS ───────────────────────────
+   His standing rule, 7 November 2026: "i want Bella lean and intelligent."
+   MEASURED 2026-11-13: the system prompt is 41,392 characters and it is
+   re-sent IN FULL on every round of a tools turn. A six-round plan therefore
+   pays for the persona six times — about Rs1.75 at $0.30 a million input
+   tokens — and almost none of it is doing anything on rounds 2 and after.
+   On those rounds an action has already run and her whole job is to say what
+   happened in a sentence or two. RESPONSE FORMAT alone is 21,101 characters
+   telling her how to structure an answer she is not writing.
+
+   IT FILTERS THE REAL PROMPT RATHER THAN RESTATING IT. A second hand-written
+   "short persona" would drift from the real one the first time either changed,
+   and then she would behave differently mid-task for reasons nobody could see.
+   Sections are found by their own ALL-CAPS headers, so a section added later
+   is kept unless it is named here.
+
+   THE GUARD MATTERS MORE THAN THE SAVING. If the headers are ever reworded
+   this would quietly return almost nothing, and she would answer a tool round
+   with no identity, no memory rules and no language rule. So: if the trim
+   removes more than it should, the FULL prompt is used and the saving is
+   given up. Lean must never be the reason she forgets who she is. */
+const _LEAN_DROP=/^(RESPONSE FORMAT|CASUAL CONVERSATION)/;
+function _leanPrompt(full){
+  const src=String(full||'');
+  if(src.length<4000) return src;
+  const lines=src.split('\n');
+  const isHead=function(l){ return /^[A-Z][A-Z0-9 &/()'’,.-]{8,}:?\s*$/.test(l.trim()); };
+  const out=[]; let dropping=false;
+  for(let i=0;i<lines.length;i++){
+    if(isHead(lines[i])) dropping=_LEAN_DROP.test(lines[i].trim());
+    if(!dropping) out.push(lines[i]);
+  }
+  const lean=out.join('\n');
+  // Nothing dropped, or far too much dropped: both mean the headers moved.
+  if(lean.length<src.length*0.25||lean.length>=src.length) return src;
+  return lean+'\n\nYOU ARE MID-TASK. An action has just run and its real result is below. '+
+    'Say in one or two short sentences what actually happened, in your own voice. '+
+    'Do not restate the plan, do not add anything you were not told, and if it failed say so plainly.';
+}
 function buildSystemPrompt(profileKey,addressedName,memCtx){
   const _clk=localClock();
   const p=PROFILES[profileKey]||{};
@@ -6243,9 +6286,10 @@ function openNotificationSettings(){
         '</div>' +
         '<div style="height:1px;background:rgba(11,37,69,0.10);margin:18px 0"></div>' +
         '<div class="ns-muted" style="font-size:11px;color:#5A6B8A;line-height:1.8">' +
-          '<strong style="color:#0B2545">Not here yet.</strong> Bella does not send browser or phone ' +
-          'notifications, so there is nothing else to switch. When she can reach you while she is ' +
-          'closed, the choice will appear here.' +
+          '<strong style="color:#0B2545">Bella can now reach you while she is closed.</strong> ' +
+          'Reminders you approve arrive as a notification on this device, even with the tab shut. ' +
+          'She asks permission the first time, and you can withdraw it under ' +
+          '"What Bella May Do" in My Account.' +
         '</div>' +
         '<button onclick="document.getElementById(\'notif-settings\').remove()" style="width:100%;margin-top:20px;padding:12px;border-radius:12px;border:none;background:#0B2545;color:#F5E6C8;font-size:13px;font-weight:600;cursor:pointer;font-family:\'BellaIndic\',\'DM Sans\',sans-serif">Done</button>' +
       '</div>' +
@@ -7987,6 +8031,9 @@ function completeLogin(userData) {
   // if the notice wording changes. After everything else, so it can never be
   // what stands between somebody and Bella loading.
   try{ maybeAskConsent(); }catch(e){}
+  // After everything else, for the same reason: an unfinished plan must never
+  // be what stands between somebody and Bella loading.
+  try{ _planResume(); }catch(e){ console.warn('plan resume:',e); }
 }
 
 // ============================================================
@@ -12638,7 +12685,11 @@ async function callBella(useSearch,memCtx,signal,route,opts){
   // Use test profile if admin test mode is active — nothing saved to real user data
   const _activeProfileKey = (_testMode && _testProfileKey) ? _testProfileKey : currentProfileKey;
   const _activeAddressedName = (_testMode && _testAddressedName) ? _testAddressedName : currentAddressedName;
-  const systemPrompt=buildSystemPrompt(_activeProfileKey,_activeAddressedName,_testMode?'':memCtx);
+  let systemPrompt=buildSystemPrompt(_activeProfileKey,_activeAddressedName,_testMode?'':memCtx);
+  // Mid-task rounds carry the lean prompt. The FIRST round is always full --
+  // that is the one that decides what to do, and deciding is the part that
+  // needs everything she knows.
+  if(opts&&opts.lean) systemPrompt=_leanPrompt(systemPrompt);
   // RESEARCH RULE. Google Search is now attached to every request, so this note is
   // always present and tells Gemini WHEN to reach for it. Previously the tool was
   // only attached when a keyword matched, so anything phrased outside that list was
@@ -14669,6 +14720,24 @@ const _TOOL_INTENTS=[
      at 200 rows and collapses at 2,000 — and a dump cannot answer "what do I
      know that matters HERE". This is the retrieval half.
      [[bella-she-cannot-confirm-her-own-memory]] */
+  /* NOT a write tool: it only PROPOSES. The plan card is the approval, and
+     every action inside the plan still stops at its own card. A confirm card
+     in front of the planner would ask the same question twice. */
+  {
+    name:'make_a_plan', write:false, endpoint:'/chain-tasks', re:null, chatTool:true,
+    declaration:{
+      name:'make_a_plan',
+      description:'Break a goal into steps and show them for approval before anything happens. Use it when what they want needs SEVERAL things done in order — a trip, an event, a move, a purchase with research behind it. Not for a single action, and not for a question you can simply answer.',
+      parameters:{type:'object',properties:{
+        goal:{type:'string',description:'What they are trying to achieve, in one sentence, in their own words.'}
+      },required:['goal']}
+    },
+    build:function(a){
+      const g=String((a&&a.goal)||'').trim();
+      if(!g) throw new Error('ask them what they are trying to achieve before planning it');
+      return {profileKey:_toolProfileKey(),goal:g};
+    }
+  },
   {
     name:'recall', write:false, endpoint:'/memory-search', re:null, chatTool:true,
     declaration:{
@@ -15143,6 +15212,229 @@ async function _executeTool(tool,args,signal){
   }
 }
 
+/* ── THE PLAN ───────────────────────────────────────────────────────
+   What separates an agent from an assistant is not more tools. It is a goal
+   that survives: broken into steps, shown before anything runs, approved once,
+   worked through one step at a time, and still there if the tab is closed.
+
+   /chain-tasks has existed since before this page could call anything and has
+   NEVER been called. It is the planner.
+
+   TWO DECISIONS WORTH KNOWING:
+   1. ITS `endpoint` FIELD IS IGNORED. /chain-tasks asks a model to name an
+      endpoint per step, and a model-named endpoint is not something this page
+      will ever call. Steps are kept as WORDS, and each one is executed by an
+      ordinary tools turn — so Bella picks the tool, and the permission gate
+      and the confirm card stand exactly where they already stand. Nothing
+      about the plan weakens either.
+   2. STEPS ARE BOUNDED AND SO IS THE SPEND. Eight steps maximum, each one a
+      tools turn on the LEAN prompt, and the person can stop it at any point.
+      An unbounded agent loop is how an agent burns money in a circle. */
+const _PLAN_MAX_STEPS=8;
+function _planKey(){
+  let who='anon'; try{ who=String(_toolProfileKey()||'anon').toLowerCase(); }catch(e){}
+  return 'b_plan_'+who;
+}
+function _planLoad(){
+  try{ return JSON.parse(localStorage.getItem(_planKey())||'null'); }catch(e){ return null; }
+}
+function _planSave(p){
+  try{ localStorage.setItem(_planKey(),JSON.stringify(p)); }catch(e){}
+}
+function _planClear(){ try{ localStorage.removeItem(_planKey()); }catch(e){} }
+
+/* Asks the planner, then throws away everything except the words. */
+async function _planFromGoal(goal,signal){
+  const g=String(goal||'').trim();
+  if(!g) throw new Error('there is no goal to plan');
+  const r=await bfetch(BACKEND+'/chain-tasks',{method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({profileKey:_toolProfileKey(),goal:g}),signal:signal});
+  const d=await r.json().catch(function(){ return {}; });
+  if(!r.ok) throw new Error((d&&d.error)||('the planner answered '+r.status));
+  const raw=Array.isArray(d&&d.steps)?d.steps:[];
+  const steps=[];
+  raw.forEach(function(x){
+    if(steps.length>=_PLAN_MAX_STEPS) return;
+    const say=String((x&&(x.action||x.step||x))||'').replace(/\s+/g,' ').trim();
+    if(!say) return;
+    steps.push({say:say.slice(0,180),state:'todo',on:true});
+  });
+  if(!steps.length) throw new Error('the planner came back with no steps');
+  return {id:'p'+Date.now(),goal:g,at:new Date().toISOString(),
+          state:'proposed',steps:steps,
+          warnings:(Array.isArray(d&&d.warnings)?d.warnings:[]).slice(0,3)};
+}
+
+let _planSeq=0;
+/* The plan card. Approve covers the PLAN; every write inside it still stops
+   at its own card, because approving a plan is not approving an action whose
+   details nobody has seen yet. Edit here means choosing which steps run —
+   real editing, with no form to fill in. */
+function _planCard(plan){
+  return new Promise(function(resolve){
+    const msgs=document.getElementById('msgs');
+    if(!msgs) return resolve('ignore');
+    const cid='bplan'+(++_planSeq);
+    let done=false;
+    const wrap=document.createElement('div'); wrap.className='msg bella'; wrap.id=cid;
+    const av=document.createElement('div'); av.className='mav b'; av.textContent='B';
+    const mw=document.createElement('div'); mw.className='msg-wrap';
+    const card=document.createElement('div'); card.className='bconf';
+    wrap.appendChild(av); wrap.appendChild(mw); mw.appendChild(card);
+    const h=document.createElement('div'); h.className='bconf-head';
+    h.textContent='Shall I work through this?';
+    card.appendChild(h);
+    const body=document.createElement('div'); body.className='bconf-body';
+    const g=document.createElement('div'); g.className='bconf-row';
+    const gk=document.createElement('div'); gk.className='bconf-k'; gk.textContent='Goal';
+    const gv=document.createElement('div'); gv.className='bconf-v'; gv.textContent=plan.goal;
+    g.appendChild(gk); g.appendChild(gv); body.appendChild(g);
+    plan.steps.forEach(function(st,i){
+      const row=document.createElement('div'); row.className='bconf-row';
+      const k=document.createElement('label'); k.className='bconf-k';
+      k.textContent='Step '+(i+1);
+      const v=document.createElement('div'); v.className='bconf-v';
+      const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=true;
+      cb.setAttribute('aria-label','Include step '+(i+1));
+      cb.style.cssText='margin-right:8px;vertical-align:middle';
+      cb.addEventListener('change',function(){ st.on=cb.checked; });
+      const sp=document.createElement('span'); sp.textContent=st.say;
+      v.appendChild(cb); v.appendChild(sp);
+      row.appendChild(k); row.appendChild(v); body.appendChild(row);
+    });
+    (plan.warnings||[]).forEach(function(w){
+      const row=document.createElement('div'); row.className='bconf-row';
+      const k=document.createElement('div'); k.className='bconf-k'; k.textContent='Note';
+      const v=document.createElement('div'); v.className='bconf-v'; v.textContent=String(w).slice(0,160);
+      row.appendChild(k); row.appendChild(v); body.appendChild(row);
+    });
+    card.appendChild(body);
+    const finish=function(verdict,said){
+      if(done) return; done=true;
+      try{ card.querySelectorAll('button,input').forEach(function(b){ b.disabled=true; }); }catch(e){}
+      card.classList.add('bconf-'+(verdict==='approve'?'approve':'ignore'));
+      const vd=document.createElement('div'); vd.className='bconf-verdict'; vd.textContent=said;
+      card.appendChild(vd);
+      resolve(verdict);
+    };
+    const acts=document.createElement('div'); acts.className='bconf-acts';
+    const mk=function(label,cls,fn){
+      const b=document.createElement('button'); b.type='button';
+      b.className='bconf-btn '+cls; b.textContent=label;
+      b.addEventListener('click',fn); acts.appendChild(b); return b;
+    };
+    const ok=mk('Approve the plan','bconf-ok',function(){
+      ok.disabled=true;
+      const n=plan.steps.filter(function(x){ return x.on; }).length;
+      if(!n){ finish('ignore','No steps were left in it, so nothing was done.'); return; }
+      finish('approve','You approved this. I will work through it one step at a time.');
+    });
+    mk('Ignore','bconf-no',function(){ finish('ignore','You said no. Nothing was done.'); });
+    card.appendChild(acts);
+    const note=document.createElement('div'); note.className='bconf-note';
+    note.textContent='Untick anything you do not want. Nothing runs until you approve, and each action still asks before it happens.';
+    card.appendChild(note);
+    msgs.appendChild(wrap); msgs.scrollTop=msgs.scrollHeight;
+    try{ ok.focus(); }catch(e){}
+    try{
+      const sig=window._chatAbortController&&window._chatAbortController.signal;
+      if(sig) sig.addEventListener('abort',function(){ finish('ignore','Stopped. Nothing was done.'); },{once:true});
+    }catch(e){}
+  });
+}
+
+/* Works through it. Saves after EVERY step, so a tab closed mid-plan loses at
+   most the step that was in flight — and that step has not happened, because
+   nothing is marked done until it has. */
+let _planStop=false;
+async function _planRun(plan,memCtx,lang){
+  plan.state='running'; _planSave(plan);
+  _planStop=false;
+  for(let i=0;i<plan.steps.length;i++){
+    const st=plan.steps[i];
+    if(!st.on){ st.state='skipped'; _planSave(plan); continue; }
+    if(st.state==='done') continue;
+    if(_planStop){ plan.state='stopped'; _planSave(plan);
+      bellaMsg('Stopped. I have left the rest of the plan where it is — ask me to carry on whenever you like.');
+      return; }
+    const sig=(window._chatAbortController&&window._chatAbortController.signal)||null;
+    if(sig&&sig.aborted){ plan.state='stopped'; _planSave(plan); return; }
+    _loopProgress('Step '+(i+1)+' of '+plan.steps.length+'…');
+    const instruction='You are working through a plan the person has already approved.\n'+
+      'The goal: '+plan.goal+'\n'+
+      'You are on step '+(i+1)+' of '+plan.steps.length+': '+st.say+'\n'+
+      'Do THIS step only. Do not do the later steps. If this step needs no action, say so in one line.';
+    let out=null;
+    try{
+      out=await _toolTurn(instruction,{lane:'tools',why:'plan step'},memCtx,sig,lang,true);
+      st.state='done';
+    }catch(e){
+      st.state='failed'; st.note=String((e&&e.message)||e).slice(0,160);
+    }
+    _planSave(plan);
+    if(out) bellaMsg(out);
+    if(st.state==='failed'){
+      plan.state='stopped'; _planSave(plan);
+      bellaMsg('I could not get past step '+(i+1)+'. I have stopped there rather than carrying on as if it had worked.');
+      return;
+    }
+  }
+  plan.state='done'; _planSave(plan);
+  const did=plan.steps.filter(function(x){ return x.state==='done'; }).length;
+  bellaMsg('That is the plan done — '+did+' of '+plan.steps.length+' steps.');
+  _planClear();
+}
+
+/* An unfinished plan is offered back, never resumed silently. Coming back to
+   a tab and finding Bella already acting would be the opposite of the gate. */
+function _planResume(){
+  const p=_planLoad();
+  if(!p||!p.steps||!p.steps.length) return;
+  if(p.state!=='running'&&p.state!=='proposed') { _planClear(); return; }
+  const left=p.steps.filter(function(x){ return x.on&&x.state!=='done'; }).length;
+  if(!left){ _planClear(); return; }
+  const msgs=document.getElementById('msgs');
+  if(!msgs) return;
+  const wrap=document.createElement('div'); wrap.className='msg bella';
+  const av=document.createElement('div'); av.className='mav b'; av.textContent='B';
+  const mw=document.createElement('div'); mw.className='msg-wrap';
+  const card=document.createElement('div'); card.className='bconf';
+  wrap.appendChild(av); wrap.appendChild(mw); mw.appendChild(card);
+  const h=document.createElement('div'); h.className='bconf-head';
+  h.textContent='We did not finish this';
+  card.appendChild(h);
+  const body=document.createElement('div'); body.className='bconf-body';
+  [['Goal',p.goal],['Left to do',left+' of '+p.steps.length+' steps']].forEach(function(r){
+    const row=document.createElement('div'); row.className='bconf-row';
+    const k=document.createElement('div'); k.className='bconf-k'; k.textContent=r[0];
+    const v=document.createElement('div'); v.className='bconf-v'; v.textContent=r[1];
+    row.appendChild(k); row.appendChild(v); body.appendChild(row);
+  });
+  card.appendChild(body);
+  const acts=document.createElement('div'); acts.className='bconf-acts';
+  const mk=function(label,cls,fn){
+    const b=document.createElement('button'); b.type='button';
+    b.className='bconf-btn '+cls; b.textContent=label;
+    b.addEventListener('click',fn); acts.appendChild(b); return b;
+  };
+  mk('Carry on','bconf-ok',function(){
+    acts.querySelectorAll('button').forEach(function(b){ b.disabled=true; });
+    window._chatAbortController=new AbortController();
+    _planRun(p,(window.userMemory&&userMemory.memories)||'','en').catch(function(e){
+      console.warn('plan resume:',e);
+    });
+  });
+  mk('Discard it','bconf-no',function(){
+    acts.querySelectorAll('button').forEach(function(b){ b.disabled=true; });
+    _planClear();
+    const vd=document.createElement('div'); vd.className='bconf-verdict';
+    vd.textContent='Discarded.'; card.appendChild(vd);
+  });
+  card.appendChild(acts);
+  msgs.appendChild(wrap); msgs.scrollTop=msgs.scrollHeight;
+}
+
 /* ── THE TURN ──────────────────────────────────────────────────────
    REASON (Gemini picks the actions) -> PLAN (the order it asked for) ->
    CONFIRM (him, per write) -> ACT -> LEARN (the result goes back so she
@@ -15153,14 +15445,14 @@ async function _executeTool(tool,args,signal){
    circle. Past the cap she answers with what she has. */
 const _TOOL_MAX_ROUNDS=2;
 
-async function _toolTurn(fullMsg,route,memCtx,signal,lang){
+async function _toolTurn(fullMsg,route,memCtx,signal,lang,forceLean){
   try{
     const extraTurns=[];
     let acted=false;
     for(let round=0;round<_TOOL_MAX_ROUNDS;round++){
       if(signal&&signal.aborted) return null;
       const step=await callBella(false,memCtx,signal,route,
-        {raw:true,extraTurns:extraTurns.slice()});
+        {raw:true,extraTurns:extraTurns.slice(),lean:forceLean||round>0});
       const calls=(step&&step.calls)||[];
       if(!calls.length){
         // She answered in words. Either nothing needed doing, or she is
@@ -15236,7 +15528,7 @@ async function _toolTurn(fullMsg,route,memCtx,signal,lang){
     // Past the round cap: one more pass, text only, so the turn always ends
     // in words rather than in a silent failure.
     if(signal&&signal.aborted) return null;
-    const last=await callBella(false,memCtx,signal,route,{raw:true,extraTurns:extraTurns});
+    const last=await callBella(false,memCtx,signal,route,{raw:true,extraTurns:extraTurns,lean:true});
     return (last&&last.text)||(acted?'That is done.':null);
   }catch(e){
     console.warn('tool turn:',e);
@@ -23510,6 +23802,100 @@ function openWeatherPanel(){
   // to display:none and the panel would look empty.
   switchWxTab(_wxTab);
   fetchWeather(false);
+  // Its own node and its own fetch, so a slow /watch-get never delays the
+  // weather itself and a failed one never blanks the panel.
+  try{ _wxWatchLoad(); }catch(e){ console.warn('watch state:',e); }
+}
+/* ── THE WEATHER WATCH ──────────────────────────────────────────────
+   The `Watches` tab, `/watch-set` and `/watch-get` have existed since
+   release 39 and the tab has always been EMPTY, because nothing could switch
+   it on — the endpoints had zero callers. `/proactive-sweep` has been reading
+   that empty tab every five minutes ever since.
+   This is the switch. It warns about SEVERE warnings only: India's come from
+   SACHET (NDMA), because neither OpenWeather nor Google issues them here. */
+let _wxWatch={loaded:false,on:false,where:'',busy:false};
+function _wxWatchKey(){ try{ return _toolProfileKey()||''; }catch(e){ return ''; } }
+function renderWxWatch(){
+  const el=document.getElementById('wx-watch');
+  if(!el) return;
+  if(!_wxWatchKey()){ el.innerHTML=''; return; }   // signed out: nothing to offer
+  const on=!!_wxWatch.on, busy=!!_wxWatch.busy;
+  const where=_wxWatch.where||'where you are';
+  const sub=!_wxWatch.loaded ? 'Checking…'
+    : (on ? ('Watching '+where+'. Severe warnings only — nothing else.')
+          : 'Severe warnings only. Bella tells you even if this tab is shut.');
+  el.innerHTML=
+    '<div style="height:1px;background:var(--border);margin:16px 0 14px"></div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px">'+
+      '<div style="min-width:0">'+
+        '<div style="font-size:13px;font-weight:600;color:var(--navy)">Warn me about severe weather</div>'+
+        '<div style="font-size:11px;color:var(--muted);line-height:1.6;margin-top:3px">'+_expEsc(sub)+'</div>'+
+      '</div>'+
+      '<button id="wx-watch-tog" type="button" role="switch" aria-checked="'+(on?'true':'false')+'" '+
+        'aria-label="Warn me about severe weather" '+(busy?'disabled ':'')+'onclick="toggleWxWatch()" '+
+        'style="flex:none;width:52px;height:30px;border-radius:999px;border:none;position:relative;'+
+        'cursor:'+(busy?'default':'pointer')+';opacity:'+(busy?'0.5':'1')+';transition:background .18s;'+
+        'background:'+(on?'var(--navy)':'rgba(11,37,69,0.18)')+'">'+
+        '<span style="position:absolute;top:3px;left:'+(on?'25px':'3px')+';width:24px;height:24px;'+
+        'border-radius:50%;background:'+(on?'var(--gold)':'#FFFFFF')+';transition:left .18s;'+
+        'box-shadow:0 1px 4px rgba(0,0,0,.25)"></span>'+
+      '</button>'+
+    '</div>';
+}
+async function _wxWatchLoad(){
+  if(!_wxWatchKey()){ renderWxWatch(); return; }
+  _wxWatch.loaded=false; renderWxWatch();
+  try{
+    const r=await bfetch(BACKEND+'/watch-get',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({profileKey:_wxWatchKey()})});
+    const d=await r.json().catch(function(){ return {}; });
+    _wxWatch.on=!!(d&&d.watching);
+  }catch(e){ _wxWatch.on=false; }
+  // The place name is for READING, never for the request -- the switch sends
+  // coordinates, so a name that failed to resolve cannot stop it working.
+  try{
+    const d=JSON.parse(sessionStorage.getItem('b_location_data')||'null');
+    if(d&&(d.city||d.area)) _wxWatch.where=String(d.city||d.area);
+  }catch(e){}
+  _wxWatch.loaded=true; renderWxWatch();
+}
+async function toggleWxWatch(){
+  if(_wxWatch.busy) return;
+  const key=_wxWatchKey(); if(!key) return;
+  const turningOn=!_wxWatch.on;
+  /* PERMISSION FIRST, and it is asked in the CONVERSATION rather than in this
+     panel: every other decision Bella asks for is a card in the chat, and a
+     second place to grant things is a second place to miss one. The panel
+     closes so the card is not left behind it. */
+  if(turningOn&&typeof _permGranted==='function'&&!_permGranted('reach_out')){
+    try{ closeWeatherPanel(); }catch(e){}
+    const v=await _askPermission('reach_out','Watching the weather where you are');
+    if(v==='never'){ return; }
+  }
+  _wxWatch.busy=true; renderWxWatch();
+  let body={profileKey:key,on:false};
+  if(turningOn){
+    let d=null; try{ d=JSON.parse(sessionStorage.getItem('b_location_data')||'null'); }catch(e){}
+    if(!(d&&Number.isFinite(d.lat)&&Number.isFinite(d.lon))){
+      _wxWatch.busy=false; renderWxWatch();
+      bellaMsg('I do not know where you are just now, so there is nowhere for me to watch. Tell me the place and I will set it up.');
+      return;
+    }
+    body={profileKey:key,on:true,lat:d.lat,lon:d.lon};
+  }
+  try{
+    const r=await bfetch(BACKEND+'/watch-set',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json().catch(function(){ return {}; });
+    if(!r.ok||d&&d.error) throw new Error((d&&d.error)||('the server answered '+r.status));
+    _wxWatch.on=!!(d&&d.watching);
+  }catch(e){
+    // Say so. A switch that silently flicks back is the worst outcome --
+    // he would not know whether it had worked.
+    bellaMsg('I could not change that just now. Nothing has been switched — please try again in a moment.');
+  }
+  _wxWatch.busy=false; renderWxWatch();
 }
 function closeWeatherPanel(){
   _wxSetMotion(false);          // and stop the moment he looks away
