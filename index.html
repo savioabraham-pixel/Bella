@@ -3311,7 +3311,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 10:42';
+const BELLA_BUILD = '13 Nov 11:22';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -3665,7 +3665,7 @@ function _inOpeningExchange(){
    removes more than it should, the FULL prompt is used and the saving is
    given up. Lean must never be the reason she forgets who she is. */
 const _LEAN_DROP=/^(RESPONSE FORMAT|CASUAL CONVERSATION)/;
-function _leanPrompt(full){
+function _leanPrompt(full,midTask){
   const src=String(full||'');
   if(src.length<4000) return src;
   const lines=src.split('\n');
@@ -3678,9 +3678,59 @@ function _leanPrompt(full){
   const lean=out.join('\n');
   // Nothing dropped, or far too much dropped: both mean the headers moved.
   if(lean.length<src.length*0.25||lean.length>=src.length) return src;
+  // Only true once something HAS run. Saying it on a first round would have
+  // her report on an action that has not happened.
+  if(!midTask) return lean;
   return lean+'\n\nYOU ARE MID-TASK. An action has just run and its real result is below. '+
     'Say in one or two short sentences what actually happened, in your own voice. '+
     'Do not restate the plan, do not add anything you were not told, and if it failed say so plainly.';
+}
+/* ── WHO A LINE IS FOR ──────────────────────────────────────────────
+   MEASURED 2026-11-13: a prompt built for one person carried FIFTEEN LINES
+   and 3,449 characters about OTHER members of the family — Sarbani's bakery,
+   Jishnu studying abroad, Neil working out his next step — with a rule above
+   them telling Bella not to use any of it.
+   **A rule asking a model not to use what you have just handed it is the
+   weakest control there is.** The standing rule is to stay inside one
+   person's own data, so the lines are FILTERED rather than forbidden.
+   Every one of them was ALREADY TAGGED with who it was for — "(for Savio or
+   Sanjukta)" — so this honours a tag that was always there.
+   It is leaner and safer at the same time, which is the only kind of cut
+   worth making. [[no-cross-user-data-ever]]
+   AN UNKNOWN KEY GETS NOTHING. The safe default for "I do not know who this
+   is" is silence about everybody else, never the whole family. */
+const _AUDIENCE_STARTERS=[
+  {who:['sreya','rohan'],          line:'- "By the way, how did that exhibition go?"'},
+  {who:['manish','garima'],        line:'- "How is Aarvi getting on?"'},
+  {who:['savio','sanjukta'],       line:'- "How is Jishnu getting on?"'},
+  {who:['sukanya','souryakiran'],  line:'- "How is Neil doing?"'},
+  {who:['joydeep','purbita'],      line:'- "How are Urmi and Josh?"'},
+  {who:['sarbani'],                line:'- "Is Subhro still buried in his books?"'}
+];
+const _AUDIENCE_SPECIAL=[
+  {who:['soumyajeet'],      line:'- Jishnu (Soumyajeet): is studying abroad, with further study in mind afterwards. Ask how his studies are going, or what he hopes to do next — one question, then listen. Do NOT ask which semester or year he is in: you do not know what stage he has reached, and guessing wrong is worse than asking.'},
+  {who:['sarbani'],         line:'- Sarbani: has JUST STARTED her own home bakery. ENCOURAGE HER ALL THE WAY — this matters more than any other instruction about her. A new business is fragile and exhausting in its first months, and she has taken a real risk. Be genuinely, specifically enthusiastic: celebrate every order, every new recipe, every good day. If she has a bad day, be steady and believing, never dismissive and never falsely bright.'},
+  {who:['souryakiran'],     line:'- Neil (Souryakiran): has finished studying and is working out his next step. Ask how things are going — one question, then listen, and follow his lead. Never ask about studies or semesters. Do not be relentlessly upbeat, and do not press.'},
+  {who:['shayani'],         line:'- Shayani: be extra gentle and warm with her. Ask about Debashish when positive.'},
+  {who:['aarvi','manish','garima'], line:'- Aarvi: a small child, growing all the time — never state her age, ask instead. Bella should be playful, and should address her parents Manish or Garima directly.'},
+  {who:['shayani'],         line:'- On her first session ask whether she prefers "Ria" or "Shayani" — store it and use it consistently.'},
+  {who:['urmi','josh'],     line:'- Urmi & Josh: They are children — keep language age-appropriate and fun'}
+];
+function _forThisPerson(table,profileKey){
+  const k=String(profileKey||'').trim().toLowerCase();
+  if(!k) return [];
+  return table.filter(function(r){ return r.who.indexOf(k)>=0; })
+              .map(function(r){ return r.line; });
+}
+function _casualStarters(profileKey){
+  const rows=_forThisPerson(_AUDIENCE_STARTERS,profileKey);
+  return rows.length?rows.join('\n'):'';
+}
+function _specialInstructions(profileKey){
+  const rows=_forThisPerson(_AUDIENCE_SPECIAL,profileKey);
+  if(!rows.length) return '';
+  return 'SPECIAL USER INSTRUCTIONS (things you MAY bring up later when they fit — '+
+         'never all at once, and never stacked onto the opening greeting):\n'+rows.join('\n')+'\n';
 }
 function buildSystemPrompt(profileKey,addressedName,memCtx){
   const _clk=localClock();
@@ -3850,17 +3900,10 @@ If you are asked what another person said to you, asked about someone else's con
 
 CASUAL CONVERSATION & SMALL TALK:
 When the user is just chatting with no specific task — Bella should feel like a warm friend who genuinely knows them and their world. Bella can naturally weave in personal context as talking points. For example:
-- "By the way, how did that exhibition go?" (for Sreya/Tishin)
-- "How is Aarvi getting on?" (for Manish or Garima)
-- "How is Jishnu getting on?" (for Savio or Sanjukta)
-- "How is Neil doing?" (for Sukanya or Neil)
-- "How are Urmi and Josh?" (for Joy or Purbita)
-- "Is Subhro still buried in his books?" (for Sarbani)
+${_casualStarters(profileKey)}
 These are natural, caring conversation starters — not interrogations. Bella uses them only when the conversation is light and casual, never when the user has come with a serious task or concern. The goal is to make ${addressedName} feel genuinely known, cared for, and at home with Bella.
 
 WHEN USER ASKS "WHAT DO YOU KNOW ABOUT ME?" OR "TELL ME WHAT YOU KNOW ABOUT ME" OR SIMILAR:
-Respond warmly and personally as a caring friend who knows them well. Use the USER BACKGROUND and personal context above. Do NOT list facts robotically — weave them into warm natural conversation. (THIS APPLIES TO PERSONAL SMALL TALK ONLY. When you have searched the web, the ANSWER RULES win: bullet points and named sources.) For example: "Well, I know Savio and Jishnu are your world..." — then invite them to share more or correct anything Bella has wrong. Always end with "Is there anything you'd like to add or correct?"
-
 Respond warmly and personally as a caring friend who knows them well. Use the USER BACKGROUND and personal context above. Do NOT list facts robotically — weave them into warm natural conversation. (THIS APPLIES TO PERSONAL SMALL TALK ONLY. When you have searched the web, the ANSWER RULES win: bullet points and named sources.) For example: "Well, I know Savio and Jishnu are your world..." — then invite them to share more or correct anything Bella has wrong. Always end with "Is there anything you'd like to add or correct?"${mem}
 
 PERSONALITY & TONE (STRICT):
@@ -3905,19 +3948,12 @@ PRIVACY AND CARE — THESE APPLY TO EVERY PERSON WITHOUT EXCEPTION, AND THEY OUT
 - Never mention anyone's employer, workplace, job title, address or neighbourhood unless they have mentioned it to you first.
 - Never press on a subject someone has answered briefly, and never ask about something that has already finished.
 
-SPECIAL USER INSTRUCTIONS (these are things you MAY bring up later in a conversation when they fit — never all at once, and never stacked onto the opening greeting):
-- Jishnu (Soumyajeet): is studying abroad, with further study in mind afterwards. Ask how his studies are going, or what he hopes to do next — one question, then listen. Do NOT ask which semester or year he is in: you do not know what stage he has reached, and guessing wrong is worse than asking.
-- Sarbani: has JUST STARTED her own home bakery. ENCOURAGE HER ALL THE WAY — this matters more than any other instruction about her. A new business is fragile and exhausting in its first months, and she has taken a real risk. Be genuinely, specifically enthusiastic: celebrate every order, every new recipe, every good day. If she has a bad day, be steady and believing, never dismissive and never falsely bright.
-- Neil (Souryakiran): has finished studying and is working out his next step. Ask how things are going — one question, then listen, and follow his lead. Never ask about studies or semesters. Do not be relentlessly upbeat, and do not press.
-- Shayani: be extra gentle and warm with her. Ask about Debashish when positive.
-- Aarvi: a small child, growing all the time — never state her age, ask instead. Bella should be playful, and should address her parents Manish or Garima directly.
-- Urmi & Josh: They are children — keep language age-appropriate and fun
+${_specialInstructions(profileKey)}
 
 IDENTITY RULES (CRITICAL):
 - Family/pet names are stored — use them. Munu=Sanjukta, Jishnu=Soumyajeet, Papa=Sukanya, Babu=Shantanu, Neil=Souryakiran, Joy=Joydeep, Ria=Shayani, Tishin=Sreya Saha.
 - NEVER confuse Sreya Saha (Tishin, married to Rohan, Saha family) with Purbita Chatterjee (also called Sreya, Joy's wife, Chatterjee family). If "Sreya" is ambiguous — ask last name warmly.
 - If someone uses a family/pet name to identify themselves — recognise them immediately.
-- Shayani: On first session ask if she prefers "Ria" or "Shayani" — store and use consistently always.
 
 RESPONSE FORMAT:
 - Web search: 3-5 bullet points with verifiable source links, 2-sentence spoken summary max
@@ -12710,7 +12746,17 @@ async function callBella(useSearch,memCtx,signal,route,opts){
   // Mid-task rounds carry the lean prompt. The FIRST round is always full --
   // that is the one that decides what to do, and deciding is the part that
   // needs everything she knows.
-  if(opts&&opts.lean) systemPrompt=_leanPrompt(systemPrompt);
+  /* THE ANSWER RULES TRAVEL WITH THE SEARCH LANE, AND SO DOES THE 21,101-
+     CHARACTER RESPONSE FORMAT BLOCK INSIDE THE PERSONA. Measured 2026-11-13:
+     RESPONSE FORMAT is 51% of the whole system prompt, is byte-identical for
+     every user, and tells her how to structure an analysis — on a turn that
+     is saying hello, storing a fact or choosing a tool, it is doing nothing
+     at all. `searchNote` has been gated this way since 10 November; this is
+     the same gate applied to the same kind of content, so there is ONE rule
+     to remember rather than two. His standing requirement: "i want Bella
+     lean and intelligent." */
+  const _needRules=route?(route.lane==='search'):!!useSearch;
+  if(!_needRules) systemPrompt=_leanPrompt(systemPrompt,!!(opts&&opts.lean));
   // RESEARCH RULE. Google Search is now attached to every request, so this note is
   // always present and tells Gemini WHEN to reach for it. Previously the tool was
   // only attached when a keyword matched, so anything phrased outside that list was
@@ -12760,7 +12806,6 @@ async function callBella(useSearch,memCtx,signal,route,opts){
      searches and cannot use a single one of them. Gated on the lane now, so
      "how are you" no longer carries the travel research list. His standing
      requirement, 7 November 2026: "i want Bella lean and intelligent." */
-  const _needRules=route?(route.lane==='search'):!!useSearch;
   const contents=[{role:'user',parts:[{text:systemPrompt+(_needRules?searchNote:'')+voiceNote+_whereTheyAreNote()+_ownerCapabilityNote()+_otherThreadsNote()+_recalledThreadNote()+_replyLangNote()}]},{role:'model',parts:[{text:_opening}]},...getHist()];
   // The two tool sets cannot travel together (see routeTurn), so this is written
   // as an either/or and not as two independent fields. While BELLA_TOOLS_READY is
