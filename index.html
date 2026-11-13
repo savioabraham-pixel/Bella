@@ -3062,6 +3062,7 @@ try{
       </div>
       <div class="menu-items open" id="sec-data">
         <div class="menu-item" onclick="showMyMemory();closeUserMenu()">My Memory</div>
+        <div class="menu-item" onclick="showMyReminders();closeUserMenu()">My Reminders</div>
         <div class="menu-item" onclick="showWhatBellaMayDo();closeUserMenu()">What Bella May Do</div>
         <div class="menu-item" onclick="downloadMyData();closeUserMenu()">Download My Data</div>
         <div class="menu-item" onclick="checkSyncNow();closeUserMenu()">Check Sync</div>
@@ -3310,7 +3311,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 09:58';
+const BELLA_BUILD = '13 Nov 10:42';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -15272,6 +15273,94 @@ function _dobMigrate(){
     u.dob=y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     localStorage.setItem('b_registered_user',JSON.stringify(u));
   }catch(e){}
+}
+
+/* ── WHAT BELLA IS REMINDING YOU OF ────────────────────────────────
+   His item 2 of three, 12 November. Release 46 added `/reminder-list` and
+   `/reminder-cancel`; until this screen existed they had no caller and the
+   feature did not exist for anybody.
+
+   CANCELLING IS A STATUS CHANGE, NOT A DELETION, and the Cloud Task is
+   deliberately left alone: it will still fire at its appointed second, read a
+   row that no longer says `pending`, and skip. That safety was built in
+   release 45 and proven live, so this screen needs no safety of its own.
+   A cancelled row is shown struck through rather than vanishing — a row that
+   disappears leaves him wondering whether he pressed the right thing. */
+let _remBusy=false;
+function _remKey(){ try{ return _toolProfileKey()||''; }catch(e){ return ''; } }
+function _remPretty(iso){
+  try{
+    const d=new Date(iso);
+    if(isNaN(d)) return String(iso||'');
+    return d.toLocaleString(undefined,{weekday:'short',day:'numeric',month:'short',
+                                       hour:'2-digit',minute:'2-digit'});
+  }catch(e){ return String(iso||''); }
+}
+async function showMyReminders(){
+  const msgs=document.getElementById('msgs');
+  if(!msgs) return;
+  const key=_remKey();
+  if(!key){ bellaMsg('Sign in and I can show you what I am reminding you of.'); return; }
+  let list=null,err='';
+  try{
+    const r=await bfetch(BACKEND+'/reminder-list',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({profileKey:key})});
+    const d=await r.json().catch(function(){ return {}; });
+    if(!r.ok) throw new Error((d&&d.error)||('the server answered '+r.status));
+    list=Array.isArray(d&&d.reminders)?d.reminders:[];
+  }catch(e){ err=String((e&&e.message)||e); }
+  /* FOUR SITUATIONS, FOUR SENTENCES. "You have none" is only ONE of them, and
+     saying it when the request failed is how a real loss goes unnoticed --
+     the same fault as My Memory. */
+  if(err){ bellaMsg('I could not check your reminders just now. That is not the same as having none — I could not reach them, so I do not know. Nothing has been lost.'); return; }
+  if(!list.length){ bellaMsg('Nothing is set at the moment. Ask me to remind you of something and it will appear here.'); return; }
+  const wrap=document.createElement('div'); wrap.className='msg bella';
+  const av=document.createElement('div'); av.className='mav b'; av.textContent='B';
+  const mw=document.createElement('div'); mw.className='msg-wrap';
+  const card=document.createElement('div'); card.className='bconf';
+  wrap.appendChild(av); wrap.appendChild(mw); mw.appendChild(card);
+  const h=document.createElement('div'); h.className='bconf-head';
+  h.textContent=(list.length===1)?'One reminder set':(list.length+' reminders set');
+  card.appendChild(h);
+  list.forEach(function(it){
+    const body=document.createElement('div'); body.className='bconf-body';
+    const row=document.createElement('div'); row.className='bconf-row';
+    const k=document.createElement('div'); k.className='bconf-k';
+    k.textContent=_remPretty(it.time);
+    const v=document.createElement('div'); v.className='bconf-v';
+    v.textContent=it.text||'(no wording)';
+    row.appendChild(k); row.appendChild(v); body.appendChild(row);
+    const acts=document.createElement('div'); acts.className='bconf-acts';
+    const b=document.createElement('button'); b.type='button';
+    b.className='bconf-btn bconf-no'; b.textContent='Cancel this';
+    b.setAttribute('aria-label','Cancel the reminder: '+(it.text||''));
+    b.addEventListener('click',async function(){
+      if(_remBusy) return;
+      _remBusy=true; b.disabled=true; b.textContent='Cancelling…';
+      try{
+        const r=await bfetch(BACKEND+'/reminder-cancel',{method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({profileKey:_remKey(),row:it.row})});
+        const d=await r.json().catch(function(){ return {}; });
+        if(!r.ok) throw new Error((d&&d.error)||('the server answered '+r.status));
+        v.style.textDecoration='line-through';
+        v.style.opacity='0.6';
+        b.textContent='Cancelled';
+      }catch(e){
+        // Say so on the button. A cancel that silently fails is the worst
+        // outcome: he would believe it was off and be reminded anyway.
+        b.disabled=false; b.textContent='Could not cancel — try again';
+      }
+      _remBusy=false;
+    });
+    acts.appendChild(b); body.appendChild(acts);
+    card.appendChild(body);
+  });
+  const note=document.createElement('div'); note.className='bconf-note';
+  note.textContent='Cancelling stops the reminder. Nothing else changes.';
+  card.appendChild(note);
+  msgs.appendChild(wrap); msgs.scrollTop=msgs.scrollHeight;
 }
 
 /* ── BIRTHDAYS ──────────────────────────────────────────────────────
