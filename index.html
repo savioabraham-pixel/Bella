@@ -3058,6 +3058,7 @@ try{
       </div>
       <div class="menu-items open" id="sec-data">
         <div class="menu-item" onclick="showMyMemory();closeUserMenu()">My Memory</div>
+        <div class="menu-item" onclick="showWhatBellaMayDo();closeUserMenu()">What Bella May Do</div>
         <div class="menu-item" onclick="downloadMyData();closeUserMenu()">Download My Data</div>
         <div class="menu-item" onclick="checkSyncNow();closeUserMenu()">Check Sync</div>
         <div class="menu-item" onclick="clearAllThreads();closeUserMenu()">Clear All Threads</div>
@@ -3305,7 +3306,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 05:44';
+const BELLA_BUILD = '13 Nov 07:30';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -14800,6 +14801,203 @@ function _toolDeclarations(){ return _TOOL_INTENTS.map(function(t){ return t.dec
    It never auto-approves, never times out into approval, and never remembers
    a decision for "next time". */
 let _confirmSeq=0;
+/* ── PERMISSION AND DISCLOSURE ──────────────────────────────────────
+   HIS STANDING RULE, 13 November 2026: "Bella always asks permissions as she
+   is within the google confines — anything that she wishes to connect to
+   inside as well as outside the ecosystem would need explicit permissions &
+   disclosures approved by the User."
+
+   THIS IS A DIFFERENT QUESTION FROM THE CONFIRM CARD AND BOTH ARE NEEDED.
+   The confirm card asks "shall I do THIS one thing?" — every time, for every
+   write. This asks "may you EVER do this SORT of thing, and do you know what
+   it involves?" — once per class, with the disclosure in front of it, and it
+   can be withdrawn afterwards from My Account.
+
+   SIX CLASSES, NOT ONE PER TOOL. A prompt for every tool would train them to
+   press Allow without reading, which is worse than not asking. A class is
+   "where does this data go" — the only distinction that matters to the person
+   answering.
+   `v` is the DISCLOSURE VERSION: change what a class does and the grant is
+   asked for again rather than inherited under wording nobody agreed to. */
+const _PERM_DEFS={
+  memory:{v:1,outside:false,title:'remember things about you',
+    does:'Keep short facts you tell her, so she still knows them next month.',
+    sends:'Only the sentence she shows you on the card before it is saved.',
+    where:'Your own row in Bella’s private spreadsheet. No one else’s account can read it.',
+    cost:'Nothing.'},
+  records:{v:1,outside:false,title:'keep records for you',
+    does:'Keep dated records — money spent, tasks, shopping, notes about people you mention.',
+    sends:'What you tell her, and the date.',
+    where:'Your own rows in Bella’s private spreadsheet.',
+    cost:'Nothing.'},
+  health:{v:1,outside:false,title:'keep notes about your health',
+    does:'Keep dated health notes — how you slept, symptoms, appointments.',
+    sends:'Only what you tell her. She is not a doctor and this is not medical advice.',
+    where:'Your own rows in Bella’s private spreadsheet. Delete it any time from My Account.',
+    cost:'Nothing.'},
+  reach_out:{v:1,outside:false,title:'reach you when Bella is closed',
+    does:'Set reminders and watches, and send you a notification even when this tab is shut.',
+    sends:'The reminder you approved, to your own devices.',
+    where:'Google’s notification service delivers it to the browsers you have signed in on.',
+    cost:'Nothing.'},
+  outside:{v:1,outside:true,title:'look things up on other services',
+    does:'Check the weather, a route, a share price, a flight or an exchange rate.',
+    sends:'Only what is needed for the lookup — a place, a ticker, a flight number. Never your name, and never anything you have told her.',
+    where:'Outside Google: Open-Meteo, OpenStreetMap and the other sources she names in her answer.',
+    cost:'Nothing — all of these are on free tiers.'},
+  outside_send:{v:1,outside:true,title:'send messages to other people',
+    does:'Send an email or a message to someone who is not you — an enquiry, a booking request, a reply.',
+    sends:'The exact message shown to you on the card, from Bella’s own address.',
+    where:'Outside Bella entirely, to the recipient you approve. It cannot be taken back once sent.',
+    cost:'Nothing to send. BELLA NEVER MAKES A PAYMENT and cannot be given the ability to.'}
+};
+/* WHICH CLASS A TOOL BELONGS TO. A tool with no class touches nothing outside
+   the conversation and asks for nothing. Returning null is the DEFAULT, so a
+   tool added later without thinking about this is ungated — which is why the
+   suite asserts that every tool is either mapped or deliberately not. */
+function _permFor(name,args){
+  const k=String((args&&args.kind)||'').toLowerCase();
+  if(name==='recall'||name==='remember_this') return 'memory';
+  if(name==='log_something') return (k==='health')?'health':'records';
+  if(name==='add_to_shopping_list'||name==='add_task'||name==='read_my_lists') return 'records';
+  if(name==='set_reminder'||name==='follow_up_later'||name==='watch_the_weather') return 'reach_out';
+  if(name==='get_weather'||name==='convert_currency'||name==='get_stock_price'||
+     name==='check_flight_status'||name==='plan_a_route') return 'outside';
+  return null;
+}
+/* PER ACCOUNT, NEVER PER DEVICE. Two people share his Mac; a grant one of them
+   gave must not be inherited by the other's sign-in. */
+function _permStoreKey(){
+  let who='anon';
+  try{ who=String(_toolProfileKey()||'anon').toLowerCase(); }catch(e){}
+  return 'b_perms_'+who;
+}
+function _permAll(){
+  try{ return JSON.parse(localStorage.getItem(_permStoreKey())||'{}')||{}; }catch(e){ return {}; }
+}
+function _permGranted(id){
+  const d=_PERM_DEFS[id]; if(!d) return true;
+  const rec=_permAll()[id];
+  return !!(rec&&rec.granted&&rec.v===d.v);
+}
+function _permSet(id,granted){
+  const d=_PERM_DEFS[id]; if(!d) return;
+  const all=_permAll();
+  all[id]={granted:!!granted,v:d.v,at:new Date().toISOString()};
+  try{ localStorage.setItem(_permStoreKey(),JSON.stringify(all)); }catch(e){}
+}
+let _permSeq=0;
+/* Resolves 'always' | 'once' | 'never'. "Just this once" is deliberate: a
+   permission someone is unsure about should not force them to choose between
+   never and for ever. It grants nothing durable. */
+function _askPermission(id,why){
+  return new Promise(function(resolve){
+    const d=_PERM_DEFS[id];
+    if(!d) return resolve('always');
+    const msgs=document.getElementById('msgs');
+    if(!msgs) return resolve('never');
+    const cid='bperm'+(++_permSeq);
+    let done=false;
+    const wrap=document.createElement('div'); wrap.className='msg bella'; wrap.id=cid;
+    const av=document.createElement('div'); av.className='mav b'; av.textContent='B';
+    const mw=document.createElement('div'); mw.className='msg-wrap';
+    const card=document.createElement('div'); card.className='bconf';
+    wrap.appendChild(av); wrap.appendChild(mw); mw.appendChild(card);
+    const h=document.createElement('div'); h.className='bconf-head';
+    h.textContent='May I '+d.title+'?';
+    card.appendChild(h);
+    const body=document.createElement('div'); body.className='bconf-body';
+    const rows=[['What this is',d.does],['What leaves this app',d.sends],
+                ['Where it goes',d.where],['What it costs',d.cost]];
+    if(d.outside) rows.unshift(['Outside Bella','Yes — this reaches a service outside this app.']);
+    if(why) rows.unshift(['Why now',why]);
+    rows.forEach(function(r){
+      const row=document.createElement('div'); row.className='bconf-row';
+      const k=document.createElement('div'); k.className='bconf-k'; k.textContent=r[0];
+      const v=document.createElement('div'); v.className='bconf-v'; v.textContent=r[1];
+      row.appendChild(k); row.appendChild(v); body.appendChild(row);
+    });
+    card.appendChild(body);
+    const finish=function(verdict,said){
+      if(done) return; done=true;
+      try{ card.querySelectorAll('button').forEach(function(b){ b.disabled=true; }); }catch(e){}
+      card.classList.add('bconf-'+(verdict==='never'?'ignore':'approve'));
+      const vd=document.createElement('div'); vd.className='bconf-verdict'; vd.textContent=said;
+      card.appendChild(vd);
+      resolve(verdict);
+    };
+    const acts=document.createElement('div'); acts.className='bconf-acts';
+    const mk=function(label,cls,fn){
+      const b=document.createElement('button'); b.type='button';
+      b.className='bconf-btn '+cls; b.textContent=label;
+      b.addEventListener('click',fn); acts.appendChild(b); return b;
+    };
+    const al=mk('Allow','bconf-ok',function(){
+      al.disabled=true; _permSet(id,true);
+      finish('always','You allowed this. You can withdraw it in My Account.');
+    });
+    mk('Just this once','bconf-edit',function(){ finish('once','Allowed once. Not saved.'); });
+    mk('Never','bconf-no',function(){
+      _permSet(id,false);
+      finish('never','You said no. You can change it in My Account.');
+    });
+    card.appendChild(acts);
+    const note=document.createElement('div'); note.className='bconf-note';
+    note.textContent='Nothing happens until you choose. You can change this later in My Account.';
+    card.appendChild(note);
+    msgs.appendChild(wrap); msgs.scrollTop=msgs.scrollHeight;
+    try{ al.focus(); }catch(e){}
+    try{
+      const sig=window._chatAbortController&&window._chatAbortController.signal;
+      if(sig) sig.addEventListener('abort',function(){ finish('never','Stopped. Nothing was allowed.'); },{once:true});
+    }catch(e){}
+  });
+}
+/* WHAT BELLA MAY DO — My Account. A permission that cannot be withdrawn is not
+   a permission, so every class is listed whether or not it has been asked for
+   yet, with the same disclosure that was shown when it was. */
+function showWhatBellaMayDo(){
+  const msgs=document.getElementById('msgs');
+  if(!msgs) return;
+  const all=_permAll();
+  const wrap=document.createElement('div'); wrap.className='msg bella';
+  const av=document.createElement('div'); av.className='mav b'; av.textContent='B';
+  const mw=document.createElement('div'); mw.className='msg-wrap';
+  const card=document.createElement('div'); card.className='bconf';
+  wrap.appendChild(av); wrap.appendChild(mw); mw.appendChild(card);
+  const h=document.createElement('div'); h.className='bconf-head';
+  h.textContent='What Bella may do';
+  card.appendChild(h);
+  Object.keys(_PERM_DEFS).forEach(function(id){
+    const d=_PERM_DEFS[id], rec=all[id];
+    const on=!!(rec&&rec.granted&&rec.v===d.v);
+    const body=document.createElement('div'); body.className='bconf-body';
+    const row=document.createElement('div'); row.className='bconf-row';
+    const k=document.createElement('div'); k.className='bconf-k';
+    k.textContent=(d.outside?'→ ':'')+d.title.charAt(0).toUpperCase()+d.title.slice(1);
+    const v=document.createElement('div'); v.className='bconf-v';
+    v.textContent=on?'Allowed':(rec?'Refused':'Not asked yet');
+    row.appendChild(k); row.appendChild(v); body.appendChild(row);
+    const det=document.createElement('div'); det.className='bconf-row';
+    const dk=document.createElement('div'); dk.className='bconf-k'; dk.textContent='';
+    const dv=document.createElement('div'); dv.className='bconf-v'; dv.textContent=d.does+' '+d.where;
+    det.appendChild(dk); det.appendChild(dv); body.appendChild(det);
+    const acts=document.createElement('div'); acts.className='bconf-acts';
+    const b=document.createElement('button'); b.type='button';
+    b.className='bconf-btn '+(on?'bconf-no':'bconf-ok');
+    b.textContent=on?'Withdraw':'Allow';
+    b.addEventListener('click',function(){
+      _permSet(id,!on); b.disabled=true;
+      v.textContent=on?'Withdrawn':'Allowed';
+    });
+    acts.appendChild(b); body.appendChild(acts);
+    card.appendChild(body);
+  });
+  const note=document.createElement('div'); note.className='bconf-note';
+  note.textContent='Bella never makes a payment, and cannot be given the ability to.';
+  card.appendChild(note);
+  msgs.appendChild(wrap); msgs.scrollTop=msgs.scrollHeight;
+}
 function _confirmAction(tool,args,lang){
   return new Promise(function(resolve){
     const id='bconf'+(++_confirmSeq);
@@ -14980,6 +15178,23 @@ async function _toolTurn(fullMsg,route,memCtx,signal,lang){
         }
         if(signal&&signal.aborted) return null;
         let args=c.args||{};
+        /* PERMISSION BEFORE CONFIRMATION, and before a READ as well as a write.
+           His rule covers anything Bella CONNECTS to, and a read that leaves
+           the app leaves the app whether or not it writes anything.
+           Asked once per class; after that this costs nothing. */
+        const _pid=_permFor(c.name,args);
+        if(_pid&&!_permGranted(_pid)){
+          hideThinking();
+          const _verdict=await _askPermission(_pid,tool.title||c.name);
+          showThinking();
+          if(_verdict==='never'){
+            responses.push({name:c.name,id:c.id,response:{ok:false,notPermitted:true,
+              note:'They have not given permission for this kind of thing. Do not do it, do not '+
+                   'ask again this conversation, and do not work around it. Say in one short line '+
+                   'that you will leave it, and that they can change it in My Account.'}});
+            continue;
+          }
+        }
         if(tool.write){
           // THE GATE. Nothing below this line runs without his word.
           hideThinking();
