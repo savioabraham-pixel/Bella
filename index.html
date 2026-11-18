@@ -3214,11 +3214,64 @@ async function bellaAuthHeader(){
 }
 // Drop-in replacement for fetch() on backend calls. Never throws on the auth
 // path: if there is no token the request goes out exactly as it does today.
+// ══ THE DOUBLE TAP — the browser half of an idempotency key (2026-11-17) ══
+// Four paths are idempotent on purpose already (thread deletion, consent,
+// reminders, the weather sweep), each by a status column or a signature. There
+// is still nothing general: on a slow network, a tap that seems to do nothing
+// gets tapped again, and the second one acts. Harmless while Bella only
+// answered; a real fault now that she ACTS — two reminders, two list items, two
+// messages sent.
+//
+// This is deliberately only HALF. The key is minted here and travels on every
+// write; the server that refuses the second one is in the backend queue and
+// needs a deploy. Measured before writing it, not assumed: an OPTIONS preflight
+// to the live backend returns
+//   access-control-allow-headers: content-type,authorization,x-bella-idempotency-key
+// so the header is already allowed today and nothing breaks while the server
+// half is still ignoring it.
+//
+// THE KEY IS PER INTENT, NOT PER CALL. A fresh uuid on every request would tell
+// a server nothing — two taps would carry two keys. The same method, url and
+// body inside a short window reuse the SAME key, which is exactly the shape of
+// a double tap. Thirty seconds, so deliberately adding milk twice an hour apart
+// is still two separate intents.
+const _IDEM_WINDOW_MS = 30000;
+const _idemSeen = new Map();   // basis -> {key, at}
+function _idemBasis(url, opts){
+  const m = String((opts && opts.method) || 'GET').toUpperCase();
+  let b = opts && opts.body;
+  // A 50MB base64 photo must never be hashed on a phone for this. The first
+  // 2,000 characters and the length identify a repeat perfectly well.
+  if(typeof b !== 'string') b = '';
+  return m + ' ' + url + ' ' + b.length + ' ' + b.slice(0, 2000);
+}
+function _idemKeyFor(url, opts){
+  const m = String((opts && opts.method) || 'GET').toUpperCase();
+  if(m === 'GET' || m === 'HEAD') return '';     // a read cannot act twice
+  const now = Date.now();
+  // Prune first, so a long session cannot grow this map without bound.
+  if(_idemSeen.size > 60){
+    _idemSeen.forEach(function(v,k){ if(now - v.at > _IDEM_WINDOW_MS) _idemSeen.delete(k); });
+  }
+  const basis = _idemBasis(url, opts);
+  const hit = _idemSeen.get(basis);
+  if(hit && (now - hit.at) <= _IDEM_WINDOW_MS) return hit.key;
+  let key;
+  try{ key = crypto.randomUUID(); }
+  catch(e){ key = 'k' + now.toString(36) + Math.random().toString(36).slice(2,10); }
+  _idemSeen.set(basis, {key: key, at: now});
+  return key;
+}
 async function bfetch(url, opts){
   opts = opts || {};
   const headers = Object.assign({}, opts.headers || {});
   const auth = await bellaAuthHeader();
   if(auth) headers['Authorization'] = auth;
+  // Never overwrite a key a caller set deliberately.
+  if(!headers['X-Bella-Idempotency-Key']){
+    const _ik = _idemKeyFor(url, opts);
+    if(_ik) headers['X-Bella-Idempotency-Key'] = _ik;
+  }
   const _r = await fetch(url, Object.assign({}, opts, {headers: headers}));
   // An account frozen or locked out mid-session would otherwise just look like
   // Bella breaking. Read the reason once and act on it, without consuming the
@@ -3312,7 +3365,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '13 Nov 16:09';
+const BELLA_BUILD = '18 Nov 10:18';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -12584,13 +12637,22 @@ async function send(){
     if(_done){ try{checkSummariseBtn();}catch(e){} endTurn(); return; }
   }
   let reply=null;
+  // DECLARED OUT HERE DELIBERATELY — 2026-11-17. This was `const _route` INSIDE
+  // the try below, and TWO things outside that block read it: the "you looked
+  // this up before" write at the end of the turn, and the suggestion chips. A
+  // const dies with its block, so that read threw a ReferenceError straight
+  // into its own empty catch — silently, on EVERY search turn, from 46129f4 on
+  // 13 Nov. Nothing on screen changed, so nothing could report it: she has
+  // never once remembered what she looked up. Measured, not read: the same
+  // shape in node returns "SWALLOWED ReferenceError".
+  let _route=null;
   window._chatAbortController=new AbortController();
   try{
     // An attachment is never a social turn — a file always goes out in the
     // search lane, exactly as it did before this router existed.
     // The attachment route is built by hand, so it needs the emoji flag set
     // by hand too — a photo with an emoji caption is still an emoji message.
-    const _route=(pTexts.length===0&&pImages.length===0)?routeTurn(fullMsg)
+    _route=(pTexts.length===0&&pImages.length===0)?routeTurn(fullMsg)
                :{lane:'search',why:'attachment present',emoji:_hasEmoji(fullMsg)};
     _recordRoute(fullMsg,_route);
     // The prompt builder has no access to the message; this is how the
@@ -12759,7 +12821,10 @@ async function send(){
     try{checkSummariseBtn();}catch(e){}
     try{
       if(idState==='confirmed'){
-        const sugs=generateSuggestions(reply, disp);
+        // The ROUTE goes in too: chips chosen from the words of a reply have no
+        // idea whether Bella ANSWERED or ACTED, which is how a reminder she had
+        // just set came back offering "Add to my calendar".
+        const sugs=generateSuggestions(reply, disp, _route);
         addSuggestions(sugs, false, reply);
       }
     }catch(e){}
@@ -19606,7 +19671,16 @@ async function _backupSheetRun(){
 // "Extract all action items / Download as PDF / What are the key deadlines?".
 // A topic now has to be either what he ASKED about, or something the answer
 // genuinely returns to — one passing mention is not a subject.
-function generateSuggestions(text, asked){
+function generateSuggestions(text, asked, route){
+  // A TOOLS TURN IS A CONFIRMATION, NOT AN ANSWER. Nothing below this line
+  // applies to it: the keyword branches would read the action back out of her
+  // own sentence and offer it again. An unrecognised tool gets NO chips rather
+  // than guessed ones — addSuggestions() already draws no row for an empty
+  // list, and three wrong offers under a finished action read worse than none.
+  if(route&&route.lane==='tools'){
+    const tc=TOOL_CHIPS[(route.tool||'')];
+    return tc?tc.slice(0,3):[];
+  }
   // Generate contextual follow-up suggestions based on Bella's response
   const t=text.toLowerCase();
   const q=String(asked==null?'':asked).toLowerCase();
@@ -19715,6 +19789,33 @@ const ACTION_CHIP_PHRASES={
   'summarize':'Summarise this','remind me':'Remind me about this',
   'forward':'Forward this for me','save':'Save this for me',
   'transcribe':'Transcribe this','ask bella':'Tell me more about this'
+};
+// ── CHIPS AFTER SHE HAS DONE SOMETHING — lane-aware, 2026-11-17 ──────────
+// generateSuggestions() reads the WORDS of Bella's reply. On a tools turn those
+// words are a confirmation of something she has just finished doing, so the
+// keyword branches fired on the action itself: "I'll remind you about the
+// meeting on Tuesday" matched the email/calendar branch and offered "Add to my
+// calendar" under a reminder that was already set. Three chips re-offering the
+// completed action is the clearest possible way to look like nothing happened.
+//
+// The router already knows: a tools turn carries lane:'tools' and the tool's
+// own name. Every chip below is something Bella can really do today —
+// /reminder-list and /reminder-cancel shipped in release 46, the memory write
+// and the forget path are live, and the watch switch reads its own list. A chip
+// is only a prefilled message, but a chip for something she cannot do is still
+// a promise broken in front of the person who clicked it.
+//
+// ENGLISH ONLY, on purpose: addSuggestions() paints GENERIC_CHIPS for hi/mr/bn,
+// which are lane-neutral by construction, so a Hindi user never saw the
+// mismatched chips in the first place and needs no second set.
+const TOOL_CHIPS={
+  set_reminder:         ['Show me my reminders','Change the time','Cancel it'],
+  follow_up_later:      ['Show me my reminders','Change the time','Cancel it'],
+  add_to_shopping_list: ['Show me the whole list','Add something else','Take an item off'],
+  add_task:             ['Show me my tasks','Add another one','Mark one done'],
+  remember_this:        ['What else do you know about me?','Remember something else','Forget that'],
+  log_something:        ['What else do you know about me?','Remember something else','Forget that'],
+  watch_the_weather:    ['Show me what you are watching','Watch another place','Stop watching it']
 };
 // Guards against a slow reply landing after the user has already moved on.
 let _sugSeq=0;
