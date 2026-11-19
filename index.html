@@ -3366,7 +3366,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '19 Nov 09:55';
+const BELLA_BUILD = '19 Nov 10:12';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -6931,6 +6931,63 @@ function openChangeNumber(){
         'font-size:13px;cursor:pointer">Close</button>'+
     '</div>';
   document.body.appendChild(box);
+  /* A CHANGE ALREADY WAITING? Then the useful thing is not a form, it is a way
+     OUT of it. Someone who asked from the locked-out screen and then thought
+     better of it had no way to call it off: "No, stop this" works but it is the
+     heavy option — it revokes every session, which is right for a theft and
+     wrong for a change of mind. */
+  try{ Promise.resolve(_cnShowPending()).catch(function(){}); }catch(e){}
+}
+
+async function _cnShowPending(){
+  try{
+    const r=await bfetch(BACKEND+'/phone-change-status',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:'{}'});
+    if(!r.ok) return;
+    const d=await r.json().catch(()=>({}));
+    if(!d||!d.pending) return;
+    const host=_cnEl('cn-step1'); if(!host) return;
+    const when=d.effectiveAt?new Date(d.effectiveAt):null;
+    const whenTxt=(when&&!isNaN(when.getTime()))
+      ? when.toLocaleString(undefined,{weekday:'long',hour:'2-digit',minute:'2-digit'}) : 'shortly';
+    host.insertAdjacentHTML('beforebegin',
+      '<div id="cn-pending" style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.35);'+
+      'border-radius:12px;padding:14px;font-size:13px;color:#F5E6C8;line-height:1.7;margin-bottom:14px">'+
+        'You already asked to move this account to a number ending <strong>'+(d.newPhoneLast4||'????')+
+        '</strong>. It takes effect <strong>'+whenTxt+'</strong>.'+
+        '<button onclick="cnCancelPending()" style="width:100%;margin-top:10px;padding:10px;border-radius:9px;'+
+        'border:1px solid rgba(245,230,200,0.25);background:transparent;color:#F5E6C8;font-size:13px;'+
+        'cursor:pointer">Cancel that request</button>'+
+      '</div>');
+  }catch(e){ /* the form still works without this */ }
+}
+
+async function cnCancelPending(){
+  _cnMsg('Cancelling…');
+  try{
+    const r=await bfetch(BACKEND+'/phone-change-cancel',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:'{}'});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){ _cnMsg(d.error||'That did not work.',true); return; }
+    const p=_cnEl('cn-pending'); if(p) p.remove();
+    _cnMsg('Cancelled. Your number has not changed, and you are still signed in.');
+  }catch(e){ _cnMsg('Could not reach Bella just now.',true); }
+}
+
+/* Lifted out so it can be TESTED. Inside cnStart it sat behind the signed-in
+   guard, which a headless page can never satisfy — so the one new protection
+   would have been the one thing nothing could check. Three answers, and
+   'unknown' deliberately means CARRY ON: a nicety must never become a new way
+   to be locked out. */
+async function _cnNumberIsFree(mobile){
+  try{
+    const r=await bfetch(BACKEND+'/phone-available',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mobile:mobile})});
+    if(r.status===409) return 'taken';
+    if(r.ok) return 'free';
+    return 'unknown';
+  }catch(e){ return 'unknown'; }
 }
 
 async function cnStart(){
@@ -6947,7 +7004,20 @@ async function cnStart(){
   if(oldMobile.replace(/[^0-9]/g,'').slice(-10)===digits.slice(-10)){
     _cnMsg('That is already the number on your account.',true); return;
   }
-  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+  if(btn){ btn.disabled=true; btn.textContent='Checking…'; }
+  /* ASK BEFORE SPENDING AN SMS. Without this the number is only checked at the
+     very END — after a code to the old number, a code to the new one, and the
+     unlink — and the person is told "already on another account" having done
+     all the work. It also wastes two SMS on the free tier every time.
+     A failure HERE is not a reason to stop: if the check cannot be reached,
+     the flow carries on and the server refuses later, which is the behaviour
+     we had before. Never let a nicety become a new way to be locked out. */
+  if(await _cnNumberIsFree('+91'+digits)==='taken'){
+    if(btn){ btn.disabled=false; btn.textContent='Send a code to my current number'; }
+    _cnMsg('That number is already on another Bella account. If it is yours, please tell Savio.',true);
+    return;
+  }
+  if(btn){ btn.textContent='Sending…'; }
   _cnMsg('Sending a code to your current number…');
   try{
     const v=await _freshVerifier('cn-recaptcha');
