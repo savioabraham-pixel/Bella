@@ -1468,7 +1468,11 @@ body.dark #theme-now{color:rgba(245,230,200,.72)!important}
    ============================================================ */
 @media(max-width:680px){
   :root{--sidebar-w:100%}
-  #sidebar{position:fixed;inset:0;z-index:50;transform:translateX(-100%);width:280px}
+  /* min(), not a plain width: identical at every size above 280px, so no screen
+     anyone owns changes — it only stops a FIXED width running off a narrower one.
+     Found by the screen-space sweep at 240x640, below anything sold today, which
+     is the point of sweeping the SPACE rather than a list of phones. */
+  #sidebar{position:fixed;inset:0;z-index:50;transform:translateX(-100%);width:min(280px,100vw)}
   #sidebar.mobile-open{transform:translateX(0);box-shadow:var(--shadow-lg)}
   .sb-toggle{display:flex!important}
   .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:49}
@@ -1488,7 +1492,7 @@ body.dark #theme-now{color:rgba(245,230,200,.72)!important}
 /* User Menu */
 .user-menu-overlay{display:none;position:fixed;inset:0;z-index:100}
 .user-menu-overlay.on{display:block}
-.user-menu-panel{position:fixed;top:0;right:-320px;width:300px;height:100%;background:var(--white);box-shadow:-4px 0 24px rgba(27,42,74,.15);z-index:101;transition:right .3s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;overflow:hidden}
+.user-menu-panel{position:fixed;top:0;right:-320px;width:min(300px,100vw);height:100%;background:var(--white);box-shadow:-4px 0 24px rgba(27,42,74,.15);z-index:101;transition:right .3s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;overflow:hidden}
 .user-menu-panel.on{right:0}
 .user-menu-header{padding:20px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--navy)}
 .user-menu-title{font-family:'BellaIndic','DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--gold)}
@@ -3410,7 +3414,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '19 Nov 10:39';
+const BELLA_BUILD = '19 Nov 17:38';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
