@@ -2148,6 +2148,50 @@ body.dark #sidebar .sb-new-chat span{
 }
 </style>
 
+<style>
+/* ══ THE TWO NUMBER-CHANGE PANELS — THEME-AWARE (19 Nov 2026) ═════════════
+   They were styled from showRecoveryHelp, which is hardcoded navy and RIGHT to
+   be: it sits over the sign-in gate, and that is always dark. These two open
+   INSIDE the app, so on light theme a navy card read as a stray piece of some
+   other interface. Savio asked the question that found it; the 24/24 panel
+   matrix had passed without noticing, because it measured FIT, not BELONGING.
+
+   MIND THE INVERSION. Inside body.dark, var(--gold) is NAVY and var(--navy) is
+   GOLD -- the names are historical. That is why nothing below uses either.
+   --white and --text mean "a surface" and "text on that surface" in BOTH
+   themes, which is exactly what a card needs. The one literal colour left is
+   the brand gold on the primary button, and it is correct over either. */
+.bp-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  z-index:100000;padding:20px;background:rgba(11,37,69,0.55);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+body.dark .bp-overlay{background:rgba(5,12,22,0.88)}
+.bp-card{background:var(--white);border:1px solid var(--bordermid);border-radius:20px;
+  max-width:420px;width:100%;max-height:90vh;overflow:auto;padding:24px;
+  box-shadow:var(--shadow-lg);color:var(--text)}
+.bp-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;
+  color:var(--text);margin-bottom:10px}
+.bp-note{font-size:13px;color:var(--tmid);line-height:1.75;margin-bottom:18px}
+.bp-box{background:var(--cream);border:1px solid var(--border);border-radius:12px;
+  padding:12px 14px;font-size:13px;color:var(--text);line-height:1.7;margin-bottom:14px}
+.bp-input{padding:11px 12px;border-radius:10px;background:var(--cream);
+  border:1.5px solid var(--border);color:var(--text);font-size:14px}
+.bp-prefix{padding:11px 12px;border-radius:10px;background:var(--cream);
+  border:1.5px solid var(--border);color:var(--tmid);font-size:14px}
+/* 44px tall, not 38: a thumb on a 320px phone is the smallest target here. */
+.bp-primary{width:100%;padding:13px;border-radius:10px;border:none;background:#D4AF37;
+  color:#0B2545;font-weight:700;font-size:14px;cursor:pointer}
+.bp-ghost{width:100%;margin-top:10px;padding:12px;border-radius:10px;
+  border:1px solid var(--bordermid);background:transparent;color:var(--tmid);
+  font-size:13px;cursor:pointer}
+.bp-danger{width:100%;margin-top:10px;padding:13px;border-radius:10px;
+  border:1px solid rgba(198,40,40,0.45);background:transparent;color:#c62828;
+  font-weight:600;font-size:14px;cursor:pointer}
+body.dark .bp-danger{border-color:rgba(255,138,128,0.5);color:#ff8a80}
+.bp-msg{font-size:12px;min-height:18px;margin-top:12px;line-height:1.6;color:var(--tmid)}
+.bp-msg.bad{color:#c62828}
+body.dark .bp-msg.bad{color:#ff8a80}
+</style>
+
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" integrity="sha384-ZaR6mWzmJtrRibZ1Vm7SoHFr8OXjyAuGAXalGDKqbxFT18oi/z+oZLIRFkpeNor1" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js" integrity="sha384-I1LYojsZ5RM1cOda44Z2h42Qa6YfsQ1XkXxREnhp4ueYBR/4d1pG1K+NZM537Vsj" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -3366,7 +3410,7 @@ async function retrySync(){
    showing him a value: "shouldn't it show the zone name rather than 'zone
    names'?" He is right. Its only job is to tell him WHICH version he is
    looking at so he can read it back to me, and a timestamp does that alone. */
-const BELLA_BUILD = '19 Nov 10:12';
+const BELLA_BUILD = '19 Nov 10:39';
 function paintBuildMarker(){
   const el = document.getElementById('build-marker');
   if(el) el.textContent = 'Build ' + BELLA_BUILD;
@@ -6879,7 +6923,9 @@ function _cnEl(id){ return document.getElementById(id); }
 function _cnMsg(t, bad){
   const m=_cnEl('cn-msg'); if(!m) return;
   m.textContent=t||'';
-  m.style.color = bad ? '#ff8a80' : 'rgba(245,230,200,0.75)';
+  // A CLASS, NOT AN INLINE COLOUR. An inline colour cannot follow the theme,
+  // and it was cream — invisible on a light surface.
+  m.className = 'bp-msg' + (bad ? ' bad' : '');
 }
 function _cnClose(){ const b=_cnEl('change-number'); if(b) b.remove(); _cnState=null; }
 
@@ -6891,44 +6937,32 @@ function openChangeNumber(){
   const prev=_cnEl('change-number'); if(prev) prev.remove();
   const box=document.createElement('div');
   box.id='change-number';
-  box.style.cssText='position:fixed;inset:0;background:rgba(11,37,69,0.88);backdrop-filter:blur(10px);'+
-    'display:flex;align-items:center;justify-content:center;z-index:100000;padding:20px';
+  box.className='bp-overlay';
   box.innerHTML =
-    '<div style="background:#0B2545;border:1px solid rgba(212,175,55,0.3);border-radius:20px;max-width:420px;'+
-      'width:100%;max-height:90vh;overflow:auto;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,0.45)">'+
-      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:600;color:#F5E6C8;margin-bottom:10px">Change my mobile number</div>'+
-      '<div style="font-size:13px;color:rgba(245,230,200,0.7);line-height:1.75;margin-bottom:18px">'+
+    '<div class="bp-card">'+
+      '<div class="bp-title">Change my mobile number</div>'+
+      '<div class="bp-note">'+
         'Do this <strong>before</strong> you lose the old number. Bella sends one code to your '+
         'current number and one to the new one — then the change happens straight away.'+
       '</div>'+
-      (last4 ? '<div style="background:rgba(245,230,200,0.06);border:1px solid rgba(245,230,200,0.14);border-radius:12px;'+
-        'padding:11px 14px;font-size:13px;color:rgba(245,230,200,0.85);margin-bottom:14px">'+
-        'Current number ends <strong style="color:#F5E6C8">'+last4+'</strong></div>' : '')+
+      (last4 ? '<div class="bp-box">Current number ends <strong>'+last4+'</strong></div>' : '')+
       '<div id="cn-step1">'+
         '<div style="display:flex;gap:8px;margin-bottom:10px">'+
-          '<div style="padding:11px 12px;border-radius:10px;background:rgba(245,230,200,0.06);'+
-            'border:1.5px solid rgba(245,230,200,0.15);color:rgba(245,230,200,0.75);font-size:14px">+91</div>'+
-          '<input id="cn-new" type="tel" inputmode="numeric" placeholder="New mobile number" '+
-            'style="flex:1;padding:11px 12px;border-radius:10px;background:rgba(245,230,200,0.06);'+
-            'border:1.5px solid rgba(245,230,200,0.15);color:#F5E6C8;font-size:14px" '+
-            'oninput="this.value=this.value.replace(/[^0-9]/g,\'\')">'+
+          '<div class="bp-prefix">+91</div>'+
+          '<input id="cn-new" class="bp-input" type="tel" inputmode="numeric" placeholder="New mobile number" '+
+            'style="flex:1" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')">'+
         '</div>'+
-        '<button id="cn-btn" onclick="cnStart()" style="width:100%;padding:12px;border-radius:10px;border:none;'+
-          'background:#D4AF37;color:#0B2545;font-weight:700;font-size:14px;cursor:pointer">Send a code to my current number</button>'+
+        '<button id="cn-btn" class="bp-primary" onclick="cnStart()">Send a code to my current number</button>'+
       '</div>'+
       '<div id="cn-step2" style="display:none">'+
-        '<input id="cn-code" type="password" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit code" '+
-          'style="width:100%;padding:12px;border-radius:10px;background:rgba(245,230,200,0.06);'+
-          'border:1.5px solid rgba(245,230,200,0.15);color:#F5E6C8;font-size:16px;letter-spacing:3px;text-align:center" '+
+        '<input id="cn-code" class="bp-input" type="password" inputmode="numeric" autocomplete="one-time-code" '+
+          'placeholder="6-digit code" style="width:100%;font-size:16px;letter-spacing:3px;text-align:center" '+
           'oninput="this.value=this.value.replace(/[^0-9]/g,\'\')">'+
-        '<button id="cn-ok" onclick="cnCode()" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;border:none;'+
-          'background:#D4AF37;color:#0B2545;font-weight:700;font-size:14px;cursor:pointer">Confirm</button>'+
+        '<button id="cn-ok" class="bp-primary" style="margin-top:10px" onclick="cnCode()">Confirm</button>'+
       '</div>'+
-      '<div id="cn-msg" style="font-size:12px;min-height:18px;margin-top:12px;line-height:1.6"></div>'+
+      '<div id="cn-msg" class="bp-msg"></div>'+
       '<div id="cn-recaptcha" style="display:none"></div>'+
-      '<button onclick="_cnClose()" style="width:100%;margin-top:14px;padding:10px;border-radius:10px;'+
-        'border:1px solid rgba(245,230,200,0.15);background:transparent;color:rgba(245,230,200,0.6);'+
-        'font-size:13px;cursor:pointer">Close</button>'+
+      '<button class="bp-ghost" onclick="_cnClose()">Close</button>'+
     '</div>';
   document.body.appendChild(box);
   /* A CHANGE ALREADY WAITING? Then the useful thing is not a form, it is a way
@@ -6951,13 +6985,10 @@ async function _cnShowPending(){
     const whenTxt=(when&&!isNaN(when.getTime()))
       ? when.toLocaleString(undefined,{weekday:'long',hour:'2-digit',minute:'2-digit'}) : 'shortly';
     host.insertAdjacentHTML('beforebegin',
-      '<div id="cn-pending" style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.35);'+
-      'border-radius:12px;padding:14px;font-size:13px;color:#F5E6C8;line-height:1.7;margin-bottom:14px">'+
+      '<div id="cn-pending" class="bp-box">'+
         'You already asked to move this account to a number ending <strong>'+(d.newPhoneLast4||'????')+
         '</strong>. It takes effect <strong>'+whenTxt+'</strong>.'+
-        '<button onclick="cnCancelPending()" style="width:100%;margin-top:10px;padding:10px;border-radius:9px;'+
-        'border:1px solid rgba(245,230,200,0.25);background:transparent;color:#F5E6C8;font-size:13px;'+
-        'cursor:pointer">Cancel that request</button>'+
+        '<button class="bp-ghost" onclick="cnCancelPending()">Cancel that request</button>'+
       '</div>');
   }catch(e){ /* the form still works without this */ }
 }
@@ -7138,23 +7169,17 @@ function _pcxShowDecideCard(last4){
     if(document.getElementById('pcx-decide')) return;
     const box=document.createElement('div');
     box.id='pcx-decide';
-    box.style.cssText='position:fixed;inset:0;background:rgba(11,37,69,0.9);backdrop-filter:blur(10px);'+
-      'display:flex;align-items:center;justify-content:center;z-index:100001;padding:20px';
+    box.className='bp-overlay';
     box.innerHTML=
-      '<div style="background:#0B2545;border:1px solid rgba(212,175,55,0.35);border-radius:20px;max-width:400px;'+
-        'width:100%;padding:24px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,0.45)">'+
-        '<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;color:#F5E6C8;margin-bottom:10px">Was this you?</div>'+
-        '<div style="font-size:13px;color:rgba(245,230,200,0.75);line-height:1.75;margin-bottom:18px">'+
+      '<div class="bp-card" style="max-width:400px;text-align:center">'+
+        '<div class="bp-title">Was this you?</div>'+
+        '<div class="bp-note">'+
           'Someone asked to move your Bella account to a mobile number ending '+
-          '<strong style="color:#F5E6C8">'+last4+'</strong>.</div>'+
-        '<button onclick="decideNumberChange(\'yes\')" style="width:100%;padding:12px;border-radius:10px;border:none;'+
-          'background:#D4AF37;color:#0B2545;font-weight:700;font-size:14px;cursor:pointer">Yes, it was me</button>'+
-        '<button onclick="decideNumberChange(\'no\')" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;'+
-          'border:1px solid rgba(255,138,128,0.5);background:transparent;color:#ff8a80;font-weight:600;font-size:14px;'+
-          'cursor:pointer">No — stop this</button>'+
-        '<div id="pcx-decide-msg" style="font-size:12px;color:rgba(245,230,200,0.65);min-height:18px;margin-top:12px;line-height:1.6"></div>'+
-        '<button onclick="document.getElementById(\'pcx-decide\').remove()" style="width:100%;margin-top:8px;padding:9px;'+
-          'border-radius:10px;border:none;background:transparent;color:rgba(245,230,200,0.5);font-size:12px;cursor:pointer">Decide later</button>'+
+          '<strong>'+last4+'</strong>.</div>'+
+        '<button class="bp-primary" onclick="decideNumberChange(\'yes\')">Yes, it was me</button>'+
+        '<button class="bp-danger" onclick="decideNumberChange(\'no\')">No — stop this</button>'+
+        '<div id="pcx-decide-msg" class="bp-msg"></div>'+
+        '<button class="bp-ghost" onclick="document.getElementById(\'pcx-decide\').remove()">Decide later</button>'+
       '</div>';
     document.body.appendChild(box);
   }catch(e){ /* a card that cannot paint must never break the page */ }
